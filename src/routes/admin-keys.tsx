@@ -2,21 +2,21 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   KeyRound, Loader2, Sparkles, Trash2, Copy, Plus, RefreshCw, Search, Clock,
-  ShieldCheck, Ban, LogOut, AlertTriangle, X,
+  Ban, AlertTriangle, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
+import { OwnerGate } from "@/components/OwnerGate";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   listKeys, revokeKey, unrevokeKey, deleteKey, extendKey,
   getConfig, setMaintenance, setRateLimitEnabled, setKeyDurationHours, setIPWhitelist,
-  listGenerationLogs, onAdminAuthChanged, signInAdmin, signOutAdmin, currentAdmin,
-  nowSeconds, dgDb,
+  listGenerationLogs, createManualKey,
+  nowSeconds,
   type ValidKey, type DgConfig, type GenerationLog,
-} from "@/lib/dgFirebase";
-import { ref, set as fbSet, get as fbGet } from "firebase/database";
-import type { User } from "firebase/auth";
+} from "@/lib/dgData";
 
 export const Route = createFileRoute("/admin-keys")({
   ssr: false,
@@ -24,65 +24,13 @@ export const Route = createFileRoute("/admin-keys")({
   component: KeysAdminGate,
 });
 
-// ----- Firebase admin gate -----
+// ----- Owner gate (Google login) -----
 
 function KeysAdminGate() {
-  const [user, setUser] = useState<User | null>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => onAdminAuthChanged((u) => { setUser(u); setReady(true); }), []);
-
-  if (!ready) {
-    return (
-      <PageShell>
-        <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-      </PageShell>
-    );
-  }
-  if (!user) return <SignInScreen />;
-  return <KeysAdmin user={user} />;
-}
-
-function SignInScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await signInAdmin(email, password);
-      toast.success("Signed in");
-    } catch (err) {
-      toast.error((err as Error).message || "Sign-in failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
-    <PageShell>
-      <div className="mx-auto max-w-md py-16">
-        <div className="rounded-2xl border border-primary/20 bg-card/60 p-8 backdrop-blur-xl glow-primary">
-          <div className="mb-6 text-center">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
-              <KeyRound className="h-7 w-7" />
-            </div>
-            <h1 className="mt-4 font-display text-2xl font-extrabold uppercase tracking-tight">Key System Admin</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Sign in with your Firebase admin account.</p>
-          </div>
-          <form onSubmit={submit} className="space-y-3">
-            <Input type="email" placeholder="admin@email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            <Button type="submit" disabled={busy} className="w-full" style={{ background: "var(--gradient-primary)" }}>
-              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-              Sign in
-            </Button>
-          </form>
-        </div>
-      </div>
-    </PageShell>
+    <OwnerGate>
+      <KeysAdmin />
+    </OwnerGate>
   );
 }
 
@@ -90,7 +38,8 @@ function SignInScreen() {
 
 type Tab = "keys" | "config" | "logs";
 
-function KeysAdmin({ user }: { user: User }) {
+function KeysAdmin() {
+  const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("keys");
 
   return (
@@ -98,13 +47,10 @@ function KeysAdmin({ user }: { user: User }) {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold">Key System</h1>
-          <p className="text-sm text-muted-foreground">Live Firebase data (ValidKeys).</p>
+          <p className="text-sm text-muted-foreground">Live Supabase data (valid_keys).</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden text-xs text-muted-foreground sm:inline">{user.email}</span>
-          <Button variant="outline" size="sm" onClick={() => signOutAdmin()}>
-            <LogOut className="mr-2 h-4 w-4" />Sign out
-          </Button>
+          <span className="hidden text-xs text-muted-foreground sm:inline">{user?.email}</span>
         </div>
       </div>
 
@@ -337,39 +283,13 @@ function ManualKeyForm() {
   const [hours, setHours] = useState("24");
   const [busy, setBusy] = useState(false);
 
-  const randSuffix = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let s = "";
-    for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    return s;
-  };
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const h = Number(hours);
     if (!Number.isFinite(h) || h <= 0) { toast.error("Invalid hours"); return; }
     setBusy(true);
     try {
-      let key = "";
-      for (let i = 0; i < 10; i++) {
-        const cand = `${prefix.trim().toUpperCase()}-${randSuffix()}`;
-        const snap = await fbGet(ref(dgDb(), `ValidKeys/${cand}`));
-        if (!snap.exists()) { key = cand; break; }
-      }
-      if (!key) throw new Error("Could not allocate key");
-
-      const now = nowSeconds();
-      await fbSet(ref(dgDb(), `ValidKeys/${key}`), {
-        status: "active",
-        expiry: now + Math.floor(h * 3600),
-        durationHours: h,
-        activated: false,
-        device: null,
-        date: now,
-        fingerprint: "",
-        sourceIP: "",
-        source: "admin",
-      });
+      const key = await createManualKey(prefix, h);
       await navigator.clipboard.writeText(key).catch(() => {});
       toast.success(`Created ${key} (copied)`);
     } catch (err) {
