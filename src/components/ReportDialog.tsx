@@ -4,6 +4,7 @@ import { Flag, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { ThemedSelect } from "@/components/ThemedSelect";
 
 export function ReportButton({ targetType, targetId, label = "Report" }: { targetType: "comment" | "mod" | "profile"; targetId: string; label?: string }) {
   const { user } = useAuth();
@@ -44,13 +45,19 @@ export function ReportButton({ targetType, targetId, label = "Report" }: { targe
                 </div>
                 <button onClick={() => setOpen(false)} className="grid h-8 w-8 place-items-center rounded-full border border-border"><X className="h-4 w-4" /></button>
               </div>
-              <select value={reason} onChange={(e) => setReason(e.target.value)} className="mt-4 w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm">
-                <option value="spam">Spam or promotion</option>
-                <option value="abuse">Abusive / harassment</option>
-                <option value="nsfw">NSFW or inappropriate</option>
-                <option value="misinformation">Misleading info</option>
-                <option value="other">Other</option>
-              </select>
+              <ThemedSelect
+                value={reason}
+                onValueChange={setReason}
+                ariaLabel="Report reason"
+                className="mt-4 h-auto w-full rounded-xl py-2.5 text-sm"
+                options={[
+                  { value: "spam", label: "Spam or promotion" },
+                  { value: "abuse", label: "Abusive / harassment" },
+                  { value: "nsfw", label: "NSFW or inappropriate" },
+                  { value: "misinformation", label: "Misleading info" },
+                  { value: "other", label: "Other" },
+                ]}
+              />
               <textarea value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Add context (optional)" rows={3} maxLength={500}
                 className="mt-3 w-full resize-none rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary" />
               <div className="mt-4 flex gap-2">

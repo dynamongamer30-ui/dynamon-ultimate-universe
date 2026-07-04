@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Search, TrendingUp, Clock, Heart, Download, Star, Sparkles } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
+import { ThemedSelect } from "@/components/ThemedSelect";
 import { mods, totalDownloads, formatCount, elementTheme, type Element } from "@/lib/mods";
 
 export const Route = createFileRoute("/mods/")({
@@ -138,11 +139,13 @@ function ModsPage() {
               </button>
             ))}
             <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Version</span>
-            <select value={version} onChange={(e) => setVersion(e.target.value)}
-              className="rounded-md border border-border bg-secondary px-3 py-1 text-[11px] font-semibold outline-none focus:border-primary">
-              <option value="all">All</option>
-              {versions.map((v) => <option key={v} value={v}>v{v}</option>)}
-            </select>
+            <ThemedSelect
+              value={version}
+              onValueChange={setVersion}
+              ariaLabel="Filter by version"
+              className="h-auto w-auto rounded-md bg-secondary px-3 py-1 text-[11px] font-semibold"
+              options={[{ value: "all", label: "All" }, ...versions.map((v) => ({ value: v, label: `v${v}` }))]}
+            />
             {activeFilters > 0 && (
               <button onClick={() => { setElements(new Set()); setMinRating(0); setVersion("all"); }}
                 className="ml-auto rounded-md px-3 py-1 text-[11px] font-semibold text-rose-300 hover:text-rose-200">
