@@ -27,6 +27,37 @@
 const LOGIN_GRACE = 1800; // secs: how fresh ActivatedUsers/<fp>.lastLogin must be
 const HEARTBEAT_GRACE = 120; // secs
 
+// VIP keys are prefixed "VIP-" or "DGVIP-" (case-insensitive).
+function isVipKey(key) {
+  return /^(dg)?vip[-_]/i.test(String(key || ""));
+}
+
+// A key is "lifetime" when its duration is 0, blank, or explicitly lifetime.
+function isLifetimeDuration(mode) {
+  const m = String(mode == null ? "" : mode)
+    .trim()
+    .toLowerCase();
+  return m === "" || m === "0" || m === "lifetime" || m === "life" || m === "permanent" || m === "unlimited";
+}
+
+// Accepts numbers (interpreted as HOURS, matching the admin panel's
+// durationHours) or strings like "24", "24h", "7d", "60m", "lifetime".
+function parseDurationToSeconds(mode) {
+  if (isLifetimeDuration(mode)) return 0;
+  const s = String(mode).trim().toLowerCase();
+  const m = s.match(/^(\d+(?:\.\d+)?)\s*([smhdw]?)$/);
+  if (!m) return 0;
+  const n = parseFloat(m[1]);
+  switch (m[2]) {
+    case "s": return Math.floor(n);
+    case "m": return Math.floor(n * 60);
+    case "d": return Math.floor(n * 86400);
+    case "w": return Math.floor(n * 604800);
+    case "h": return Math.floor(n * 3600);
+    default: return Math.floor(n * 3600); // bare number = hours
+  }
+}
+
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
@@ -216,6 +247,82 @@ export default {
         const d = await body();
         if (d.fp) await banDevice(d.fp, "tamper:" + (d.kind || "?"));
         return json({ ok: true });
+      }
+
+      // ---------- app: read public config (maintenance/update/etc.) ----------
+      // Returns the merged Config object (each app_config row = one Config child),
+      // exactly like the old Firebase /Config.json read the app relied on.
+      if (path === "/config" && req.method === "GET") {
+        const cfg = (await fbGet("Config")) || {};
+        return json(cfg);
+      }
+
+      // ---------- app: verify + activate a key (server-side, atomic bind) ----------
+      // The Android gate no longer touches the database directly. It POSTs the
+      // key + device fingerprint here; ALL trust decisions happen server-side.
+      if (path === "/verify-key" && req.method === "POST") {
+        const d = await body();
+        const key = String(d.key || "").trim();
+        const fp = String(d.fp || "").trim();
+        if (!key || !fp) return json({ ok: false, error: "bad_request" });
+
+        // Banned device -> hard stop.
+        const ban = await isBanned(fp);
+        if (ban) return json({ ok: false, error: "banned", reason: ban });
+
+        const kd = await fbGet("ValidKeys/" + key);
+        if (!kd || typeof kd !== "object") return json({ ok: false, error: "invalid_key" });
+
+        const status = String(kd.status || "active").toLowerCase();
+        if (status !== "active") return json({ ok: false, error: "suspended" });
+
+        const nowSec = Math.floor(Date.now() / 1000);
+        const durationMode = kd.durationHours != null ? String(kd.durationHours) : String(kd.duration || "24");
+        const lifetime = isLifetimeDuration(durationMode);
+        const boundDevice = kd.device == null ? "" : String(kd.device);
+        const vip = isVipKey(key);
+
+        // First use: bind this device + start the timer.
+        if (boundDevice === "" || boundDevice === "null") {
+          const durSec = parseDurationToSeconds(durationMode);
+          const expiry = lifetime || durSec <= 0 ? 0 : nowSec + durSec;
+
+          const merged = Object.assign({}, kd, {
+            device: fp,
+            expiry: expiry,
+            activated: true,
+            activatedAt: nowSec,
+          });
+          await fbPut("ValidKeys/" + key, merged);
+
+          await fbPut("ActivatedUsers/" + fp, {
+            Key: key,
+            key: key,
+            expiry: expiry,
+            lastLogin: Date.now(),
+            ExpiryReadable: expiry > 0 ? new Date(expiry * 1000).toISOString() : "Lifetime",
+          });
+
+          return json({ ok: true, vip: vip, durationMode: durationMode, expiry: expiry, lifetime: lifetime });
+        }
+
+        // Returning device: must match + not be expired.
+        if (boundDevice === fp) {
+          const expiry = Number(kd.expiry || 0);
+          if (lifetime || expiry === 0 || expiry > nowSec) {
+            // refresh the tripwire marker
+            const au = (await fbGet("ActivatedUsers/" + fp)) || {};
+            au.lastLogin = Date.now();
+            au.Key = key;
+            au.key = key;
+            await fbPut("ActivatedUsers/" + fp, au);
+            return json({ ok: true, vip: vip, durationMode: durationMode, expiry: expiry, lifetime: lifetime });
+          }
+          return json({ ok: false, error: "expired" });
+        }
+
+        // Bound to a different device.
+        return json({ ok: false, error: "device_mismatch" });
       }
 
       // ---------- admin: upload encrypted payload ----------
