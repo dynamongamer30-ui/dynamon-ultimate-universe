@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Shield, Send, Trash2, Loader2, Mail, AlertTriangle, Bell } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { OwnerGate } from "@/components/OwnerGate";
+import { ThemedSelect } from "@/components/ThemedSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { mods } from "@/lib/mods";
@@ -131,12 +132,13 @@ function AdminPage() {
           <h3 className="font-display text-xl font-bold flex items-center gap-2"><Mail className="h-5 w-5" /> Broadcast new release</h3>
           <p className="mt-1 text-sm text-muted-foreground">Notify all {totalSubs} email-opted-in trainers about a new mod build.</p>
           <label className="mt-4 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Mod</label>
-          <select value={blastMod} onChange={(e) => setBlastMod(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm">
-            {mods.map((m) => (
-              <option key={m.slug} value={m.slug}>{m.name} — v{m.version}</option>
-            ))}
-          </select>
+          <ThemedSelect
+            value={blastMod}
+            onValueChange={setBlastMod}
+            ariaLabel="Select mod"
+            className="mt-1 h-auto w-full rounded-xl py-2.5 text-sm"
+            options={mods.map((m) => ({ value: m.slug, label: `${m.name} — v${m.version}` }))}
+          />
           <input value={blastSubject} onChange={(e) => setBlastSubject(e.target.value)} placeholder="Subject"
             className="mt-3 w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary" />
           <textarea value={blastBody} onChange={(e) => setBlastBody(e.target.value)} placeholder="Message body…" rows={6} maxLength={2000}

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Shield, Save, Loader2, Eye, EyeOff, Star, ArrowLeft, Settings2, Megaphone, Link2, Image as ImageIcon, Box, KeyRound } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { OwnerGate } from "@/components/OwnerGate";
+import { ThemedSelect } from "@/components/ThemedSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { useSiteSettings, DEFAULT_BRANDING, DEFAULT_ANNOUNCEMENT, DEFAULT_SOCIALS, type SiteBranding, type Announcement, type Socials, type ModOverride } from "@/hooks/useSiteSettings";
 import { mods as baseMods } from "@/lib/mods";
@@ -126,11 +127,17 @@ function AnnouncementEditor({ initial, onSaved }: { initial: Announcement; onSav
       <Field label="Message"><input value={v.message} onChange={(e) => setV({ ...v, message: e.target.value })} className={inp} placeholder="New Fire Phoenix v2.0 just dropped — tap to view" /></Field>
       <Field label="Link (optional)"><input value={v.href} onChange={(e) => setV({ ...v, href: e.target.value })} className={inp} placeholder="/mods/fire-phoenix" /></Field>
       <Field label="Tone">
-        <select value={v.tone} onChange={(e) => setV({ ...v, tone: e.target.value as Announcement["tone"] })} className={inp}>
-          <option value="info">Info (primary)</option>
-          <option value="success">Success (green)</option>
-          <option value="warning">Warning (amber)</option>
-        </select>
+        <ThemedSelect
+          value={v.tone}
+          onValueChange={(val) => setV({ ...v, tone: val as Announcement["tone"] })}
+          ariaLabel="Announcement tone"
+          className={`${inp} h-auto`}
+          options={[
+            { value: "info", label: "Info (primary)" },
+            { value: "success", label: "Success (green)" },
+            { value: "warning", label: "Warning (amber)" },
+          ]}
+        />
       </Field>
       <SaveRow saving={saving} onReset={() => setV(DEFAULT_ANNOUNCEMENT)}
         onSave={async () => { setSaving(true); if (await saveSetting("announcement", v)) onSaved(); setSaving(false); }} />
@@ -169,10 +176,16 @@ function FeaturedEditor({ onSaved }: { onSaved: () => void }) {
   return (
     <Card title="Featured mod" desc="Pinned to the top of the vault and shown as the hero card.">
       <Field label="Mod">
-        <select value={slug} onChange={(e) => setSlug(e.target.value)} className={inp}>
-          <option value="">— auto (top by popularity) —</option>
-          {baseMods.map((m) => <option key={m.slug} value={m.slug}>{m.name}</option>)}
-        </select>
+        <ThemedSelect
+          value={slug === "" ? "__auto__" : slug}
+          onValueChange={(val) => setSlug(val === "__auto__" ? "" : val)}
+          ariaLabel="Featured mod"
+          className={`${inp} h-auto`}
+          options={[
+            { value: "__auto__", label: "— auto (top by popularity) —" },
+            ...baseMods.map((m) => ({ value: m.slug, label: m.name })),
+          ]}
+        />
       </Field>
       <SaveRow saving={saving} onReset={() => setSlug("")}
         onSave={async () => { setSaving(true); if (await saveSetting("featured", { slug })) onSaved(); setSaving(false); }} />
