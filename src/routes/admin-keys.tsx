@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   KeyRound, Loader2, Sparkles, Trash2, Copy, Plus, RefreshCw, Search, Clock,
-  Ban, AlertTriangle, X, ShieldCheck,
+  Ban, AlertTriangle, X, ShieldCheck, Smartphone, Lock, Unlock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
@@ -14,8 +14,10 @@ import {
   listKeys, revokeKey, unrevokeKey, deleteKey, extendKey,
   getConfig, setMaintenance, setRateLimitEnabled, setKeyDurationHours, setIPWhitelist,
   listGenerationLogs, createManualKey,
+  listActivatedUsers, listBannedDevices, banDevice, unbanDevice,
   nowSeconds,
   type ValidKey, type DgConfig, type GenerationLog,
+  type ActivatedUser, type BannedDevice,
 } from "@/lib/dgData";
 
 export const Route = createFileRoute("/admin-keys")({
@@ -36,7 +38,7 @@ function KeysAdminGate() {
 
 // ----- Main panel -----
 
-type Tab = "keys" | "config" | "logs";
+type Tab = "keys" | "devices" | "locks" | "config" | "logs";
 
 function KeysAdmin() {
   const { user } = useAuth();
@@ -55,7 +57,7 @@ function KeysAdmin() {
       </div>
 
       <div className="mb-6 inline-flex rounded-full border border-border bg-card/60 p-1 text-xs font-semibold">
-        {(["keys","config","logs"] as Tab[]).map((t) => (
+        {(["keys","devices","locks","config","logs"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`rounded-full px-4 py-1.5 capitalize transition-colors ${tab===t ? "text-primary-foreground" : "text-muted-foreground"}`}
             style={tab===t ? { background: "var(--gradient-primary)" } : undefined}>
@@ -65,6 +67,8 @@ function KeysAdmin() {
       </div>
 
       {tab === "keys" && <KeysPanel />}
+      {tab === "devices" && <DevicesPanel />}
+      {tab === "locks" && <LocksPanel />}
       {tab === "config" && <ConfigPanel />}
       {tab === "logs" && <LogsPanel />}
     </PageShell>
@@ -332,6 +336,215 @@ function ManualKeyForm() {
         Generate & copy
       </Button>
     </form>
+  );
+}
+
+// ----- Devices panel (activated devices) -----
+
+function DevicesPanel() {
+  const [rows, setRows] = useState<ActivatedUser[]>([]);
+  const [banned, setBanned] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [busy, setBusy] = useState("");
+
+  const reload = async () => {
+    setLoading(true);
+    try {
+      const [users, bans] = await Promise.all([listActivatedUsers(), listBannedDevices()]);
+      setRows(users.sort((a, b) => Number(b.lastLogin ?? 0) - Number(a.lastLogin ?? 0)));
+      setBanned(new Set(bans.map((b) => b.fingerprint)));
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void reload(); }, []);
+
+  const doLock = async (fp: string) => {
+    setBusy(fp);
+    try { await banDevice(fp, "locked from devices panel"); toast.success("Device locked"); await reload(); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(""); }
+  };
+  const doUnlock = async (fp: string) => {
+    setBusy(fp);
+    try { await unbanDevice(fp); toast.success("Device unlocked"); await reload(); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(""); }
+  };
+
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? rows.filter((r) => r.fingerprint.toLowerCase().includes(q) || String(r.Key ?? r.key ?? "").toLowerCase().includes(q))
+    : rows;
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <StatTile label="Activated devices" value={rows.length} icon={<Smartphone className="h-4 w-4 text-primary" />} />
+        <StatTile label="Locked" value={banned.size} icon={<Lock className="h-4 w-4 text-red-400" />} />
+        <StatTile label="Unlocked" value={Math.max(0, rows.length - rows.filter((r) => banned.has(r.fingerprint)).length)} icon={<Unlock className="h-4 w-4 text-green-400" />} />
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-border bg-card/60 p-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Search by device or key" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Button variant="outline" size="sm" onClick={reload} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+        ) : filtered.length === 0 ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">No activated devices yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="py-2 pr-3">Device</th>
+                  <th className="py-2 pr-3">Key</th>
+                  <th className="py-2 pr-3">Last login</th>
+                  <th className="py-2 pr-3">State</th>
+                  <th className="py-2 pr-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r) => {
+                  const isLocked = banned.has(r.fingerprint);
+                  const last = Number(r.lastLogin ?? 0);
+                  return (
+                    <tr key={r.fingerprint} className="border-t border-border/40">
+                      <td className="py-3 pr-3 font-mono text-[11px] text-muted-foreground">{r.fingerprint.slice(0, 16)}…</td>
+                      <td className="py-3 pr-3 font-mono text-xs text-primary">{String(r.Key ?? r.key ?? "—")}</td>
+                      <td className="py-3 pr-3 text-xs text-muted-foreground">{last ? new Date(last).toLocaleString() : "—"}</td>
+                      <td className="py-3 pr-3">
+                        <span className={`rounded-full border px-2 py-0.5 text-[11px] ${isLocked ? "border-red-400/40 text-red-300" : "border-green-400/40 text-green-300"}`}>
+                          {isLocked ? "Locked" : "Active"}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-3">
+                        <div className="flex justify-end gap-1">
+                          {isLocked ? (
+                            <IconBtn title="Unlock" disabled={busy === r.fingerprint} onClick={() => doUnlock(r.fingerprint)}><Unlock className="h-3.5 w-3.5" /></IconBtn>
+                          ) : (
+                            <IconBtn title="Lock" disabled={busy === r.fingerprint} onClick={() => doLock(r.fingerprint)} danger><Lock className="h-3.5 w-3.5" /></IconBtn>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ----- Locks panel (banned devices) -----
+
+function LocksPanel() {
+  const [rows, setRows] = useState<BannedDevice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [newFp, setNewFp] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState("");
+
+  const reload = async () => {
+    setLoading(true);
+    try { setRows((await listBannedDevices()).sort((a, b) => b.time - a.time)); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void reload(); }, []);
+
+  const doAdd = async () => {
+    const fp = newFp.trim();
+    if (!fp) return toast.error("Enter a device fingerprint");
+    setBusy("add");
+    try { await banDevice(fp, reason.trim() || "manual lock"); toast.success("Device locked"); setNewFp(""); setReason(""); await reload(); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(""); }
+  };
+  const doUnlock = async (fp: string) => {
+    setBusy(fp);
+    try { await unbanDevice(fp); toast.success("Device unlocked"); await reload(); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(""); }
+  };
+
+  const q = search.trim().toLowerCase();
+  const filtered = q ? rows.filter((r) => r.fingerprint.toLowerCase().includes(q) || r.reason.toLowerCase().includes(q)) : rows;
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="rounded-2xl border border-border bg-card/60 p-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Search locked devices" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Button variant="outline" size="sm" onClick={reload} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+        ) : filtered.length === 0 ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">No locked devices.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="py-2 pr-3">Device</th>
+                  <th className="py-2 pr-3">Reason</th>
+                  <th className="py-2 pr-3">Locked at</th>
+                  <th className="py-2 pr-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r) => (
+                  <tr key={r.fingerprint} className="border-t border-border/40">
+                    <td className="py-3 pr-3 font-mono text-[11px] text-muted-foreground">{r.fingerprint.slice(0, 16)}…</td>
+                    <td className="py-3 pr-3 text-xs">{r.reason || "—"}</td>
+                    <td className="py-3 pr-3 text-xs text-muted-foreground">{r.time ? new Date(r.time * 1000).toLocaleString() : "—"}</td>
+                    <td className="py-3 pr-3">
+                      <div className="flex justify-end gap-1">
+                        <IconBtn title="Unlock" disabled={busy === r.fingerprint} onClick={() => doUnlock(r.fingerprint)}><Unlock className="h-3.5 w-3.5" /></IconBtn>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="h-fit rounded-2xl border border-red-400/20 bg-card/60 p-4">
+        <h3 className="mb-3 flex items-center gap-2 font-display text-base font-bold">
+          <Lock className="h-4 w-4 text-red-400" /> Lock a device
+        </h3>
+        <p className="mb-3 text-xs text-muted-foreground">Manually block a device fingerprint. The license worker rejects locked devices instantly.</p>
+        <label className="text-xs text-muted-foreground">Device fingerprint</label>
+        <Input value={newFp} onChange={(e) => setNewFp(e.target.value)} placeholder="paste fingerprint" className="mt-1 mb-3 font-mono text-xs" />
+        <label className="text-xs text-muted-foreground">Reason (optional)</label>
+        <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="abuse / sharing / …" className="mt-1 mb-3" />
+        <Button onClick={doAdd} disabled={busy === "add"} className="w-full" style={{ background: "var(--gradient-primary)" }}>
+          {busy === "add" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
+          Lock device
+        </Button>
+      </div>
+    </div>
   );
 }
 

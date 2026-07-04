@@ -291,6 +291,22 @@ export async function listActivatedUsers(): Promise<ActivatedUser[]> {
   return rows.map((r) => ({ fingerprint: r.id, ...(r.data ?? {}) }));
 }
 
+/** Lock (ban) a device fingerprint. Matches the worker's banned_devices shape. */
+export async function banDevice(fingerprint: string, reason = "manual ban"): Promise<void> {
+  const nowSec = nowSeconds();
+  await upsertRow("banned_devices", fingerprint, {
+    reason,
+    time: nowSec,
+    at: Date.now(),
+    by: "owner-panel",
+  });
+}
+
+/** Unlock (unban) a device fingerprint. */
+export async function unbanDevice(fingerprint: string): Promise<void> {
+  await deleteRow("banned_devices", fingerprint);
+}
+
 // ---------- Misc helpers ----------
 
 export const nowSeconds = () => Math.floor(Date.now() / 1000);

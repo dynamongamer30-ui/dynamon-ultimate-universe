@@ -233,7 +233,91 @@ function ModDetail() {
       <section className="mt-16">
         <SocialStrip />
       </section>
+
+      {gateOpen && (
+        <FollowGate
+          modName={mod.name}
+          megaUrl={megaUrl}
+          followUrl={followUrl}
+          onClose={() => setGateOpen(false)}
+        />
+      )}
     </PageShell>
+  );
+}
+
+function FollowGate({
+  modName, megaUrl, followUrl, onClose,
+}: { modName: string; megaUrl: string; followUrl: string; onClose: () => void }) {
+  // If there's no follow link configured, skip straight to the unlocked state.
+  const [step, setStep] = useState<"gate" | "ready">(followUrl ? "gate" : "ready");
+  const [waiting, setWaiting] = useState(false);
+
+  const handleFollow = () => {
+    playClick();
+    window.open(followUrl, "_blank", "noopener,noreferrer");
+    // Short verify delay so the reveal feels earned, then unlock.
+    setWaiting(true);
+    setTimeout(() => { setWaiting(false); setStep("ready"); }, 4000);
+  };
+
+  return (
+    <div
+      role="dialog" aria-modal="true" aria-label={`Download ${modName}`}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose} aria-label="Close"
+          className="absolute right-4 top-4 rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        {step === "gate" ? (
+          <div className="text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Lock className="h-6 w-6" />
+            </div>
+            <h3 className="mt-4 font-display text-xl font-extrabold uppercase tracking-tight text-balance">
+              One step to unlock
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
+              Follow us to unlock the secure download for <span className="font-semibold text-foreground">{modName}</span>. The link reveals automatically once you&apos;re back.
+            </p>
+            <button
+              onClick={handleFollow} disabled={waiting}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
+            >
+              {waiting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Verifying…</>) : (<><ExternalLink className="h-4 w-4" /> Follow to unlock</>)}
+            </button>
+          </div>
+        ) : (
+          <div className="text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Check className="h-6 w-6" />
+            </div>
+            <h3 className="mt-4 font-display text-xl font-extrabold uppercase tracking-tight text-balance">
+              Download unlocked
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
+              Your secure MEGA link for <span className="font-semibold text-foreground">{modName}</span> is ready.
+            </p>
+            <a
+              href={megaUrl} target="_blank" rel="noopener noreferrer" onMouseDown={playClick}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90"
+            >
+              <Download className="h-4 w-4" /> Open download
+            </a>
+          </div>
+        )}
+      </motion.div>
+    </div>
   );
 }
 
