@@ -42,8 +42,6 @@ export function SocialStrip({ variant = "full" }: { variant?: "full" | "compact"
 
   return (
     <section className="relative overflow-hidden rounded-3xl glass p-6 sm:p-10">
-      <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-primary/20 blur-3xl" aria-hidden />
-      <div className="absolute -left-16 -bottom-16 h-60 w-60 rounded-full bg-accent/20 blur-3xl" aria-hidden />
       <div className="relative grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Join the Universe</p>

@@ -72,29 +72,31 @@ function ModDetail() {
         {/* Hero image with element halo */}
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-[2rem] glass"
+          className="edge-light relative overflow-hidden rounded-2xl border border-border bg-card"
           style={{ boxShadow: theme.glow }}
         >
-          <div className="absolute inset-0 opacity-70 mix-blend-overlay" style={{ background: theme.gradient }} />
+          <div className="absolute inset-0 z-10 opacity-40 mix-blend-overlay" style={{ background: theme.gradient }} />
           <img src={mod.image} alt={mod.name} width={1024} height={1024} className="relative aspect-square w-full object-cover" />
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card to-transparent p-6">
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-widest ${theme.chip}`}>
+          <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-card to-transparent p-6">
+            <span className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${theme.chip}`}>
               <Sparkles className="h-3 w-3" /> {theme.label} element
             </span>
           </div>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary">Dynamons World · Mod APK</p>
-          <h1 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-5xl">{mod.name}</h1>
-          <p className="mt-3 text-lg text-muted-foreground">{mod.tagline}</p>
+          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
+            <span className="inline-block h-px w-8 bg-primary" aria-hidden />
+            Dynamons World · Mod APK
+          </p>
+          <h1 className="mt-4 font-display text-4xl font-black uppercase leading-[0.95] tracking-tight text-balance sm:text-5xl">{mod.name}</h1>
+          <p className="mt-4 text-lg leading-relaxed text-muted-foreground text-pretty">{mod.tagline}</p>
 
           {/* Tabs */}
-          <div className="mt-6 inline-flex rounded-full border border-border bg-card/60 p-1 text-xs font-semibold">
+          <div className="mt-6 inline-flex rounded-lg border border-border bg-card p-1 text-xs font-bold">
             {(["overview", "changelog"] as const).map((t) => (
               <button key={t} onClick={() => { setTab(t); playClick(); }}
-                className={`rounded-full px-4 py-1.5 capitalize transition-colors ${tab === t ? "text-primary-foreground" : "text-muted-foreground"}`}
-                style={tab === t ? { background: "var(--gradient-primary)" } : undefined}>
+                className={`press rounded-md px-4 py-1.5 capitalize transition-colors ${tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
                 {t}
               </button>
             ))}
@@ -107,8 +109,8 @@ function ModDetail() {
               </div>
               <ul className="mt-5 grid gap-2 sm:grid-cols-2">
                 {mod.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 rounded-xl border border-border bg-card/60 px-3 py-2.5 text-sm">
-                    <span className="grid h-6 w-6 place-items-center rounded-full text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+                  <li key={f} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-primary/15 text-primary">
                       <Check className="h-3.5 w-3.5" />
                     </span>
                     {f}
@@ -125,8 +127,7 @@ function ModDetail() {
           <div className="mt-7 flex flex-wrap gap-3">
             <button
               onClick={handleGet}
-              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.03]"
-              style={{ background: "var(--gradient-primary)" }}
+              className="press inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110"
             >
               <Download className="h-4 w-4" /> {user ? "Download mod" : "Sign in to download"}
             </button>
@@ -134,7 +135,7 @@ function ModDetail() {
             <FavoriteButton slug={mod.slug} />
             <Link
               to="/disclaimer" onMouseDown={playClick}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-5 py-3 text-sm font-semibold hover:bg-card"
+              className="press inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-3 text-sm font-semibold transition-colors hover:border-primary/40"
             >
               <Shield className="h-4 w-4" /> Safety notes
             </Link>
@@ -154,10 +155,10 @@ function ModDetail() {
         <div className="flex items-end justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-primary">Gameplay</p>
-            <h2 className="mt-1 font-display text-2xl font-bold">Watch the {theme.label} build in action</h2>
+            <h2 className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight">Watch the {theme.label} build in action</h2>
           </div>
         </div>
-        <div className="mt-5 overflow-hidden rounded-3xl glass" style={{ boxShadow: theme.glow }}>
+        <div className="mt-5 overflow-hidden edge-light rounded-2xl glass" style={{ boxShadow: theme.glow }}>
           {mod.youtubeId ? (
             <div className="relative aspect-video w-full">
               <iframe
@@ -189,7 +190,7 @@ function ModDetail() {
       <CommentsPanel slug={mod.slug} />
 
       <section className="mt-16">
-        <h2 className="font-display text-2xl font-bold">More from the vault</h2>
+        <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">More from the vault</h2>
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           {mods.filter((m) => m.slug !== mod.slug).slice(0, 3).map((m) => {
             const t = elementTheme[m.element];

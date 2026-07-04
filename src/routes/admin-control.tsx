@@ -46,11 +46,11 @@ function ControlPanel() {
           <KeyRound className="h-3.5 w-3.5" /> Key System
         </Link>
       </div>
-      <header className="mt-4 rounded-3xl glass p-6 sm:p-10">
+      <header className="mt-4 edge-light rounded-2xl glass p-6 sm:p-10">
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-300">
           <Shield className="h-3.5 w-3.5" /> Owner Control Panel
         </p>
-        <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">Edit everything, live.</h1>
+        <h1 className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-4xl">Edit everything, live.</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Tune branding, swap socials, push announcements and edit any field on every mod. Changes appear instantly across the site.
         </p>
@@ -315,7 +315,7 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
 const inp = "w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary";
 function Card({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-3xl glass p-6 sm:p-8">
+    <section className="edge-light rounded-2xl glass p-6 sm:p-8">
       <h2 className="font-display text-xl font-bold flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" />{title}</h2>
       {desc && <p className="mt-1 text-sm text-muted-foreground">{desc}</p>}
       <div className="mt-6 space-y-4">{children}</div>

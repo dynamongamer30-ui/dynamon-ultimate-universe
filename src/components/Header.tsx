@@ -85,7 +85,7 @@ export function Header() {
           <button
             onClick={() => { setSearchOpen((v) => !v); playClick(); }}
             aria-label="Search"
-            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card/60 text-muted-foreground transition-colors hover:text-foreground"
+            className="press grid h-10 w-10 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
           >
             <Search className="h-4 w-4" />
           </button>
@@ -157,8 +157,7 @@ export function Header() {
           ) : (
             <Link
               to="/auth" onMouseDown={playClick}
-              className="hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.03] sm:inline-flex"
-              style={{ background: "var(--gradient-primary)" }}
+              className="press hidden items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110 sm:inline-flex"
             >
               <UserIcon className="h-4 w-4" /> Sign in
             </Link>

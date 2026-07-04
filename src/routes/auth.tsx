@@ -98,7 +98,7 @@ function AuthPage() {
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
             <Sparkles className="h-3.5 w-3.5" /> Trainers only
           </div>
-          <h1 className="mt-5 font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl">
+          <h1 className="mt-5 font-display text-4xl font-black uppercase tracking-tight leading-[1.05] sm:text-5xl">
             Forge your <span className="text-gradient">trainer identity.</span>
           </h1>
           <p className="mt-4 max-w-md text-muted-foreground">
@@ -131,10 +131,8 @@ function AuthPage() {
         <motion.div
           key={step}
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl glass p-7 shadow-elev sm:p-8"
+          className="relative overflow-hidden edge-light rounded-2xl glass p-7 shadow-elev sm:p-8"
         >
-          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/30 blur-3xl" aria-hidden />
-          <div className="absolute -bottom-16 -left-12 h-44 w-44 rounded-full bg-accent/20 blur-3xl" aria-hidden />
 
           <AnimatePresence mode="wait">
             {step === "credentials" && !user ? (
@@ -176,7 +174,7 @@ function CredentialsStep({
 }) {
   return (
     <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="relative">
-      <h2 className="font-display text-2xl font-bold">
+      <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">
         {mode === "signin" ? "Welcome back" : "Create your account"}
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">Continue with Google or email.</p>
@@ -287,7 +285,7 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
       className="relative space-y-5"
     >
       <div>
-        <h2 className="font-display text-2xl font-bold">Build your trainer</h2>
+        <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">Build your trainer</h2>
         <p className="mt-1 text-sm text-muted-foreground">Only takes a moment. You can update it anytime.</p>
       </div>
 

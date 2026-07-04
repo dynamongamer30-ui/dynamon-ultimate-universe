@@ -69,7 +69,7 @@ function SignInScreen() {
             <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
               <KeyRound className="h-7 w-7" />
             </div>
-            <h1 className="mt-4 font-display text-2xl font-bold">Key System Admin</h1>
+            <h1 className="mt-4 font-display text-2xl font-extrabold uppercase tracking-tight">Key System Admin</h1>
             <p className="mt-1 text-sm text-muted-foreground">Sign in with your Firebase admin account.</p>
           </div>
           <form onSubmit={submit} className="space-y-3">
@@ -325,7 +325,7 @@ function StatTile({ label, value, icon }: { label: string; value: number; icon: 
   return (
     <div className="rounded-xl border border-border bg-card/60 p-3">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">{icon}{label}</div>
-      <div className="mt-1 font-display text-2xl font-bold">{value}</div>
+      <div className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight">{value}</div>
     </div>
   );
 }

@@ -16,9 +16,9 @@ function Disclaimer() {
   return (
     <PageShell>
       <article className="prose prose-invert mx-auto max-w-3xl space-y-10">
-        <header className="rounded-3xl glass p-8">
+        <header className="edge-light rounded-2xl glass p-8">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">Read this first</p>
-          <h1 className="mt-3 font-display text-4xl font-extrabold">Disclaimer & Safety</h1>
+          <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight">Disclaimer & Safety</h1>
           <p className="mt-3 text-sm text-muted-foreground">
             Dynamon Universe is a fan-made, non-commercial hub. We are not affiliated with, endorsed by, or
             sponsored by the official Dynamons World developers or publisher. All trademarks belong to their
@@ -26,8 +26,8 @@ function Disclaimer() {
           </p>
         </header>
 
-        <section id="legal" className="rounded-3xl glass p-8">
-          <h2 className="font-display text-2xl font-bold">Legal</h2>
+        <section id="legal" className="edge-light rounded-2xl glass p-8">
+          <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">Legal</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             Mod APKs may violate the original game's Terms of Service. You are solely responsible for how you
             use any build you discover here. Always own a legitimate copy of the original game and respect
@@ -35,8 +35,8 @@ function Disclaimer() {
           </p>
         </section>
 
-        <section id="privacy" className="rounded-3xl glass p-8">
-          <h2 className="font-display text-2xl font-bold">Privacy</h2>
+        <section id="privacy" className="edge-light rounded-2xl glass p-8">
+          <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">Privacy</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             We use a lightweight account system (Google or email) so you can download mods, leave ratings
             and comments. We only store your email and the activity you create on the site. Likes and
@@ -45,8 +45,8 @@ function Disclaimer() {
           </p>
         </section>
 
-        <section id="dmca" className="rounded-3xl glass p-8">
-          <h2 className="font-display text-2xl font-bold">DMCA</h2>
+        <section id="dmca" className="edge-light rounded-2xl glass p-8">
+          <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">DMCA</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             If you are a rights holder and believe content on Dynamon Universe infringes your rights, contact
             us via the contact page with the URL of the content, a description of the work, and your contact

@@ -71,7 +71,6 @@ export function NotificationOptIn() {
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-md overflow-hidden rounded-3xl glass shadow-elev"
           >
-            <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary/30 blur-3xl" aria-hidden />
             <button onClick={skip} className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground" aria-label="Close">
               <X className="h-4 w-4" />
             </button>

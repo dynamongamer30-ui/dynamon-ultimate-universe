@@ -32,7 +32,7 @@ function Contact() {
       <section className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">Get in touch</p>
-          <h1 className="mt-3 font-display text-4xl font-extrabold sm:text-5xl">Let's talk Dynamons.</h1>
+          <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">Let's talk Dynamons.</h1>
           <p className="mt-4 text-muted-foreground">
             Whether it's a mod request, a creator collab or a bug report — drop us a line.
             For fastest answers, ping us on WhatsApp or Telegram.
@@ -42,7 +42,7 @@ function Contact() {
           </div>
         </div>
 
-        <form onSubmit={submit} className="rounded-3xl glass p-6 sm:p-8">
+        <form onSubmit={submit} className="edge-light rounded-2xl glass p-6 sm:p-8">
           <div className="grid gap-4 sm:grid-cols-2">
             <input
               required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}

@@ -110,7 +110,7 @@ function ProfilePage() {
     return (
       <PageShell>
         <div className="mx-auto max-w-md py-20 text-center">
-          <h1 className="font-display text-2xl font-bold">Finish setting up your trainer</h1>
+          <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight">Finish setting up your trainer</h1>
           <p className="mt-2 text-sm text-muted-foreground">Pick a username, avatar and gender first.</p>
           <Link to="/auth" className="mt-6 inline-flex rounded-full px-5 py-3 text-sm font-semibold text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
             Complete profile
@@ -128,10 +128,8 @@ function ProfilePage() {
         {/* Identity card */}
         <motion.aside
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl glass p-6 lg:sticky lg:top-24"
+          className="relative overflow-hidden edge-light rounded-2xl glass p-6 lg:sticky lg:top-24"
         >
-          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/30 blur-3xl" aria-hidden />
-          <div className="absolute -bottom-16 -left-12 h-44 w-44 rounded-full bg-accent/20 blur-3xl" aria-hidden />
           <div className="relative flex flex-col items-center text-center">
             <div className="relative">
               {avatarUrl ? (
@@ -145,7 +143,7 @@ function ProfilePage() {
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2"><OwnerBadge size="md" /></span>
               )}
             </div>
-            <h1 className="mt-6 font-display text-2xl font-bold">{displayName || "Your name"}</h1>
+            <h1 className="mt-6 font-display text-2xl font-extrabold uppercase tracking-tight">{displayName || "Your name"}</h1>
             <p className="text-sm text-muted-foreground">@{username || profile.username}</p>
             {profile.is_owner && (
               <div className="mt-3 flex flex-wrap justify-center gap-2">
@@ -163,10 +161,10 @@ function ProfilePage() {
         <motion.form
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           onSubmit={submit}
-          className="space-y-6 rounded-3xl glass p-7 sm:p-8"
+          className="space-y-6 edge-light rounded-2xl glass p-7 sm:p-8"
         >
           <div>
-            <h2 className="font-display text-2xl font-bold">Edit profile</h2>
+            <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">Edit profile</h2>
             <p className="mt-1 text-sm text-muted-foreground">Update your name, avatar or username anytime.</p>
           </div>
 

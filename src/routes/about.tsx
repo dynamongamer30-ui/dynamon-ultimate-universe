@@ -18,10 +18,9 @@ export const Route = createFileRoute("/about")({
 function About() {
   return (
     <PageShell>
-      <section className="relative overflow-hidden rounded-3xl glass p-8 sm:p-14">
-        <div className="absolute -top-24 right-1/4 h-72 w-72 rounded-full bg-accent/20 blur-3xl" aria-hidden />
+      <section className="relative overflow-hidden edge-light rounded-2xl glass p-8 sm:p-14">
         <p className="text-xs font-semibold uppercase tracking-widest text-primary">Our story</p>
-        <h1 className="mt-3 font-display text-4xl font-extrabold sm:text-5xl">Built by Dynamon fans, for Dynamon fans.</h1>
+        <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">Built by Dynamon fans, for Dynamon fans.</h1>
         <p className="mt-5 max-w-2xl text-muted-foreground">
           We grew up training, battling and collecting in Dynamons World. We wanted a single, beautiful place
           dedicated to the game — no clutter from a hundred other titles, no shady popups. Just careful, curated

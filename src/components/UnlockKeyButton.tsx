@@ -20,19 +20,15 @@ export function UnlockKeyButton({
   };
 
   const base =
-    "inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-transform hover:scale-[1.03]";
+    "press inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-bold transition-[filter] hover:brightness-110";
 
   const styles =
     variant === "primary"
-      ? "text-primary-foreground glow-primary"
-      : "border border-primary/40 bg-card/60 text-primary hover:border-primary hover:bg-primary/10";
+      ? "bg-primary text-primary-foreground glow-primary"
+      : "border border-primary/40 bg-card text-primary hover:border-primary hover:bg-primary/10";
 
   return (
-    <button
-      onClick={onClick}
-      className={`${base} ${styles} ${className}`}
-      style={variant === "primary" ? { background: "var(--gradient-primary)" } : undefined}
-    >
+    <button onClick={onClick} className={`${base} ${styles} ${className}`}>
       <KeyRound className="h-4 w-4" />
       {label}
     </button>

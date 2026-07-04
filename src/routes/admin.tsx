@@ -103,11 +103,11 @@ function AdminPage() {
 
   return (
     <PageShell>
-      <header className="rounded-3xl glass p-8 sm:p-12">
+      <header className="edge-light rounded-2xl glass p-8 sm:p-12">
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-300">
           <Shield className="h-3.5 w-3.5" /> Owner Console
         </p>
-        <h1 className="mt-3 font-display text-4xl font-extrabold sm:text-5xl">Dashboard</h1>
+        <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">Dashboard</h1>
         <p className="mt-3 max-w-2xl text-muted-foreground">Moderate the community and notify trainers about new builds.</p>
         <Link to="/admin-control" className="mt-5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-primary-foreground glow-primary" style={{ background: "var(--gradient-primary)" }}>
           <Shield className="h-4 w-4" /> Open Control Panel
@@ -122,7 +122,7 @@ function AdminPage() {
       </section>
 
       <section className="mt-8 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl glass p-6">
+        <div className="edge-light rounded-2xl glass p-6">
           <h3 className="font-display text-xl font-bold flex items-center gap-2"><Mail className="h-5 w-5" /> Broadcast new release</h3>
           <p className="mt-1 text-sm text-muted-foreground">Notify all {totalSubs} email-opted-in trainers about a new mod build.</p>
           <label className="mt-4 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Mod</label>
@@ -144,7 +144,7 @@ function AdminPage() {
           </button>
         </div>
 
-        <div className="rounded-3xl glass p-6">
+        <div className="edge-light rounded-2xl glass p-6">
           <h3 className="font-display text-xl font-bold flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-400" /> Reports queue</h3>
           <div className="mt-4 space-y-3 max-h-[520px] overflow-auto">
             {reports.length === 0 && <p className="text-sm text-muted-foreground">No reports yet.</p>}
@@ -176,9 +176,9 @@ function AdminPage() {
 
 function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
-    <div className={`rounded-3xl glass p-6 text-center ${accent ? "ring-2 ring-amber-400/50" : ""}`}>
+    <div className={`edge-light rounded-2xl glass p-6 text-center ${accent ? "ring-2 ring-amber-400/50" : ""}`}>
       <p className="text-xs uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="mt-2 font-display text-4xl font-extrabold text-gradient">{value}</p>
+      <p className="mt-2 font-display text-4xl font-black uppercase tracking-tight text-gradient">{value}</p>
     </div>
   );
 }

@@ -31,11 +31,11 @@ function FavoritesPage() {
 
   return (
     <PageShell>
-      <header className="rounded-3xl glass p-8 sm:p-12">
+      <header className="edge-light rounded-2xl glass p-8 sm:p-12">
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-rose-300">
           <Heart className="h-3.5 w-3.5 fill-rose-400" /> Your Vault
         </p>
-        <h1 className="mt-3 font-display text-4xl font-extrabold sm:text-5xl">My favorites</h1>
+        <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">My favorites</h1>
         <p className="mt-3 max-w-2xl text-muted-foreground">Bookmarked mods you've saved for later.</p>
       </header>
 

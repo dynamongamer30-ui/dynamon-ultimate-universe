@@ -66,7 +66,7 @@ function SignInScreen() {
             <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
               <Shield className="h-7 w-7" />
             </div>
-            <h1 className="mt-4 font-display text-2xl font-bold">OTA Loader</h1>
+            <h1 className="mt-4 font-display text-2xl font-extrabold uppercase tracking-tight">OTA Loader</h1>
             <p className="mt-1 text-sm text-muted-foreground">Sign in with your Firebase admin account.</p>
           </div>
           <form onSubmit={submit} className="space-y-3">

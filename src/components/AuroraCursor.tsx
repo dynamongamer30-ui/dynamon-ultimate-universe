@@ -1,81 +1,89 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Premium aurora cursor: a soft glow follows the pointer with springy trailing
- * particles. Hidden on touch / coarse pointers.
+ * Ember cursor — a precise dot with a spring-trailing ring.
+ * The ring expands with a hot ember glow over interactive elements
+ * and contracts sharply on press for mechanical feel.
+ * Hidden on touch / coarse pointers and for reduced motion.
  */
 export function AuroraCursor() {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
-  const trailRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const coarse = window.matchMedia("(pointer: coarse)").matches;
-    if (coarse) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (coarse || reduced) return;
 
     const dot = dotRef.current;
     const ring = ringRef.current;
-    const canvas = trailRef.current;
-    if (!dot || !ring || !canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!dot || !ring) return;
 
-    let w = window.innerWidth, h = window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const resize = () => {
-      w = window.innerWidth; h = window.innerHeight;
-      canvas.width = w * dpr; canvas.height = h * dpr;
-      canvas.style.width = `${w}px`; canvas.style.height = `${h}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    let mx = w / 2, my = h / 2;
-    let rx = mx, ry = my;
-    type T = { x: number; y: number; life: number; hue: number };
-    const trail: T[] = [];
+    let mx = window.innerWidth / 2,
+      my = window.innerHeight / 2;
+    // spring state for the ring
+    let rx = mx,
+      ry = my,
+      vx = 0,
+      vy = 0;
+    let isHover = false;
+    let isDown = false;
+    let visible = false;
 
     const onMove = (e: PointerEvent) => {
-      mx = e.clientX; my = e.clientY;
-      trail.push({ x: mx, y: my, life: 1, hue: Math.random() > 0.5 ? 155 : 280 });
-      if (trail.length > 36) trail.shift();
+      mx = e.clientX;
+      my = e.clientY;
+      if (!visible) {
+        visible = true;
+        dot.style.opacity = "1";
+        ring.style.opacity = "0.8";
+      }
     };
-    window.addEventListener("pointermove", onMove, { passive: true });
-
-    const hover = (target: Element | null) =>
+    const hoverable = (target: Element | null) =>
       target?.closest("a,button,[role='button'],input,textarea,select,label,[data-cursor]");
-    let isHover = false;
-    const onOver = (e: Event) => { if (hover(e.target as Element)) isHover = true; };
-    const onOut = (e: Event) => { if (hover(e.target as Element)) isHover = false; };
+    const onOver = (e: Event) => {
+      if (hoverable(e.target as Element)) isHover = true;
+    };
+    const onOut = (e: Event) => {
+      if (hoverable(e.target as Element)) isHover = false;
+    };
+    const onDown = () => {
+      isDown = true;
+    };
+    const onUp = () => {
+      isDown = false;
+    };
+    const onLeaveWindow = () => {
+      visible = false;
+      dot.style.opacity = "0";
+      ring.style.opacity = "0";
+    };
+
+    window.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("pointerover", onOver, true);
     document.addEventListener("pointerout", onOut, true);
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointerup", onUp);
+    document.documentElement.addEventListener("pointerleave", onLeaveWindow);
 
     let raf = 0;
     const loop = () => {
-      // smooth ring follow
-      rx += (mx - rx) * 0.18;
-      ry += (my - ry) * 0.18;
-      dot.style.transform = `translate(${mx - 4}px, ${my - 4}px)`;
-      ring.style.transform = `translate(${rx - 22}px, ${ry - 22}px) scale(${isHover ? 1.6 : 1})`;
-      ring.style.opacity = isHover ? "1" : "0.7";
+      // critically-damped spring for the ring
+      const STIFF = 0.14;
+      const DAMP = 0.72;
+      vx = (vx + (mx - rx) * STIFF) * DAMP;
+      vy = (vy + (my - ry) * STIFF) * DAMP;
+      rx += vx;
+      ry += vy;
 
-      // trail
-      ctx.clearRect(0, 0, w, h);
-      for (let i = 0; i < trail.length; i++) {
-        const p = trail[i];
-        p.life -= 0.04;
-        if (p.life <= 0) continue;
-        const r = 14 * p.life + 2;
-        const color = p.hue === 155 ? `rgba(110,231,183,${p.life * 0.35})` : `rgba(196,181,253,${p.life * 0.35})`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 18;
-        ctx.fill();
-      }
-      ctx.shadowBlur = 0;
+      const scale = isDown ? 0.72 : isHover ? 1.55 : 1;
+      dot.style.transform = `translate3d(${mx - 3}px, ${my - 3}px, 0) scale(${isDown ? 0.6 : 1})`;
+      ring.style.transform = `translate3d(${rx - 19}px, ${ry - 19}px, 0) scale(${scale})`;
+      ring.style.borderColor = isHover ? "oklch(0.76 0.17 50 / 0.9)" : "oklch(0.7 0.19 42 / 0.55)";
+      ring.style.boxShadow = isHover
+        ? "0 0 22px 2px oklch(0.7 0.19 42 / 0.35)"
+        : "0 0 14px 0px oklch(0.7 0.19 42 / 0.18)";
+
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -83,25 +91,25 @@ export function AuroraCursor() {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("resize", resize);
       document.removeEventListener("pointerover", onOver, true);
       document.removeEventListener("pointerout", onOut, true);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", onUp);
+      document.documentElement.removeEventListener("pointerleave", onLeaveWindow);
     };
   }, []);
 
   return (
     <>
-      <canvas ref={trailRef} className="pointer-events-none fixed inset-0 z-[60] hidden md:block" aria-hidden />
       <div
         ref={ringRef}
-        className="pointer-events-none fixed left-0 top-0 z-[61] hidden h-11 w-11 rounded-full border border-emerald-300/70 transition-[transform,opacity] duration-150 md:block"
-        style={{ boxShadow: "0 0 24px 4px rgba(110,231,183,0.35), inset 0 0 14px rgba(196,181,253,0.4)" }}
+        className="pointer-events-none fixed left-0 top-0 z-[61] hidden h-[38px] w-[38px] rounded-full border opacity-0 transition-opacity duration-300 md:block"
         aria-hidden
       />
       <div
         ref={dotRef}
-        className="pointer-events-none fixed left-0 top-0 z-[62] hidden h-2 w-2 rounded-full bg-emerald-200 md:block"
-        style={{ boxShadow: "0 0 10px rgba(110,231,183,0.9)" }}
+        className="pointer-events-none fixed left-0 top-0 z-[62] hidden h-1.5 w-1.5 rounded-full opacity-0 transition-opacity duration-300 md:block"
+        style={{ background: "oklch(0.8 0.16 50)", boxShadow: "0 0 8px oklch(0.7 0.19 42 / 0.9)" }}
         aria-hidden
       />
     </>
