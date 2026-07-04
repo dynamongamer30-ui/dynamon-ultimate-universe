@@ -1,0 +1,227 @@
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { motion } from "motion/react";
+import { useState } from "react";
+import { ArrowLeft, Check, Download, Shield, PlayCircle, Sparkles } from "lucide-react";
+import { PageShell } from "@/components/PageShell";
+import { CommentsPanel } from "@/components/CommentsPanel";
+import { UnlockKeyButton } from "@/components/UnlockKeyButton";
+import { SocialStrip } from "@/components/SocialStrip";
+import { ChangelogTimeline } from "@/components/ChangelogTimeline";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { useAuth } from "@/hooks/useAuth";
+import { useGamification } from "@/hooks/useGamification";
+import { getMod, mods, formatCount, elementTheme, type Mod } from "@/lib/mods";
+import { playClick } from "@/lib/sound";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/mods/$slug")({
+  loader: ({ params }) => {
+    const mod = getMod(params.slug);
+    if (!mod) throw notFound();
+    return { mod };
+  },
+  head: ({ loaderData }) => ({
+    meta: loaderData ? [
+      { title: `${loaderData.mod.name} — Dynamon Universe` },
+      { name: "description", content: loaderData.mod.tagline },
+      { property: "og:title", content: `${loaderData.mod.name} — Dynamon Universe` },
+      { property: "og:description", content: loaderData.mod.tagline },
+      { property: "og:image", content: loaderData.mod.image },
+      { property: "twitter:image", content: loaderData.mod.image },
+    ] : [],
+  }),
+  notFoundComponent: () => (
+    <PageShell>
+      <div className="py-20 text-center">
+        <h1 className="font-display text-3xl font-bold">Mod not found</h1>
+        <p className="mt-2 text-muted-foreground">It might have been renamed or removed.</p>
+        <Link to="/mods" className="mt-6 inline-block text-primary hover:underline">Back to all mods</Link>
+      </div>
+    </PageShell>
+  ),
+  errorComponent: ({ error }) => (
+    <PageShell><div className="py-20 text-center text-sm text-muted-foreground">{error.message}</div></PageShell>
+  ),
+  component: ModDetail,
+});
+
+function ModDetail() {
+  const { mod } = Route.useLoaderData() as { mod: Mod };
+  const { user } = useAuth();
+  const { award, grant } = useGamification();
+  const theme = elementTheme[mod.element];
+  const [tab, setTab] = useState<"overview" | "changelog">("overview");
+
+  const handleGet = () => {
+    if (!user) { toast.error("Sign in to download"); return; }
+    playClick();
+    award(10, "Downloaded");
+    grant("first_download");
+    toast.success(`${mod.name} — download starting`, {
+      description: "Build access is delivered through our community channels for safety.",
+    });
+  };
+
+  return (
+    <PageShell>
+      <Link to="/mods" onMouseDown={playClick} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Back to mods
+      </Link>
+
+      <article className="mt-6 grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:items-start">
+        {/* Hero image with element halo */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-[2rem] glass"
+          style={{ boxShadow: theme.glow }}
+        >
+          <div className="absolute inset-0 opacity-70 mix-blend-overlay" style={{ background: theme.gradient }} />
+          <img src={mod.image} alt={mod.name} width={1024} height={1024} className="relative aspect-square w-full object-cover" />
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card to-transparent p-6">
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-widest ${theme.chip}`}>
+              <Sparkles className="h-3 w-3" /> {theme.label} element
+            </span>
+          </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary">Dynamons World · Mod APK</p>
+          <h1 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-5xl">{mod.name}</h1>
+          <p className="mt-3 text-lg text-muted-foreground">{mod.tagline}</p>
+
+          {/* Tabs */}
+          <div className="mt-6 inline-flex rounded-full border border-border bg-card/60 p-1 text-xs font-semibold">
+            {(["overview", "changelog"] as const).map((t) => (
+              <button key={t} onClick={() => { setTab(t); playClick(); }}
+                className={`rounded-full px-4 py-1.5 capitalize transition-colors ${tab === t ? "text-primary-foreground" : "text-muted-foreground"}`}
+                style={tab === t ? { background: "var(--gradient-primary)" } : undefined}>
+                {t}
+              </button>
+            ))}
+          </div>
+
+          {tab === "overview" ? (
+            <>
+              <div className="mt-5 rounded-2xl glass p-5">
+                <p className="text-sm leading-relaxed text-muted-foreground">{mod.description}</p>
+              </div>
+              <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+                {mod.features.map((f) => (
+                  <li key={f} className="flex items-center gap-2 rounded-xl border border-border bg-card/60 px-3 py-2.5 text-sm">
+                    <span className="grid h-6 w-6 place-items-center rounded-full text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+                      <Check className="h-3.5 w-3.5" />
+                    </span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <div className="mt-5">
+              <ChangelogTimeline entries={mod.changelog} glow={theme.glow} />
+            </div>
+          )}
+
+          <div className="mt-7 flex flex-wrap gap-3">
+            <button
+              onClick={handleGet}
+              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.03]"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              <Download className="h-4 w-4" /> {user ? "Download mod" : "Sign in to download"}
+            </button>
+            <UnlockKeyButton variant="outline" label="Unlock Key" />
+            <FavoriteButton slug={mod.slug} />
+            <Link
+              to="/disclaimer" onMouseDown={playClick}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-5 py-3 text-sm font-semibold hover:bg-card"
+            >
+              <Shield className="h-4 w-4" /> Safety notes
+            </Link>
+          </div>
+
+          <div className="mt-6 grid grid-cols-4 gap-3 text-center text-xs">
+            <Stat label="Downloads" value={`${formatCount(mod.downloads)}+`} />
+            <Stat label="Version" value={mod.version} />
+            <Stat label="Size" value={mod.size} />
+            <Stat label="Updated" value={new Date(mod.updated).toLocaleDateString()} />
+          </div>
+        </motion.div>
+      </article>
+
+      {/* YouTube embed / placeholder */}
+      <section className="mt-14">
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">Gameplay</p>
+            <h2 className="mt-1 font-display text-2xl font-bold">Watch the {theme.label} build in action</h2>
+          </div>
+        </div>
+        <div className="mt-5 overflow-hidden rounded-3xl glass" style={{ boxShadow: theme.glow }}>
+          {mod.youtubeId ? (
+            <div className="relative aspect-video w-full">
+              <iframe
+                className="absolute inset-0 h-full w-full"
+                src={`https://www.youtube.com/embed/${mod.youtubeId}`}
+                title={`${mod.name} gameplay`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <div className="relative aspect-video w-full">
+              <img src={mod.image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+              <div className="absolute inset-0 grid place-items-center bg-gradient-to-t from-background/90 to-background/30">
+                <div className="text-center">
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+                    <PlayCircle className="h-8 w-8" />
+                  </div>
+                  <p className="mt-4 font-display text-lg font-bold">Trailer dropping soon</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Subscribe on YouTube to be the first to watch.</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <CommentsPanel slug={mod.slug} />
+
+      <section className="mt-16">
+        <h2 className="font-display text-2xl font-bold">More from the vault</h2>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          {mods.filter((m) => m.slug !== mod.slug).slice(0, 3).map((m) => {
+            const t = elementTheme[m.element];
+            return (
+              <Link
+                key={m.slug} to="/mods/$slug" params={{ slug: m.slug }} onMouseDown={playClick}
+                className="group relative overflow-hidden rounded-2xl glass"
+                style={{ boxShadow: t.glow }}
+              >
+                <img src={m.image} alt={m.name} width={1024} height={1024} loading="lazy" className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-105" />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card to-transparent p-4">
+                  <p className="font-display text-sm font-bold">{m.name}</p>
+                  <p className="text-[11px] text-muted-foreground">v{m.version} · {t.label}</p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mt-16">
+        <SocialStrip />
+      </section>
+    </PageShell>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card/60 p-3">
+      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold">{value}</p>
+    </div>
+  );
+}

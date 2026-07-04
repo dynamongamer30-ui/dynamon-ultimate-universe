@@ -1,0 +1,13 @@
+{
+  "name": "Dynamon Universe",
+  "short_name": "Dynamon",
+  "description": "Premium Dynamons World mod APK hub.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1410",
+  "theme_color": "#0c1f17",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "64x64", "type": "image/x-icon" }
+  ]
+}
