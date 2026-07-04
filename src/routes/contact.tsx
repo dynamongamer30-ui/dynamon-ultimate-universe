@@ -31,11 +31,16 @@ function Contact() {
     <PageShell>
       <section className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary">Get in touch</p>
-          <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">Let's talk Dynamons.</h1>
-          <p className="mt-4 text-muted-foreground">
-            Whether it's a mod request, a creator collab or a bug report — drop us a line.
-            For fastest answers, ping us on WhatsApp or Telegram.
+          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
+            <span className="inline-block h-px w-8 bg-primary" aria-hidden />
+            Get in touch
+          </p>
+          <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl">{"Let's talk Dynamons."}</h1>
+          <p className="mt-4 leading-relaxed text-muted-foreground text-pretty">
+            Found a bug in a build? Want an edition we haven&apos;t made yet? Making content and looking to collab?
+            This inbox is read by the same people who test the mods — not a support bot. Tell us the edition,
+            your device, and what happened, and we&apos;ll get you a real answer. For the fastest replies,
+            ping us on WhatsApp or Telegram.
           </p>
           <div className="mt-6">
             <SocialStrip variant="compact" />
@@ -62,8 +67,7 @@ function Contact() {
           />
           <button
             type="submit" onMouseDown={playClick}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary"
-            style={{ background: "var(--gradient-primary)" }}
+            className="press mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110"
           >
             <Send className="h-4 w-4" /> Send message
           </button>
