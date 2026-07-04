@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Shield, Send, Trash2, Loader2, Mail, AlertTriangle } from "lucide-react";
+import { Shield, Send, Trash2, Loader2, Mail, AlertTriangle, Bell } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { OwnerGate } from "@/components/OwnerGate";
 import { supabase } from "@/integrations/supabase/client";
@@ -109,9 +109,14 @@ function AdminPage() {
         </p>
         <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">Dashboard</h1>
         <p className="mt-3 max-w-2xl text-muted-foreground">Moderate the community and notify trainers about new builds.</p>
-        <Link to="/admin-control" className="mt-5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-primary-foreground glow-primary" style={{ background: "var(--gradient-primary)" }}>
-          <Shield className="h-4 w-4" /> Open Control Panel
-        </Link>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link to="/admin-control" className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-primary-foreground glow-primary" style={{ background: "var(--gradient-primary)" }}>
+            <Shield className="h-4 w-4" /> Open Control Panel
+          </Link>
+          <Link to="/admin-notifications" className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold transition-colors hover:border-primary/40 hover:text-primary">
+            <Bell className="h-4 w-4" /> Send Notifications
+          </Link>
+        </div>
       </header>
 
       <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
