@@ -49,6 +49,10 @@ export type ModOverride = {
   downloads_absolute: number | null;
   likes_absolute: number | null;
   download_url: string | null;
+  /** AES-encrypted MEGA download link (encrypted with VITE_CIPHER_KEY). */
+  mega_enc: string | null;
+  /** AES-encrypted "follow us" gate link (encrypted with VITE_CIPHER_KEY). */
+  follow_enc: string | null;
 };
 
 export const DEFAULT_BRANDING: SiteBranding = {

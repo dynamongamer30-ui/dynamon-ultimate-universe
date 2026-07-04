@@ -39,6 +39,19 @@ export interface DgConfig {
   IPWhitelist: string[];
 }
 
+/** App Update System — mirrors the former Firebase `Config/Update` node.
+ *  The Android app reads these fields verbatim, so names/casing must not change. */
+export interface AppUpdate {
+  Enabled: boolean;
+  VersionCode: number;
+  VersionName: string;
+  Title: string;
+  Subtitle: string;
+  WhatsNew: string;
+  UpdateUrl: string;
+  BtnText: string;
+}
+
 export interface GenerationLog {
   id: string;
   key: string;
@@ -247,6 +260,28 @@ export async function setConfigNode(id: string, value: unknown): Promise<void> {
   await upsertRow("app_config", id, value);
 }
 
+// ---------- App Update System (Config/Update node) ----------
+
+export const DEFAULT_APP_UPDATE: AppUpdate = {
+  Enabled: false,
+  VersionCode: 0,
+  VersionName: "",
+  Title: "Update Available",
+  Subtitle: "",
+  WhatsNew: "",
+  UpdateUrl: "",
+  BtnText: "UPDATE",
+};
+
+export async function getAppUpdate(): Promise<AppUpdate> {
+  const row = await getConfigNode<Partial<AppUpdate>>("Update");
+  return { ...DEFAULT_APP_UPDATE, ...(row ?? {}) };
+}
+
+export async function setAppUpdate(u: AppUpdate): Promise<void> {
+  await setConfigNode("Update", u);
+}
+
 // ---------- Logs / read-only nodes ----------
 
 export async function listGenerationLogs(n = 200): Promise<GenerationLog[]> {
@@ -289,6 +324,22 @@ export async function listBannedDevices(): Promise<BannedDevice[]> {
 export async function listActivatedUsers(): Promise<ActivatedUser[]> {
   const rows = await selectAll("activated_users");
   return rows.map((r) => ({ fingerprint: r.id, ...(r.data ?? {}) }));
+}
+
+/** Lock (ban) a device fingerprint. Matches the worker's banned_devices shape. */
+export async function banDevice(fingerprint: string, reason = "manual ban"): Promise<void> {
+  const nowSec = nowSeconds();
+  await upsertRow("banned_devices", fingerprint, {
+    reason,
+    time: nowSec,
+    at: Date.now(),
+    by: "owner-panel",
+  });
+}
+
+/** Unlock (unban) a device fingerprint. */
+export async function unbanDevice(fingerprint: string): Promise<void> {
+  await deleteRow("banned_devices", fingerprint);
 }
 
 // ---------- Misc helpers ----------

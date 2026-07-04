@@ -91,6 +91,11 @@ export default {
       ActivatedUsers: "activated_users",
       SuspiciousActivity: "suspicious_activity",
       ValidKeys: "valid_keys",
+      // The web Control panel stores each Config child (Maintenance, Update,
+      // Links, ...) as its own row in `app_config`. Reading the whole node
+      // (no id) returns { Maintenance: <val>, Update: {...}, Links: {...} },
+      // which is exactly the merged Config object the Android app expects.
+      Config: "app_config",
     };
     const sbParse = (p) => {
       const s = String(p).split("/").filter(Boolean);

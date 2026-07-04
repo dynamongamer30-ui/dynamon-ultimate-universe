@@ -4,8 +4,8 @@ import { useAuth } from "./useAuth";
 
 export type Profile = {
   id: string;
-  username: string;
-  display_name: string;
+  username: string | null;
+  display_name: string | null;
   gender: "male" | "female" | "other" | null;
   avatar_url: string | null;
   is_owner: boolean;
