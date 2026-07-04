@@ -1,0 +1,1 @@
+import{n as e}from"./createLucideIcon-D8RmYTQo.js";var t={auth:{signInWithOAuth:async(t,n)=>{let r=t===`microsoft`?`azure`:t,{data:i,error:a}=await e.auth.signInWithOAuth({provider:r,options:{redirectTo:n?.redirect_uri??window.location.origin+`/auth`,queryParams:n?.extraParams}});return a?{error:a,redirected:!1}:{redirected:!0,data:i}}}};export{t};

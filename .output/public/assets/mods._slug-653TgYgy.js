@@ -1,0 +1,1 @@
+import{o as e}from"./useStore-BS3ea2yH.js";import{t}from"./PageShell-z40SruK_.js";var n=e(),r=({error:e})=>(0,n.jsx)(t,{children:(0,n.jsx)(`div`,{className:`py-20 text-center text-sm text-muted-foreground`,children:e.message})});export{r as errorComponent};
