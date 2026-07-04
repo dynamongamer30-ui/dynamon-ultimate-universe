@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useState } from "react";
-import { ArrowLeft, Check, Download, Shield, PlayCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, Download, Shield, PlayCircle, Sparkles, Lock, ExternalLink, Loader2, X } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { CommentsPanel } from "@/components/CommentsPanel";
 import { UnlockKeyButton } from "@/components/UnlockKeyButton";
@@ -10,6 +10,8 @@ import { ChangelogTimeline } from "@/components/ChangelogTimeline";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { Cipher } from "@/lib/cipher";
 import { getMod, mods, formatCount, elementTheme, type Mod } from "@/lib/mods";
 import { playClick } from "@/lib/sound";
 import { toast } from "sonner";
@@ -45,21 +47,38 @@ export const Route = createFileRoute("/mods/$slug")({
   component: ModDetail,
 });
 
+function safeDecrypt(ct?: string | null): string {
+  if (!ct) return "";
+  try { return Cipher.decrypt(ct) || ""; } catch { return ""; }
+}
+
 function ModDetail() {
   const { mod } = Route.useLoaderData() as { mod: Mod };
   const { user } = useAuth();
   const { award, grant } = useGamification();
+  const { overrides } = useSiteSettings();
   const theme = elementTheme[mod.element];
   const [tab, setTab] = useState<"overview" | "changelog">("overview");
+  const [gateOpen, setGateOpen] = useState(false);
+
+  // Decrypt the owner-configured, AES-encrypted links for this mod.
+  const ov = overrides[mod.slug];
+  const megaUrl = safeDecrypt(ov?.mega_enc) || ov?.download_url || "";
+  const followUrl = safeDecrypt(ov?.follow_enc);
 
   const handleGet = () => {
     if (!user) { toast.error("Sign in to download"); return; }
     playClick();
     award(10, "Downloaded");
     grant("first_download");
-    toast.success(`${mod.name} — download starting`, {
-      description: "Build access is delivered through our community channels for safety.",
-    });
+    if (!megaUrl) {
+      toast.error("Download not available yet", {
+        description: "The owner hasn't published a download link for this build.",
+      });
+      return;
+    }
+    // Open the follow-gate; the actual MEGA link is only revealed inside it.
+    setGateOpen(true);
   };
 
   return (

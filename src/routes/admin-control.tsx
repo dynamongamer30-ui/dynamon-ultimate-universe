@@ -6,6 +6,7 @@ import { OwnerGate } from "@/components/OwnerGate";
 import { supabase } from "@/integrations/supabase/client";
 import { useSiteSettings, DEFAULT_BRANDING, DEFAULT_ANNOUNCEMENT, DEFAULT_SOCIALS, type SiteBranding, type Announcement, type Socials, type ModOverride } from "@/hooks/useSiteSettings";
 import { mods as baseMods } from "@/lib/mods";
+import { Cipher } from "@/lib/cipher";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin-control")({
@@ -226,6 +227,10 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
     rating: existing?.rating ?? ("" as number | ""),
     rating_count: (existing?.rating_count ?? "") as number | "",
     download_url: existing?.download_url ?? "",
+    // Decrypt stored ciphertext back to plaintext for editing. If the key
+    // doesn't match or the value is empty, fall back to an empty field.
+    mega: safeDecrypt(existing?.mega_enc),
+    follow: safeDecrypt(existing?.follow_enc),
     hidden: existing?.hidden ?? false,
     featured: existing?.featured ?? false,
   });
@@ -256,6 +261,10 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
       rating: v.rating === "" ? null : Number(v.rating),
       rating_count: v.rating_count === "" ? null : Number(v.rating_count),
       download_url: v.download_url || null,
+      // Encrypt the MEGA + Follow links so the ciphertext (not the raw URL) is
+      // what's stored and shipped to the public site.
+      mega_enc: v.mega.trim() ? Cipher.encrypt(v.mega.trim()) : null,
+      follow_enc: v.follow.trim() ? Cipher.encrypt(v.follow.trim()) : null,
       hidden: v.hidden,
       featured: v.featured,
     };
@@ -284,6 +293,8 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
         <Field label={`Updated date`}><input value={v.updated_date} onChange={(e) => setV({ ...v, updated_date: e.target.value })} className={inp} placeholder={base.updated} /></Field>
         <Field label="YouTube video ID"><input value={v.youtube_id} onChange={(e) => setV({ ...v, youtube_id: e.target.value })} className={inp} placeholder="dQw4w9WgXcQ" /></Field>
         <Field label="Download URL"><input value={v.download_url} onChange={(e) => setV({ ...v, download_url: e.target.value })} className={inp} placeholder="https://…" /></Field>
+        <Field label="MEGA link (encrypted on save)"><input value={v.mega} onChange={(e) => setV({ ...v, mega: e.target.value })} className={inp} placeholder="https://mega.nz/file/…" /></Field>
+        <Field label="Follow-us link (shown before reveal)"><input value={v.follow} onChange={(e) => setV({ ...v, follow: e.target.value })} className={inp} placeholder="https://youtube.com/@… or t.me/…" /></Field>
         <Field label={`Set downloads to (live total auto-increments from here)`}><input type="number" min="0" value={v.downloads_absolute} onChange={(e) => setV({ ...v, downloads_absolute: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder={String(base.downloads)} /></Field>
         <Field label="Downloads boost (+/-)"><input type="number" value={v.downloads_boost} onChange={(e) => setV({ ...v, downloads_boost: Number(e.target.value) })} className={inp} /></Field>
         <Field label={`Set likes to (live total auto-increments)`}><input type="number" min="0" value={v.likes_absolute} onChange={(e) => setV({ ...v, likes_absolute: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder={String(base.baseLikes)} /></Field>
@@ -312,6 +323,11 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
 }
 
 // ---------- Shared primitives ----------
+/** Decrypt stored ciphertext for editing; returns "" if empty or key mismatch. */
+function safeDecrypt(ct?: string | null): string {
+  if (!ct) return "";
+  try { return Cipher.decrypt(ct) || ""; } catch { return ""; }
+}
 const inp = "w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary";
 function Card({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
   return (
