@@ -259,41 +259,8 @@ insert into public.app_config (id, data) values
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------
--- 6. Owner Gmail -> is_owner (profiles.id == auth.users.id; no email col)
+-- 6. Owner identity
 -- ---------------------------------------------------------------------
--- The owner email is centralised here. Change it in ONE place if needed.
-create or replace function public.dg_owner_email()
-returns text language sql immutable as $$ select 'yugvadecha30@gmail.com'::text $$;
-
--- (a) Flip any EXISTING profile that belongs to the owner Gmail.
-update public.profiles p
-   set is_owner = true
-  from auth.users u
- where u.id = p.id
-   and lower(u.email) = public.dg_owner_email();
-
--- (b) Auto-grant on FUTURE sign-in: when the owner's profile row is created
---     (or updated) we stamp is_owner = true. This guarantees the very first
---     Google login as the owner Gmail lands in the owner console immediately.
-create or replace function public.dg_mark_owner_profile()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if exists (
-    select 1 from auth.users u
-     where u.id = new.id
-       and lower(u.email) = public.dg_owner_email()
-  ) then
-    new.is_owner := true;
-  end if;
-  return new;
-end;
-$$;
-
-drop trigger if exists dg_mark_owner_on_profile on public.profiles;
-create trigger dg_mark_owner_on_profile
-  before insert or update on public.profiles
-  for each row execute function public.dg_mark_owner_profile();
+-- Owner-by-Gmail logic (dg_owner_email, is_owner_user, profiles triggers)
+-- lives in 20260704080000_auth_foundation.sql, which runs first. Every
+-- owner-only RLS policy above calls public.is_owner_user(auth.uid()).
