@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   KeyRound, Loader2, Sparkles, Trash2, Copy, Plus, RefreshCw, Search, Clock,
-  Ban, AlertTriangle, X,
+  Ban, AlertTriangle, X, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
@@ -504,6 +504,3 @@ function LogsPanel() {
     </div>
   );
 }
-
-// silence unused
-void currentAdmin;

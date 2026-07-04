@@ -1,0 +1,21 @@
+name = "generator"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# ---------------------------------------------------------------------------
+# Secrets (set with `wrangler secret put <NAME>` — do NOT commit real values):
+#   SUPABASE_URL           https://<project-ref>.supabase.co
+#   SUPABASE_SERVICE_KEY   Supabase service-role key (server-side only)
+#   TURNSTILE_SECRET_KEY   Cloudflare Turnstile secret key
+#   EARNLINKS_TOKEN        Shortener API token
+#
+# Deploy:
+#   cd workers/generator
+#   wrangler secret put SUPABASE_URL
+#   wrangler secret put SUPABASE_SERVICE_KEY
+#   wrangler secret put TURNSTILE_SECRET_KEY
+#   wrangler secret put EARNLINKS_TOKEN
+#   wrangler deploy
+#
+# The deployed URL becomes VITE_GEN_WORKER_URL in the web app's env.
+# ---------------------------------------------------------------------------

@@ -14,8 +14,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import confetti from "canvas-confetti";
-import { get, ref, update, remove } from "firebase/database";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { Cipher } from "@/lib/cipher";
 import { getFingerprint } from "@/lib/fingerprint";
 
@@ -51,6 +50,21 @@ const INITIAL_STAGES: Stage[] = [
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function mapRedeemError(code?: string): string {
+  switch (code) {
+    case "not_found": return "Session token not found.";
+    case "already_used": return "This download link was already used.";
+    case "fingerprint_mismatch": return "Device mismatch. Start the download on the same device.";
+    case "version_mismatch": return "Session version mismatch. Please try again.";
+    case "expired": return "Session expired. Please start again.";
+    case "too_fast": return "Verification too fast. Please complete all steps.";
+    case "no_link": return "No download link available for this session.";
+    case "invalid_token": return "Invalid session token.";
+    case "invalid_fingerprint": return "Could not verify this device.";
+    default: return "Verification failed. Please try again.";
+  }
+}
 
 function MatrixRain() {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -166,7 +180,7 @@ function UnlockPage() {
 
   async function run() {
     try {
-      // 0. Initialize
+      // 0. Initialize — read + decode the local session token (obfuscated in storage).
       const token = await runStage(0, async () => {
         const raw = typeof window !== "undefined" ? localStorage.getItem("dg_token") : null;
         if (!raw) throw new Error("No session token found.");
@@ -174,95 +188,67 @@ function UnlockPage() {
         try {
           decoded = Cipher.decrypt(raw);
         } catch {
-          throw new Error("Failed to read session token.");
+          decoded = raw; // tolerate plain-UUID tokens written by newer clients
         }
         if (!decoded) throw new Error("Failed to read session token.");
         if (!UUID_RE.test(decoded)) throw new Error("Invalid session token format.");
         return decoded;
       });
 
-      // 1. Config
-      const cfg = await runStage(1, async () => {
-        const snap = await get(ref(db, "Config/Security"));
-        const v = (snap.val() || {}) as { timer?: number; minTimer?: number };
-        return {
-          timerSec: Number(v.timer ?? 900),
-          minTimerSec: Number(v.minTimer ?? 45),
-        };
-      });
-
-      // 2. Session
-      const session = await runStage(2, async () => {
-        const snap = await get(ref(db, `SecureSessions/${token}`));
-        const s = snap.val() as
-          | { megaLink: string; timestamp: number; used: boolean; fingerprint: string; modVersion?: string }
-          | null;
-        if (!s) throw new Error("Session token not found.");
-        if (s.used === true) throw new Error("Token already used.");
-        const v = new URLSearchParams(window.location.search).get("v");
-        if (v && s.modVersion && s.modVersion !== v) throw new Error("Session version mismatch.");
-        return s;
-      });
-
-      // 3. Fingerprint
-      await runStage(3, async () => {
+      // 1. Compute the device fingerprint that the server will verify against.
+      const fingerprint = await runStage(1, async () => {
         const fp = await getFingerprint();
-        if (fp !== session.fingerprint) throw new Error("Device fingerprint mismatch.");
+        if (!fp) throw new Error("Could not compute device fingerprint.");
+        return fp;
       });
 
-      // 4. Timestamp
-      await runStage(4, async () => {
-        let offset = 0;
-        try {
-          const snap = await get(ref(db, ".info/serverTimeOffset"));
-          offset = Number(snap.val() || 0);
-        } catch {
-          /* ignore */
+      // 2-4. Server-side verification. A single SECURITY DEFINER RPC checks the
+      // session, fingerprint, timing window and version, then ATOMICALLY burns
+      // the token — none of this logic or the link is exposed to the browser.
+      const version = new URLSearchParams(window.location.search).get("v");
+      let redeemed: { ok: boolean; error?: string; link?: string; encrypted?: boolean } | null = null;
+
+      await runStage(2, async () => {
+        // redeem_secure_session isn't in the generated types yet; call loosely.
+        const { data, error } = await (supabase.rpc as unknown as (
+          fn: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ data: unknown; error: { message: string } | null }>)(
+          "redeem_secure_session",
+          { p_token: token, p_fingerprint: fingerprint, p_version: version },
+        );
+        if (error) throw new Error("Secure channel error. Please try again.");
+        redeemed = data as typeof redeemed;
+        if (!redeemed || !redeemed.ok) {
+          throw new Error(mapRedeemError(redeemed?.error));
         }
-        const serverNow = Date.now() + offset;
-        const elapsed = (serverNow - Number(session.timestamp)) / 1000;
-        if (elapsed > cfg.timerSec) throw new Error("Session expired. Please try again.");
-        if (elapsed < cfg.minTimerSec) throw new Error("Verification too fast. Please complete all steps.");
       });
 
-      // 5. Decrypt
+      // 3-4 are validated inside the RPC; surface them as completed UX steps.
+      await runStage(3, async () => { /* fingerprint verified server-side */ });
+      await runStage(4, async () => { /* timing verified server-side */ });
+
+      // 5. Resolve the final link. New sessions return plaintext; legacy sessions
+      // return an encrypted blob we decrypt locally for backward compatibility.
       const url = await runStage(5, async () => {
-        let out = "";
-        try {
-          out = Cipher.decrypt(session.megaLink);
-        } catch (e) {
-          throw new Error(`Cipher error: ${e instanceof Error ? e.message : "unknown"}`);
+        const r = redeemed!;
+        let out = r.link || "";
+        if (r.encrypted && out) {
+          try {
+            out = Cipher.decrypt(out);
+          } catch (e) {
+            throw new Error(`Cipher error: ${e instanceof Error ? e.message : "unknown"}`);
+          }
         }
-        if (!out) throw new Error("Decryption returned empty.");
+        if (!out) throw new Error("No download link available.");
         return out;
       });
 
-      // Success: mark used, cleanup
-      try {
-        await update(ref(db, `SecureSessions/${token}`), { used: true });
-      } catch {
-        /* non-fatal */
-      }
       try {
         localStorage.removeItem("dg_token");
       } catch {
         /* ignore */
       }
-      // Best-effort cleanup of stale sessions
-      void (async () => {
-        try {
-          const snap = await get(ref(db, "SecureSessions"));
-          const all = (snap.val() || {}) as Record<string, { used?: boolean; timestamp?: number }>;
-          const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-          await Promise.all(
-            Object.entries(all)
-              .filter(([, v]) => v?.used === true || Number(v?.timestamp ?? 0) < cutoff)
-              .map(([k]) => remove(ref(db, `SecureSessions/${k}`))),
-          );
-        } catch {
-          /* ignore */
-        }
-      })();
 
       setDownloadUrl(url);
       setDone(true);

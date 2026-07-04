@@ -274,11 +274,16 @@ export async function listAccessTokens(): Promise<AccessToken[]> {
 
 export async function listBannedDevices(): Promise<BannedDevice[]> {
   const rows = await selectAll("banned_devices");
-  return rows.map((r) => ({
-    fingerprint: r.id,
-    reason: String(r.data?.reason ?? ""),
-    time: Number(r.data?.time ?? 0),
-  }));
+  return rows.map((r) => {
+    // Prefer `time` (unix seconds). Fall back to legacy `at` (ms) if present.
+    const timeSec = Number(r.data?.time ?? 0);
+    const atMs = Number(r.data?.at ?? 0);
+    return {
+      fingerprint: r.id,
+      reason: String(r.data?.reason ?? ""),
+      time: timeSec > 0 ? timeSec : atMs > 0 ? Math.floor(atMs / 1000) : 0,
+    };
+  });
 }
 
 export async function listActivatedUsers(): Promise<ActivatedUser[]> {

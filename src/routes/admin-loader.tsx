@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  Shield, Loader2, RefreshCw, Upload, Ban, ShieldCheck, LogOut, KeyRound,
+  Loader2, RefreshCw, Upload, Ban, KeyRound, ShieldCheck,
   AlertTriangle, X, Trash2, FileUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
+import { OwnerGate } from "@/components/OwnerGate";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,11 +16,7 @@ import {
   listDevices, uploadPayload, banDevice, unbanDevice,
   type ListDevicesResult, type UploadPayloadArgs,
 } from "@/lib/dgWorker";
-import {
-  onAdminAuthChanged, signInAdmin, signOutAdmin, listBannedDevices,
-  type BannedDevice,
-} from "@/lib/dgFirebase";
-import type { User } from "firebase/auth";
+import { listBannedDevices, type BannedDevice } from "@/lib/dgData";
 
 export const Route = createFileRoute("/admin-loader")({
   ssr: false,
@@ -26,66 +24,20 @@ export const Route = createFileRoute("/admin-loader")({
   component: LoaderGate,
 });
 
-// ---------- Firebase admin sign-in gate ----------
+// ---------- Owner gate (Google login) ----------
 
 function LoaderGate() {
-  const [user, setUser] = useState<User | null>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => onAdminAuthChanged((u) => { setUser(u); setReady(true); }), []);
-
-  if (!ready) {
-    return (
-      <PageShell>
-        <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-      </PageShell>
-    );
-  }
-  if (!user) return <SignInScreen />;
-  return <LoaderShell user={user} />;
-}
-
-function SignInScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    try { await signInAdmin(email, password); toast.success("Signed in"); }
-    catch (err) { toast.error((err as Error).message || "Sign-in failed"); }
-    finally { setBusy(false); }
-  };
-
   return (
-    <PageShell>
-      <div className="mx-auto max-w-md py-16">
-        <div className="rounded-2xl border border-primary/20 bg-card/60 p-8 backdrop-blur-xl glow-primary">
-          <div className="mb-6 text-center">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
-              <Shield className="h-7 w-7" />
-            </div>
-            <h1 className="mt-4 font-display text-2xl font-extrabold uppercase tracking-tight">OTA Loader</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Sign in with your Firebase admin account.</p>
-          </div>
-          <form onSubmit={submit} className="space-y-3">
-            <Input type="email" placeholder="admin@email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            <Button type="submit" disabled={busy} className="w-full" style={{ background: "var(--gradient-primary)" }}>
-              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-              Sign in
-            </Button>
-          </form>
-        </div>
-      </div>
-    </PageShell>
+    <OwnerGate>
+      <LoaderShell />
+    </OwnerGate>
   );
 }
 
 // ---------- Admin Key (worker X-Admin) gate ----------
 
-function LoaderShell({ user }: { user: User }) {
+function LoaderShell() {
+  const { user } = useAuth();
   const [adminKey, setKey] = useState<string>(getAdminKey());
 
   const saveKey = (k: string) => {
@@ -102,10 +54,7 @@ function LoaderShell({ user }: { user: User }) {
           <p className="text-sm text-muted-foreground">Manage current build, payloads, and device bans via the License Worker.</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden text-xs text-muted-foreground sm:inline">{user.email}</span>
-          <Button variant="outline" size="sm" onClick={() => signOutAdmin()}>
-            <LogOut className="mr-2 h-4 w-4" />Sign out
-          </Button>
+          <span className="hidden text-xs text-muted-foreground sm:inline">{user?.email}</span>
         </div>
       </div>
 
