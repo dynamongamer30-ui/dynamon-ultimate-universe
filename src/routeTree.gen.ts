@@ -11,12 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UnlockRouteImport } from './routes/unlock'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ModsRouteImport } from './routes/mods'
 import { Route as GeneratorRouteImport } from './routes/generator'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as DisclaimerRouteImport } from './routes/disclaimer'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminNotificationsRouteImport } from './routes/admin-notifications'
 import { Route as AdminLoaderRouteImport } from './routes/admin-loader'
 import { Route as AdminKeysRouteImport } from './routes/admin-keys'
 import { Route as AdminControlRouteImport } from './routes/admin-control'
@@ -35,6 +37,11 @@ const UnlockRoute = UnlockRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ModsRoute = ModsRouteImport.update({
@@ -65,6 +72,11 @@ const ContactRoute = ContactRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/admin-notifications',
+  path: '/admin-notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminLoaderRoute = AdminLoaderRouteImport.update({
@@ -121,12 +133,14 @@ export interface FileRoutesByFullPath {
   '/admin-control': typeof AdminControlRoute
   '/admin-keys': typeof AdminKeysRoute
   '/admin-loader': typeof AdminLoaderRoute
+  '/admin-notifications': typeof AdminNotificationsRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
   '/generator': typeof GeneratorRoute
   '/mods': typeof ModsRouteWithChildren
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/unlock': typeof UnlockRoute
   '/mods/$slug': typeof ModsSlugRoute
@@ -140,11 +154,13 @@ export interface FileRoutesByTo {
   '/admin-control': typeof AdminControlRoute
   '/admin-keys': typeof AdminKeysRoute
   '/admin-loader': typeof AdminLoaderRoute
+  '/admin-notifications': typeof AdminNotificationsRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
   '/generator': typeof GeneratorRoute
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/unlock': typeof UnlockRoute
   '/mods/$slug': typeof ModsSlugRoute
@@ -159,12 +175,14 @@ export interface FileRoutesById {
   '/admin-control': typeof AdminControlRoute
   '/admin-keys': typeof AdminKeysRoute
   '/admin-loader': typeof AdminLoaderRoute
+  '/admin-notifications': typeof AdminNotificationsRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
   '/generator': typeof GeneratorRoute
   '/mods': typeof ModsRouteWithChildren
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/unlock': typeof UnlockRoute
   '/mods/$slug': typeof ModsSlugRoute
@@ -180,12 +198,14 @@ export interface FileRouteTypes {
     | '/admin-control'
     | '/admin-keys'
     | '/admin-loader'
+    | '/admin-notifications'
     | '/auth'
     | '/contact'
     | '/disclaimer'
     | '/favorites'
     | '/generator'
     | '/mods'
+    | '/notifications'
     | '/profile'
     | '/unlock'
     | '/mods/$slug'
@@ -199,11 +219,13 @@ export interface FileRouteTypes {
     | '/admin-control'
     | '/admin-keys'
     | '/admin-loader'
+    | '/admin-notifications'
     | '/auth'
     | '/contact'
     | '/disclaimer'
     | '/favorites'
     | '/generator'
+    | '/notifications'
     | '/profile'
     | '/unlock'
     | '/mods/$slug'
@@ -217,12 +239,14 @@ export interface FileRouteTypes {
     | '/admin-control'
     | '/admin-keys'
     | '/admin-loader'
+    | '/admin-notifications'
     | '/auth'
     | '/contact'
     | '/disclaimer'
     | '/favorites'
     | '/generator'
     | '/mods'
+    | '/notifications'
     | '/profile'
     | '/unlock'
     | '/mods/$slug'
@@ -237,12 +261,14 @@ export interface RootRouteChildren {
   AdminControlRoute: typeof AdminControlRoute
   AdminKeysRoute: typeof AdminKeysRoute
   AdminLoaderRoute: typeof AdminLoaderRoute
+  AdminNotificationsRoute: typeof AdminNotificationsRoute
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
   DisclaimerRoute: typeof DisclaimerRoute
   FavoritesRoute: typeof FavoritesRoute
   GeneratorRoute: typeof GeneratorRoute
   ModsRoute: typeof ModsRouteWithChildren
+  NotificationsRoute: typeof NotificationsRoute
   ProfileRoute: typeof ProfileRoute
   UnlockRoute: typeof UnlockRoute
 }
@@ -261,6 +287,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mods': {
@@ -303,6 +336,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-notifications': {
+      id: '/admin-notifications'
+      path: '/admin-notifications'
+      fullPath: '/admin-notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin-loader': {
@@ -391,12 +431,14 @@ const rootRouteChildren: RootRouteChildren = {
   AdminControlRoute: AdminControlRoute,
   AdminKeysRoute: AdminKeysRoute,
   AdminLoaderRoute: AdminLoaderRoute,
+  AdminNotificationsRoute: AdminNotificationsRoute,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
   DisclaimerRoute: DisclaimerRoute,
   FavoritesRoute: FavoritesRoute,
   GeneratorRoute: GeneratorRoute,
   ModsRoute: ModsRouteWithChildren,
+  NotificationsRoute: NotificationsRoute,
   ProfileRoute: ProfileRoute,
   UnlockRoute: UnlockRoute,
 }

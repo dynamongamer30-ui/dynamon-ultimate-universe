@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ArrowLeft, Check, Download, Shield, PlayCircle, Sparkles, Lock, ExternalLink, Loader2, X } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { CommentsPanel } from "@/components/CommentsPanel";
-import { UnlockKeyButton } from "@/components/UnlockKeyButton";
 import { SocialStrip } from "@/components/SocialStrip";
 import { ChangelogTimeline } from "@/components/ChangelogTimeline";
 import { FavoriteButton } from "@/components/FavoriteButton";
@@ -150,7 +149,6 @@ function ModDetail() {
             >
               <Download className="h-4 w-4" /> {user ? "Download mod" : "Sign in to download"}
             </button>
-            <UnlockKeyButton variant="outline" label="Unlock Key" />
             <FavoriteButton slug={mod.slug} />
             <Link
               to="/disclaimer" onMouseDown={playClick}

@@ -3,7 +3,6 @@ import { motion } from "motion/react";
 import { Shield, Zap, Users, ChevronRight, Star, Download, TrendingUp, ArrowRight } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
-import { UnlockKeyButton } from "@/components/UnlockKeyButton";
 import { ForYouRail } from "@/components/ForYouRail";
 import { mods, totalDownloads, formatCount, elementTheme } from "@/lib/mods";
 import heroImg from "@/assets/hero.jpg";
@@ -65,7 +64,6 @@ function Index() {
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.18 }}
               className="mt-8 flex flex-wrap items-center gap-3"
             >
-              <UnlockKeyButton label="Get Free Key" />
               <Link
                 to="/mods"
                 onMouseDown={playClick}
