@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   KeyRound, Loader2, Sparkles, Trash2, Copy, Plus, RefreshCw, Search, Clock,
-  Ban, AlertTriangle, X, ShieldCheck, Smartphone, Lock, Unlock,
+  Ban, AlertTriangle, X, ShieldCheck, Smartphone, Lock, Unlock, ArrowUpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
@@ -15,9 +15,9 @@ import {
   getConfig, setMaintenance, setRateLimitEnabled, setKeyDurationHours, setIPWhitelist,
   listGenerationLogs, createManualKey,
   listActivatedUsers, listBannedDevices, banDevice, unbanDevice,
-  nowSeconds,
+  nowSeconds, getAppUpdate, setAppUpdate,
   type ValidKey, type DgConfig, type GenerationLog,
-  type ActivatedUser, type BannedDevice,
+  type ActivatedUser, type BannedDevice, type AppUpdate,
 } from "@/lib/dgData";
 
 export const Route = createFileRoute("/admin-keys")({
@@ -56,14 +56,16 @@ function KeysAdmin() {
         </div>
       </div>
 
-      <div className="mb-6 inline-flex rounded-full border border-border bg-card/60 p-1 text-xs font-semibold">
-        {(["keys","devices","locks","config","logs"] as Tab[]).map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`rounded-full px-4 py-1.5 capitalize transition-colors ${tab===t ? "text-primary-foreground" : "text-muted-foreground"}`}
-            style={tab===t ? { background: "var(--gradient-primary)" } : undefined}>
-            {t}
-          </button>
-        ))}
+      <div className="mb-6 -mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="inline-flex min-w-full gap-1 rounded-full border border-border bg-card/60 p-1 text-xs font-semibold sm:min-w-0">
+          {(["keys","devices","locks","config","logs"] as Tab[]).map((t) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 whitespace-nowrap rounded-full px-3 py-2 capitalize transition-colors sm:flex-none sm:px-4 sm:py-1.5 ${tab===t ? "text-primary-foreground" : "text-muted-foreground"}`}
+              style={tab===t ? { background: "var(--gradient-primary)" } : undefined}>
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === "keys" && <KeysPanel />}
@@ -552,6 +554,7 @@ function LocksPanel() {
 
 function ConfigPanel() {
   const [cfg, setCfg] = useState<DgConfig | null>(null);
+  const [upd, setUpd] = useState<AppUpdate | null>(null);
   const [loading, setLoading] = useState(true);
   const [newIP, setNewIP] = useState("");
   const [hours, setHours] = useState("24");
@@ -559,11 +562,24 @@ function ConfigPanel() {
 
   const reload = async () => {
     setLoading(true);
-    try { const c = await getConfig(); setCfg(c); setHours(String(c.KeyDurationHours)); }
+    try {
+      const [c, u] = await Promise.all([getConfig(), getAppUpdate()]);
+      setCfg(c); setHours(String(c.KeyDurationHours)); setUpd(u);
+    }
     catch (e) { toast.error((e as Error).message); }
     finally { setLoading(false); }
   };
   useEffect(() => { reload(); }, []);
+
+  const saveUpdate = async () => {
+    if (!upd) return;
+    setBusy(true);
+    try { await setAppUpdate(upd); toast.success("Update settings saved"); await reload(); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  };
+  const setU = <K extends keyof AppUpdate>(k: K, v: AppUpdate[K]) =>
+    setUpd((p) => (p ? { ...p, [k]: v } : p));
 
   if (loading || !cfg) {
     return <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>;
@@ -636,7 +652,77 @@ function ConfigPanel() {
           ))}
         </ul>
       </div>
+
+      {upd && (
+        <div className="rounded-2xl border border-border bg-card/60 p-5 lg:col-span-2">
+          <div className="mb-4 flex items-center gap-2">
+            <ArrowUpCircle className="h-5 w-5 text-primary" />
+            <h3 className="font-display text-lg font-bold">App Update System</h3>
+          </div>
+
+          <Toggle
+            label="Force update enabled"
+            desc="When on, the app prompts users to update."
+            on={upd.Enabled}
+            onClick={() => setU("Enabled", !upd.Enabled)}
+            disabled={busy}
+            warn
+          />
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Labeled label="Target version code">
+              <Input type="number" min="0" value={String(upd.VersionCode)}
+                onChange={(e) => setU("VersionCode", parseInt(e.target.value) || 0)} />
+            </Labeled>
+            <Labeled label="Version name">
+              <Input value={upd.VersionName} onChange={(e) => setU("VersionName", e.target.value)} placeholder="1.12.58" />
+            </Labeled>
+            <Labeled label="Dialog title">
+              <Input value={upd.Title} onChange={(e) => setU("Title", e.target.value)} placeholder="Update Available" />
+            </Labeled>
+            <Labeled label="Dialog subtitle">
+              <Input value={upd.Subtitle} onChange={(e) => setU("Subtitle", e.target.value)} placeholder="v4.5 • Critical Patch" />
+            </Labeled>
+          </div>
+
+          <div className="mt-4">
+            <Labeled label="What's new (use • for bullets)">
+              <textarea
+                value={upd.WhatsNew}
+                onChange={(e) => setU("WhatsNew", e.target.value)}
+                rows={4}
+                placeholder={"• Upgrading game servers\n• Fixing login issues"}
+                className="w-full resize-y rounded-md border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-primary"
+              />
+            </Labeled>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Labeled label="Update URL">
+              <Input value={upd.UpdateUrl} onChange={(e) => setU("UpdateUrl", e.target.value)} placeholder="https://..." />
+            </Labeled>
+            <Labeled label="Button text">
+              <Input value={upd.BtnText} onChange={(e) => setU("BtnText", e.target.value)} placeholder="UPDATE" />
+            </Labeled>
+          </div>
+
+          <div className="mt-5 flex justify-end">
+            <Button onClick={saveUpdate} disabled={busy} style={{ background: "var(--gradient-primary)" }}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save update settings"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+      {children}
+    </label>
   );
 }
 

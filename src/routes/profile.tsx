@@ -42,17 +42,17 @@ function ProfilePage() {
 
   useEffect(() => {
     if (profile) {
-      setDisplayName(profile.display_name);
+      setDisplayName(profile.display_name ?? "");
       setGender(profile.gender);
       setAvatarId(profile.avatar_url);
-      setUsername(profile.username);
+      setUsername(profile.username ?? "");
     }
   }, [profile]);
 
   // username availability
   useEffect(() => {
-    const u = username.trim();
-    if (!u || (profile && u.toLowerCase() === profile.username.toLowerCase())) {
+    const u = (username ?? "").trim();
+    if (!u || (profile && u.toLowerCase() === (profile.username ?? "").toLowerCase())) {
       setUsernameStatus("idle"); return;
     }
     if (!/^[a-zA-Z0-9_]{3,24}$/.test(u)) { setUsernameStatus("invalid"); return; }
