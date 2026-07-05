@@ -54,6 +54,11 @@ export async function createNotification(title: string, body: string): Promise<v
   if (error) throw new Error(error.message);
 }
 
+export async function updateNotification(id: string, title: string, body: string): Promise<void> {
+  const { error } = await db("notifications").update({ title, body }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 export async function deleteNotification(id: string): Promise<void> {
   const { error } = await db("notifications").delete().eq("id", id);
   if (error) throw new Error(error.message);
