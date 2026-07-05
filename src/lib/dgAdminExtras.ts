@@ -1,4 +1,3 @@
-```ts
 /**
  * DG admin extras — feature-parity data layer for the legacy Firebase admin panel.
  * Backed by the SAME Supabase tables + owner-only RLS the Workers use.
@@ -145,4 +144,3 @@ export async function rotateKey(oldKey: string): Promise<string> {
   }
   return newKey;
 }
-```
