@@ -1,4 +1,3 @@
-```tsx
 /**
  * Admin Extras — feature-parity panel (Ember Vault theme).
  * Access tokens · Rate limits · Feature locks · Key tools.
@@ -168,4 +167,3 @@ function KeyToolsPanel() {
     </div>
   );
 }
-```
