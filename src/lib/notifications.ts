@@ -13,8 +13,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // The generated Supabase types don't yet include these new tables, so we use
-// an untyped accessor (matching the pattern used elsewhere in this codebase).
-const db = supabase.from as unknown as (table: string) => any;
+// an untyped accessor. NOTE: we must call `supabase.from(...)` with `supabase`
+// as the receiver — extracting the method into a standalone variable loses its
+// `this` binding and throws "Cannot read properties of undefined (reading 'rest')".
+const db = (table: string): any => (supabase as any).from(table);
 
 export interface AppNotification {
   id: string;
