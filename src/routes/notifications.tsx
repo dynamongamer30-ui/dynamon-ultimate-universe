@@ -1,5 +1,6 @@
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, Check, CheckCheck } from "lucide-react";
+import { Bell, Check } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -18,7 +19,20 @@ function fmt(iso: string): string {
 
 function NotificationsPage() {
   const { user } = useAuth();
-  const { items, readIds, unreadCount, loading, markAllRead } = useNotifications();
+  const { items, readIds, loading, markAllRead } = useNotifications();
+
+  // Snapshot which notifications were unread when the page opened, so they keep
+  // their "new" highlight during this visit even after we mark them read.
+  const [unreadOnArrival, setUnreadOnArrival] = useState<Set<string>>(new Set());
+  const snapshotted = useRef(false);
+
+  // Auto-mark everything read once the list has loaded — no button needed.
+  useEffect(() => {
+    if (!user || loading || snapshotted.current) return;
+    snapshotted.current = true;
+    setUnreadOnArrival(new Set(items.filter((n) => !readIds.has(n.id)).map((n) => n.id)));
+    markAllRead();
+  }, [user, loading, items, readIds, markAllRead]);
 
   return (
     <PageShell>
@@ -33,14 +47,6 @@ function NotificationsPage() {
               Announcements and updates from the Dynamon Universe team.
             </p>
           </div>
-          {user && unreadCount > 0 && (
-            <button
-              onClick={markAllRead}
-              className="press inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold transition-colors hover:border-primary/40 hover:text-primary"
-            >
-              <CheckCheck className="h-4 w-4" /> Mark all read
-            </button>
-          )}
         </div>
       </header>
 
@@ -57,7 +63,7 @@ function NotificationsPage() {
       ) : (
         <ul className="mt-8 space-y-3">
           {items.map((n) => {
-            const unread = !readIds.has(n.id);
+            const unread = unreadOnArrival.has(n.id);
             return (
               <li
                 key={n.id}
