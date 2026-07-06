@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   KeyRound, Loader2, Sparkles, Trash2, Copy, Plus, RefreshCw, Search, Clock,
   Ban, AlertTriangle, X, ShieldCheck, Smartphone, Lock, Unlock, ArrowUpCircle,
@@ -41,7 +41,7 @@ function KeysAdminGate() {
 
 // ----- Main panel -----
 
-type Tab = "keys" | "devices" | "locks" | "config" | "app" | "logs";
+type Tab = "keys" | "devices" | "config" | "app";
 
 function KeysAdmin() {
   const { user } = useAuth();
@@ -61,7 +61,7 @@ function KeysAdmin() {
 
       <div className="mb-6 -mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="inline-flex min-w-full gap-1 rounded-full border border-border bg-card/60 p-1 text-xs font-semibold sm:min-w-0">
-          {(["keys","devices","locks","config","app","logs"] as Tab[]).map((t) => (
+          {(["keys","devices","config","app"] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`flex-1 whitespace-nowrap rounded-full px-3 py-2 capitalize transition-colors sm:flex-none sm:px-4 sm:py-1.5 ${tab===t ? "text-primary-foreground" : "text-muted-foreground"}`}
               style={tab===t ? { background: "var(--gradient-primary)" } : undefined}>
@@ -73,10 +73,8 @@ function KeysAdmin() {
 
       {tab === "keys" && <KeysPanel />}
       {tab === "devices" && <DevicesPanel />}
-      {tab === "locks" && <LocksPanel />}
       {tab === "config" && <ConfigPanel />}
       {tab === "app" && <AppExtrasPanel />}
-      {tab === "logs" && <LogsPanel />}
     </PageShell>
   );
 }
@@ -808,16 +806,15 @@ function LogsPanel() {
   );
 }
 
-
 // ============================================================
 // App tab — App Config (dialog + links + API) · Feature Locks (mod menu)
-// · Payload upload · Key Tools. All Supabase-backed via dgData config nodes.
+// · Payload upload. Supabase-backed via dgData config nodes. Mobile-friendly.
 // ============================================================
 const AX_INPUT = "w-full rounded-lg bg-background/70 border border-border px-3 py-2 text-sm outline-none focus:border-primary";
 const AX_BTN = "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-primary-foreground";
 const AX_GHOST = "inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:border-primary";
-const AX_CARD = "rounded-2xl border border-border bg-card/60 backdrop-blur p-5 space-y-4";
-const AX_HEAD = "flex items-center gap-2 text-lg font-semibold text-primary";
+const AX_CARD = "rounded-2xl border border-border bg-card/60 backdrop-blur p-4 sm:p-5 space-y-4";
+const AX_HEAD = "flex items-center gap-2 text-base sm:text-lg font-semibold text-primary";
 
 const AX_LOCK_GROUPS = [
   { group: "Battle",   items: [ ["god","God Mode"],["oneHit","One-Hit Kill"],["crit","Always Critical"],["statusImmune","Status Immunity"],["noCD","No Cooldowns"],["alwaysCatch","Always Catch"] ] },
@@ -841,7 +838,6 @@ function AppExtrasPanel() {
       <AxAppConfig />
       <AxFeatureLocks />
       <AxPayload />
-      <AxKeyTools />
     </div>
   );
 }
@@ -858,16 +854,19 @@ function AxAppConfig() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let alive = true;
     (async () => {
       try {
         const [t, s, tu, tx, lk, ap] = await Promise.all([
           getConfigNode<string>("Title"), getConfigNode<string>("Subtitle"), getConfigNode<string>("TutorialUrl"),
           getConfigNode<Record<string, string>>("Texts"), getConfigNode<Record<string, string>>("Links"), getConfigNode<Record<string, string>>("Api"),
         ]);
+        if (!alive) return;
         setTitle(t || ""); setSubtitle(s || ""); setTutorial(tu || "");
         setTexts(tx || {}); setLinks(lk || {}); setApi(ap || {});
-      } catch (err) { toast.error(String(err)); } finally { setLoading(false); }
+      } catch (err) { toast.error(String(err)); } finally { if (alive) setLoading(false); }
     })();
+    return () => { alive = false; };
   }, []);
 
   const link = (k: string) => links[k] || "";
@@ -890,7 +889,7 @@ function AxAppConfig() {
 
   return (
     <div className={AX_CARD}>
-      <div className={AX_HEAD}><Settings2 className="h-5 w-5" /> App Config <span className="text-sm text-muted-foreground">(in-app dialog)</span></div>
+      <div className={AX_HEAD}><Settings2 className="h-5 w-5" /> App Config <span className="text-xs sm:text-sm text-muted-foreground">(in-app dialog)</span></div>
       <div className="grid gap-3 sm:grid-cols-2">
         <AxField label="Dialog Title" value={title} onChange={setTitle} />
         <AxField label="Dialog Subtitle" value={subtitle} onChange={setSubtitle} />
@@ -915,7 +914,7 @@ function AxAppConfig() {
         <AxField label="API Token" value={api.Token || ""} onChange={(v) => setApiF("Token", v)} />
         <AxField label="Dest Base" value={api.DestBase || ""} onChange={(v) => setApiF("DestBase", v)} />
       </div>
-      <button className={AX_BTN} style={{ background: "var(--gradient-primary)" }} disabled={busy} onClick={save}>
+      <button type="button" className={AX_BTN} style={{ background: "var(--gradient-primary)" }} disabled={busy} onClick={save}>
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save App Config
       </button>
     </div>
@@ -927,10 +926,12 @@ function AxFeatureLocks() {
   const [locks, setLocks] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+    let alive = true;
     (async () => {
-      try { setLocks((await getConfigNode<Record<string, boolean>>("FeatureLocks")) || {}); }
-      catch (err) { toast.error(String(err)); } finally { setLoading(false); }
+      try { const v = await getConfigNode<Record<string, boolean>>("FeatureLocks"); if (alive) setLocks(v || {}); }
+      catch (err) { toast.error(String(err)); } finally { if (alive) setLoading(false); }
     })();
+    return () => { alive = false; };
   }, []);
   const toggle = async (k: string) => {
     const next = { ...locks, [k]: !locks[k] };
@@ -940,15 +941,15 @@ function AxFeatureLocks() {
   };
   return (
     <div className={AX_CARD}>
-      <div className={AX_HEAD}><Lock className="h-5 w-5" /> Feature Locks <span className="text-sm text-muted-foreground">(mod menu)</span></div>
-      {loading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : AX_LOCK_GROUPS.map((g) => (
-        <div key={g.group} className="space-y-2">
-          <div className="text-xs font-semibold text-primary/80">{g.group}</div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {g.items.map((it) => {
+      <div className={AX_HEAD}><Lock className="h-5 w-5" /> Feature Locks <span className="text-xs sm:text-sm text-muted-foreground">(mod menu)</span></div>
+      {loading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : AX_LOCK_GROUPS.map((grp) => (
+        <div key={grp.group} className="space-y-2">
+          <div className="text-xs font-semibold text-primary/80">{grp.group}</div>
+          <div className="grid grid-cols-1 gap-2 xs:grid-cols-2 sm:grid-cols-3">
+            {grp.items.map((it) => {
               const on = !!locks[it[0]];
               return (
-                <button key={it[0]} onClick={() => toggle(it[0])}
+                <button type="button" key={it[0]} onClick={() => toggle(it[0])}
                   className={AX_GHOST + (on ? " border-primary text-primary" : "")}>
                   {on ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />} {it[1]}
                 </button>
@@ -961,19 +962,26 @@ function AxFeatureLocks() {
   );
 }
 
-/* ---- Payload JSON upload ---- */
+/* ---- Payload JSON upload (ref-based, no navigation) ---- */
 function AxPayload() {
-  const [url, setUrl] = useState(() => localStorage.getItem("dg_worker_url") || "");
-  const [key, setKey] = useState(() => localStorage.getItem("dg_admin_key") || "");
+  const [url, setUrl] = useState("");
+  const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
-  const saveCfg = () => { localStorage.setItem("dg_worker_url", url.trim()); localStorage.setItem("dg_admin_key", key.trim()); toast.success("Worker settings saved"); };
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    try { setUrl(localStorage.getItem("dg_worker_url") || ""); setKey(localStorage.getItem("dg_admin_key") || ""); } catch (err) { /* no localStorage during SSR */ }
+  }, []);
+  const saveCfg = () => {
+    try { localStorage.setItem("dg_worker_url", url.trim()); localStorage.setItem("dg_admin_key", key.trim()); toast.success("Worker settings saved"); }
+    catch (err) { toast.error(String(err)); }
+  };
   const onFile = async (file: File) => {
     setBusy(true);
     try {
       if (!url || !key) throw new Error("Set Worker URL + Admin key first");
       const payload = JSON.parse(await file.text());
       const need = ["build","ct_b64","iv_b64","sig_b64","key_b64","ct_sha"];
-      for (const f of need) if (!(f in payload)) throw new Error("payload JSON missing field: " + f);
+      for (const fld of need) if (!(fld in payload)) throw new Error("payload JSON missing field: " + fld);
       const res = await fetch(url.replace(/\/+$/, "") + "/admin/upload-payload", {
         method: "POST", headers: { "Content-Type": "application/json", "X-Admin": key }, body: JSON.stringify(payload),
       });
@@ -981,6 +989,11 @@ function AxPayload() {
       if (!res.ok) throw new Error("upload failed (" + res.status + "): " + txt);
       toast.success("Payload uploaded");
     } catch (err) { toast.error(String(err)); } finally { setBusy(false); }
+  };
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) void onFile(f);
+    if (fileRef.current) fileRef.current.value = "";
   };
   return (
     <div className={AX_CARD}>
@@ -990,90 +1003,13 @@ function AxPayload() {
         <AxField label="Admin Key (X-Admin)" value={key} onChange={setKey} />
       </div>
       <div className="flex flex-wrap gap-3">
-        <button className={AX_GHOST} onClick={saveCfg}><Save className="h-4 w-4" /> Save worker settings</button>
-        <label className={AX_BTN + " cursor-pointer"} style={{ background: "var(--gradient-primary)" }}>
+        <button type="button" className={AX_GHOST} onClick={saveCfg}><Save className="h-4 w-4" /> Save worker settings</button>
+        <button type="button" className={AX_BTN} style={{ background: "var(--gradient-primary)" }} disabled={busy} onClick={() => { if (fileRef.current) fileRef.current.click(); }}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />} Upload payload.json
-          <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => { const f = e.target.files && e.target.files[0]; if (f) onFile(f); e.currentTarget.value = ""; }} />
-        </label>
+        </button>
+        <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onChange} />
       </div>
       <p className="text-xs text-muted-foreground">JSON must contain: build, ct_b64, iv_b64, sig_b64, key_b64, ct_sha</p>
-    </div>
-  );
-}
-
-/* ---- Key Tools (rotate / reduce / unbind) ---- */
-async function axReadRow(table: string, id: string) {
-  const { data, error } = await supabase.from(table as never).select("data").eq("id", id).maybeSingle();
-  if (error) throw error;
-  return (data as unknown as { data: Record<string, unknown> } | null)?.data ?? null;
-}
-async function axRotateKey(oldKey: string) {
-  const data = await axReadRow("valid_keys", oldKey);
-  if (!data) throw new Error("key not found");
-  const prefix = oldKey.indexOf("-") >= 0 ? oldKey.split("-")[0] : "DG";
-  const AB = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let suffix = ""; for (let i = 0; i < 6; i++) suffix += AB[Math.floor(Math.random() * AB.length)];
-  const newKey = prefix + "-" + suffix;
-  const up1 = await supabase.from("valid_keys" as never).upsert({ id: newKey, data: { ...data, rotatedFrom: oldKey, rotatedAt: nowSeconds() } } as never, { onConflict: "id" });
-  if (up1.error) throw up1.error;
-  await supabase.from("valid_keys" as never).delete().eq("id", oldKey);
-  for (const table of ["activated_users", "banned_devices"]) {
-    const sel = await supabase.from(table as never).select("id,data");
-    const rows = (sel.data as unknown as Array<{ id: string; data: Record<string, unknown> }>) || [];
-    for (const r of rows) {
-      const d = r.data || {};
-      if (d.Key === oldKey || d.key === oldKey) {
-        await supabase.from(table as never).upsert({ id: r.id, data: { ...d, Key: newKey, key: newKey } } as never, { onConflict: "id" });
-      }
-    }
-  }
-  return newKey;
-}
-async function axUnbindDevice(key: string) {
-  const data = await axReadRow("valid_keys", key);
-  if (data) {
-    await supabase.from("valid_keys" as never).upsert({ id: key, data: { ...data, deviceId: null, boundDevice: null, fingerprint: null, fp: null } } as never, { onConflict: "id" });
-  }
-  const sel = await supabase.from("activated_users" as never).select("id,data");
-  const rows = (sel.data as unknown as Array<{ id: string; data: Record<string, unknown> }>) || [];
-  let n = 0;
-  for (const r of rows) {
-    const d = r.data || {};
-    if (d.Key === key || d.key === key) { await supabase.from("activated_users" as never).delete().eq("id", r.id); n++; }
-  }
-  return n;
-}
-
-function AxKeyTools() {
-  const [key, setKey] = useState("");
-  const [hours, setHours] = useState(24);
-  const [busy, setBusy] = useState(false);
-  const run = async (fn: () => Promise<unknown>, ok: string) => {
-    if (!key.trim()) { toast.error("Enter a key"); return; }
-    setBusy(true);
-    try { const r = await fn(); toast.success(typeof r === "string" ? ok + ": " + r : ok); }
-    catch (err) { toast.error(String(err)); } finally { setBusy(false); }
-  };
-  return (
-    <div className={AX_CARD}>
-      <div className={AX_HEAD}><KeyRound className="h-5 w-5" /> Key Tools</div>
-      <input className={AX_INPUT} placeholder="Key (e.g. DG-ABC123)" value={key} onChange={(e) => setKey(e.target.value)} />
-      <div className="flex flex-wrap items-end gap-3">
-        <button className={AX_BTN} style={{ background: "var(--gradient-primary)" }} disabled={busy}
-          onClick={() => run(() => axRotateKey(key.trim()).then((nk) => { setKey(nk as string); return nk; }), "Rotated to new key")}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Rotate
-        </button>
-        <button className={AX_GHOST} disabled={busy} onClick={() => run(() => axUnbindDevice(key.trim()), "Device unbound")}>
-          <Smartphone className="h-4 w-4" /> Unbind device
-        </button>
-        <label className="text-sm space-y-1">
-          <span className="text-xs text-muted-foreground">Reduce hours</span>
-          <input className={AX_INPUT} type="number" min={1} value={hours} onChange={(e) => setHours(Number(e.target.value))} />
-        </label>
-        <button className={AX_GHOST} disabled={busy} onClick={() => run(() => extendKey(key.trim(), -Math.abs(hours)), "Reduced by " + hours + "h")}>
-          <Clock className="h-4 w-4" /> Reduce
-        </button>
-      </div>
     </div>
   );
 }
