@@ -323,7 +323,6 @@ function ManualKeyForm() {
             {p}
           </button>
         ))}
-        <Input value={["DG","VIP"].includes(prefix) ? "" : prefix} onChange={(e) => setPrefix(e.target.value.toUpperCase())} placeholder="Custom" className="ml-1 h-7 w-20 border-0 bg-transparent px-2 text-xs" />
       </div>
 
       <label className="text-xs text-muted-foreground">Duration (hours)</label>
@@ -342,7 +341,6 @@ function ManualKeyForm() {
     </form>
   );
 }
-
 // ----- Devices panel (activated devices) -----
 
 function DevicesPanel() {
@@ -365,13 +363,13 @@ function DevicesPanel() {
 
   const doLock = async (fp: string) => {
     setBusy(fp);
-    try { await banDevice(fp, "locked from devices panel"); toast.success("Device locked"); await reload(); }
+    try { await banDevice(fp, "locked from devices panel"); toast.success("Device banned"); await reload(); }
     catch (e) { toast.error((e as Error).message); }
     finally { setBusy(""); }
   };
   const doUnlock = async (fp: string) => {
     setBusy(fp);
-    try { await unbanDevice(fp); toast.success("Device unlocked"); await reload(); }
+    try { await unbanDevice(fp); toast.success("Device unbanned"); await reload(); }
     catch (e) { toast.error((e as Error).message); }
     finally { setBusy(""); }
   };
@@ -381,12 +379,15 @@ function DevicesPanel() {
     ? rows.filter((r) => r.fingerprint.toLowerCase().includes(q) || String(r.Key ?? r.key ?? "").toLowerCase().includes(q))
     : rows;
 
+  const bannedCount = rows.filter((r) => banned.has(r.fingerprint)).length;
+  const unbannedCount = Math.max(0, rows.length - bannedCount);
+
   return (
     <div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatTile label="Activated devices" value={rows.length} icon={<Smartphone className="h-4 w-4 text-primary" />} />
-        <StatTile label="Locked" value={banned.size} icon={<Lock className="h-4 w-4 text-red-400" />} />
-        <StatTile label="Unlocked" value={Math.max(0, rows.length - rows.filter((r) => banned.has(r.fingerprint)).length)} icon={<Unlock className="h-4 w-4 text-green-400" />} />
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-3">
+        <StatTile label="Total devices" value={rows.length} icon={<Smartphone className="h-4 w-4 text-primary" />} />
+        <StatTile label="Banned" value={bannedCount} icon={<Lock className="h-4 w-4 text-red-400" />} />
+        <StatTile label="Unbanned" value={unbannedCount} icon={<Unlock className="h-4 w-4 text-green-400" />} />
       </div>
 
       <div className="mt-6 rounded-2xl border border-border bg-card/60 p-4">
@@ -427,15 +428,15 @@ function DevicesPanel() {
                       <td className="py-3 pr-3 text-xs text-muted-foreground">{last ? new Date(last).toLocaleString() : "—"}</td>
                       <td className="py-3 pr-3">
                         <span className={`rounded-full border px-2 py-0.5 text-[11px] ${isLocked ? "border-red-400/40 text-red-300" : "border-green-400/40 text-green-300"}`}>
-                          {isLocked ? "Locked" : "Active"}
+                          {isLocked ? "Banned" : "Active"}
                         </span>
                       </td>
                       <td className="py-3 pr-3">
                         <div className="flex justify-end gap-1">
                           {isLocked ? (
-                            <IconBtn title="Unlock" disabled={busy === r.fingerprint} onClick={() => doUnlock(r.fingerprint)}><Unlock className="h-3.5 w-3.5" /></IconBtn>
+                            <IconBtn title="Unban" disabled={busy === r.fingerprint} onClick={() => doUnlock(r.fingerprint)}><Unlock className="h-3.5 w-3.5" /></IconBtn>
                           ) : (
-                            <IconBtn title="Lock" disabled={busy === r.fingerprint} onClick={() => doLock(r.fingerprint)} danger><Lock className="h-3.5 w-3.5" /></IconBtn>
+                            <IconBtn title="Ban" disabled={busy === r.fingerprint} onClick={() => doLock(r.fingerprint)} danger><Lock className="h-3.5 w-3.5" /></IconBtn>
                           )}
                         </div>
                       </td>
@@ -450,7 +451,6 @@ function DevicesPanel() {
     </div>
   );
 }
-
 // ----- Locks panel (banned devices) -----
 
 function LocksPanel() {
