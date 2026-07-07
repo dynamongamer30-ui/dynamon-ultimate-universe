@@ -16,10 +16,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
+    // Only update state when the actual user changes. Ignore the noisy
+    // TOKEN_REFRESHED / focus re-check events that fire on every tab focus,
+    // which otherwise remount the whole app (and bounce admin tabs).
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        // keep the session token fresh but don't churn identity/loading
+        setSession((prev) => (prev?.user?.id === s?.user?.id ? (s ?? prev) : (s ?? null)));
+        return;
+      }
+      setSession((prev) => {
+        const next = s ?? null;
+        if (prev?.user?.id === next?.user?.id) return prev; // same user -> no remount
+        return next;
+      });
       setLoading(false);
     });
+
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
@@ -37,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setLoading(false);
     })();
+
     return () => sub.subscription.unsubscribe();
   }, []);
 
