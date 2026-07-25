@@ -1,6 +1,6 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, Download, Shield, PlayCircle, Sparkles, Lock, ExternalLink, Loader2, X } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { CommentsPanel } from "@/components/CommentsPanel";
@@ -10,7 +10,9 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { supabase } from "@/integrations/supabase/client";
 import { Cipher } from "@/lib/cipher";
+import { getFingerprint } from "@/lib/fingerprint";
 import { getMod, mods, formatCount, elementTheme, type Mod } from "@/lib/mods";
 import { playClick } from "@/lib/sound";
 import { toast } from "sonner";
@@ -60,9 +62,14 @@ function ModDetail() {
   const [tab, setTab] = useState<"overview" | "changelog">("overview");
   const [gateOpen, setGateOpen] = useState(false);
 
-  // Decrypt the owner-configured, AES-encrypted links for this mod.
+  // Only check whether a link is configured — never decrypt it here.
+  // The plaintext/ciphertext link is now only ever revealed through
+  // create_secure_session() -> /unlock -> redeem_secure_session(), all
+  // server-side and one-time-use. It used to be decrypted right here on
+  // page load, before any gate — anyone reading the anon REST response
+  // for mod_overrides plus the bundled cipher key could pull it directly.
   const ov = overrides[mod.slug];
-  const megaUrl = safeDecrypt(ov?.mega_enc) || ov?.download_url || "";
+  const hasDownload = !!(ov?.mega_enc || ov?.download_url);
   const followUrl = safeDecrypt(ov?.follow_enc);
 
   const handleGet = () => {
@@ -70,13 +77,14 @@ function ModDetail() {
     playClick();
     award(10, "Downloaded");
     grant("first_download");
-    if (!megaUrl) {
+    if (!hasDownload) {
       toast.error("Download not available yet", {
         description: "The owner hasn't published a download link for this build.",
       });
       return;
     }
-    // Open the follow-gate; the actual MEGA link is only revealed inside it.
+    // Open the follow-gate; the real link is only resolved server-side,
+    // after the gate + /unlock verification succeed.
     setGateOpen(true);
   };
 
@@ -235,7 +243,7 @@ function ModDetail() {
       {gateOpen && (
         <FollowGate
           modName={mod.name}
-          megaUrl={megaUrl}
+          slug={mod.slug}
           followUrl={followUrl}
           onClose={() => setGateOpen(false)}
         />
@@ -245,19 +253,66 @@ function ModDetail() {
 }
 
 function FollowGate({
-  modName, megaUrl, followUrl, onClose,
-}: { modName: string; megaUrl: string; followUrl: string; onClose: () => void }) {
-  // If there's no follow link configured, skip straight to the unlocked state.
-  const [step, setStep] = useState<"gate" | "ready">(followUrl ? "gate" : "ready");
+  modName, slug, followUrl, onClose,
+}: { modName: string; slug: string; followUrl: string; onClose: () => void }) {
+  const navigate = useNavigate();
+  // If there's no follow link configured, skip straight to verifying.
+  const [step, setStep] = useState<"gate" | "verifying" | "error">(followUrl ? "gate" : "verifying");
   const [waiting, setWaiting] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
+  const started = useRef(false);
+
+  const goToUnlock = async () => {
+    setStep("verifying");
+    try {
+      const fingerprint = await getFingerprint();
+      if (!fingerprint) throw new Error("Could not verify this device.");
+
+      // Server-side only: mints a one-time token and stores the link
+      // (still ciphertext) in secure_sessions. The link itself never
+      // reaches the browser here.
+      const { data, error } = await supabase.rpc("create_secure_session", {
+        p_slug: slug,
+        p_fingerprint: fingerprint,
+      });
+      if (error) throw new Error("Secure channel error. Please try again.");
+      const res = data as { ok: boolean; token?: string; error?: string } | null;
+      if (!res || !res.ok || !res.token) {
+        const map: Record<string, string> = {
+          rate_limited: "Too many attempts — please wait a bit and try again.",
+          no_link: "Download not available yet for this mod.",
+        };
+        throw new Error(map[res?.error || ""] || "Could not start the download.");
+      }
+
+      try {
+        localStorage.setItem("dg_token", Cipher.encrypt(res.token));
+      } catch {
+        localStorage.setItem("dg_token", res.token);
+      }
+
+      navigate({ to: "/unlock", search: { v: slug } });
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : "Something went wrong.");
+      setStep("error");
+    }
+  };
 
   const handleFollow = () => {
     playClick();
     window.open(followUrl, "_blank", "noopener,noreferrer");
-    // Short verify delay so the reveal feels earned, then unlock.
+    // Short delay so the follow feels earned, then verify server-side.
     setWaiting(true);
-    setTimeout(() => { setWaiting(false); setStep("ready"); }, 4000);
+    setTimeout(() => { setWaiting(false); void goToUnlock(); }, 4000);
   };
+
+  useEffect(() => {
+    if (!followUrl && !started.current) {
+      started.current = true;
+      void goToUnlock();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div
@@ -286,7 +341,7 @@ function FollowGate({
               One step to unlock
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
-              Follow us to unlock the secure download for <span className="font-semibold text-foreground">{modName}</span>. The link reveals automatically once you&apos;re back.
+              Follow us to unlock the secure download for <span className="font-semibold text-foreground">{modName}</span>. You&apos;ll be taken to a secure verification step once you&apos;re back.
             </p>
             <button
               onClick={handleFollow} disabled={waiting}
@@ -295,23 +350,23 @@ function FollowGate({
               {waiting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Verifying…</>) : (<><ExternalLink className="h-4 w-4" /> Follow to unlock</>)}
             </button>
           </div>
+        ) : step === "verifying" ? (
+          <div className="text-center py-4">
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <p className="mt-4 text-sm text-muted-foreground">Starting your secure download session…</p>
+          </div>
         ) : (
           <div className="text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
-              <Check className="h-6 w-6" />
-            </div>
-            <h3 className="mt-4 font-display text-xl font-extrabold uppercase tracking-tight text-balance">
-              Download unlocked
+            <h3 className="mt-1 font-display text-xl font-extrabold uppercase tracking-tight text-balance text-destructive">
+              Couldn&apos;t start download
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
-              Your secure MEGA link for <span className="font-semibold text-foreground">{modName}</span> is ready.
-            </p>
-            <a
-              href={megaUrl} target="_blank" rel="noopener noreferrer" onMouseDown={playClick}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90"
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">{errMsg}</p>
+            <button
+              onClick={() => setStep(followUrl ? "gate" : "verifying")}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold transition hover:border-primary/40"
             >
-              <Download className="h-4 w-4" /> Open download
-            </a>
+              Try again
+            </button>
           </div>
         )}
       </motion.div>
