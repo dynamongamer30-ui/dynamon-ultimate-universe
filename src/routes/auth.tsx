@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Mail, Lock, Loader2, Sparkles, User as UserIcon, AtSign, Check, ArrowRight } from "lucide-react";
+import { Loader2, Sparkles, User as UserIcon, AtSign, Check, ArrowRight } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { AvatarPicker } from "@/components/AvatarPicker";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,10 +28,7 @@ function AuthPage() {
   const { user, loading } = useAuth();
   const { profile, loading: profileLoading, refresh } = useProfile();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [step, setStep] = useState<Step>("credentials");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   // If user already has a complete profile, send them to /mods
@@ -40,38 +37,6 @@ function AuthPage() {
     if (user && profile) navigate({ to: "/mods" });
     if (user && !profile) setStep("profile");
   }, [user, profile, loading, profileLoading, navigate]);
-
-  const handleEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email, password,
-          options: { emailRedirectTo: window.location.origin + "/auth" },
-        });
-        if (error) throw error;
-        if (!data.session) {
-          toast.success("Account created — check your email, then sign in.");
-          setMode("signin");
-          return;
-        }
-        playSuccess();
-        toast.success("Account created — finish your profile.");
-        setStep("profile");
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        if (!data.session) throw new Error("Sign-in did not start. Please try again.");
-        playSuccess();
-        toast.success("Welcome back, Trainer.");
-      }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const handleGoogle = async () => {
     playClick(); setBusy(true);
@@ -136,13 +101,7 @@ function AuthPage() {
 
           <AnimatePresence mode="wait">
             {step === "credentials" && !user ? (
-              <CredentialsStep
-                key="creds"
-                mode={mode} setMode={setMode}
-                email={email} setEmail={setEmail}
-                password={password} setPassword={setPassword}
-                busy={busy} onEmail={handleEmail} onGoogle={handleGoogle}
-              />
+              <CredentialsStep key="creds" busy={busy} onGoogle={handleGoogle} />
             ) : (
               <ProfileStep key="profile" onDone={async () => { await refresh(); navigate({ to: "/mods" }); }} />
             )}
@@ -161,67 +120,24 @@ function Chip({ active, children }: { active: boolean; children: React.ReactNode
   );
 }
 
-function CredentialsStep({
-  mode, setMode, email, setEmail, password, setPassword, busy, onEmail, onGoogle,
-}: {
-  mode: "signin" | "signup";
-  setMode: (m: "signin" | "signup") => void;
-  email: string; setEmail: (v: string) => void;
-  password: string; setPassword: (v: string) => void;
-  busy: boolean;
-  onEmail: (e: React.FormEvent) => void;
-  onGoogle: () => void;
-}) {
+function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => void }) {
   return (
     <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="relative">
       <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">
-        {mode === "signin" ? "Welcome back" : "Create your account"}
+        Welcome, Trainer
       </h2>
-      <p className="mt-1 text-sm text-muted-foreground">Continue with Google or email.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Sign in with your Google account to continue.</p>
 
       <button
         onClick={onGoogle} disabled={busy}
         className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card/60 px-4 py-3 text-sm font-semibold transition-colors hover:bg-card disabled:opacity-60"
       >
-        <GoogleIcon /> Continue with Google
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
+        Continue with Google
       </button>
 
-      <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground">
-        <div className="h-px flex-1 bg-border" /> or email <div className="h-px flex-1 bg-border" />
-      </div>
-
-      <form onSubmit={onEmail} className="space-y-3">
-        <div className="relative">
-          <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@email.com" autoComplete="email"
-            className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
-          />
-        </div>
-        <div className="relative">
-          <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
-            placeholder="•••••••• (min 6 characters)" autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
-          />
-        </div>
-        <button
-          type="submit" disabled={busy}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
-          style={{ background: "var(--gradient-primary)" }}
-        >
-          {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-          {mode === "signin" ? "Sign in" : "Continue"}
-        </button>
-      </form>
-
       <p className="mt-5 text-center text-xs text-muted-foreground">
-        {mode === "signin" ? "New here?" : "Already a Trainer?"}{" "}
-        <button onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="font-semibold text-primary hover:underline">
-          {mode === "signin" ? "Create an account" : "Sign in"}
-        </button>
+        By continuing you agree to our <Link to="/disclaimer" className="text-primary hover:underline">Disclaimer &amp; Safety</Link>.
       </p>
     </motion.div>
   );
