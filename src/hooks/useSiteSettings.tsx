@@ -105,16 +105,50 @@ const C = createContext<Ctx>({
   refresh: async () => {},
 });
 
-function applyOverride(mod: Mod, o?: ModOverride): Mod {
-  if (!o) return mod;
+function applyOverride(
+  mod: Mod,
+  o: ModOverride | undefined,
+  realLikes: number,
+  realRatingSum: number,
+  realRatingCount: number,
+): Mod {
+  if (!o) {
+    // No admin override row at all — still fold in real likes/ratings.
+    const seedCount = mod.ratingCount ?? 0;
+    const combinedCount = seedCount + realRatingCount;
+    const combinedRating = combinedCount > 0
+      ? (mod.baseRating * seedCount + realRatingSum) / combinedCount
+      : mod.baseRating;
+    return {
+      ...mod,
+      baseLikes: Math.max(0, mod.baseLikes + realLikes),
+      baseRating: combinedRating,
+      ratingCount: combinedCount,
+    };
+  }
+
   const downloads =
     o.downloads_absolute != null
       ? Math.max(0, o.downloads_absolute + (o.downloads_boost || 0))
       : Math.max(0, mod.downloads + (o.downloads_boost || 0));
-  const baseLikes =
-    o.likes_absolute != null
-      ? Math.max(0, o.likes_absolute + (o.likes_boost || 0))
-      : Math.max(0, mod.baseLikes + (o.likes_boost || 0));
+
+  // Likes = admin-set seed (or the mod's default baseline) + manual boost
+  // + REAL per-user likes from mod_likes. Set "likes to" 1000, then every
+  // genuine like a user gives adds 1 on top automatically.
+  const likesSeed = o.likes_absolute != null ? o.likes_absolute : mod.baseLikes;
+  const baseLikes = Math.max(0, likesSeed + (o.likes_boost || 0) + realLikes);
+
+  // Rating = weighted blend of the admin's seed rating/count (treated as
+  // that many synthetic reviews) with the REAL average from actual user
+  // reviews (comments.rating). As real reviews come in, the shown average
+  // converges toward the true community rating instead of staying fixed.
+  const seedRating = o.rating ?? mod.baseRating;
+  const seedCount = o.rating_count ?? mod.ratingCount ?? 0;
+  const combinedCount = seedCount + realRatingCount;
+  const combinedRating = combinedCount > 0
+    ? (seedRating * seedCount + realRatingSum) / combinedCount
+    : seedRating;
+
   return {
     ...mod,
     name: o.name || mod.name,
@@ -128,8 +162,8 @@ function applyOverride(mod: Mod, o?: ModOverride): Mod {
     changelog: o.changelog && o.changelog.length ? o.changelog : mod.changelog,
     downloads,
     baseLikes,
-    baseRating: o.rating ?? mod.baseRating,
-    ratingCount: o.rating_count ?? mod.ratingCount,
+    baseRating: combinedRating,
+    ratingCount: combinedCount,
   };
 }
 
@@ -140,11 +174,15 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   const [socials, setSocials] = useState<Socials>(DEFAULT_SOCIALS);
   const [overrides, setOverrides] = useState<Record<string, ModOverride>>({});
   const [featuredSlug, setFeaturedSlug] = useState<string | null>(null);
+  const [realLikes, setRealLikes] = useState<Record<string, number>>({});
+  const [realRatings, setRealRatings] = useState<Record<string, { sum: number; count: number }>>({});
 
   const refresh = async () => {
-    const [{ data: settings }, { data: ov }] = await Promise.all([
+    const [{ data: settings }, { data: ov }, { data: likeRows }, { data: ratingRows }] = await Promise.all([
       supabase.from("site_settings").select("key, value"),
       supabase.from("mod_overrides").select("*"),
+      supabase.from("mod_likes").select("mod_slug"),
+      supabase.from("comments").select("mod_slug, rating").not("rating", "is", null),
     ]);
     const map = new Map<string, unknown>();
     (settings ?? []).forEach((r: { key: string; value: unknown }) => map.set(r.key, r.value));
@@ -156,13 +194,36 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     const overrideMap: Record<string, ModOverride> = {};
     (ov ?? []).forEach((r) => { overrideMap[r.slug as string] = r as unknown as ModOverride; });
     setOverrides(overrideMap);
+
+    // Real per-mod like counts — one row per user per mod in mod_likes.
+    const likeCounts: Record<string, number> = {};
+    (likeRows ?? []).forEach((r: { mod_slug: string }) => {
+      likeCounts[r.mod_slug] = (likeCounts[r.mod_slug] || 0) + 1;
+    });
+    setRealLikes(likeCounts);
+
+    // Real per-mod rating aggregates — top-level reviews only (replies
+    // have rating: null, already filtered by the .not("rating","is",null)).
+    const ratingAgg: Record<string, { sum: number; count: number }> = {};
+    (ratingRows ?? []).forEach((r: { mod_slug: string; rating: number }) => {
+      const cur = ratingAgg[r.mod_slug] || { sum: 0, count: 0 };
+      cur.sum += r.rating;
+      cur.count += 1;
+      ratingAgg[r.mod_slug] = cur;
+    });
+    setRealRatings(ratingAgg);
+
     setLoading(false);
   };
 
   useEffect(() => { refresh(); }, []);
 
   const { mods, allMods } = useMemo(() => {
-    const merged = baseMods.map((m) => applyOverride(m, overrides[m.slug]));
+    const merged = baseMods.map((m) => {
+      const rl = realLikes[m.slug] || 0;
+      const rr = realRatings[m.slug] || { sum: 0, count: 0 };
+      return applyOverride(m, overrides[m.slug], rl, rr.sum, rr.count);
+    });
     // Re-order to put featured first
     const fSlug = featuredSlug;
     const ordered = fSlug
@@ -170,7 +231,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       : merged;
     const visible = ordered.filter((m) => !overrides[m.slug]?.hidden);
     return { mods: visible, allMods: ordered };
-  }, [overrides, featuredSlug]);
+  }, [overrides, featuredSlug, realLikes, realRatings]);
 
   return (
     <C.Provider value={{ loading, branding, announcement, socials, overrides, mods, allMods, refresh }}>
