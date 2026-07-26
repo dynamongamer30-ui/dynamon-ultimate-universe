@@ -302,6 +302,18 @@ function KeysPanel() {
             </div>
 
             <div className="space-y-2.5 md:hidden">
+              <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-background/40 px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={toggleAll}
+                  className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+                />
+                <span className="text-sm font-semibold text-foreground">
+                  {allFilteredSelected ? "Deselect all" : "Select all"}
+                  <span className="ml-1 font-normal text-muted-foreground">({filtered.length})</span>
+                </span>
+              </label>
               {filtered.map(k => <KeyCard key={k.key} k={k} selected={selected.has(k.key)} onToggle={toggle} />)}
             </div>
             </>
@@ -728,6 +740,18 @@ function DevicesPanel() {
           </div>
 
           <div className="space-y-2.5 md:hidden">
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-background/40 px-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={allFilteredSelected}
+                onChange={toggleAll}
+                className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+              />
+              <span className="text-sm font-semibold text-foreground">
+                {allFilteredSelected ? "Deselect all" : "Select all"}
+                <span className="ml-1 font-normal text-muted-foreground">({filtered.length})</span>
+              </span>
+            </label>
             {filtered.map((r) => {
               const isLocked = banned.has(r.fingerprint);
               const last = Number(r.lastLogin ?? 0);
