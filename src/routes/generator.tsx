@@ -134,10 +134,10 @@ function GeneratorPage() {
   const search = useSearch({ from: "/generator" }) as GeneratorSearch;
   const ref = search.ref;
 
-  // Package of the modded APK the key unlocks. If it isn't installed, we fall
-  // back to the newest mod page on the site (resolved at runtime, so new
-  // uploads are followed automatically without editing this file).
-  const MODDED_APP_PACKAGE = "com.funtomic.dynamons";
+  // Deep link registered by the modded APK (com.funtomic.dynamons):
+  //   <data android:scheme="dynamongamer" android:host="verify" />
+  // If it isn't installed we fall back to the newest mod page on the site
+  // (resolved at runtime, so new uploads are followed automatically).
 
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const [turnstileToken, setTurnstileToken] = useState<string>("");
@@ -334,10 +334,11 @@ function GeneratorPage() {
     const onHide = () => { hidden = true; };
     document.addEventListener("visibilitychange", onHide);
 
-    // Android intent URL — launches the app if installed & registered.
-    const intentUrl =
-      `intent://open#Intent;scheme=dynamongamer;package=${MODDED_APP_PACKAGE};end`;
-    window.location.href = intentUrl;
+    // Must match the APK's intent-filter exactly:
+    //   <data android:scheme="dynamongamer" android:host="verify" />
+    // Using the plain scheme URL (not intent://) avoids Android's default
+    // "open Play Store" fallback when the package isn't resolvable.
+    window.location.href = "dynamongamer://verify";
 
     // If the app took over, the tab goes hidden; if we're still here after the
     // delay, treat it as "not installed" and redirect.
