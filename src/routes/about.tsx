@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/PageShell";
-import { SocialStrip } from "@/components/SocialStrip";
 import { Heart, Sparkles, Users } from "lucide-react";
 
 export const Route = createFileRoute("/about")({
@@ -47,10 +46,6 @@ function About() {
             <p className="mt-1 text-sm text-muted-foreground">{text}</p>
           </div>
         ))}
-      </section>
-
-      <section className="mt-16">
-        <SocialStrip />
       </section>
     </PageShell>
   );

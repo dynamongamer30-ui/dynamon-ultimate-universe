@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/PageShell";
-import { SocialStrip } from "@/components/SocialStrip";
 
 export const Route = createFileRoute("/disclaimer")({
   head: () => ({
@@ -53,8 +52,6 @@ function Disclaimer() {
             information. We respond within 72 hours.
           </p>
         </section>
-
-        <SocialStrip />
       </article>
     </PageShell>
   );

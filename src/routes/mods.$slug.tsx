@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, Download, Shield, PlayCircle, Sparkles, Lock, ExternalLink, Loader2, X } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { CommentsPanel } from "@/components/CommentsPanel";
-import { SocialStrip } from "@/components/SocialStrip";
 import { ChangelogTimeline } from "@/components/ChangelogTimeline";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { LikeButton } from "@/components/LikeButton";
@@ -236,10 +235,6 @@ function ModDetail() {
             );
           })}
         </div>
-      </section>
-
-      <section className="mt-16">
-        <SocialStrip />
       </section>
 
       {gateOpen && (

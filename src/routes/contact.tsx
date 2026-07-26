@@ -76,10 +76,6 @@ function Contact() {
           </p>
         </form>
       </section>
-
-      <section className="mt-16">
-        <SocialStrip />
-      </section>
     </PageShell>
   );
 }
