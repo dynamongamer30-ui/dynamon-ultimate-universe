@@ -8,6 +8,7 @@ import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useConfirm } from "@/hooks/useConfirm";
 import { useGamification } from "@/hooks/useGamification";
 import { playClick, playSoft, playSuccess } from "@/lib/sound";
 import { toast } from "sonner";
@@ -43,6 +44,7 @@ export function CommentsPanel({ slug }: { slug: string }) {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { award, grant } = useGamification();
+  const confirm = useConfirm();
   const [comments, setComments] = useState<EnrichedComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState("");
@@ -67,11 +69,11 @@ export function CommentsPanel({ slug }: { slug: string }) {
     const commentIds = list.map((c) => c.id);
 
     const [{ data: authors }, { data: likes }] = await Promise.all([
-      supabase.from("profiles").select("id, username, display_name, avatar_url, custom_avatar_url, is_owner").in("id", authorIds),
+      supabase.from("public_profiles").select("id, username, display_name, avatar_url, custom_avatar_url, is_owner").in("id", authorIds),
       supabase.from("comment_likes").select("comment_id, user_id").in("comment_id", commentIds),
     ]);
 
-    const authorMap = new Map<string, AuthorRow>((authors ?? []).map((a) => [a.id, a as AuthorRow]));
+    const authorMap = new Map<string, AuthorRow>((authors ?? []).map((a) => [a.id as string, a as unknown as AuthorRow]));
     const likeRows = (likes ?? []) as LikeRow[];
 
     const enriched: EnrichedComment[] = list.map((c) => {
@@ -159,7 +161,12 @@ export function CommentsPanel({ slug }: { slug: string }) {
 
   const remove = async (c: EnrichedComment) => {
     if (!user || (c.user_id !== user.id && !profile?.is_owner)) return;
-    if (!confirm("Delete this review?")) return;
+    if (!(await confirm({
+      title: "Delete review",
+      description: "Delete this review? This cannot be undone.",
+      confirmText: "Delete",
+      danger: true,
+    }))) return;
     await supabase.from("comments").delete().eq("id", c.id);
     setComments((prev) => prev.filter((x) => x.id !== c.id && x.parent_id !== c.id));
   };
@@ -195,7 +202,7 @@ export function CommentsPanel({ slug }: { slug: string }) {
             </div>
           </div>
         </div>
-        <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{c.body}</p>
+        <p className="mt-3 whitespace-pre-line break-words [overflow-wrap:anywhere] text-sm leading-relaxed text-muted-foreground">{c.body}</p>
 
         {!isReply && <div className="mt-3"><ElementalReactions commentId={c.id} /></div>}
 
