@@ -48,6 +48,7 @@ export type ModOverride = {
   rating_count: number | null;
   downloads_absolute: number | null;
   likes_absolute: number | null;
+  real_downloads: number;
   download_url: string | null;
   /** AES-encrypted MEGA download link (encrypted with VITE_CIPHER_KEY). */
   mega_enc: string | null;
@@ -114,40 +115,35 @@ function applyOverride(
 ): Mod {
   if (!o) {
     // No admin override row at all — still fold in real likes/ratings.
-    const seedCount = mod.ratingCount ?? 0;
-    const combinedCount = seedCount + realRatingCount;
-    const combinedRating = combinedCount > 0
-      ? (mod.baseRating * seedCount + realRatingSum) / combinedCount
+    const combinedRating = realRatingCount > 0
+      ? realRatingSum / realRatingCount
       : mod.baseRating;
     return {
       ...mod,
       baseLikes: Math.max(0, mod.baseLikes + realLikes),
       baseRating: combinedRating,
-      ratingCount: combinedCount,
+      ratingCount: realRatingCount,
     };
   }
 
-  const downloads =
-    o.downloads_absolute != null
-      ? Math.max(0, o.downloads_absolute + (o.downloads_boost || 0))
-      : Math.max(0, mod.downloads + (o.downloads_boost || 0));
+  // Downloads = the owner's "set to" seed (or the mod's built-in default)
+  // + REAL completed downloads (mod_overrides.real_downloads, incremented
+  // server-side by redeem_secure_session on every genuine unlock).
+  const downloadsSeed = o.downloads_absolute != null ? o.downloads_absolute : mod.downloads;
+  const downloads = Math.max(0, downloadsSeed + (o.real_downloads || 0));
 
-  // Likes = admin-set seed (or the mod's default baseline) + manual boost
-  // + REAL per-user likes from mod_likes. Set "likes to" 1000, then every
-  // genuine like a user gives adds 1 on top automatically.
+  // Likes = the owner's "set to" seed + REAL per-user likes from mod_likes.
+  // Set it to 1000, then every genuine like a user gives adds 1 on top.
   const likesSeed = o.likes_absolute != null ? o.likes_absolute : mod.baseLikes;
-  const baseLikes = Math.max(0, likesSeed + (o.likes_boost || 0) + realLikes);
+  const baseLikes = Math.max(0, likesSeed + realLikes);
 
-  // Rating = weighted blend of the admin's seed rating/count (treated as
-  // that many synthetic reviews) with the REAL average from actual user
-  // reviews (comments.rating). As real reviews come in, the shown average
-  // converges toward the true community rating instead of staying fixed.
+  // Rating = the owner's seed number shown only until real reviews exist.
+  // Once anyone leaves a real star rating, the real average takes over
+  // completely — the seed has no lingering weight, matching "set rating,
+  // then real people's ratings are what actually count."
   const seedRating = o.rating ?? mod.baseRating;
-  const seedCount = o.rating_count ?? mod.ratingCount ?? 0;
-  const combinedCount = seedCount + realRatingCount;
-  const combinedRating = combinedCount > 0
-    ? (seedRating * seedCount + realRatingSum) / combinedCount
-    : seedRating;
+  const combinedRating = realRatingCount > 0 ? (realRatingSum / realRatingCount) : seedRating;
+  const combinedCount = realRatingCount;
 
   return {
     ...mod,
