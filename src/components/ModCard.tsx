@@ -4,11 +4,11 @@ import { useRef, useState } from "react";
 import { Download, Heart, MessageSquare, Star, TrendingUp } from "lucide-react";
 import type { Mod } from "@/lib/mods";
 import { formatCount, elementTheme } from "@/lib/mods";
-import { useLocalState } from "@/hooks/useLocalState";
 import { useAuth } from "@/hooks/useAuth";
+import { useLikes } from "@/hooks/useLikes";
 import { useGamification } from "@/hooks/useGamification";
 import { FavoriteButton } from "@/components/FavoriteButton";
-import { playClick, playSoft, playHover, playSuccess } from "@/lib/sound";
+import { playClick, playSoft, playHover } from "@/lib/sound";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -17,12 +17,13 @@ export function ModCard({ mod, index = 0, featured = false }: { mod: Mod; index?
   const navigate = useNavigate();
   const { award, grant } = useGamification();
   const theme = elementTheme[mod.element];
-  const [localLikes, setLocalLikes] = useLocalState<number>(`mod:${mod.slug}:likes`, 0);
-  const [liked, setLiked] = useLocalState<boolean>(`mod:${mod.slug}:liked`, false);
-  const [extraDl, setExtraDl] = useLocalState<number>(`mod:${mod.slug}:dl`, 0);
+  const { has, toggle } = useLikes();
+  const liked = has(mod.slug);
 
-  const totalLikes = mod.baseLikes + localLikes;
-  const totalDownloads = mod.downloads + extraDl;
+  // mod.baseLikes / mod.downloads already come from useSiteSettings fully
+  // merged (owner seed + real DB counts) — no local/fake math needed here.
+  const totalLikes = mod.baseLikes;
+  const totalDownloads = mod.downloads;
 
   // Pointer-tracking tilt (subtle, spring-released)
   const cardRef = useRef<HTMLElement>(null);
@@ -42,28 +43,19 @@ export function ModCard({ mod, index = 0, featured = false }: { mod: Mod; index?
     setHovered(false);
   };
 
-  const toggleLike = () => {
+  const toggleLike = async () => {
     if (!user) { navigate({ to: "/auth" }); return; }
-    const newLiked = !liked;
-    setLiked(newLiked);
-    setLocalLikes((n) => (newLiked ? n + 1 : Math.max(0, n - 1)));
     playSoft();
-    if (newLiked) { award(3, "Liked"); grant("first_like"); }
+    const added = await toggle(mod.slug);
+    if (added) { award(2, "Liked a mod"); grant("first_like"); }
   };
 
   const handleGet = (e: React.MouseEvent) => {
-    if (!user) {
-      e.preventDefault();
-      navigate({ to: "/auth" });
-      return;
-    }
-    playSuccess();
-    setExtraDl((n) => n + 1);
-    award(10, "Downloaded");
-    grant("first_download");
-    toast.success(`${mod.name} — download starting`, {
-      description: "Build access is delivered through our community channels for safety.",
-    });
+    // Just navigate to the detail page — that's where the real gated
+    // download flow (follow-gate -> secure session -> /unlock) lives.
+    // No fake toast/counter here; nothing has actually happened yet.
+    if (!user) { e.preventDefault(); navigate({ to: "/auth" }); return; }
+    playClick();
   };
 
   const share = async () => {
