@@ -169,6 +169,22 @@ function KeysPanel() {
     toast.success(`Revoked ${ok} key${ok !== 1 ? "s" : ""}`);
   };
 
+  const bulkExtend = async () => {
+    const targets = [...selected];
+    if (!targets.length) return;
+    const v = window.prompt(`Extend ${targets.length} selected key(s) by how many hours?`, "24");
+    const h = Number(v);
+    if (!v || !Number.isFinite(h) || h <= 0) return;
+    setBulkBusy(true);
+    let ok = 0;
+    for (const key of targets) {
+      try { await extendKey(key, h); ok++; } catch { /* skip */ }
+    }
+    setBulkBusy(false);
+    clearSelection();
+    toast.success(`Extended ${ok} key${ok !== 1 ? "s" : ""} by +${h}h`);
+  };
+
   const bulkDelete = async () => {
     const targets = [...selected];
     if (!targets.length) return;
@@ -220,6 +236,13 @@ function KeysPanel() {
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-2.5">
               <span className="text-sm font-semibold text-foreground">{selected.size} selected</span>
               <div className="flex-1" />
+              <button
+                onClick={bulkExtend}
+                disabled={bulkBusy}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
+              >
+                {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Clock className="h-3.5 w-3.5" />} Extend
+              </button>
               <button
                 onClick={bulkRevoke}
                 disabled={bulkBusy}
@@ -518,6 +541,9 @@ function DevicesPanel() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const confirm = useConfirm();
 
   const reload = async () => {
     setLoading(true);
@@ -548,6 +574,63 @@ function DevicesPanel() {
     ? rows.filter((r) => r.fingerprint.toLowerCase().includes(q) || String(r.Key ?? r.key ?? "").toLowerCase().includes(q))
     : rows;
 
+  const toggle = (fp: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(fp)) next.delete(fp); else next.add(fp);
+      return next;
+    });
+  };
+  const allFilteredSelected = filtered.length > 0 && filtered.every((r) => selected.has(r.fingerprint));
+  const toggleAll = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) filtered.forEach((r) => next.delete(r.fingerprint));
+      else filtered.forEach((r) => next.add(r.fingerprint));
+      return next;
+    });
+  };
+  const clearSelection = () => setSelected(new Set());
+
+  const bulkBan = async () => {
+    const targets = [...selected];
+    if (!targets.length) return;
+    if (!(await confirm({
+      title: "Ban selected devices",
+      description: `Ban ${targets.length} device${targets.length > 1 ? "s" : ""}? They lose access immediately.`,
+      confirmText: "Ban all",
+      danger: true,
+    }))) return;
+    setBulkBusy(true);
+    let ok = 0;
+    for (const fp of targets) {
+      try { await banDevice(fp, "bulk ban from devices panel"); ok++; } catch { /* skip */ }
+    }
+    setBulkBusy(false);
+    clearSelection();
+    toast.success(`Banned ${ok} device${ok !== 1 ? "s" : ""}`);
+    await reload();
+  };
+
+  const bulkUnban = async () => {
+    const targets = [...selected];
+    if (!targets.length) return;
+    if (!(await confirm({
+      title: "Unban selected devices",
+      description: `Unban ${targets.length} device${targets.length > 1 ? "s" : ""}?`,
+      confirmText: "Unban all",
+    }))) return;
+    setBulkBusy(true);
+    let ok = 0;
+    for (const fp of targets) {
+      try { await unbanDevice(fp); ok++; } catch { /* skip */ }
+    }
+    setBulkBusy(false);
+    clearSelection();
+    toast.success(`Unbanned ${ok} device${ok !== 1 ? "s" : ""}`);
+    await reload();
+  };
+
   const bannedCount = rows.filter((r) => banned.has(r.fingerprint)).length;
   const unbannedCount = Math.max(0, rows.length - bannedCount);
 
@@ -570,15 +653,39 @@ function DevicesPanel() {
           </Button>
         </div>
 
+        {selected.size > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-2.5">
+            <span className="text-sm font-semibold text-foreground">{selected.size} selected</span>
+            <div className="flex-1" />
+            <button onClick={bulkBan} disabled={bulkBusy}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-400/10 disabled:opacity-50">
+              {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />} Ban
+            </button>
+            <button onClick={bulkUnban} disabled={bulkBusy}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-green-400/40 px-3 py-1.5 text-xs font-semibold text-green-300 hover:bg-green-400/10 disabled:opacity-50">
+              {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlock className="h-3.5 w-3.5" />} Unban
+            </button>
+            <button onClick={clearSelection} disabled={bulkBusy}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-white/5 disabled:opacity-50">
+              Clear
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
         ) : filtered.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">No activated devices yet.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead className="text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
+                  <th className="py-2 pr-3">
+                    <input type="checkbox" checked={allFilteredSelected} onChange={toggleAll}
+                      className="h-4 w-4 cursor-pointer accent-[var(--primary)]" aria-label="Select all devices" />
+                  </th>
                   <th className="py-2 pr-3">Device</th>
                   <th className="py-2 pr-3">Key</th>
                   <th className="py-2 pr-3">Last login</th>
@@ -591,7 +698,11 @@ function DevicesPanel() {
                   const isLocked = banned.has(r.fingerprint);
                   const last = Number(r.lastLogin ?? 0);
                   return (
-                    <tr key={r.fingerprint} className="border-t border-border/40">
+                    <tr key={r.fingerprint} className={`border-t border-border/40 ${selected.has(r.fingerprint) ? "bg-primary/5" : ""}`}>
+                      <td className="py-3 pr-3">
+                        <input type="checkbox" checked={selected.has(r.fingerprint)} onChange={() => toggle(r.fingerprint)}
+                          className="h-4 w-4 cursor-pointer accent-[var(--primary)]" aria-label={`Select ${r.fingerprint}`} />
+                      </td>
                       <td className="py-3 pr-3 font-mono text-[11px] text-muted-foreground">{r.fingerprint.slice(0, 16)}…</td>
                       <td className="py-3 pr-3 font-mono text-xs text-primary">{String(r.Key ?? r.key ?? "—")}</td>
                       <td className="py-3 pr-3 text-xs text-muted-foreground">{last ? new Date(last).toLocaleString() : "—"}</td>
@@ -615,6 +726,42 @@ function DevicesPanel() {
               </tbody>
             </table>
           </div>
+
+          <div className="space-y-2.5 md:hidden">
+            {filtered.map((r) => {
+              const isLocked = banned.has(r.fingerprint);
+              const last = Number(r.lastLogin ?? 0);
+              const isSel = selected.has(r.fingerprint);
+              return (
+                <div key={r.fingerprint} className={`rounded-xl border p-3 ${isSel ? "border-primary/40 bg-primary/5" : "border-border bg-background/40"}`}>
+                  <div className="flex items-start gap-3">
+                    <input type="checkbox" checked={isSel} onChange={() => toggle(r.fingerprint)}
+                      className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-[var(--primary)]" aria-label={`Select ${r.fingerprint}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate font-mono text-xs text-primary">{String(r.Key ?? r.key ?? "—")}</span>
+                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${isLocked ? "border-red-400/40 text-red-300" : "border-green-400/40 text-green-300"}`}>
+                          {isLocked ? "Banned" : "Active"}
+                        </span>
+                      </div>
+                      <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                        <div className="truncate font-mono">Device: {r.fingerprint.slice(0, 20)}…</div>
+                        <div>Last login: {last ? new Date(last).toLocaleString() : "—"}</div>
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        {isLocked ? (
+                          <IconBtn title="Unban" disabled={busy === r.fingerprint} onClick={() => doUnlock(r.fingerprint)}><Unlock className="h-3.5 w-3.5" /> Unban</IconBtn>
+                        ) : (
+                          <IconBtn title="Ban" disabled={busy === r.fingerprint} onClick={() => doLock(r.fingerprint)} danger><Lock className="h-3.5 w-3.5" /> Ban</IconBtn>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          </>
         )}
       </div>
     </div>
