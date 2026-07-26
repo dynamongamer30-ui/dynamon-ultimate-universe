@@ -9,6 +9,7 @@ export type Profile = {
   gender: "male" | "female" | "other" | null;
   avatar_url: string | null;
   is_owner: boolean;
+  custom_avatar_url: string | null;
 };
 
 export function useProfile() {

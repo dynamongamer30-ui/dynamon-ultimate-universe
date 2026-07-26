@@ -46,13 +46,15 @@ export type ModOverride = {
   likes_boost: number;
   rating: number | null;
   rating_count: number | null;
+  seed_rating_points: number | null;
+  seed_rating_count: number | null;
   downloads_absolute: number | null;
   likes_absolute: number | null;
   real_downloads: number;
   download_url: string | null;
   /** AES-encrypted MEGA download link (encrypted with VITE_CIPHER_KEY). */
   mega_enc: string | null;
-  /** AES-encrypted "follow us" gate link (encrypted with VITE_CIPHER_KEY). */
+  /** AES-encrypted shortener/earn-link (e.g. followyou.me), shown before the unlock page (encrypted with VITE_CIPHER_KEY). */
   follow_enc: string | null;
 };
 
@@ -137,13 +139,16 @@ function applyOverride(
   const likesSeed = o.likes_absolute != null ? o.likes_absolute : mod.baseLikes;
   const baseLikes = Math.max(0, likesSeed + realLikes);
 
-  // Rating = the owner's seed number shown only until real reviews exist.
-  // Once anyone leaves a real star rating, the real average takes over
-  // completely — the seed has no lingering weight, matching "set rating,
-  // then real people's ratings are what actually count."
-  const seedRating = o.rating ?? mod.baseRating;
-  const combinedRating = realRatingCount > 0 ? (realRatingSum / realRatingCount) : seedRating;
-  const combinedCount = realRatingCount;
+  // Rating = weighted blend of the owner's seed (points/count) and real
+  // reviews. Set seed to 1000 points / 200 votes (avg 5.0), then every real
+  // review adds its stars to the points and 1 to the count — the seed never
+  // gets dropped or overwritten, it just keeps getting diluted by real data.
+  const seedPoints = o.seed_rating_points ?? (o.rating != null ? o.rating * 200 : mod.baseRating * 200);
+  const seedCount = o.seed_rating_count ?? 200;
+  const totalPoints = seedPoints + realRatingSum;
+  const totalCount = seedCount + realRatingCount;
+  const combinedRating = totalCount > 0 ? totalPoints / totalCount : mod.baseRating;
+  const combinedCount = totalCount;
 
   return {
     ...mod,
