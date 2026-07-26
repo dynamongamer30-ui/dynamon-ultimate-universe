@@ -8,7 +8,6 @@ import { OwnerBadge, VerifiedFounderChip } from "@/components/OwnerBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { getAvatarUrl } from "@/lib/avatars";
 import { toast } from "sonner";
 import { playClick, playSuccess, playSoft } from "@/lib/sound";
 
@@ -120,7 +119,7 @@ function ProfilePage() {
     );
   }
 
-  const avatarUrl = getAvatarUrl(avatarId);
+  const avatarUrl = avatarId;
 
   return (
     <PageShell>

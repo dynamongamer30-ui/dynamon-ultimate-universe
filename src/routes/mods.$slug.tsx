@@ -343,13 +343,13 @@ function FollowGate({
               One step to unlock
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
-              Follow us to unlock the secure download for <span className="font-semibold text-foreground">{modName}</span>. You&apos;ll be taken to a secure verification step once you&apos;re back.
+              Complete the quick step to unlock the secure download for <span className="font-semibold text-foreground">{modName}</span>. You&apos;ll be taken to a secure verification step once you&apos;re back.
             </p>
             <button
               onClick={handleFollow} disabled={waiting}
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
             >
-              {waiting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Verifying…</>) : (<><ExternalLink className="h-4 w-4" /> Follow to unlock</>)}
+              {waiting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Verifying…</>) : (<><ExternalLink className="h-4 w-4" /> Continue to unlock</>)}
             </button>
           </div>
         ) : step === "verifying" ? (

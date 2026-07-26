@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Shield, Save, Loader2, Eye, EyeOff, Star, ArrowLeft, Settings2, Megaphone, Link2, Image as ImageIcon, Box, KeyRound } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Shield, Save, Loader2, Eye, EyeOff, Star, ArrowLeft, Settings2, Megaphone, Link2, Image as ImageIcon, Box, KeyRound, Trash2, Upload, Plus, User } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { OwnerGate } from "@/components/OwnerGate";
 import { ThemedSelect } from "@/components/ThemedSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { useSiteSettings, DEFAULT_BRANDING, DEFAULT_ANNOUNCEMENT, DEFAULT_SOCIALS, type SiteBranding, type Announcement, type Socials, type ModOverride } from "@/hooks/useSiteSettings";
+import { useProfile } from "@/hooks/useProfile";
 import { mods as baseMods } from "@/lib/mods";
 import { Cipher } from "@/lib/cipher";
 import { toast } from "sonner";
@@ -23,7 +24,7 @@ function ControlRoute() {
   return <OwnerGate><ControlPanel /></OwnerGate>;
 }
 
-type Tab = "branding" | "announcement" | "socials" | "featured" | "mods";
+type Tab = "branding" | "announcement" | "socials" | "featured" | "mods" | "security" | "avatars";
 
 function ControlPanel() {
   const { branding, announcement, socials, overrides, refresh } = useSiteSettings();
@@ -36,6 +37,8 @@ function ControlPanel() {
     { id: "socials", label: "Socials", icon: Link2 },
     { id: "featured", label: "Featured Mod", icon: Star },
     { id: "mods", label: "Mods Editor", icon: Box },
+    { id: "security", label: "Unlock Timing", icon: Shield },
+    { id: "avatars", label: "Avatars", icon: ImageIcon },
   ];
 
   return (
@@ -74,6 +77,8 @@ function ControlPanel() {
         {tab === "socials" && <SocialsEditor initial={socials} onSaved={refresh} />}
         {tab === "featured" && <FeaturedEditor onSaved={refresh} />}
         {tab === "mods" && <ModsEditor overrides={overrides} onSaved={refresh} />}
+        {tab === "security" && <SecurityEditor />}
+        {tab === "avatars" && <AvatarsEditor />}
         
       </div>
     </PageShell>
@@ -86,6 +91,207 @@ async function saveSetting(key: string, value: unknown) {
   if (error) { toast.error(error.message); return false; }
   toast.success("Saved");
   return true;
+}
+
+// app_config uses a different shape (id/data) than site_settings (key/value) —
+// this is where redeem_secure_session reads {timer, minTimer} from at runtime.
+async function saveAppConfig(id: string, data: unknown) {
+  const { error } = await supabase.from("app_config").upsert({ id, data: data as never });
+  if (error) { toast.error(error.message); return false; }
+  toast.success("Saved");
+  return true;
+}
+
+// ---------- Avatars ----------
+type AvatarRow = {
+  id: string;
+  url: string;
+  gender: "male" | "female";
+  label: string | null;
+  active: boolean;
+  sort_order: number;
+};
+
+function AvatarsEditor() {
+  const { profile, refresh: refreshProfile } = useProfile();
+  const [rows, setRows] = useState<AvatarRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [customUrl, setCustomUrl] = useState("");
+  const [savingCustom, setSavingCustom] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from("avatar_pool").select("*").order("sort_order");
+    if (error) toast.error(error.message);
+    setRows((data ?? []) as AvatarRow[]);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+  useEffect(() => { setCustomUrl(profile?.custom_avatar_url ?? ""); }, [profile?.custom_avatar_url]);
+
+  const upload = async (file: File, gender: "male" | "female") => {
+    setUploading(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${gender}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: false });
+    if (upErr) { toast.error(upErr.message); setUploading(false); return; }
+    const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+    const { error: insErr } = await supabase.from("avatar_pool").insert({
+      url: pub.publicUrl,
+      gender,
+      active: true,
+      sort_order: rows.length,
+    } as never);
+    if (insErr) toast.error(insErr.message); else { toast.success("Avatar added"); load(); }
+    setUploading(false);
+  };
+
+  const updateRow = async (id: string, patch: Partial<AvatarRow>) => {
+    const { error } = await supabase.from("avatar_pool").update(patch as never).eq("id", id);
+    if (error) toast.error(error.message); else load();
+  };
+
+  const removeRow = async (id: string) => {
+    if (!confirm("Remove this avatar from the pool?")) return;
+    const { error } = await supabase.from("avatar_pool").delete().eq("id", id);
+    if (error) toast.error(error.message); else load();
+  };
+
+  const saveCustomPfp = async () => {
+    if (!profile) return;
+    setSavingCustom(true);
+    const { error } = await supabase.from("profiles").update({ custom_avatar_url: customUrl || null } as never).eq("id", profile.id);
+    if (error) toast.error(error.message); else { toast.success("Saved"); refreshProfile(); }
+    setSavingCustom(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card title="My profile picture" desc="A custom image just for your account — separate from the shared picker below. Leave blank to use the regular avatar picker on your profile instead.">
+        <Field label="Custom avatar URL">
+          <input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} className={inp} placeholder="https://…" />
+        </Field>
+        <div className="mt-3 flex items-center gap-3">
+          {customUrl && <img src={customUrl} alt="" className="h-12 w-12 rounded-full object-cover ring-2 ring-primary/40" />}
+          <button onClick={saveCustomPfp} disabled={savingCustom}
+            className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-60"
+            style={{ background: "var(--gradient-primary)" }}>
+            {savingCustom ? <Loader2 className="h-4 w-4 animate-spin" /> : <User className="h-4 w-4" />} Save
+          </button>
+        </div>
+      </Card>
+
+      <Card title="Avatar pool" desc="These show up in the picker every user sees, and next to their comments. Upload images (they're stored in your Supabase project, not on an external host) or edit URLs directly.">
+        <div className="flex flex-wrap gap-3">
+          <UploadButton label="Add male avatar" uploading={uploading} onFile={(f) => upload(f, "male")} />
+          <UploadButton label="Add female avatar" uploading={uploading} onFile={(f) => upload(f, "female")} />
+        </div>
+
+        {loading ? (
+          <Loader2 className="mt-6 h-5 w-5 animate-spin text-muted-foreground" />
+        ) : (
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {rows.map((r) => (
+              <div key={r.id} className="flex items-center gap-3 rounded-xl border border-border bg-background/40 p-3">
+                <img src={r.url} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <input value={r.url} onChange={(e) => setRows((prev) => prev.map((x) => x.id === r.id ? { ...x, url: e.target.value } : x))}
+                    onBlur={(e) => updateRow(r.id, { url: e.target.value })}
+                    className="w-full truncate rounded-lg border border-border bg-background/60 px-2 py-1 text-xs outline-none focus:border-primary" />
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="capitalize text-muted-foreground">{r.gender}</span>
+                    <button onClick={() => updateRow(r.id, { active: !r.active })}
+                      className={`rounded-full px-2 py-0.5 font-semibold ${r.active ? "bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-muted-foreground"}`}>
+                      {r.active ? "Active" : "Hidden"}
+                    </button>
+                  </div>
+                </div>
+                <button onClick={() => removeRow(r.id)} className="shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-red-500/10 hover:text-red-400" aria-label="Remove">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            {rows.length === 0 && <p className="text-sm text-muted-foreground">No avatars yet — upload some above.</p>}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function UploadButton({ label, uploading, onFile }: { label: string; uploading: boolean; onFile: (f: File) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <input ref={ref} type="file" accept="image/*" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
+      <button onClick={() => ref.current?.click()} disabled={uploading}
+        className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-2 text-sm font-semibold text-foreground hover:bg-card disabled:opacity-60">
+        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} {label}
+      </button>
+    </>
+  );
+}
+const DEFAULT_SECURITY = { timer: 900, minTimer: 45 };
+type SecurityConfig = { timer: number; minTimer: number };
+
+function SecurityEditor() {
+  const [v, setV] = useState<SecurityConfig>(DEFAULT_SECURITY);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    supabase.from("app_config").select("data").eq("id", "Security").maybeSingle().then(({ data }) => {
+      const d = data?.data as Partial<SecurityConfig> | undefined;
+      if (d) setV({ ...DEFAULT_SECURITY, ...d });
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return <Card title="Unlock timing"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></Card>;
+
+  return (
+    <Card
+      title="Unlock timing"
+      desc="Controls the /unlock page for every mod. Minimum = shortest time a real user can take to reach the page (below this, it's flagged as fake and rejected). Maximum = how long a session token stays valid before it expires."
+    >
+      <Grid>
+        <Field label="Minimum time (seconds)">
+          <input
+            type="number"
+            min={0}
+            value={v.minTimer}
+            onChange={(e) => setV({ ...v, minTimer: Number(e.target.value) })}
+            className={inp}
+          />
+        </Field>
+        <Field label="Maximum time (seconds)">
+          <input
+            type="number"
+            min={0}
+            value={v.timer}
+            onChange={(e) => setV({ ...v, timer: Number(e.target.value) })}
+            className={inp}
+          />
+        </Field>
+      </Grid>
+      {v.minTimer >= v.timer && (
+        <p className="text-xs font-semibold text-red-400">Minimum must be less than maximum, or every session will fail.</p>
+      )}
+      <SaveRow
+        saving={saving}
+        onReset={() => setV(DEFAULT_SECURITY)}
+        onSave={async () => {
+          if (v.minTimer >= v.timer) { toast.error("Minimum must be less than maximum."); return; }
+          setSaving(true);
+          await saveAppConfig("Security", v);
+          setSaving(false);
+        }}
+      />
+    </Card>
+  );
 }
 
 // ---------- Branding ----------
@@ -235,7 +441,8 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
     changelog: JSON.stringify(existing?.changelog ?? [], null, 2),
     downloads_absolute: (existing?.downloads_absolute ?? "") as number | "",
     likes_absolute: (existing?.likes_absolute ?? "") as number | "",
-    rating: existing?.rating ?? ("" as number | ""),
+    seed_rating_points: (existing?.seed_rating_points ?? "") as number | "",
+    seed_rating_count: (existing?.seed_rating_count ?? "") as number | "",
     download_url: existing?.download_url ?? "",
     // Decrypt stored ciphertext back to plaintext for editing. If the key
     // doesn't match or the value is empty, fall back to an empty field.
@@ -266,7 +473,8 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
       changelog,
       downloads_absolute: v.downloads_absolute === "" ? null : Number(v.downloads_absolute),
       likes_absolute: v.likes_absolute === "" ? null : Number(v.likes_absolute),
-      rating: v.rating === "" ? null : Number(v.rating),
+      seed_rating_points: v.seed_rating_points === "" ? null : Number(v.seed_rating_points),
+      seed_rating_count: v.seed_rating_count === "" ? null : Number(v.seed_rating_count),
       download_url: v.download_url || null,
       // Encrypt the MEGA + Follow links so the ciphertext (not the raw URL) is
       // what's stored and shipped to the public site.
@@ -301,10 +509,19 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
         <Field label="YouTube video ID"><input value={v.youtube_id} onChange={(e) => setV({ ...v, youtube_id: e.target.value })} className={inp} placeholder="dQw4w9WgXcQ" /></Field>
         <Field label="Download URL"><input value={v.download_url} onChange={(e) => setV({ ...v, download_url: e.target.value })} className={inp} placeholder="https://…" /></Field>
         <Field label="MEGA link (encrypted on save)"><input value={v.mega} onChange={(e) => setV({ ...v, mega: e.target.value })} className={inp} placeholder="https://mega.nz/file/…" /></Field>
-        <Field label="Follow-us link (shown before reveal)"><input value={v.follow} onChange={(e) => setV({ ...v, follow: e.target.value })} className={inp} placeholder="https://youtube.com/@… or t.me/…" /></Field>
+        <Field label="Shortener / earn link (e.g. followyou.me — shown before the unlock page)"><input value={v.follow} onChange={(e) => setV({ ...v, follow: e.target.value })} className={inp} placeholder="https://followyou.me/…" /></Field>
         <Field label={`Set downloads (real completed downloads add on top)`}><input type="number" min="0" value={v.downloads_absolute} onChange={(e) => setV({ ...v, downloads_absolute: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder={String(base.downloads)} /></Field>
         <Field label={`Set likes (real user likes add on top)`}><input type="number" min="0" value={v.likes_absolute} onChange={(e) => setV({ ...v, likes_absolute: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder={String(base.baseLikes)} /></Field>
-        <Field label={`Set rating (shown until real reviews exist, then real average takes over)`}><input type="number" step="0.1" min="0" max="5" value={v.rating} onChange={(e) => setV({ ...v, rating: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder={String(base.baseRating)} /></Field>
+        <Field label={`Set rating points (e.g. 1000 = your baseline "score")`}><input type="number" min="0" value={v.seed_rating_points} onChange={(e) => setV({ ...v, seed_rating_points: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder="1000" /></Field>
+        <Field label={`Set rating votes (e.g. 200 = your baseline "voter count")`}><input type="number" min="0" value={v.seed_rating_count} onChange={(e) => setV({ ...v, seed_rating_count: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder="200" /></Field>
+      </Grid>
+      {v.seed_rating_points !== "" && v.seed_rating_count !== "" && Number(v.seed_rating_count) > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Baseline average: <span className="font-semibold text-foreground">{(Number(v.seed_rating_points) / Number(v.seed_rating_count)).toFixed(2)}</span> ★
+          — real reviews add their stars to the points and 1 to the votes, so this dilutes naturally as people rate. It never gets overwritten.
+        </p>
+      )}
+      <Grid>
         {existing && (
           <Field label="Real downloads so far (read-only)">
             <div className={`${inp} flex items-center opacity-70`}>{existing.real_downloads ?? 0}</div>
