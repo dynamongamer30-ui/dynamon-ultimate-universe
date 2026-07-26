@@ -45,7 +45,7 @@ function Index() {
               className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary"
             >
               <span className="inline-block h-px w-8 bg-primary" aria-hidden />
-              Only Dynamons World 🖐️
+              Only Dynamons World
             </motion.p>
 
             <motion.h1

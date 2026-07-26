@@ -212,13 +212,19 @@ export default {
         if (ban) return json({ banned: true, reason: ban });
 
         // TRIPWIRE: gate must have written a fresh login marker this session.
+        // IMPORTANT: a missing/stale login marker is NOT proof of tampering —
+        // it also happens for innocent users who simply haven't logged in yet
+        // (e.g. tapped "Get Key" before "Login/Verify"). Banning here caused
+        // false-positive bans, so we now BLOCK without banning. Real tampering
+        // is still caught below by the ciphertext-mismatch check and by the
+        // /tamper endpoint (badsig / debugger), which have no false positives.
         const au = await fbGet("ActivatedUsers/" + fp);
         let last = au && au.lastLogin ? Number(au.lastLogin) : 0;
         if (last > 0 && last < 1e12) last = last * 1000; // seconds -> ms
         const fresh = last > 0 && Date.now() - last <= LOGIN_GRACE * 1000;
         if (!au || !fresh) {
-          await banDevice(fp, "gate-removed");
-          return json({ banned: true, reason: "no-login" });
+          // Block the mod but do NOT ban — user just needs to log in properly.
+          return json({ blocked: true, reason: "no-login" });
         }
 
         const kf = await KV.get("key:" + build, "json");

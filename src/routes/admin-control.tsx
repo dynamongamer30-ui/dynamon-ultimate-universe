@@ -7,6 +7,7 @@ import { ThemedSelect } from "@/components/ThemedSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { useSiteSettings, DEFAULT_BRANDING, DEFAULT_ANNOUNCEMENT, DEFAULT_SOCIALS, type SiteBranding, type Announcement, type Socials, type ModOverride } from "@/hooks/useSiteSettings";
 import { useProfile } from "@/hooks/useProfile";
+import { useConfirm } from "@/hooks/useConfirm";
 import { mods as baseMods } from "@/lib/mods";
 import { Cipher } from "@/lib/cipher";
 import { toast } from "sonner";
@@ -114,6 +115,7 @@ type AvatarRow = {
 
 function AvatarsEditor() {
   const { profile, refresh: refreshProfile } = useProfile();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<AvatarRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -154,7 +156,12 @@ function AvatarsEditor() {
   };
 
   const removeRow = async (id: string) => {
-    if (!confirm("Remove this avatar from the pool?")) return;
+    if (!(await confirm({
+      title: "Remove avatar",
+      description: "Remove this avatar from the pool?",
+      confirmText: "Remove",
+      danger: true,
+    }))) return;
     const { error } = await supabase.from("avatar_pool").delete().eq("id", id);
     if (error) toast.error(error.message); else load();
   };
@@ -429,6 +436,7 @@ function ModsEditor({ overrides, onSaved }: { overrides: Record<string, ModOverr
 
 function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: ModOverride; onSaved: () => void }) {
   const base = baseMods.find((m) => m.slug === slug)!;
+  const confirm = useConfirm();
   const [v, setV] = useState({
     name: existing?.name ?? "",
     tagline: existing?.tagline ?? "",
@@ -489,7 +497,12 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
   };
 
   const clear = async () => {
-    if (!confirm("Reset this mod to defaults?")) return;
+    if (!(await confirm({
+      title: "Reset mod",
+      description: "Reset this mod to defaults?",
+      confirmText: "Reset",
+      danger: true,
+    }))) return;
     await supabase.from("mod_overrides").delete().eq("slug", slug);
     toast.success("Reset");
     onSaved();
