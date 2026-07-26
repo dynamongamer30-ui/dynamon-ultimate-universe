@@ -4,10 +4,12 @@ import { Link } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { mods, elementTheme } from "@/lib/mods";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { elementTheme } from "@/lib/mods";
 
 export function ForYouRail() {
   const { user } = useAuth();
+  const { mods } = useSiteSettings();
   const [elements, setElements] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -34,7 +36,7 @@ export function ForYouRail() {
       setLoaded(true);
     })();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [user, mods]);
 
   if (!user || !loaded) return null;
 
