@@ -206,7 +206,8 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     // Real per-mod rating aggregates — top-level reviews only (replies
     // have rating: null, already filtered by the .not("rating","is",null)).
     const ratingAgg: Record<string, { sum: number; count: number }> = {};
-    (ratingRows ?? []).forEach((r: { mod_slug: string; rating: number }) => {
+    (ratingRows ?? []).forEach((r: { mod_slug: string; rating: number | null }) => {
+      if (r.rating == null) return; // guard: never count a null as a 0-star
       const cur = ratingAgg[r.mod_slug] || { sum: 0, count: 0 };
       cur.sum += r.rating;
       cur.count += 1;
