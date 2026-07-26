@@ -7,6 +7,7 @@ import { CommentsPanel } from "@/components/CommentsPanel";
 import { SocialStrip } from "@/components/SocialStrip";
 import { ChangelogTimeline } from "@/components/ChangelogTimeline";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { LikeButton } from "@/components/LikeButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
@@ -157,6 +158,7 @@ function ModDetail() {
             >
               <Download className="h-4 w-4" /> {user ? "Download mod" : "Sign in to download"}
             </button>
+            <LikeButton slug={mod.slug} />
             <FavoriteButton slug={mod.slug} />
             <Link
               to="/disclaimer" onMouseDown={playClick}

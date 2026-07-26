@@ -233,12 +233,9 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
     youtube_id: existing?.youtube_id ?? "",
     features: (existing?.features ?? []).join("\n"),
     changelog: JSON.stringify(existing?.changelog ?? [], null, 2),
-    downloads_boost: existing?.downloads_boost ?? 0,
-    likes_boost: existing?.likes_boost ?? 0,
     downloads_absolute: (existing?.downloads_absolute ?? "") as number | "",
     likes_absolute: (existing?.likes_absolute ?? "") as number | "",
     rating: existing?.rating ?? ("" as number | ""),
-    rating_count: (existing?.rating_count ?? "") as number | "",
     download_url: existing?.download_url ?? "",
     // Decrypt stored ciphertext back to plaintext for editing. If the key
     // doesn't match or the value is empty, fall back to an empty field.
@@ -267,12 +264,9 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
       youtube_id: v.youtube_id || null,
       features: features.length ? features : null,
       changelog,
-      downloads_boost: Number(v.downloads_boost) || 0,
-      likes_boost: Number(v.likes_boost) || 0,
       downloads_absolute: v.downloads_absolute === "" ? null : Number(v.downloads_absolute),
       likes_absolute: v.likes_absolute === "" ? null : Number(v.likes_absolute),
       rating: v.rating === "" ? null : Number(v.rating),
-      rating_count: v.rating_count === "" ? null : Number(v.rating_count),
       download_url: v.download_url || null,
       // Encrypt the MEGA + Follow links so the ciphertext (not the raw URL) is
       // what's stored and shipped to the public site.
@@ -308,12 +302,14 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
         <Field label="Download URL"><input value={v.download_url} onChange={(e) => setV({ ...v, download_url: e.target.value })} className={inp} placeholder="https://…" /></Field>
         <Field label="MEGA link (encrypted on save)"><input value={v.mega} onChange={(e) => setV({ ...v, mega: e.target.value })} className={inp} placeholder="https://mega.nz/file/…" /></Field>
         <Field label="Follow-us link (shown before reveal)"><input value={v.follow} onChange={(e) => setV({ ...v, follow: e.target.value })} className={inp} placeholder="https://youtube.com/@… or t.me/…" /></Field>
-        <Field label={`Set downloads to (live total auto-increments from here)`}><input type="number" min="0" value={v.downloads_absolute} onChange={(e) => setV({ ...v, downloads_absolute: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder={String(base.downloads)} /></Field>
-        <Field label="Downloads boost (+/-)"><input type="number" value={v.downloads_boost} onChange={(e) => setV({ ...v, downloads_boost: Number(e.target.value) })} className={inp} /></Field>
-        <Field label={`Set likes to (live total auto-increments)`}><input type="number" min="0" value={v.likes_absolute} onChange={(e) => setV({ ...v, likes_absolute: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder={String(base.baseLikes)} /></Field>
-        <Field label="Likes boost (+/-)"><input type="number" value={v.likes_boost} onChange={(e) => setV({ ...v, likes_boost: Number(e.target.value) })} className={inp} /></Field>
-        <Field label={`Rating (0–5, default: ${base.baseRating})`}><input type="number" step="0.1" min="0" max="5" value={v.rating} onChange={(e) => setV({ ...v, rating: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} /></Field>
-        <Field label="Number of ratings / reviews"><input type="number" min="0" value={v.rating_count} onChange={(e) => setV({ ...v, rating_count: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder="e.g. 1240" /></Field>
+        <Field label={`Set downloads (real completed downloads add on top)`}><input type="number" min="0" value={v.downloads_absolute} onChange={(e) => setV({ ...v, downloads_absolute: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder={String(base.downloads)} /></Field>
+        <Field label={`Set likes (real user likes add on top)`}><input type="number" min="0" value={v.likes_absolute} onChange={(e) => setV({ ...v, likes_absolute: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder={String(base.baseLikes)} /></Field>
+        <Field label={`Set rating (shown until real reviews exist, then real average takes over)`}><input type="number" step="0.1" min="0" max="5" value={v.rating} onChange={(e) => setV({ ...v, rating: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder={String(base.baseRating)} /></Field>
+        {existing && (
+          <Field label="Real downloads so far (read-only)">
+            <div className={`${inp} flex items-center opacity-70`}>{existing.real_downloads ?? 0}</div>
+          </Field>
+        )}
       </Grid>
       <Field label={`Tagline (default: ${base.tagline})`}>
         <input value={v.tagline} onChange={(e) => setV({ ...v, tagline: e.target.value })} className={inp} placeholder={base.tagline} />
