@@ -119,6 +119,57 @@ export type Database = {
         }
         Relationships: []
       }
+      app_config: {
+        Row: {
+          data: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      avatar_pool: {
+        Row: {
+          active: boolean
+          created_at: string
+          gender: string
+          id: string
+          label: string | null
+          sort_order: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          gender: string
+          id?: string
+          label?: string | null
+          sort_order?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          gender?: string
+          id?: string
+          label?: string | null
+          sort_order?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       broadcasts: {
         Row: {
           author_id: string
@@ -299,6 +350,8 @@ export type Database = {
           name: string | null
           rating: number | null
           rating_count: number | null
+          seed_rating_count: number | null
+          seed_rating_points: number | null
           size: string | null
           slug: string
           tagline: string | null
@@ -321,6 +374,8 @@ export type Database = {
           name?: string | null
           rating?: number | null
           rating_count?: number | null
+          seed_rating_count?: number | null
+          seed_rating_points?: number | null
           size?: string | null
           slug: string
           tagline?: string | null
@@ -343,6 +398,8 @@ export type Database = {
           name?: string | null
           rating?: number | null
           rating_count?: number | null
+          seed_rating_count?: number | null
+          seed_rating_points?: number | null
           size?: string | null
           slug?: string
           tagline?: string | null
@@ -432,6 +489,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          custom_avatar_url: string | null
           display_name: string
           gender: Database["public"]["Enums"]["gender"] | null
           id: string
@@ -442,6 +500,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          custom_avatar_url?: string | null
           display_name: string
           gender?: Database["public"]["Enums"]["gender"] | null
           id: string
@@ -452,6 +511,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          custom_avatar_url?: string | null
           display_name?: string
           gender?: Database["public"]["Enums"]["gender"] | null
           id?: string
@@ -728,11 +788,19 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      create_secure_session: {
+        Args: { p_fingerprint: string; p_slug: string }
+        Returns: Json
+      }
+      redeem_secure_session: {
+        Args: { p_fingerprint: string; p_token: string; p_version?: string }
+        Returns: Json
+      }
       get_my_profile: {
         Args: never
         Returns: {
           avatar_url: string
-          created_at: string
+          custom_avatar_url: string
           display_name: string
           gender: string
           id: string
