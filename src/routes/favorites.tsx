@@ -5,7 +5,7 @@ import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { mods } from "@/lib/mods";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export const Route = createFileRoute("/favorites")({
   ssr: false,
@@ -15,6 +15,7 @@ export const Route = createFileRoute("/favorites")({
 
 function FavoritesPage() {
   const { user } = useAuth();
+  const { mods } = useSiteSettings();
   const [slugs, setSlugs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 

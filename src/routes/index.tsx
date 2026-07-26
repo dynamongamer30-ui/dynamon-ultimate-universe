@@ -4,7 +4,8 @@ import { Shield, Zap, Users, ChevronRight, Star, Download, TrendingUp, ArrowRigh
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ForYouRail } from "@/components/ForYouRail";
-import { mods, totalDownloads, formatCount, elementTheme } from "@/lib/mods";
+import { formatCount, elementTheme } from "@/lib/mods";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import heroImg from "@/assets/hero.jpg";
 import { playClick, playHover } from "@/lib/sound";
 
@@ -23,11 +24,15 @@ export const Route = createFileRoute("/")({
 const spring = { type: "spring" as const, stiffness: 120, damping: 20 };
 
 function Index() {
+  const { mods } = useSiteSettings();
   const sorted = [...mods].sort(
     (a, b) => (b.downloads * 0.6 + b.baseLikes * 4) - (a.downloads * 0.6 + a.baseLikes * 4),
   );
   const top = sorted[0];
   const latestVersion = mods.reduce((v, m) => (m.version > v ? m.version : v), "0");
+  const totalDownloads = mods.reduce((s, m) => s + m.downloads, 0);
+
+  if (!top) return <PageShell><div className="py-20 text-center text-muted-foreground">No mods available yet.</div></PageShell>;
 
   return (
     <PageShell>

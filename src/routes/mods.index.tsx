@@ -4,7 +4,8 @@ import { Search, TrendingUp, Clock, Heart, Download, Star, Sparkles } from "luci
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ThemedSelect } from "@/components/ThemedSelect";
-import { mods, totalDownloads, formatCount, elementTheme, type Element } from "@/lib/mods";
+import { formatCount, elementTheme, type Element } from "@/lib/mods";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export const Route = createFileRoute("/mods/")({
   head: () => ({
@@ -23,13 +24,15 @@ type Sort = "popular" | "downloads" | "likes" | "newest";
 const ALL_ELEMENTS: Element[] = ["dark", "fire", "thunder", "water", "earth", "diamond", "gold", "spirit"];
 
 function ModsPage() {
+  const { mods } = useSiteSettings();
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<Sort>("popular");
   const [elements, setElements] = useState<Set<Element>>(new Set());
   const [minRating, setMinRating] = useState(0);
   const [version, setVersion] = useState<string>("all");
 
-  const versions = useMemo(() => Array.from(new Set(mods.map((m) => m.version))).sort().reverse(), []);
+  const totalDownloads = useMemo(() => mods.reduce((s, m) => s + m.downloads, 0), [mods]);
+  const versions = useMemo(() => Array.from(new Set(mods.map((m) => m.version))).sort().reverse(), [mods]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -47,7 +50,7 @@ function ModsPage() {
       return (b.downloads * 0.6 + b.baseLikes * 4) - (a.downloads * 0.6 + a.baseLikes * 4);
     });
     return list;
-  }, [q, sort, elements, minRating, version]);
+  }, [mods, q, sort, elements, minRating, version]);
 
   const sorts: { id: Sort; label: string; icon: React.ReactNode }[] = [
     { id: "popular", label: "Most Popular", icon: <TrendingUp className="h-3.5 w-3.5" /> },
