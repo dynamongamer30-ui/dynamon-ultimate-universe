@@ -9,10 +9,10 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact — Dynamon Universe" },
-      { name: "description", content: "Reach the Dynamon Universe team for collaborations, mod requests, or bug reports." },
+      { title: "Contact Us — Dynamon Universe" },
+      { name: "description", content: "Message the Dynamon Universe team about bugs, mod requests, or working together." },
       { property: "og:title", content: "Contact Dynamon Universe" },
-      { property: "og:description", content: "Send a message to the Dynamon Universe team." },
+      { property: "og:description", content: "Send us a message — a real person will read it." },
     ],
   }),
   component: Contact,
@@ -24,7 +24,7 @@ function Contact() {
     e.preventDefault();
     if (!form.message.trim()) return;
     playSuccess();
-    toast.success("Message sent — we'll reply on your favorite channel.");
+    toast.success("Message sent — we’ll get back to you soon.");
     setForm({ name: "", email: "", message: "" });
   };
   return (
@@ -35,12 +35,12 @@ function Contact() {
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Get in touch
           </p>
-          <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl">{"Let's talk Dynamons."}</h1>
+          <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl">{"Say hello."}</h1>
           <p className="mt-4 leading-relaxed text-muted-foreground text-pretty">
-            Found a bug in a build? Want an edition we haven&apos;t made yet? Making content and looking to collab?
-            This inbox is read by the same people who test the mods — not a support bot. Tell us the edition,
-            your device, and what happened, and we&apos;ll get you a real answer. For the fastest replies,
-            ping us on WhatsApp or Telegram.
+            Found a bug? Want a mod we haven&apos;t made yet? Making videos and want to work together?
+            The same people who test the mods read these messages &mdash; not a robot. To help us fix things fast,
+            tell us three things: which mod, which phone you use, and what went wrong. Want a quicker reply?
+            Message us on WhatsApp or Telegram instead.
           </p>
           <div className="mt-6">
             <SocialStrip variant="compact" />
@@ -56,13 +56,13 @@ function Contact() {
             />
             <input
               required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="Your email"
+              placeholder="Your email (so we can reply)"
               className="rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
             />
           </div>
           <textarea
             required rows={6} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
-            placeholder="How can we help?"
+            placeholder="Which mod, which phone, and what happened?"
             className="mt-4 w-full resize-none rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
           />
           <button

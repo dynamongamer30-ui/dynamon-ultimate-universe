@@ -5,10 +5,10 @@ import { Heart, Sparkles, Users } from "lucide-react";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About — Dynamon Universe" },
-      { name: "description", content: "Dynamon Universe is a community-built hub focused only on Dynamons World mod APKs. Learn our story and values." },
+      { title: "About Us — Dynamon Universe" },
+      { name: "description", content: "Dynamon Universe is a fan-made site for Dynamons World mods only. Here’s who we are and how we work." },
       { property: "og:title", content: "About Dynamon Universe" },
-      { property: "og:description", content: "Why we built the only Dynamons World-focused mod hub." },
+      { property: "og:description", content: "Why we made a site just for Dynamons World mods." },
     ],
   }),
   component: About,
@@ -22,21 +22,20 @@ function About() {
           <span className="inline-block h-px w-8 bg-primary" aria-hidden />
           Our story
         </p>
-        <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl">Built by Dynamon fans, for Dynamon fans.</h1>
+        <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl">Made by fans, for fans.</h1>
         <p className="mt-5 max-w-2xl leading-relaxed text-muted-foreground text-pretty">
-          We grew up training, battling, and collecting in Dynamons World — and we got tired of hunting for mods
-          on sketchy aggregator sites buried under popups, fake download buttons, and builds for a hundred games
-          we didn&apos;t play. So we built the site we wanted: one focused vault, dedicated entirely to Dynamons World.
-          Every edition is hand-tested on real devices before it ships, every changelog is honest, and every download
-          is exactly what it says it is. That&apos;s the whole promise.
+          We play Dynamons World too. We got fed up with mod sites full of pop-ups, fake download buttons,
+          and mods for games we don&apos;t even play. So we made the site we wished existed: one place, one game,
+          nothing else. We install and play every mod ourselves on real phones before putting it here. We write
+          honest update notes. And what you download is exactly what the page says it is. That&apos;s it.
         </p>
       </section>
 
       <section className="mt-10 grid gap-6 sm:grid-cols-3">
         {[
-          { Icon: Sparkles, title: "Focused", text: "Only Dynamons World. One game, eight editions, zero clutter — we will never dilute the vault with other titles." },
-          { Icon: Heart, title: "Crafted", text: "Every build is installed, played, and stress-tested on real devices before it goes live. If it crashes for us, it never ships to you." },
-          { Icon: Users, title: "Community", text: "Ratings, reviews, and requests from trainers like you decide which editions we feature and what we build next." },
+          { Icon: Sparkles, title: "One game only", text: "We only do Dynamons World. One game, eight versions, nothing else. We’ll never add mods for other games." },
+          { Icon: Heart, title: "Tested by hand", text: "We install and play every mod on real phones first. If it crashes for us, we don’t put it up." },
+          { Icon: Users, title: "You decide", text: "Your ratings, reviews, and requests decide which mods we show first and what we make next." },
         ].map(({ Icon, title, text }) => (
           <div key={title} className="rounded-2xl glass p-6">
             <div className="grid h-10 w-10 place-items-center rounded-xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>

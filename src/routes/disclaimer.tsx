@@ -23,6 +23,7 @@ function Disclaimer() {
             sponsored by the official Dynamons World developers or publisher. All trademarks belong to their
             respective owners.
           </p>
+          <p className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed text-foreground"><span className="font-bold text-primary">In simple words: </span>This is a fan site. We are not the company that made Dynamons World, and they don&apos;t run or approve this site. The game and its name belong to them.</p>
         </header>
 
         <section id="legal" className="edge-light rounded-2xl glass p-8">
@@ -32,6 +33,7 @@ function Disclaimer() {
             use any build you discover here. Always own a legitimate copy of the original game and respect
             the developers — consider supporting them through the official channels.
           </p>
+          <p className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed text-foreground"><span className="font-bold text-primary">In simple words: </span>Using a mod can break the game&apos;s rules, and that&apos;s your choice to make. Please also own the real game and support the people who made it.</p>
         </section>
 
         <section id="privacy" className="edge-light rounded-2xl glass p-8">
@@ -42,6 +44,7 @@ function Disclaimer() {
             ratings may also be cached locally in your browser for performance. Embedded social links open
             in their own platforms with their own privacy policies.
           </p>
+          <p className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed text-foreground"><span className="font-bold text-primary">In simple words: </span>We save your email and the things you do here (like ratings and comments) so the site works. Nothing else. When you tap a social link, that app&apos;s own rules apply, not ours.</p>
         </section>
 
         <section id="dmca" className="edge-light rounded-2xl glass p-8">
@@ -51,6 +54,7 @@ function Disclaimer() {
             us via the contact page with the URL of the content, a description of the work, and your contact
             information. We respond within 72 hours.
           </p>
+          <p className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed text-foreground"><span className="font-bold text-primary">In simple words: </span>If you own something posted here and want it taken down, message us on the Contact page with the link and proof it&apos;s yours. We reply within 3 days.</p>
         </section>
       </article>
     </PageShell>
