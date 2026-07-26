@@ -6,6 +6,7 @@ import { OwnerGate } from "@/components/OwnerGate";
 import { ThemedSelect } from "@/components/ThemedSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useConfirm } from "@/hooks/useConfirm";
 import { mods } from "@/lib/mods";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ type Subscriber = { user_id: string; email: string };
 
 function AdminPage() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [reports, setReports] = useState<Report[]>([]);
   const [stats, setStats] = useState({ users: 0, comments: 0, favorites: 0, reports: 0 });
   const [subs, setSubs] = useState<Subscriber[]>([]);
@@ -64,7 +66,12 @@ function AdminPage() {
   };
 
   const deleteTarget = async (r: Report) => {
-    if (!confirm(`Delete this ${r.target_type}?`)) return;
+    if (!(await confirm({
+      title: "Delete content",
+      description: `Delete this ${r.target_type}? This cannot be undone.`,
+      confirmText: "Delete",
+      danger: true,
+    }))) return;
     if (r.target_type === "comment") {
       await supabase.from("comments").delete().eq("id", r.target_id);
     }

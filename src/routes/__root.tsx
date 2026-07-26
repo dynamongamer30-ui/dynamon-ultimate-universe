@@ -21,6 +21,7 @@ import { SiteSettingsProvider } from "@/hooks/useSiteSettings";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { GamificationProvider } from "@/hooks/useGamification";
 import { OwnerReturnRedirect } from "@/components/OwnerReturnRedirect";
+import { ConfirmProvider } from "@/hooks/useConfirm";
 
 function NotFoundComponent() {
   return (
@@ -140,6 +141,7 @@ function RootComponent() {
       <AuthProvider>
         <SiteSettingsProvider>
           <GamificationProvider>
+            <ConfirmProvider>
             <AuroraBackground />
             <AuroraCursor />
             <AnnouncementBanner />
@@ -148,6 +150,7 @@ function RootComponent() {
             <NotificationOptIn />
             <PWAInstall />
             <DailyCheckIn />
+            </ConfirmProvider>
           </GamificationProvider>
         </SiteSettingsProvider>
       </AuthProvider>

@@ -17,6 +17,7 @@ import {
   type ListDevicesResult, type UploadPayloadArgs,
 } from "@/lib/dgWorker";
 import { listBannedDevices, type BannedDevice } from "@/lib/dgData";
+import { useConfirm } from "@/hooks/useConfirm";
 
 export const Route = createFileRoute("/admin-loader")({
   ssr: false,
@@ -259,6 +260,7 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
 // ---------- 3) Ban manager ----------
 
 function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
+  const confirm = useConfirm();
   const [banFp, setBanFp] = useState("");
   const [banReason, setBanReason] = useState("");
   const [unbanFp, setUnbanFp] = useState("");
@@ -285,7 +287,12 @@ function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
     const fp = banFp.trim();
     const reason = banReason.trim();
     if (!fp || !reason) return toast.error("Fingerprint and reason are required");
-    if (!window.confirm(`Ban device\n${fp}\nReason: ${reason}?`)) return;
+    if (!(await confirm({
+      title: "Ban device",
+      description: `Ban device\n${fp}\nReason: ${reason}`,
+      confirmText: "Ban",
+      danger: true,
+    }))) return;
     setBusy(true);
     try { await banDevice(fp, reason); toast.success("Banned"); setBanFp(""); setBanReason(""); await reload(); }
     catch (e2) { handleErr(e2); }
@@ -294,7 +301,11 @@ function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
 
   const doUnban = async (fp: string) => {
     if (!fp) return;
-    if (!window.confirm(`Unban ${fp}?`)) return;
+    if (!(await confirm({
+      title: "Unban device",
+      description: `Unban ${fp}?`,
+      confirmText: "Unban",
+    }))) return;
     setBusy(true);
     try { await unbanDevice(fp); toast.success("Unbanned"); setUnbanFp(""); await reload(); }
     catch (e) { handleErr(e); }

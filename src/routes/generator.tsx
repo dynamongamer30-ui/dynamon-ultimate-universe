@@ -1,6 +1,6 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Copy, KeyRound, Loader2, ShieldCheck, Sparkles, ExternalLink, RefreshCw } from "lucide-react";
+import { Copy, KeyRound, Loader2, ShieldCheck, Sparkles, ExternalLink, RefreshCw, Timer, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import {
   TURNSTILE_SITE_KEY,
 } from "@/lib/dgWorker";
 import { getFingerprint } from "@/lib/fingerprint";
+import { supabase } from "@/integrations/supabase/client";
+import { mods } from "@/lib/mods";
 
 // ---------- Route registration (both /generator and /generator.html) ----------
 
@@ -109,7 +111,7 @@ type Phase =
   | { kind: "loading" }
   | { kind: "invalid"; reason: string }
   | { kind: "ready" }
-  | { kind: "success"; key: string; remaining: number; hours: number };
+  | { kind: "success"; key: string; remaining: number; hours: number; generatedAt: number };
 
 const REASON_TEXT: Record<string, string> = {
   not_found: "This access link is invalid.",
@@ -131,6 +133,11 @@ function reasonMessage(reason?: string): string {
 function GeneratorPage() {
   const search = useSearch({ from: "/generator" }) as GeneratorSearch;
   const ref = search.ref;
+
+  // Package of the modded APK the key unlocks. If it isn't installed, we fall
+  // back to the newest mod page on the site (resolved at runtime, so new
+  // uploads are followed automatically without editing this file).
+  const MODDED_APP_PACKAGE = "com.funtomic.dynamons";
 
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const [turnstileToken, setTurnstileToken] = useState<string>("");
@@ -222,7 +229,7 @@ function GeneratorPage() {
 
     if (res.ok) {
       // Default to 24h for the user-visible label; the real expiry is enforced server-side.
-      setPhase({ kind: "success", key: res.key, remaining: res.remaining, hours: 24 });
+      setPhase({ kind: "success", key: res.key, remaining: res.remaining, hours: 24, generatedAt: Date.now() });
       toast.success("Key generated!");
       resetTurnstile();
       return;
@@ -264,6 +271,80 @@ function GeneratorPage() {
     } catch {
       toast.error("Could not copy");
     }
+  };
+
+  // ---- Live countdown to the 10-minute unused-key deletion deadline ----
+  // Starts from when the key was generated (client time; within ~1-2s of the
+  // DB `date`, which is fine — avoids an extra DB/Worker round-trip per key).
+  const KEY_TTL_SECONDS = 600; // must match the cleanup_valid_keys() 10-min rule
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (phase.kind !== "success") { setSecondsLeft(null); return; }
+    const deadline = phase.generatedAt + KEY_TTL_SECONDS * 1000;
+    const tick = () => setSecondsLeft(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [phase]);
+
+  // Auto-copy the key the instant the success screen appears (no tap needed).
+  useEffect(() => {
+    if (phase.kind === "success") {
+      navigator.clipboard.writeText(phase.key).catch(() => { /* clipboard may be blocked; tap still works */ });
+    }
+  }, [phase]);
+
+  const fmtCountdown = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  // Resolve the newest mod page at runtime so the "app not installed" fallback
+  // always follows your latest upload. Prefers the most recently updated row in
+  // mod_overrides; if that's unavailable, uses the newest base mod by date.
+  const latestModUrl = useCallback(async (): Promise<string> => {
+    try {
+      const { data } = await supabase
+        .from("mod_overrides")
+        .select("slug, updated_at")
+        .eq("hidden", false)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data?.slug) return `/mods/${data.slug}`;
+    } catch { /* fall through */ }
+    // Fallback: newest base mod by its `updated` date.
+    const newest = [...mods].sort((a, b) => (a.updated < b.updated ? 1 : -1))[0];
+    return newest ? `/mods/${newest.slug}` : "/mods";
+  }, []);
+
+  // Copy the key, then try to launch the modded APK. If it doesn't take over
+  // the screen within ~1.5s (not installed / can't open), tell the user and
+  // send them to the latest mod page to download it.
+  const copyAndOpenApp = async (k: string) => {
+    await copyKey(k);
+    const isAndroid = /android/i.test(navigator.userAgent);
+    const fallback = async () => {
+      toast.error("App not installed on your phone — opening the latest mod page.");
+      const url = await latestModUrl();
+      window.location.assign(url);
+    };
+
+    if (!isAndroid) { await fallback(); return; }
+
+    let hidden = false;
+    const onHide = () => { hidden = true; };
+    document.addEventListener("visibilitychange", onHide);
+
+    // Android intent URL — launches the app if installed & registered.
+    const intentUrl =
+      `intent://open#Intent;scheme=dynamongamer;package=${MODDED_APP_PACKAGE};end`;
+    window.location.href = intentUrl;
+
+    // If the app took over, the tab goes hidden; if we're still here after the
+    // delay, treat it as "not installed" and redirect.
+    setTimeout(() => {
+      document.removeEventListener("visibilitychange", onHide);
+      if (!hidden && !document.hidden) fallback();
+    }, 1500);
   };
 
   // ---------- Render ----------
@@ -350,25 +431,32 @@ function GeneratorPage() {
                 <div className="font-mono text-3xl tracking-widest text-amber-200 group-hover:text-amber-100">
                   {phase.key}
                 </div>
-                <div className="mt-2 inline-flex items-center gap-1 text-xs text-amber-100/60">
-                  <Copy className="h-3 w-3" />
-                  Tap to copy
+                <div className="mt-2 inline-flex items-center gap-1 text-xs text-emerald-300/80">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Copied to clipboard automatically
                 </div>
               </button>
 
-              <p className="text-sm text-amber-100/70">
-                Valid for {phase.hours} hours from first activation.
-              </p>
+              {/* Live countdown to the 10-minute unused-key deletion deadline */}
+              {secondsLeft !== null && (
+                secondsLeft > 0 ? (
+                  <div className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold ${
+                    secondsLeft <= 60
+                      ? "border-red-500/40 bg-red-500/10 text-red-300"
+                      : "border-amber-500/30 bg-amber-500/5 text-amber-200"
+                  }`}>
+                    <Timer className="h-4 w-4" />
+                    Use it within <span className="font-mono tabular-nums">{fmtCountdown(secondsLeft)}</span> or it's deleted
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-4 py-1.5 text-sm font-semibold text-red-300">
+                    <XCircle className="h-4 w-4" />
+                    This key has expired — generate a new one
+                  </div>
+                )
+              )}
 
               <div className="flex w-full flex-col gap-2 sm:flex-row">
-                <Button
-                  onClick={() => copyKey(phase.key)}
-                  variant="outline"
-                  className="flex-1 border-amber-500/30 text-amber-100 hover:bg-amber-500/10"
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy Key
-                </Button>
                 <Button
                   onClick={() => window.location.assign(startGate())}
                   variant="outline"
@@ -378,11 +466,12 @@ function GeneratorPage() {
                   Get Another
                 </Button>
                 <Button
-                  onClick={() => window.open("https://dynamonsworld.com", "_blank")}
-                  className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:from-amber-400 hover:to-orange-400"
+                  onClick={() => copyAndOpenApp(phase.key)}
+                  disabled={secondsLeft === 0}
+                  className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:from-amber-400 hover:to-orange-400 disabled:opacity-50"
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  Open App
+                  Copy &amp; Open App
                 </Button>
               </div>
             </div>

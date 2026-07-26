@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
 import { OwnerGate } from "@/components/OwnerGate";
 import { useAuth } from "@/hooks/useAuth";
+import { useConfirm } from "@/hooks/useConfirm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -86,6 +87,9 @@ function KeysPanel() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all"|"active"|"expired"|"revoked"|"activated">("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const confirm = useConfirm();
 
   useEffect(() => {
     const unsub = listKeys((list) => {
@@ -121,6 +125,69 @@ function KeysPanel() {
     });
   }, [keys, search, filter]);
 
+  const toggle = (key: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  // Select-all toggles only the currently-filtered rows (so "select all" while
+  // on the Expired filter selects exactly the expired keys, etc).
+  const allFilteredSelected = filtered.length > 0 && filtered.every((k) => selected.has(k.key));
+  const toggleAll = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        filtered.forEach((k) => next.delete(k.key));
+      } else {
+        filtered.forEach((k) => next.add(k.key));
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  const bulkRevoke = async () => {
+    const targets = [...selected];
+    if (!targets.length) return;
+    if (!(await confirm({
+      title: "Revoke selected keys",
+      description: `Revoke ${targets.length} selected key${targets.length > 1 ? "s" : ""}? Users on these keys lose access on their next check.`,
+      confirmText: "Revoke all",
+      danger: true,
+    }))) return;
+    setBulkBusy(true);
+    let ok = 0;
+    for (const key of targets) {
+      try { await revokeKey(key); ok++; } catch { /* skip */ }
+    }
+    setBulkBusy(false);
+    clearSelection();
+    toast.success(`Revoked ${ok} key${ok !== 1 ? "s" : ""}`);
+  };
+
+  const bulkDelete = async () => {
+    const targets = [...selected];
+    if (!targets.length) return;
+    if (!(await confirm({
+      title: "Delete selected keys",
+      description: `Permanently delete ${targets.length} selected key${targets.length > 1 ? "s" : ""}? This cannot be undone.`,
+      confirmText: "Delete all",
+      danger: true,
+    }))) return;
+    setBulkBusy(true);
+    let ok = 0;
+    for (const key of targets) {
+      try { await deleteKey(key); ok++; } catch { /* skip */ }
+    }
+    setBulkBusy(false);
+    clearSelection();
+    toast.success(`Deleted ${ok} key${ok !== 1 ? "s" : ""}`);
+  };
+
   return (
     <div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -149,15 +216,53 @@ function KeysPanel() {
             </div>
           </div>
 
+          {selected.size > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-2.5">
+              <span className="text-sm font-semibold text-foreground">{selected.size} selected</span>
+              <div className="flex-1" />
+              <button
+                onClick={bulkRevoke}
+                disabled={bulkBusy}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-400/10 disabled:opacity-50"
+              >
+                {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-3.5 w-3.5" />} Revoke
+              </button>
+              <button
+                onClick={bulkDelete}
+                disabled={bulkBusy}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-400/10 disabled:opacity-50"
+              >
+                {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Delete
+              </button>
+              <button
+                onClick={clearSelection}
+                disabled={bulkBusy}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-white/5 disabled:opacity-50"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
           ) : filtered.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted-foreground">No keys found.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+            <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[600px] text-left text-sm">
                 <thead className="text-xs uppercase tracking-wider text-muted-foreground">
                   <tr>
+                    <th className="py-2 pr-3">
+                      <input
+                        type="checkbox"
+                        checked={allFilteredSelected}
+                        onChange={toggleAll}
+                        className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+                        aria-label="Select all"
+                      />
+                    </th>
                     <th className="py-2 pr-3">Key</th>
                     <th className="py-2 pr-3">Status</th>
                     <th className="py-2 pr-3">Device</th>
@@ -168,10 +273,15 @@ function KeysPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(k => <KeyRow key={k.key} k={k} />)}
+                  {filtered.map(k => <KeyRow key={k.key} k={k} selected={selected.has(k.key)} onToggle={toggle} />)}
                 </tbody>
               </table>
             </div>
+
+            <div className="space-y-2.5 md:hidden">
+              {filtered.map(k => <KeyCard key={k.key} k={k} selected={selected.has(k.key)} onToggle={toggle} />)}
+            </div>
+            </>
           )}
         </div>
 
@@ -181,21 +291,14 @@ function KeysPanel() {
   );
 }
 
-function KeyRow({ k }: { k: ValidKey }) {
+function useKeyActions(k: ValidKey) {
   const [busy, setBusy] = useState(false);
-  const now = nowSeconds();
-  const isExpired = k.expiry <= now;
-  const status: { label: string; cls: string } =
-    k.status === "revoked" ? { label: "Revoked", cls: "border-red-400/40 text-red-300" } :
-    isExpired ? { label: "Expired", cls: "border-amber-400/40 text-amber-300" } :
-    k.activated ? { label: "Activated", cls: "border-primary/40 text-primary" } :
-    { label: "Active", cls: "border-green-400/40 text-green-300" };
+  const confirm = useConfirm();
 
   const copy = async () => {
     await navigator.clipboard.writeText(k.key);
     toast.success(`Copied ${k.key}`);
   };
-
   const doExtend = async (hours: number) => {
     setBusy(true);
     try { await extendKey(k.key, hours); toast.success(`Extended +${hours}h`); }
@@ -217,15 +320,90 @@ function KeyRow({ k }: { k: ValidKey }) {
     finally { setBusy(false); }
   };
   const doDelete = async () => {
-    if (!window.confirm(`Delete ${k.key}? This cannot be undone.`)) return;
+    if (!(await confirm({
+      title: "Delete key",
+      description: `Delete ${k.key}? This cannot be undone.`,
+      confirmText: "Delete",
+      danger: true,
+    }))) return;
     setBusy(true);
     try { await deleteKey(k.key); toast.success("Deleted"); }
     catch (e) { toast.error((e as Error).message); }
     finally { setBusy(false); }
   };
 
+  const now = nowSeconds();
+  const isExpired = k.expiry <= now;
+  const status: { label: string; cls: string } =
+    k.status === "revoked" ? { label: "Revoked", cls: "border-red-400/40 text-red-300" } :
+    isExpired ? { label: "Expired", cls: "border-amber-400/40 text-amber-300" } :
+    k.activated ? { label: "Activated", cls: "border-primary/40 text-primary" } :
+    { label: "Active", cls: "border-green-400/40 text-green-300" };
+
+  return { busy, copy, doExtend, doExtendCustom, doRevoke, doDelete, status };
+}
+
+function KeyActionButtons({ k }: { k: ValidKey }) {
+  const { busy, copy, doExtend, doExtendCustom, doRevoke, doDelete } = useKeyActions(k);
   return (
-    <tr className="border-t border-border/40">
+    <div className="flex flex-wrap justify-end gap-1">
+      <IconBtn title="Copy" onClick={copy}><Copy className="h-3.5 w-3.5" /></IconBtn>
+      <IconBtn title="+24h" disabled={busy} onClick={() => doExtend(24)}>+1d</IconBtn>
+      <IconBtn title="+7d" disabled={busy} onClick={() => doExtend(24*7)}>+7d</IconBtn>
+      <IconBtn title="Custom" disabled={busy} onClick={doExtendCustom}><Clock className="h-3.5 w-3.5" /></IconBtn>
+      <IconBtn title={k.status==="revoked"?"Unrevoke":"Revoke"} disabled={busy} onClick={doRevoke}>
+        {k.status==="revoked" ? <RefreshCw className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
+      </IconBtn>
+      <IconBtn title="Delete" disabled={busy} onClick={doDelete} danger><Trash2 className="h-3.5 w-3.5" /></IconBtn>
+    </div>
+  );
+}
+
+function KeyCard({ k, selected, onToggle }: { k: ValidKey; selected: boolean; onToggle: (key: string) => void }) {
+  const { copy, status } = useKeyActions(k);
+  return (
+    <div className={`rounded-xl border p-3 ${selected ? "border-primary/40 bg-primary/5" : "border-border bg-background/40"}`}>
+      <div className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggle(k.key)}
+          className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-[var(--primary)]"
+          aria-label={`Select ${k.key}`}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <button onDoubleClick={copy} className="truncate font-mono text-sm font-semibold text-primary" title="Double-click to copy">{k.key}</button>
+            <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${status.cls}`}>{status.label}</span>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+            <span>Device: {k.device ? k.device.slice(0, 10) + "…" : "—"}</span>
+            <span>Source: {k.source || "—"}</span>
+            <span>Created: {k.date ? new Date(k.date * 1000).toLocaleDateString() : "—"}</span>
+            <span className="flex gap-1">Expires: <Countdown unixSec={k.expiry} /></span>
+          </div>
+          <div className="mt-3">
+            <KeyActionButtons k={k} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KeyRow({ k, selected, onToggle }: { k: ValidKey; selected: boolean; onToggle: (key: string) => void }) {
+  const { copy, status } = useKeyActions(k);
+  return (
+    <tr className={`border-t border-border/40 ${selected ? "bg-primary/5" : ""}`}>
+      <td className="py-3 pr-3">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggle(k.key)}
+          className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+          aria-label={`Select ${k.key}`}
+        />
+      </td>
       <td className="py-3 pr-3">
         <button onDoubleClick={copy} className="font-mono text-sm text-primary hover:underline" title="Double-click to copy">
           {k.key}
@@ -237,16 +415,7 @@ function KeyRow({ k }: { k: ValidKey }) {
       <td className="py-3 pr-3 text-xs"><Countdown unixSec={k.expiry} /></td>
       <td className="py-3 pr-3 text-xs text-muted-foreground">{k.source || "—"}</td>
       <td className="py-3 pr-3">
-        <div className="flex justify-end gap-1">
-          <IconBtn title="Copy" onClick={copy}><Copy className="h-3.5 w-3.5" /></IconBtn>
-          <IconBtn title="+24h" disabled={busy} onClick={() => doExtend(24)}>+1d</IconBtn>
-          <IconBtn title="+7d" disabled={busy} onClick={() => doExtend(24*7)}>+7d</IconBtn>
-          <IconBtn title="Custom" disabled={busy} onClick={doExtendCustom}><Clock className="h-3.5 w-3.5" /></IconBtn>
-          <IconBtn title={k.status==="revoked"?"Unrevoke":"Revoke"} disabled={busy} onClick={doRevoke}>
-            {k.status==="revoked" ? <RefreshCw className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
-          </IconBtn>
-          <IconBtn title="Delete" disabled={busy} onClick={doDelete} danger><Trash2 className="h-3.5 w-3.5" /></IconBtn>
-        </div>
+        <KeyActionButtons k={k} />
       </td>
     </tr>
   );
@@ -407,7 +576,7 @@ function DevicesPanel() {
           <p className="py-12 text-center text-sm text-muted-foreground">No activated devices yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[600px] text-left text-sm">
               <thead className="text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th className="py-2 pr-3">Device</th>
@@ -506,7 +675,7 @@ function LocksPanel() {
           <p className="py-12 text-center text-sm text-muted-foreground">No locked devices.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[600px] text-left text-sm">
               <thead className="text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th className="py-2 pr-3">Device</th>
@@ -785,7 +954,7 @@ function LogsPanel() {
         <p className="py-12 text-center text-sm text-muted-foreground">No logs.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[600px] text-left text-sm">
             <thead className="text-xs uppercase tracking-wider text-muted-foreground">
               <tr><th className="py-2 pr-3">When</th><th className="py-2 pr-3">Key</th><th className="py-2 pr-3">IP</th><th className="py-2 pr-3">Fingerprint</th></tr>
             </thead>
