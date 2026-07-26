@@ -6,7 +6,6 @@ import { playClick } from "@/lib/sound";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useGamification } from "@/hooks/useGamification";
-import { getAvatarUrl } from "@/lib/avatars";
 import { mods } from "@/lib/mods";
 import { OwnerBadge } from "@/components/OwnerBadge";
 import { LevelBadge } from "@/components/LevelBadge";
@@ -43,10 +42,10 @@ export function Header() {
     ? mods.filter((m) => (m.name + " " + m.tagline + " " + m.features.join(" ") + " " + m.element).toLowerCase().includes(q.toLowerCase()))
     : [];
 
-  const avatarUrl = getAvatarUrl(profile?.avatar_url);
+  const avatarUrl = profile?.custom_avatar_url || profile?.avatar_url || undefined;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 backdrop-blur-xl bg-background/70">
+    <header className="sticky top-0 z-50 border-b border-border/60 backdrop-blur-xl bg-background/95">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
         <Link to="/" onMouseDown={playClick} className="flex items-center gap-2 min-w-0">
           <motion.span
