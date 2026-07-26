@@ -22,8 +22,8 @@ export const Route = createFileRoute("/unlock")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Secure Verification — Dynamon Universe" },
-      { name: "description", content: "Verifying your secure download session." },
+      { title: "Unlocking Your Download — Dynamon Universe" },
+      { name: "description", content: "Hold on while we unlock your download link." },
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
@@ -40,12 +40,12 @@ type Stage = {
 };
 
 const INITIAL_STAGES: Stage[] = [
-  { id: 0, title: "Initialize Secure Channel", Icon: Lock, status: "pending" },
-  { id: 1, title: "Fetch Security Config", Icon: Timer, status: "pending" },
-  { id: 2, title: "Verify Session Token", Icon: ShieldCheck, status: "pending" },
-  { id: 3, title: "Check Device Fingerprint", Icon: Fingerprint, status: "pending" },
-  { id: 4, title: "Validate Timestamp", Icon: Cpu, status: "pending" },
-  { id: 5, title: "Decrypt Payload", Icon: Unlock, status: "pending" },
+  { id: 0, title: "Starting secure connection", Icon: Lock, status: "pending" },
+  { id: 1, title: "Loading download settings", Icon: Timer, status: "pending" },
+  { id: 2, title: "Checking your download pass", Icon: ShieldCheck, status: "pending" },
+  { id: 3, title: "Making sure it's the same device", Icon: Fingerprint, status: "pending" },
+  { id: 4, title: "Confirming the wait time", Icon: Cpu, status: "pending" },
+  { id: 5, title: "Unlocking your download link", Icon: Unlock, status: "pending" },
 ];
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -53,16 +53,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function mapRedeemError(code?: string): string {
   switch (code) {
-    case "not_found": return "Session token not found.";
-    case "already_used": return "This download link was already used.";
-    case "fingerprint_mismatch": return "Device mismatch. Start the download on the same device.";
-    case "version_mismatch": return "Session version mismatch. Please try again.";
-    case "expired": return "Session expired. Please start again.";
-    case "too_fast": return "Verification too fast. Please complete all steps.";
-    case "no_link": return "No download link available for this session.";
-    case "invalid_token": return "Invalid session token.";
-    case "invalid_fingerprint": return "Could not verify this device.";
-    default: return "Verification failed. Please try again.";
+    case "not_found": return "We couldn't find your download pass. Please start the download again.";
+    case "already_used": return "This download link has already been used. Each link works only once — please start again.";
+    case "fingerprint_mismatch": return "This link was started on a different phone. Please finish the download on the same device you started it on.";
+    case "version_mismatch": return "Something changed while you were waiting. Please start the download again.";
+    case "expired": return "This link took too long and has expired. Please start the download again.";
+    case "too_fast": return "That was a bit too quick. Please go back and complete every step.";
+    case "no_link": return "No download link is attached to this page. Please start the download again.";
+    case "invalid_token": return "This download link isn't valid. Please start again from the mod page.";
+    case "invalid_fingerprint": return "We couldn't recognise your device. Please start the download again.";
+    default: return "Something went wrong. Please start the download again.";
   }
 }
 
@@ -183,7 +183,7 @@ function UnlockPage() {
       // 0. Initialize — read + decode the local session token (obfuscated in storage).
       const token = await runStage(0, async () => {
         const raw = typeof window !== "undefined" ? localStorage.getItem("dg_token") : null;
-        if (!raw) throw new Error("No session token found.");
+        if (!raw) throw new Error("We could not find your download pass. Please start the download again from the mod page.");
         let decoded = "";
         try {
           decoded = Cipher.decrypt(raw);
@@ -191,14 +191,14 @@ function UnlockPage() {
           decoded = raw; // tolerate plain-UUID tokens written by newer clients
         }
         if (!decoded) throw new Error("Failed to read session token.");
-        if (!UUID_RE.test(decoded)) throw new Error("Invalid session token format.");
+        if (!UUID_RE.test(decoded)) throw new Error("This download link looks broken. Please start again from the mod page.");
         return decoded;
       });
 
       // 1. Compute the device fingerprint that the server will verify against.
       const fingerprint = await runStage(1, async () => {
         const fp = await getFingerprint();
-        if (!fp) throw new Error("Could not compute device fingerprint.");
+        if (!fp) throw new Error("We could not recognise your device. Try turning off private/incognito mode, then start again.");
         return fp;
       });
 
@@ -300,7 +300,7 @@ function UnlockPage() {
                 className="text-2xl font-bold tracking-tight text-white sm:text-[1.6rem]"
                 style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif" }}
               >
-                Secure Verification
+                Unlocking your download
               </h1>
               <p className="mt-1 text-sm text-white/60">Verifying your download session…</p>
             </div>
@@ -336,8 +336,8 @@ function UnlockPage() {
 
           {done && downloadUrl && (
             <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
-              <p className="text-base font-semibold text-emerald-400">Verification Complete!</p>
-              <p className="mt-1 text-xs text-white/60">Redirecting to download in 2 seconds…</p>
+              <p className="text-base font-semibold text-emerald-400">All done — your download is ready!</p>
+              <p className="mt-1 text-xs text-white/60">Taking you to the download in 2 seconds…</p>
               <a
                 href={downloadUrl}
                 className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2.5 text-sm font-semibold text-black shadow-[0_10px_30px_-10px_rgba(255,69,0,0.8)] transition hover:brightness-110"
@@ -349,7 +349,7 @@ function UnlockPage() {
 
           {fatalError && (
             <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-center">
-              <p className="text-sm font-semibold text-red-400">Verification failed</p>
+              <p className="text-sm font-semibold text-red-400">We could not unlock this download</p>
               <p className="mt-1 text-xs text-white/60">{fatalError}</p>
               <Link
                 to="/"
@@ -362,7 +362,7 @@ function UnlockPage() {
         </div>
 
         <p className="mt-6 text-center text-[11px] text-white/30">
-          Protected session • Single-use token • Device-bound
+          Private link • Works once • Only on this device
         </p>
       </main>
     </div>

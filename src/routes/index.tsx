@@ -52,17 +52,18 @@ function Index() {
               initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.06 }}
               className="mt-6 font-display text-5xl font-black uppercase leading-[0.95] tracking-tight text-balance sm:text-6xl lg:text-7xl xl:text-8xl"
             >
-              The mod
+              Dynamons World
               <br />
-              <span className="text-gradient">vault.</span>
+              <span className="text-gradient">mods.</span>
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.12 }}
               className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg text-pretty"
             >
-              Eight hand-crafted Dynamons World builds. Clean injections, real community
-              ratings, weekly drops. No other games, no clutter — just Dynamons.
+              Modded versions of Dynamons World, made and tested by fans. Free to
+              download, rated by real players, and updated every week. Only Dynamons
+              here — nothing else to scroll past.
             </motion.p>
 
             <motion.div
@@ -75,7 +76,7 @@ function Index() {
                 onMouseEnter={playHover}
                 className="press group inline-flex items-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-semibold transition-colors hover:border-primary/50 hover:text-primary"
               >
-                Browse the vault
+                See all mods
                 <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </motion.div>

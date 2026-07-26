@@ -114,18 +114,18 @@ type Phase =
   | { kind: "success"; key: string; remaining: number; hours: number; generatedAt: number };
 
 const REASON_TEXT: Record<string, string> = {
-  not_found: "This access link is invalid.",
-  missing: "Access link is missing.",
-  used: "This link was already used.",
-  expired: "Link expired (10 minute limit). Please get a new one.",
-  invalid_token: "Access link is invalid.",
-  token_used: "This link was already used.",
-  token_expired: "Link expired. Please get a new one.",
+  not_found: "This link doesn't work any more. Tap below to start again.",
+  missing: "Something's missing from this link. Tap below to start again.",
+  used: "You've already used this link. Each one works only once — tap below for a fresh one.",
+  expired: "This link only lasts 10 minutes and that time is up. Tap below to start again.",
+  invalid_token: "This link doesn't work any more. Tap below to start again.",
+  token_used: "You've already used this link. Tap below for a fresh one.",
+  token_expired: "This link has expired. Tap below to start again.",
 };
 
 function reasonMessage(reason?: string): string {
-  if (!reason) return "Link invalid.";
-  return REASON_TEXT[reason] || "Link invalid.";
+  if (!reason) return "This link doesn't work any more. Tap below to start again.";
+  return REASON_TEXT[reason] || "This link doesn't work any more. Tap below to start again.";
 }
 
 // ---------- Page ----------
@@ -174,14 +174,14 @@ function GeneratorPage() {
     if (phase.kind !== "ready") return;
     getFingerprint()
       .then(setFingerprint)
-      .catch(() => toast.error("Could not compute device fingerprint"));
+      .catch(() => toast.error("We couldn’t check your device. Turn off private/incognito mode and try again."));
   }, [phase.kind]);
 
   // Step 3 — render Turnstile
   useEffect(() => {
     if (phase.kind !== "ready") return;
     if (!TURNSTILE_SITE_KEY) {
-      toast.error("Turnstile not configured");
+      toast.error("The robot check isn’t set up right now. Please try again later.");
       return;
     }
     let cancelled = false;
@@ -196,14 +196,14 @@ function GeneratorPage() {
           callback: (token: string) => setTurnstileToken(token),
           "error-callback": () => {
             setTurnstileToken("");
-            toast.error("Captcha error — please retry");
+            toast.error("The robot check didn’t work. Please try again.");
           },
           "expired-callback": () => {
             setTurnstileToken("");
           },
         });
       })
-      .catch(() => toast.error("Failed to load captcha"));
+      .catch(() => toast.error("The robot check couldn’t load. Check your internet and refresh."));
     return () => {
       cancelled = true;
     };
@@ -230,7 +230,7 @@ function GeneratorPage() {
     if (res.ok) {
       // Default to 24h for the user-visible label; the real expiry is enforced server-side.
       setPhase({ kind: "success", key: res.key, remaining: res.remaining, hours: 24, generatedAt: Date.now() });
-      toast.success("Key generated!");
+      toast.success("Your key is ready and copied!");
       resetTurnstile();
       return;
     }
@@ -238,10 +238,10 @@ function GeneratorPage() {
     const err = res.error;
     switch (err) {
       case "maintenance":
-        toast.error("Generator is under maintenance, try later");
+        toast.error("Keys are paused for maintenance right now. Please check back soon.");
         break;
       case "captcha_failed":
-        toast.error("Captcha failed — please try again");
+        toast.error("The robot check didn’t pass. Please try again.");
         resetTurnstile();
         break;
       case "rate_limited":
@@ -252,7 +252,7 @@ function GeneratorPage() {
       case "invalid_token":
       case "token_used":
       case "token_expired":
-        toast.error("Link invalid — please get a new key");
+        toast.error("That link no longer works. Please get a new key.");
         setPhase({ kind: "invalid", reason: err });
         break;
       case "missing_fields":
@@ -267,9 +267,9 @@ function GeneratorPage() {
   const copyKey = async (k: string) => {
     try {
       await navigator.clipboard.writeText(k);
-      toast.success("Key copied to clipboard");
+      toast.success("Key copied");
     } catch {
-      toast.error("Could not copy");
+      toast.error("Couldn’t copy — press and hold the key to copy it");
     }
   };
 
@@ -358,17 +358,17 @@ function GeneratorPage() {
           <div className="mb-6 flex flex-col items-center gap-3 text-center">
             <Orb pulse={phase.kind === "loading" || submitting} />
             <h1 className="bg-gradient-to-r from-amber-200 via-amber-400 to-orange-400 bg-clip-text text-3xl font-bold tracking-tight text-transparent">
-              Get Your Access Key
+              Get your key
             </h1>
             <p className="text-sm text-amber-100/70">
-              Verify you're human to claim your one-time Dynamon Universe key.
+              Tick the box below to prove you're not a robot. Then we'll give you a key that unlocks the mod in the app.
             </p>
           </div>
 
           {phase.kind === "loading" && (
             <div className="flex flex-col items-center gap-3 py-10 text-amber-200/80">
               <Loader2 className="h-6 w-6 animate-spin" />
-              <span>Validating your access link…</span>
+              <span>Checking your link…</span>
             </div>
           )}
 
@@ -380,7 +380,7 @@ function GeneratorPage() {
                 className="bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:from-amber-400 hover:to-orange-400"
               >
                 <KeyRound className="mr-2 h-4 w-4" />
-                Get a New Key
+                Start again
               </Button>
             </div>
           )}
@@ -389,13 +389,13 @@ function GeneratorPage() {
             <div className="flex flex-col items-center gap-5">
               <div className="flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/5 px-3 py-1 text-xs text-amber-200">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                Link verified — complete the captcha
+                Link looks good — just tick the box below
               </div>
 
               <div ref={widgetRef} className="min-h-[70px]" />
 
               <div className="text-xs text-amber-100/50">
-                Device: {fingerprint ? `${fingerprint.slice(0, 10)}…` : "computing…"}
+                Your device ID: {fingerprint ? `${fingerprint.slice(0, 10)}…` : "checking…"}
               </div>
 
               <Button
@@ -406,12 +406,12 @@ function GeneratorPage() {
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating…
+                    Making your key…
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Key
+                    Get my key
                   </>
                 )}
               </Button>
@@ -422,7 +422,7 @@ function GeneratorPage() {
             <div className="flex flex-col items-center gap-5 py-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
                 <Sparkles className="h-3.5 w-3.5" />
-                {phase.remaining} key{phase.remaining === 1 ? "" : "s"} remaining today
+                {phase.remaining} more key{phase.remaining === 1 ? "" : "s"} left for you today
               </div>
 
               <button
@@ -434,7 +434,7 @@ function GeneratorPage() {
                 </div>
                 <div className="mt-2 inline-flex items-center gap-1 text-xs text-emerald-300/80">
                   <CheckCircle2 className="h-3 w-3" />
-                  Copied to clipboard automatically
+                  Already copied — just paste it in the app
                 </div>
               </button>
 
@@ -447,12 +447,12 @@ function GeneratorPage() {
                       : "border-amber-500/30 bg-amber-500/5 text-amber-200"
                   }`}>
                     <Timer className="h-4 w-4" />
-                    Use it within <span className="font-mono tabular-nums">{fmtCountdown(secondsLeft)}</span> or it's deleted
+                    Use it within <span className="font-mono tabular-nums">{fmtCountdown(secondsLeft)}</span> or it disappears
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-4 py-1.5 text-sm font-semibold text-red-300">
                     <XCircle className="h-4 w-4" />
-                    This key has expired — generate a new one
+                    This key ran out of time — get a new one
                   </div>
                 )
               )}
@@ -464,7 +464,7 @@ function GeneratorPage() {
                   className="flex-1 border-amber-500/30 text-amber-100 hover:bg-amber-500/10"
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Get Another
+                  New key
                 </Button>
                 <Button
                   onClick={() => copyAndOpenApp(phase.key)}
@@ -480,7 +480,7 @@ function GeneratorPage() {
         </div>
 
         <p className="mt-4 text-center text-xs text-amber-100/40">
-          One key per device. Sharing keys may result in a ban.
+          One key per device. Don't share your key — shared keys get blocked.
         </p>
       </div>
     </PageShell>

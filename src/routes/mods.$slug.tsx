@@ -78,7 +78,7 @@ function ModDetail() {
     award(10, "Downloaded");
     grant("first_download");
     if (!hasDownload) {
-      toast.error("Download not available yet", {
+      toast.error("No download ready for this mod yet", {
         description: "The owner hasn't published a download link for this build.",
       });
       return;
@@ -155,7 +155,7 @@ function ModDetail() {
               onClick={handleGet}
               className="press inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110"
             >
-              <Download className="h-4 w-4" /> {user ? "Download mod" : "Sign in to download"}
+              <Download className="h-4 w-4" /> {user ? "Download mod" : "Log in to download"}
             </button>
             <LikeButton slug={mod.slug} />
             <FavoriteButton slug={mod.slug} />
@@ -272,14 +272,14 @@ function FollowGate({
         p_slug: slug,
         p_fingerprint: fingerprint,
       });
-      if (error) throw new Error("Secure channel error. Please try again.");
+      if (error) throw new Error("We couldn’t reach the server. Check your internet and try again.");
       const res = data as { ok: boolean; token?: string; error?: string } | null;
       if (!res || !res.ok || !res.token) {
         const map: Record<string, string> = {
-          rate_limited: "Too many attempts — please wait a bit and try again.",
-          no_link: "Download not available yet for this mod.",
+          rate_limited: "You’ve tried a few times in a row. Please wait a minute, then try again.",
+          no_link: "This mod doesn’t have a download ready yet. Please check back soon.",
         };
-        throw new Error(map[res?.error || ""] || "Could not start the download.");
+        throw new Error(map[res?.error || ""] || "We couldn’t start the download. Please try again.");
       }
 
       try {
@@ -335,16 +335,16 @@ function FollowGate({
               <Lock className="h-6 w-6" />
             </div>
             <h3 className="mt-4 font-display text-xl font-extrabold uppercase tracking-tight text-balance">
-              One step to unlock
+              One quick step first
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
-              Complete the quick step to unlock the secure download for <span className="font-semibold text-foreground">{modName}</span>. You&apos;ll be taken to a secure verification step once you&apos;re back.
+              Tap the button below and finish the short step that opens. Come back here when you’re done and your download for <span className="font-semibold text-foreground">{modName}</span> will unlock automatically.
             </p>
             <button
               onClick={handleFollow} disabled={waiting}
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
             >
-              {waiting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Verifying…</>) : (<><ExternalLink className="h-4 w-4" /> Continue to unlock</>)}
+              {waiting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Checking…</>) : (<><ExternalLink className="h-4 w-4" /> Start the step</>)}
             </button>
           </div>
         ) : step === "verifying" ? (
