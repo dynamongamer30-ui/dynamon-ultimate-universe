@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useGamification } from "@/hooks/useGamification";
-import { getAvatarUrl } from "@/lib/avatars";
 import { playClick, playSoft, playSuccess } from "@/lib/sound";
 import { toast } from "sonner";
 
@@ -28,6 +27,7 @@ type AuthorRow = {
   username: string;
   display_name: string;
   avatar_url: string | null;
+  custom_avatar_url: string | null;
   is_owner: boolean;
 };
 
@@ -67,7 +67,7 @@ export function CommentsPanel({ slug }: { slug: string }) {
     const commentIds = list.map((c) => c.id);
 
     const [{ data: authors }, { data: likes }] = await Promise.all([
-      supabase.from("profiles").select("id, username, display_name, avatar_url, is_owner").in("id", authorIds),
+      supabase.from("profiles").select("id, username, display_name, avatar_url, custom_avatar_url, is_owner").in("id", authorIds),
       supabase.from("comment_likes").select("comment_id, user_id").in("comment_id", commentIds),
     ]);
 
@@ -165,7 +165,7 @@ export function CommentsPanel({ slug }: { slug: string }) {
   };
 
   const renderComment = (c: EnrichedComment, isReply = false) => {
-    const avatar = getAvatarUrl(c.author?.avatar_url);
+    const avatar = c.author?.custom_avatar_url || c.author?.avatar_url;
     const isMine = user?.id === c.user_id;
     const canRemove = isMine || profile?.is_owner;
     const replies = repliesByParent.get(c.id) ?? [];
@@ -194,13 +194,6 @@ export function CommentsPanel({ slug }: { slug: string }) {
               </p>
             </div>
           </div>
-          {typeof c.rating === "number" && (
-            <div className="flex shrink-0 gap-0.5">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} className={`h-3.5 w-3.5 ${i < (c.rating ?? 0) ? "fill-[var(--gold)] text-[var(--gold)]" : "text-muted-foreground/40"}`} />
-              ))}
-            </div>
-          )}
         </div>
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{c.body}</p>
 
