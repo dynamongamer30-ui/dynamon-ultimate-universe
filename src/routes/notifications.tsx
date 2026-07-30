@@ -4,6 +4,7 @@ import { Bell, Check } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
+import { NotificationBody } from "@/components/NotificationBody";
 
 export const Route = createFileRoute("/notifications")({
   ssr: false,
@@ -95,7 +96,9 @@ function NotificationsPage() {
                       <h2 className="font-display text-lg font-bold">{n.title}</h2>
                       <span className="shrink-0 text-xs text-muted-foreground">{fmt(n.created_at)}</span>
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{n.body}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                      <NotificationBody text={n.body} />
+                    </p>
                   </div>
                 </div>
               </li>

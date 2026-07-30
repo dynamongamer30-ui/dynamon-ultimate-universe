@@ -4,6 +4,7 @@ import { Bell, Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { playClick } from "@/lib/sound";
 import { useNotifications } from "@/hooks/useNotifications";
+import { NotificationBody } from "@/components/NotificationBody";
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -96,7 +97,9 @@ export function NotificationBell() {
                               </div>
                             )}
                             <p className="truncate text-sm font-semibold">{n.title}</p>
-                            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
+                            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                              <NotificationBody text={n.body} />
+                            </p>
                             <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">{timeAgo(n.created_at)}</p>
                           </div>
                         </div>
