@@ -167,11 +167,11 @@ function ModDetail() {
             </Link>
           </div>
 
-          <div className="mt-6 grid grid-cols-4 gap-3 text-center text-xs">
+          <div className="mt-6 grid grid-cols-2 gap-3 text-center text-xs sm:grid-cols-4">
             <Stat label="Downloads" value={`${formatCount(mod.downloads)}+`} />
             <Stat label="Version" value={mod.version} />
             <Stat label="Size" value={mod.size} />
-            <Stat label="Updated" value={new Date(mod.updated).toLocaleDateString()} />
+            <Stat label="Updated" value={new Date(mod.updated).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} />
           </div>
         </motion.div>
       </article>
@@ -373,9 +373,9 @@ function FollowGate({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border bg-card/60 p-3">
-      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-semibold">{value}</p>
+    <div className="min-w-0 rounded-xl border border-border bg-card/60 p-3">
+      <p className="truncate text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-1 break-words text-sm font-semibold leading-tight">{value}</p>
     </div>
   );
 }
