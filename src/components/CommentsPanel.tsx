@@ -124,7 +124,9 @@ export function CommentsPanel({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !profile) { toast.error("Sign in and complete your profile first"); return; }
-    if (!body.trim()) return;
+    // A star rating is always set (defaults to 5), so this is the only real
+    // requirement — the written text is optional. `body` is NOT NULL in the
+    // database, so an empty review is stored as "" rather than skipped.
     setBusy(true);
     try {
       const { error } = await supabase.from("comments").insert({
@@ -215,7 +217,11 @@ export function CommentsPanel({
             </div>
           </div>
         </div>
-        <p className="mt-3 whitespace-pre-line break-words [overflow-wrap:anywhere] text-sm leading-relaxed text-muted-foreground">{c.body}</p>
+        {c.body ? (
+          <p className="mt-3 whitespace-pre-line break-words [overflow-wrap:anywhere] text-sm leading-relaxed text-muted-foreground">{c.body}</p>
+        ) : (
+          <p className="mt-3 text-sm italic text-muted-foreground/60">Left a rating without writing a review.</p>
+        )}
 
         {!isReply && <div className="mt-3"><ElementalReactions commentId={c.id} /></div>}
 
@@ -315,7 +321,7 @@ export function CommentsPanel({
               </div>
               <textarea
                 value={body} onChange={(e) => setBody(e.target.value)}
-                placeholder="Share your experience…" rows={4} maxLength={1000}
+                placeholder="Share your experience… (optional — you can rate without writing anything)" rows={4} maxLength={1000}
                 className="mt-3 w-full resize-none rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
               />
               <button
@@ -324,7 +330,7 @@ export function CommentsPanel({
                 style={{ background: "var(--gradient-primary)" }}
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Post review
+                {body.trim() ? "Post review" : "Submit rating"}
               </button>
             </form>
           )}

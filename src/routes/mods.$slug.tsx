@@ -57,7 +57,7 @@ function ModDetail() {
   const { mod } = Route.useLoaderData() as { mod: Mod };
   const { user } = useAuth();
   const { award, grant } = useGamification();
-  const { overrides } = useSiteSettings();
+  const { overrides, allMods } = useSiteSettings();
   const theme = elementTheme[mod.element];
   const [tab, setTab] = useState<"overview" | "changelog">("overview");
   const [gateOpen, setGateOpen] = useState(false);
@@ -69,6 +69,12 @@ function ModDetail() {
   // page load, before any gate — anyone reading the anon REST response
   // for mod_overrides plus the bundled cipher key could pull it directly.
   const ov = overrides[mod.slug];
+  // The route loader's `mod` is the static base definition (no admin seed,
+  // no real user data folded in — used for name/description/etc). For the
+  // rating shown in the Comments panel, use the fully blended version from
+  // useSiteSettings (same seed+real math as the mods list / mod cards) so
+  // the number here always matches the rest of the site.
+  const blendedMod = allMods.find((m) => m.slug === mod.slug) || mod;
   const hasDownload = !!(ov?.mega_enc || ov?.download_url);
   const followUrl = safeDecrypt(ov?.follow_enc);
 
@@ -213,7 +219,7 @@ function ModDetail() {
         </div>
       </section>
 
-      <CommentsPanel slug={mod.slug} combinedRating={mod.baseRating} combinedCount={mod.ratingCount} />
+      <CommentsPanel slug={mod.slug} combinedRating={blendedMod.baseRating} combinedCount={blendedMod.ratingCount} />
 
       <section className="mt-16">
         <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">More from the vault</h2>
