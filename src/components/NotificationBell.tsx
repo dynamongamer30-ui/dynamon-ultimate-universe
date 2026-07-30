@@ -18,7 +18,7 @@ function timeAgo(iso: string): string {
 }
 
 export function NotificationBell() {
-  const { items, readIds, unreadCount, markAllRead, sender } = useNotifications();
+  const { items, readIds, unreadCount, markAllRead, markOneRead, sender } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -51,7 +51,7 @@ export function NotificationBell() {
         {open && (
           <motion.div
             initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-            className="absolute right-0 mt-2 w-80 overflow-hidden rounded-2xl glass shadow-elev"
+            className="fixed inset-x-3 top-16 z-50 max-h-[80vh] w-auto overflow-hidden rounded-2xl glass shadow-elev sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80"
           >
             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
               <p className="text-sm font-semibold">Notifications</p>
@@ -74,27 +74,33 @@ export function NotificationBell() {
                 {recent.map((n) => {
                   const unread = !readIds.has(n.id);
                   return (
-                    <li key={n.id} className={`px-4 py-3 ${unread ? "bg-primary/5" : ""}`}>
-                      <div className="flex items-start gap-2">
-                        {unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />}
-                        <div className={`min-w-0 ${unread ? "" : "pl-4"}`}>
-                          {sender && (
-                            <div className="mb-1 flex items-center gap-1.5">
-                              <img
-                                src={sender.custom_avatar_url || sender.avatar_url || "/favicon.ico"}
-                                alt=""
-                                className="h-4 w-4 shrink-0 rounded-full object-cover"
-                              />
-                              <span className="text-[11px] font-medium text-primary">
-                                {sender.display_name || "Dynamon Gamer 07"}
-                              </span>
-                            </div>
-                          )}
-                          <p className="truncate text-sm font-semibold">{n.title}</p>
-                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
-                          <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">{timeAgo(n.created_at)}</p>
+                    <li key={n.id} className={unread ? "bg-primary/5" : ""}>
+                      <Link
+                        to="/notifications"
+                        onClick={() => { if (unread) markOneRead(n.id); setOpen(false); }}
+                        className="block px-4 py-3 hover:bg-card/60"
+                      >
+                        <div className="flex items-start gap-2">
+                          {unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />}
+                          <div className={`min-w-0 ${unread ? "" : "pl-4"}`}>
+                            {sender && (
+                              <div className="mb-1 flex items-center gap-1.5">
+                                <img
+                                  src={sender.custom_avatar_url || sender.avatar_url || "/favicon.ico"}
+                                  alt=""
+                                  className="h-4 w-4 shrink-0 rounded-full object-cover"
+                                />
+                                <span className="text-[11px] font-medium text-primary">
+                                  {sender.display_name || "Dynamon Gamer 07"}
+                                </span>
+                              </div>
+                            )}
+                            <p className="truncate text-sm font-semibold">{n.title}</p>
+                            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
+                            <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">{timeAgo(n.created_at)}</p>
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     </li>
                   );
                 })}
