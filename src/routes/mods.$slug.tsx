@@ -213,7 +213,7 @@ function ModDetail() {
         </div>
       </section>
 
-      <CommentsPanel slug={mod.slug} />
+      <CommentsPanel slug={mod.slug} combinedRating={mod.baseRating} combinedCount={mod.ratingCount} />
 
       <section className="mt-16">
         <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">More from the vault</h2>

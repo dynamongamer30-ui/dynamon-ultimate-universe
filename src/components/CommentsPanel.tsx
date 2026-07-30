@@ -40,7 +40,20 @@ type EnrichedComment = CommentRow & {
   likedByMe: boolean;
 };
 
-export function CommentsPanel({ slug }: { slug: string }) {
+export function CommentsPanel({
+  slug,
+  combinedRating,
+  combinedCount,
+}: {
+  slug: string;
+  /** Blended (owner seed + real) rating average, same number shown at the
+   * top of the mod page. When provided, this panel's "Community Rating"
+   * card uses it instead of recalculating from only the real comments
+   * below — so the two numbers on the page always agree. */
+  combinedRating?: number;
+  /** Blended (owner seed + real) rating count, same as above. */
+  combinedCount?: number;
+}) {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { award, grant } = useGamification();
@@ -259,11 +272,14 @@ export function CommentsPanel({ slug }: { slug: string }) {
     );
   };
 
+  const displayRating = combinedRating != null ? combinedRating : avg;
+  const displayCount = combinedCount != null ? combinedCount : ratings.length;
+
   return (
     <section id="comments" className="mt-14 scroll-mt-24">
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Community Rating" value={(avg || 0).toFixed(1)} sub={`${ratings.length} ratings`} stars={Math.round(avg)} />
-        <StatCard label="Reviews" value={String(topLevel.length)} sub="Be helpful. Be honest." />
+        <StatCard label="Community Rating" value={(displayRating || 0).toFixed(1)} sub={`${displayCount} ratings`} stars={Math.round(displayRating)} />
+        <StatCard label="Reviews" value={String(displayCount)} sub="Be helpful. Be honest." />
         <StatCard label="Likes" value={String(comments.reduce((s, c) => s + c.likeCount, 0))} sub="One like per trainer per comment" />
       </div>
 
