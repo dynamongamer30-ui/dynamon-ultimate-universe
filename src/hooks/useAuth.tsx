@@ -54,6 +54,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Mark the user active on real visits, not just fresh logins. Supabase's
+  // last_sign_in_at only updates on an actual login event — a returning
+  // user whose session is still valid (the normal case) never re-triggers
+  // it, so it can't be used alone to tell "still visiting" from "gone for
+  // good". Throttled to once per browser session so it's cheap.
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid) return;
+    const key = `__dg_touched_${uid}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch { /* private mode etc — still safe to touch */ }
+    (supabase as unknown as { rpc: (fn: string) => { then: (a: () => void, b: () => void) => void } })
+      .rpc("touch_last_active").then(() => {}, () => {});
+  }, [session?.user?.id]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
