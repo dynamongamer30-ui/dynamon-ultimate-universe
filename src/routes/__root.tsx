@@ -22,6 +22,7 @@ import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { GamificationProvider } from "@/hooks/useGamification";
 import { OwnerReturnRedirect } from "@/components/OwnerReturnRedirect";
 import { ConfirmProvider } from "@/hooks/useConfirm";
+import { installDeployFreshnessGuard } from "@/lib/deployFreshness";
 
 function NotFoundComponent() {
   return (
@@ -136,6 +137,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => { installDeployFreshnessGuard(); }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
