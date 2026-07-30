@@ -78,7 +78,7 @@ function ControlPanel() {
         {tab === "socials" && <SocialsEditor initial={socials} onSaved={refresh} />}
         {tab === "featured" && <FeaturedEditor onSaved={refresh} />}
         {tab === "mods" && <ModsEditor overrides={overrides} onSaved={refresh} />}
-        {tab === "security" && <SecurityEditor />}
+        {tab === "security" && <><SecurityEditor /><AccountsEditor /></>}
         {tab === "avatars" && <AvatarsEditor />}
         
       </div>
@@ -243,6 +243,79 @@ function UploadButton({ label, uploading, onFile }: { label: string; uploading: 
 }
 const DEFAULT_SECURITY = { timer: 900, minTimer: 45 };
 type SecurityConfig = { timer: number; minTimer: number };
+
+function AccountsEditor() {
+  const [enabled, setEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [totalUsers, setTotalUsers] = useState<number | null>(null);
+  const [inactive30d, setInactive30d] = useState<number | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    const [{ data: cfg }, { data: stats }] = await Promise.all([
+      supabase.from("app_config").select("data").eq("id", "AccountDeletion").maybeSingle(),
+      (supabase as unknown as { rpc: (fn: string) => Promise<{ data: { total_users: number; inactive_30d: number }[] | null }> })
+        .rpc("admin_account_stats"),
+    ]);
+    const d = cfg?.data as { enabled?: boolean } | undefined;
+    setEnabled(d?.enabled !== false);
+    const row = stats?.[0];
+    setTotalUsers(row?.total_users ?? null);
+    setInactive30d(row?.inactive_30d ?? null);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  if (loading) return <Card title="Accounts"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></Card>;
+
+  return (
+    <Card
+      title="Accounts"
+      desc="Signed-up users, and whether inactive accounts (30+ days with no visit or sign-in) get auto-deleted."
+    >
+      <Grid>
+        <Field label="Total signed-up users">
+          <div className={`${inp} flex items-center font-mono text-lg font-bold text-primary`}>{totalUsers}</div>
+        </Field>
+        <Field label="Inactive 30+ days (would be deleted)">
+          <div className={`${inp} flex items-center font-mono text-lg font-bold ${inactive30d ? "text-amber-400" : "text-muted-foreground"}`}>{inactive30d}</div>
+        </Field>
+      </Grid>
+
+      <label className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-border bg-card/40 p-4">
+        <div>
+          <p className="text-sm font-semibold">Auto-delete inactive accounts</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            When on, accounts with no visit or sign-in for 30 days are removed automatically every night.
+            Turn this off before going offline for a while so no one's data gets deleted while you're away.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          onClick={() => setEnabled((v) => !v)}
+          className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-border"}`}
+        >
+          <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
+        </button>
+      </label>
+
+      <SaveRow
+        saving={saving}
+        onReset={load}
+        onSave={async () => {
+          setSaving(true);
+          await saveAppConfig("AccountDeletion", { enabled });
+          setSaving(false);
+          toast.success(enabled ? "Auto-deletion is ON" : "Auto-deletion is PAUSED");
+        }}
+      />
+    </Card>
+  );
+}
 
 function SecurityEditor() {
   const [v, setV] = useState<SecurityConfig>(DEFAULT_SECURITY);
