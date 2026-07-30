@@ -18,7 +18,7 @@ function timeAgo(iso: string): string {
 }
 
 export function NotificationBell() {
-  const { items, readIds, unreadCount, markAllRead } = useNotifications();
+  const { items, readIds, unreadCount, markAllRead, sender } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -78,6 +78,18 @@ export function NotificationBell() {
                       <div className="flex items-start gap-2">
                         {unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />}
                         <div className={`min-w-0 ${unread ? "" : "pl-4"}`}>
+                          {sender && (
+                            <div className="mb-1 flex items-center gap-1.5">
+                              <img
+                                src={sender.custom_avatar_url || sender.avatar_url || "/favicon.ico"}
+                                alt=""
+                                className="h-4 w-4 shrink-0 rounded-full object-cover"
+                              />
+                              <span className="text-[11px] font-medium text-primary">
+                                {sender.display_name || "Dynamon Gamer 07"}
+                              </span>
+                            </div>
+                          )}
                           <p className="truncate text-sm font-semibold">{n.title}</p>
                           <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
                           <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">{timeAgo(n.created_at)}</p>

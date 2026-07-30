@@ -4,7 +4,9 @@ import {
   listNotifications,
   listMyReadIds,
   markRead,
+  getSenderProfile,
   type AppNotification,
+  type SenderProfile,
 } from "@/lib/notifications";
 
 /**
@@ -16,6 +18,11 @@ export function useNotifications() {
   const [items, setItems] = useState<AppNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [sender, setSender] = useState<SenderProfile | null>(null);
+
+  useEffect(() => {
+    getSenderProfile().then(setSender).catch(() => setSender(null));
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!user) {
@@ -80,6 +87,7 @@ export function useNotifications() {
     readIds,
     unreadCount: unread.length,
     loading,
+    sender,
     refresh,
     markAllRead,
     markOneRead,

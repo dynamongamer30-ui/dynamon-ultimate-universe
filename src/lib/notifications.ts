@@ -25,6 +25,24 @@ export interface AppNotification {
   created_at: string; // ISO timestamp
 }
 
+export interface SenderProfile {
+  display_name: string | null;
+  avatar_url: string | null;
+  custom_avatar_url: string | null;
+}
+
+/** All notifications on this site come from the single owner account, so we
+ * fetch their public profile once and show it as the sender everywhere. */
+export async function getSenderProfile(): Promise<SenderProfile | null> {
+  const { data, error } = await supabase
+    .from("public_profiles")
+    .select("display_name, avatar_url, custom_avatar_url")
+    .eq("is_owner", true)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as SenderProfile;
+}
+
 export async function listNotifications(): Promise<AppNotification[]> {
   const { data, error } = await db("notifications")
     .select("id,title,body,created_at")

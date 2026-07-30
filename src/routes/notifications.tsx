@@ -19,7 +19,7 @@ function fmt(iso: string): string {
 
 function NotificationsPage() {
   const { user } = useAuth();
-  const { items, readIds, loading, markAllRead } = useNotifications();
+  const { items, readIds, loading, markAllRead, sender } = useNotifications();
 
   // Snapshot which notifications were unread when the page opened, so they keep
   // their "new" highlight during this visit even after we mark them read.
@@ -70,14 +70,27 @@ function NotificationsPage() {
                 className={`rounded-2xl border p-5 transition-colors ${unread ? "border-primary/40 bg-primary/5" : "border-border bg-card/40"}`}
               >
                 <div className="flex items-start gap-3">
-                  <span
-                    className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${unread ? "text-primary-foreground" : "bg-card text-muted-foreground"}`}
-                    style={unread ? { background: "var(--gradient-primary)" } : undefined}
-                    aria-hidden
-                  >
-                    {unread ? <Bell className="h-4 w-4" /> : <Check className="h-4 w-4" />}
-                  </span>
+                  {sender ? (
+                    <img
+                      src={sender.custom_avatar_url || sender.avatar_url || "/favicon.ico"}
+                      alt=""
+                      className="mt-0.5 h-9 w-9 shrink-0 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <span
+                      className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${unread ? "text-primary-foreground" : "bg-card text-muted-foreground"}`}
+                      style={unread ? { background: "var(--gradient-primary)" } : undefined}
+                      aria-hidden
+                    >
+                      {unread ? <Bell className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+                    </span>
+                  )}
                   <div className="min-w-0 flex-1">
+                    {sender && (
+                      <p className="text-xs font-semibold text-primary">
+                        {sender.display_name || "Dynamon Gamer 07"}
+                      </p>
+                    )}
                     <div className="flex items-start justify-between gap-3">
                       <h2 className="font-display text-lg font-bold">{n.title}</h2>
                       <span className="shrink-0 text-xs text-muted-foreground">{fmt(n.created_at)}</span>
