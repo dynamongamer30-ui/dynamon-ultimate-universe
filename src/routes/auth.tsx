@@ -139,6 +139,9 @@ function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => vo
       <p className="mt-5 text-center text-xs text-muted-foreground">
         By continuing you agree to our <Link to="/disclaimer" className="text-primary hover:underline">Disclaimer &amp; Safety</Link>.
       </p>
+      <p className="mt-2 text-center text-[11px] text-muted-foreground/80">
+        Accounts that don&apos;t sign in for 30 days are automatically deleted, along with their data.
+      </p>
     </motion.div>
   );
 }

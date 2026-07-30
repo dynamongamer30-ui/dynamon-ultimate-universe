@@ -44,7 +44,7 @@ function Disclaimer() {
             ratings may also be cached locally in your browser for performance. Embedded social links open
             in their own platforms with their own privacy policies.
           </p>
-          <p className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed text-foreground"><span className="font-bold text-primary">In simple words: </span>We save your email and the things you do here (like ratings and comments) so the site works. Nothing else. When you tap a social link, that app&apos;s own rules apply, not ours.</p>
+          <p className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed text-foreground"><span className="font-bold text-primary">In simple words: </span>We save your email and the things you do here (like ratings and comments) so the site works. Nothing else. When you tap a social link, that app&apos;s own rules apply, not ours. If you don&apos;t sign in for 30 days, your account and its data are automatically deleted.</p>
         </section>
 
         <section id="dmca" className="edge-light rounded-2xl glass p-8">
