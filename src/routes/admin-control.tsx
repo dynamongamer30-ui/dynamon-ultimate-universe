@@ -524,6 +524,7 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
     likes_absolute: (existing?.likes_absolute ?? "") as number | "",
     seed_rating_points: (existing?.seed_rating_points ?? "") as number | "",
     seed_rating_count: (existing?.seed_rating_count ?? "") as number | "",
+    seed_review_likes: (existing?.seed_review_likes ?? "") as number | "",
     download_url: existing?.download_url ?? "",
     // Decrypt stored ciphertext back to plaintext for editing. If the key
     // doesn't match or the value is empty, fall back to an empty field.
@@ -556,6 +557,7 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
       likes_absolute: v.likes_absolute === "" ? null : Number(v.likes_absolute),
       seed_rating_points: v.seed_rating_points === "" ? null : Number(v.seed_rating_points),
       seed_rating_count: v.seed_rating_count === "" ? null : Number(v.seed_rating_count),
+      seed_review_likes: v.seed_review_likes === "" ? null : Number(v.seed_review_likes),
       download_url: v.download_url || null,
       // Encrypt the MEGA + Follow links so the ciphertext (not the raw URL) is
       // what's stored and shipped to the public site.
@@ -600,6 +602,7 @@ function ModRowEditor({ slug, existing, onSaved }: { slug: string; existing?: Mo
         <Field label={`Set likes (real user likes add on top)`}><input type="number" min="0" value={v.likes_absolute} onChange={(e) => setV({ ...v, likes_absolute: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder={String(base.baseLikes)} /></Field>
         <Field label={`Set rating points (e.g. 1000 = your baseline "score")`}><input type="number" min="0" value={v.seed_rating_points} onChange={(e) => setV({ ...v, seed_rating_points: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder="1000" /></Field>
         <Field label={`Set rating votes (e.g. 200 = your baseline "voter count")`}><input type="number" min="0" value={v.seed_rating_count} onChange={(e) => setV({ ...v, seed_rating_count: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder="200" /></Field>
+        <Field label={`Set review likes (real likes on reviews add on top)`}><input type="number" min="0" value={v.seed_review_likes} onChange={(e) => setV({ ...v, seed_review_likes: e.target.value === "" ? "" : Number(e.target.value) })} className={inp} placeholder="0" /></Field>
       </Grid>
       {v.seed_rating_points !== "" && v.seed_rating_count !== "" && Number(v.seed_rating_count) > 0 && (
         <p className="text-xs text-muted-foreground">

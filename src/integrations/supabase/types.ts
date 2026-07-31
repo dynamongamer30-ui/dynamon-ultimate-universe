@@ -352,6 +352,7 @@ export type Database = {
           rating_count: number | null
           seed_rating_count: number | null
           seed_rating_points: number | null
+          seed_review_likes: number | null
           size: string | null
           slug: string
           tagline: string | null
@@ -376,6 +377,7 @@ export type Database = {
           rating_count?: number | null
           seed_rating_count?: number | null
           seed_rating_points?: number | null
+          seed_review_likes?: number | null
           size?: string | null
           slug: string
           tagline?: string | null
@@ -400,6 +402,7 @@ export type Database = {
           rating_count?: number | null
           seed_rating_count?: number | null
           seed_rating_points?: number | null
+          seed_review_likes?: number | null
           size?: string | null
           slug?: string
           tagline?: string | null

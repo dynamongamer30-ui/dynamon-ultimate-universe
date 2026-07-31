@@ -44,6 +44,7 @@ export function CommentsPanel({
   slug,
   combinedRating,
   combinedCount,
+  combinedLikes,
 }: {
   slug: string;
   /** Blended (owner seed + real) rating average, same number shown at the
@@ -53,6 +54,8 @@ export function CommentsPanel({
   combinedRating?: number;
   /** Blended (owner seed + real) rating count, same as above. */
   combinedCount?: number;
+  /** Blended (owner seed + real) count of likes on reviews. */
+  combinedLikes?: number;
 }) {
   const { user } = useAuth();
   const { profile } = useProfile();
@@ -286,7 +289,7 @@ export function CommentsPanel({
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Community Rating" value={(displayRating || 0).toFixed(1)} sub={`${displayCount} ratings`} stars={Math.round(displayRating)} />
         <StatCard label="Reviews" value={String(displayCount)} sub="Be helpful. Be honest." />
-        <StatCard label="Likes" value={String(comments.reduce((s, c) => s + c.likeCount, 0))} sub="One like per trainer per comment" />
+        <StatCard label="Likes" value={String((combinedLikes ?? 0) + comments.reduce((s, c) => s + c.likeCount, 0))} sub="One like per trainer per comment" />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.4fr]">

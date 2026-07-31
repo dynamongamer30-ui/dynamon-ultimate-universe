@@ -48,6 +48,7 @@ export type ModOverride = {
   rating_count: number | null;
   seed_rating_points: number | null;
   seed_rating_count: number | null;
+  seed_review_likes: number | null;
   downloads_absolute: number | null;
   likes_absolute: number | null;
   real_downloads: number;
