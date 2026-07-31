@@ -15,6 +15,7 @@ const looseRpc = supabase.rpc as unknown as (
 ) => Promise<{ data: unknown; error: { message: string } | null }>;
 
 type DailyKey = { id: string; key: string; claimed: boolean; expires_at: string };
+type UnclaimedPass = { id: string; claim_deadline: string };
 
 export const Route = createFileRoute("/rewards")({
   head: () => ({
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/rewards")({
 function Rewards() {
   const { user } = useAuth();
   const [pass, setPass] = useState<{ id: string; expires_at: string } | null>(null);
+  const [unclaimed, setUnclaimed] = useState<UnclaimedPass | null>(null);
   const [dailyKey, setDailyKey] = useState<DailyKey | null>(null);
   const [loading, setLoading] = useState(false);
   const checked = useRef(false);
@@ -41,13 +43,18 @@ function Rewards() {
     setLoading(true);
     (async () => {
       try {
-        const [passRes, keyRes] = await Promise.all([
+        const [passRes, unclaimedRes, keyRes] = await Promise.all([
           looseRpc("my_active_phoenix_pass"),
+          looseRpc("my_unclaimed_phoenix_pass"),
           looseRpc("my_daily_key"),
         ]);
         if (!passRes.error) {
           const rows = (passRes.data as Array<{ id: string; expires_at: string }> | null) || [];
           setPass(rows[0] || null);
+        }
+        if (!unclaimedRes.error) {
+          const rows = (unclaimedRes.data as UnclaimedPass[] | null) || [];
+          setUnclaimed(rows[0] || null);
         }
         if (!keyRes.error) {
           const rows = (keyRes.data as DailyKey[] | null) || [];
@@ -88,6 +95,11 @@ function Rewards() {
 
       {/* Daily Key claim card (winners only) */}
       {user && !loading && dailyKey && <DailyKeyCard initial={dailyKey} />}
+
+      {/* Phoenix Pass claim card (winners only — claim within 24h) */}
+      {user && !loading && unclaimed && (
+        <PhoenixClaimCard initial={unclaimed} onClaimed={(exp) => { setPass({ id: unclaimed.id, expires_at: exp }); setUnclaimed(null); }} />
+      )}
 
       {/* Active Phoenix Pass banner */}
       {user && !loading && pass && (
@@ -290,6 +302,58 @@ function DailyKeyCard({ initial }: { initial: DailyKey }) {
           </button>
         )}
       </div>
+    </motion.div>
+  );
+}
+
+function PhoenixClaimCard({ initial, onClaimed }: { initial: UnclaimedPass; onClaimed: (expiresAt: string) => void }) {
+  const [busy, setBusy] = useState(false);
+
+  const claim = async () => {
+    setBusy(true);
+    try {
+      const { data, error } = await looseRpc("claim_phoenix_pass", { p_id: initial.id });
+      if (error) throw new Error("claim_failed");
+      const res = data as { ok?: boolean; error?: string; expires_at?: string } | null;
+      if (!res || !res.ok || !res.expires_at) {
+        const map: Record<string, string> = {
+          invalid_or_expired: "This pass can’t be claimed — the 24-hour window may have passed.",
+        };
+        toast.error(map[res?.error || ""] || "We couldn’t claim your pass. Please try again.");
+        return;
+      }
+      playClick();
+      toast.success("Phoenix Pass claimed 🔥 — good for 30 days");
+      onClaimed(res.expires_at);
+    } catch {
+      toast.error("We couldn’t claim your pass. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      className="mt-6 flex flex-col items-start gap-4 rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div className="flex items-center gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-400/15 text-amber-300">
+          <Feather className="h-5 w-5" />
+        </span>
+        <div>
+          <p className="text-sm font-bold">You won a Phoenix Pass!</p>
+          <p className="text-xs text-muted-foreground">
+            Claim it before {new Date(initial.claim_deadline).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}. Once claimed, it’s yours for 30 days.
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={claim} disabled={busy}
+        className="press inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-amber-950 transition hover:brightness-110 disabled:opacity-60 sm:w-auto"
+      >
+        {busy ? (<><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</>) : (<><Feather className="h-4 w-4" /> Claim your pass</>)}
+      </button>
     </motion.div>
   );
 }
