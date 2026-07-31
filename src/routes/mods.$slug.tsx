@@ -108,7 +108,7 @@ function ModDetail() {
           style={{ boxShadow: theme.glow }}
         >
           <div className="absolute inset-0 z-10 opacity-40 mix-blend-overlay" style={{ background: theme.gradient }} />
-          <img src={mod.image} alt={mod.name} width={1024} height={1024} className="relative aspect-square w-full object-cover" />
+          <img src={mod.image} alt={blendedMod.name} width={1024} height={1024} className="relative aspect-square w-full object-cover" />
           <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-card to-transparent p-6">
             <span className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${theme.chip}`}>
               <Sparkles className="h-3 w-3" /> {theme.label} element
@@ -121,8 +121,8 @@ function ModDetail() {
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Dynamons World · Mod APK
           </p>
-          <h1 className="mt-4 font-display text-4xl font-black uppercase leading-[0.95] tracking-tight text-balance sm:text-5xl">{mod.name}</h1>
-          <p className="mt-4 text-lg leading-relaxed text-muted-foreground text-pretty">{mod.tagline}</p>
+          <h1 className="mt-4 font-display text-4xl font-black uppercase leading-[0.95] tracking-tight text-balance sm:text-5xl">{blendedMod.name}</h1>
+          <p className="mt-4 text-lg leading-relaxed text-muted-foreground text-pretty">{blendedMod.tagline}</p>
 
           {/* Tabs */}
           <div className="mt-6 inline-flex rounded-lg border border-border bg-card p-1 text-xs font-bold">
@@ -137,10 +137,10 @@ function ModDetail() {
           {tab === "overview" ? (
             <>
               <div className="mt-5 rounded-2xl glass p-5">
-                <p className="text-sm leading-relaxed text-muted-foreground">{mod.description}</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{blendedMod.description}</p>
               </div>
               <ul className="mt-5 grid gap-2 sm:grid-cols-2">
-                {mod.features.map((f) => (
+                {blendedMod.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
                     <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-primary/15 text-primary">
                       <Check className="h-3.5 w-3.5" />
@@ -152,7 +152,7 @@ function ModDetail() {
             </>
           ) : (
             <div className="mt-5">
-              <ChangelogTimeline entries={mod.changelog} glow={theme.glow} />
+              <ChangelogTimeline entries={blendedMod.changelog} glow={theme.glow} />
             </div>
           )}
 
@@ -174,10 +174,10 @@ function ModDetail() {
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3 text-center text-xs sm:grid-cols-4">
-            <Stat label="Downloads" value={`${formatCount(mod.downloads)}+`} />
-            <Stat label="Version" value={mod.version} />
-            <Stat label="Size" value={mod.size} />
-            <Stat label="Updated" value={new Date(mod.updated).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} />
+            <Stat label="Downloads" value={`${formatCount(blendedMod.downloads)}+`} />
+            <Stat label="Version" value={blendedMod.version} />
+            <Stat label="Size" value={blendedMod.size} />
+            <Stat label="Updated" value={new Date(blendedMod.updated).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} />
           </div>
         </motion.div>
       </article>
@@ -191,12 +191,12 @@ function ModDetail() {
           </div>
         </div>
         <div className="mt-5 overflow-hidden edge-light rounded-2xl glass" style={{ boxShadow: theme.glow }}>
-          {mod.youtubeId ? (
+          {blendedMod.youtubeId ? (
             <div className="relative aspect-video w-full">
               <iframe
                 className="absolute inset-0 h-full w-full"
-                src={`https://www.youtube.com/embed/${mod.youtubeId}`}
-                title={`${mod.name} gameplay`}
+                src={`https://www.youtube.com/embed/${blendedMod.youtubeId}`}
+                title={`${blendedMod.name} gameplay`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 loading="lazy"
@@ -245,7 +245,7 @@ function ModDetail() {
 
       {gateOpen && (
         <FollowGate
-          modName={mod.name}
+          modName={blendedMod.name}
           slug={mod.slug}
           followUrl={followUrl}
           onClose={() => setGateOpen(false)}
