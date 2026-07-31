@@ -207,7 +207,7 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
     try {
       const r = await uploadPayload(form);
       toast.success(`Uploaded build ${form.build}`);
-      console.log("uploadPayload response", r);
+      void r;
     } catch (err) {
       const msg = (err as Error).message;
       if (/401|403|unauthor|forbidden/i.test(msg)) { toast.error("Admin key rejected — re-enter it"); onAuthFail(); }
