@@ -25,6 +25,7 @@ import { Route as GeneratorRouteImport } from './routes/generator'
 import { Route as ModsRouteImport } from './routes/mods'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as UnlockRouteImport } from './routes/unlock'
 import { Route as ModsIndexRouteImport } from './routes/mods.index'
 import { Route as ModsSlugRouteImport } from './routes/mods.$slug'
@@ -109,6 +110,11 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RewardsRoute = RewardsRouteImport.update({
+  id: '/rewards',
+  path: '/rewards',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UnlockRoute = UnlockRouteImport.update({
   id: '/unlock',
   path: '/unlock',
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/mods': typeof ModsRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
+  '/rewards': typeof RewardsRoute
   '/unlock': typeof UnlockRoute
   '/mods/$slug': typeof ModsSlugRoute
   '/mods/': typeof ModsIndexRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByTo {
   '/generator': typeof GeneratorRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
+  '/rewards': typeof RewardsRoute
   '/unlock': typeof UnlockRoute
   '/mods/$slug': typeof ModsSlugRoute
   '/mods': typeof ModsIndexRoute
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/mods': typeof ModsRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
+  '/rewards': typeof RewardsRoute
   '/unlock': typeof UnlockRoute
   '/mods/$slug': typeof ModsSlugRoute
   '/mods/': typeof ModsIndexRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/mods'
     | '/notifications'
     | '/profile'
+    | '/rewards'
     | '/unlock'
     | '/mods/$slug'
     | '/mods/'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/generator'
     | '/notifications'
     | '/profile'
+    | '/rewards'
     | '/unlock'
     | '/mods/$slug'
     | '/mods'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/mods'
     | '/notifications'
     | '/profile'
+    | '/rewards'
     | '/unlock'
     | '/mods/$slug'
     | '/mods/'
@@ -270,6 +282,7 @@ export interface RootRouteChildren {
   ModsRoute: typeof ModsRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
   ProfileRoute: typeof ProfileRoute
+  RewardsRoute: typeof RewardsRoute
   UnlockRoute: typeof UnlockRoute
 }
 
@@ -387,6 +400,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rewards': {
+      id: '/rewards'
+      path: '/rewards'
+      fullPath: '/rewards'
+      preLoaderRoute: typeof RewardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/unlock': {
       id: '/unlock'
       path: '/unlock'
@@ -440,6 +460,7 @@ const rootRouteChildren: RootRouteChildren = {
   ModsRoute: ModsRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
   ProfileRoute: ProfileRoute,
+  RewardsRoute: RewardsRoute,
   UnlockRoute: UnlockRoute,
 }
 export const routeTree = rootRouteImport

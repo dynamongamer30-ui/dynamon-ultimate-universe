@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { Menu, Sparkles, X, Search, LogOut, User as UserIcon, Settings, Heart, Trophy, Shield, Bell } from "lucide-react";
+import { Menu, Sparkles, X, Search, LogOut, User as UserIcon, Settings, Heart, Trophy, Shield, Bell, Gift } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { playClick } from "@/lib/sound";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,6 +15,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 const nav = [
   { to: "/", label: "Home" },
   { to: "/mods", label: "Mods" },
+  { to: "/rewards", label: "Rewards" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
 ];
@@ -135,6 +136,9 @@ export function Header() {
                     </Link>
                     <Link to="/notifications" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-card/60">
                       <Bell className="h-4 w-4" /> Notifications
+                    </Link>
+                    <Link to="/rewards" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-card/60">
+                      <Gift className="h-4 w-4" /> Daily rewards
                     </Link>
                     <Link to="/achievements" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-card/60">
                       <Trophy className="h-4 w-4" /> Achievements · Lv {xp.level}
