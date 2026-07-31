@@ -156,7 +156,7 @@ function UnlockPage() {
   // JSON-encodes values, so the raw query string literally contains quote
   // characters around the slug — comparing that against the plain slug
   // stored server-side always failed with "version_mismatch".
-  const { v: modSlugFromUrl } = useSearch({ from: "/unlock" });
+  const { v: modVersionFromUrl } = useSearch({ from: "/unlock" });
   const [stages, setStages] = useState<Stage[]>(INITIAL_STAGES);
   const [done, setDone] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -217,7 +217,7 @@ function UnlockPage() {
       // 2-4. Server-side verification. A single SECURITY DEFINER RPC checks the
       // session, fingerprint, timing window and version, then ATOMICALLY burns
       // the token — none of this logic or the link is exposed to the browser.
-      const version = modSlugFromUrl;
+      const version = modVersionFromUrl;
       let redeemed: { ok: boolean; error?: string; link?: string; encrypted?: boolean } | null = null;
 
       await runStage(2, async () => {
