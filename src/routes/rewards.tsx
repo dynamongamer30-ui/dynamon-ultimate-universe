@@ -1,11 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Feather, KeyRound, Sparkles, Clock, Users, Bell, Gift, ArrowRight, Loader2 } from "lucide-react";
+import { Feather, KeyRound, Sparkles, Clock, Users, Bell, Gift, ArrowRight, Loader2, Copy, Check } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { playClick } from "@/lib/sound";
+import { toast } from "sonner";
+
+// These reward RPCs aren't in the generated Supabase types yet; call loosely.
+const looseRpc = supabase.rpc as unknown as (
+  fn: string,
+  args?: Record<string, unknown>,
+) => Promise<{ data: unknown; error: { message: string } | null }>;
+
+type DailyKey = { id: string; key: string; claimed: boolean; expires_at: string };
 
 export const Route = createFileRoute("/rewards")({
   head: () => ({
@@ -22,26 +31,30 @@ export const Route = createFileRoute("/rewards")({
 function Rewards() {
   const { user } = useAuth();
   const [pass, setPass] = useState<{ id: string; expires_at: string } | null>(null);
-  const [loadingPass, setLoadingPass] = useState(false);
+  const [dailyKey, setDailyKey] = useState<DailyKey | null>(null);
+  const [loading, setLoading] = useState(false);
   const checked = useRef(false);
 
   useEffect(() => {
     if (!user || checked.current) return;
     checked.current = true;
-    setLoadingPass(true);
+    setLoading(true);
     (async () => {
       try {
-        const rpc = supabase.rpc as unknown as (
-          fn: string,
-          args?: Record<string, unknown>,
-        ) => Promise<{ data: unknown; error: { message: string } | null }>;
-        const { data, error } = await rpc("my_active_phoenix_pass");
-        if (!error) {
-          const rows = (data as Array<{ id: string; expires_at: string }> | null) || [];
+        const [passRes, keyRes] = await Promise.all([
+          looseRpc("my_active_phoenix_pass"),
+          looseRpc("my_daily_key"),
+        ]);
+        if (!passRes.error) {
+          const rows = (passRes.data as Array<{ id: string; expires_at: string }> | null) || [];
           setPass(rows[0] || null);
         }
+        if (!keyRes.error) {
+          const rows = (keyRes.data as DailyKey[] | null) || [];
+          setDailyKey(rows[0] || null);
+        }
       } finally {
-        setLoadingPass(false);
+        setLoading(false);
       }
     })();
   }, [user]);
@@ -66,37 +79,39 @@ function Rewards() {
         </p>
       </section>
 
-      {/* Active pass banner */}
-      {user && (loadingPass || pass) && (
+      {/* Your active rewards */}
+      {user && loading && (
+        <div className="mt-6 flex items-center gap-2 rounded-2xl border border-border bg-card/50 p-5 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Checking your rewards…
+        </div>
+      )}
+
+      {/* Daily Key claim card (winners only) */}
+      {user && !loading && dailyKey && <DailyKeyCard initial={dailyKey} />}
+
+      {/* Active Phoenix Pass banner */}
+      {user && !loading && pass && (
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 sm:flex-row sm:items-center sm:justify-between"
         >
-          {loadingPass ? (
-            <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Checking your rewards…
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-400/15 text-amber-300">
+              <Feather className="h-5 w-5" />
             </span>
-          ) : pass ? (
-            <>
-              <div className="flex items-center gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-400/15 text-amber-300">
-                  <Feather className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="text-sm font-bold">You have a Phoenix Pass ready!</p>
-                  <p className="text-xs text-muted-foreground">
-                    Expires {new Date(pass.expires_at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · spend it on any mod
-                  </p>
-                </div>
-              </div>
-              <Link
-                to="/mods" onMouseDown={playClick}
-                className="press inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-amber-950 transition hover:brightness-110"
-              >
-                Pick a mod <ArrowRight className="h-4 w-4" />
-              </Link>
-            </>
-          ) : null}
+            <div>
+              <p className="text-sm font-bold">You have a Phoenix Pass ready!</p>
+              <p className="text-xs text-muted-foreground">
+                Expires {new Date(pass.expires_at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · spend it on any mod
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/mods" onMouseDown={playClick}
+            className="press inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-amber-950 transition hover:brightness-110"
+          >
+            Pick a mod <ArrowRight className="h-4 w-4" />
+          </Link>
         </motion.div>
       )}
 
@@ -191,6 +206,91 @@ function Rewards() {
         </div>
       </section>
     </PageShell>
+  );
+}
+
+function DailyKeyCard({ initial }: { initial: DailyKey }) {
+  const [claimed, setClaimed] = useState(initial.claimed);
+  const [key, setKey] = useState<string | null>(initial.claimed ? initial.key : null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const claim = async () => {
+    setBusy(true);
+    try {
+      const { data, error } = await looseRpc("claim_daily_key", { p_id: initial.id });
+      if (error) throw new Error("claim_failed");
+      const res = data as { ok?: boolean; error?: string; key?: string } | null;
+      if (!res || !res.ok || !res.key) {
+        const map: Record<string, string> = {
+          not_a_winner: "This key isn’t available to claim — it may have expired.",
+        };
+        toast.error(map[res?.error || ""] || "We couldn’t claim your key. Please try again.");
+        return;
+      }
+      setKey(res.key);
+      setClaimed(true);
+      playClick();
+      toast.success("Daily Key claimed 🎉");
+    } catch {
+      toast.error("We couldn’t claim your key. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copy = () => {
+    if (!key) return;
+    navigator.clipboard?.writeText(key)
+      .then(() => { setCopied(true); toast.success("Key copied"); setTimeout(() => setCopied(false), 1800); })
+      .catch(() => {});
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      className="mt-6 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-transparent p-5"
+    >
+      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+            <KeyRound className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-sm font-bold">
+              {claimed ? "Your Daily Key" : "You won a Daily Key!"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {claimed
+                ? "Paste this into the Dynamon Universe app. Works for 24 hours."
+                : `Claim it before ${new Date(initial.expires_at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}.`}
+            </p>
+          </div>
+        </div>
+
+        {claimed && key ? (
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <code className="flex-1 select-all rounded-lg border border-border bg-background/60 px-3 py-2.5 text-center font-mono text-sm font-bold tracking-wider sm:flex-none">
+              {key}
+            </code>
+            <button
+              onClick={copy}
+              className="press grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+              aria-label="Copy key"
+            >
+              {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={claim} disabled={busy}
+            className="press inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground glow-primary transition hover:brightness-110 disabled:opacity-60 sm:w-auto"
+          >
+            {busy ? (<><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</>) : (<><Gift className="h-4 w-4" /> Claim your key</>)}
+          </button>
+        )}
+      </div>
+    </motion.div>
   );
 }
 
