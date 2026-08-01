@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { playClick } from "@/lib/sound";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationBody } from "@/components/NotificationBody";
+import { NotificationClaim } from "@/components/NotificationClaim";
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -101,6 +102,7 @@ export function NotificationBell() {
                               <NotificationBody text={n.body} />
                             </p>
                             <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">{timeAgo(n.created_at)}</p>
+                            <NotificationClaim notification={n} />
                           </div>
                         </div>
                       </Link>
