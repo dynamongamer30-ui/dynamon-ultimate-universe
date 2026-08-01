@@ -10,7 +10,11 @@ type DailyKey = { id: string; key: string; claimed: boolean; expires_at: string 
 type UnclaimedPass = { id: string; claim_deadline: string };
 
 // These reward RPCs aren't in the generated Supabase types yet; call loosely.
-const looseRpc = supabase.rpc as unknown as (
+// IMPORTANT: must .bind(supabase) — assigning supabase.rpc to a plain variable
+// loses its `this` binding and throws "Cannot read properties of undefined
+// (reading 'rest')" the moment it's called (same gotcha documented for
+// .from() in src/lib/notifications.ts).
+const looseRpc = supabase.rpc.bind(supabase) as (
   fn: string,
   args?: Record<string, unknown>,
 ) => Promise<{ data: unknown; error: { message: string } | null }>;

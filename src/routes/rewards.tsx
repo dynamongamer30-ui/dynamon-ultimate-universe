@@ -9,7 +9,10 @@ import { playClick } from "@/lib/sound";
 import { toast } from "sonner";
 
 // These reward RPCs aren't in the generated Supabase types yet; call loosely.
-const looseRpc = supabase.rpc as unknown as (
+// IMPORTANT: must .bind(supabase) or calling this later throws
+// "Cannot read properties of undefined (reading 'rest')" — extracting a
+// Supabase client method into a plain variable loses its `this` binding.
+const looseRpc = supabase.rpc.bind(supabase) as (
   fn: string,
   args?: Record<string, unknown>,
 ) => Promise<{ data: unknown; error: { message: string } | null }>;
