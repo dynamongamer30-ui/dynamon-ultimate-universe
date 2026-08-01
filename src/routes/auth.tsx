@@ -17,6 +17,7 @@ export const Route = createFileRoute("/auth")({
     meta: [
       { title: "Sign in — Dynamon Universe" },
       { name: "description", content: "Create your trainer profile to download Dynamons World mods, leave reviews and join the community." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: AuthPage,

@@ -6,16 +6,22 @@ import { ModCard } from "@/components/ModCard";
 import { ThemedSelect } from "@/components/ThemedSelect";
 import { formatCount, elementTheme, type Element } from "@/lib/mods";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { canonicalHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/mods/")({
-  head: () => ({
-    meta: [
-      { title: "Mods — Dynamon Universe" },
-      { name: "description", content: "All Dynamons World mod APK builds available on Dynamon Universe. Compare versions, features and ratings." },
-      { property: "og:title", content: "All Dynamons World Mods — Dynamon Universe" },
-      { property: "og:description", content: "Compare every fan-made Dynamons World mod build on Dynamon Universe." },
-    ],
-  }),
+  head: () => {
+    const { links, meta: canonicalMeta } = canonicalHead("/mods");
+    return {
+      meta: [
+        { title: "Mods — Dynamon Universe" },
+        { name: "description", content: "All Dynamons World mod APK builds available on Dynamon Universe. Compare versions, features and ratings." },
+        { property: "og:title", content: "All Dynamons World Mods — Dynamon Universe" },
+        { property: "og:description", content: "Compare every fan-made Dynamons World mod build on Dynamon Universe." },
+        ...canonicalMeta,
+      ],
+      links,
+    };
+  },
   component: ModsPage,
 });
 

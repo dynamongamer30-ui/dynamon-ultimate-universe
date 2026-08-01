@@ -10,10 +10,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 
 // Not in the generated Supabase types yet; .bind(supabase) or `this` is lost.
-const looseRpc = supabase.rpc.bind(supabase) as (
+const looseRpc = supabase.rpc.bind(supabase) as unknown as (
   fn: string,
   args?: Record<string, unknown>,
 ) => Promise<{ data: unknown; error: { message: string } | null }>;
+const db = (table: string): any => (supabase as any).from(table);
 
 type TrainerLevelRow = { level: number; days_required: number; reward_kind: string; reward_qty: number };
 type TrainerProgress = {
@@ -42,8 +43,8 @@ function TrainerRankLadder() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("trainer_levels").select("*").order("level");
-      setLevels((data ?? []) as TrainerLevelRow[]);
+      const { data } = await db("trainer_levels").select("*").order("level");
+      setLevels(((data ?? []) as unknown) as TrainerLevelRow[]);
       if (user) {
         const { data: p, error } = await looseRpc("my_trainer_progress");
         if (!error) setProgress(((p as TrainerProgress[] | null) ?? [])[0] ?? null);

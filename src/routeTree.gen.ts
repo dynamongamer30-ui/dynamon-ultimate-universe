@@ -9,105 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as AchievementsRouteImport } from './routes/achievements'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AdminControlRouteImport } from './routes/admin-control'
-import { Route as AdminKeysRouteImport } from './routes/admin-keys'
-import { Route as AdminLoaderRouteImport } from './routes/admin-loader'
-import { Route as AdminNotificationsRouteImport } from './routes/admin-notifications'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as ContactRouteImport } from './routes/contact'
-import { Route as DisclaimerRouteImport } from './routes/disclaimer'
-import { Route as FavoritesRouteImport } from './routes/favorites'
-import { Route as GeneratorRouteImport } from './routes/generator'
-import { Route as ModsRouteImport } from './routes/mods'
-import { Route as NotificationsRouteImport } from './routes/notifications'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as UnlockRouteImport } from './routes/unlock'
+import { Route as RewardsRouteImport } from './routes/rewards'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as ModsRouteImport } from './routes/mods'
+import { Route as GeneratorRouteImport } from './routes/generator'
+import { Route as FavoritesRouteImport } from './routes/favorites'
+import { Route as DisclaimerRouteImport } from './routes/disclaimer'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as ClaimRouteImport } from './routes/claim'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminNotificationsRouteImport } from './routes/admin-notifications'
+import { Route as AdminLoaderRouteImport } from './routes/admin-loader'
+import { Route as AdminKeysRouteImport } from './routes/admin-keys'
+import { Route as AdminControlRouteImport } from './routes/admin-control'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AchievementsRouteImport } from './routes/achievements'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as ModsIndexRouteImport } from './routes/mods.index'
 import { Route as ModsSlugRouteImport } from './routes/mods.$slug'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AchievementsRoute = AchievementsRouteImport.update({
-  id: '/achievements',
-  path: '/achievements',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminControlRoute = AdminControlRouteImport.update({
-  id: '/admin-control',
-  path: '/admin-control',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminKeysRoute = AdminKeysRouteImport.update({
-  id: '/admin-keys',
-  path: '/admin-keys',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminLoaderRoute = AdminLoaderRouteImport.update({
-  id: '/admin-loader',
-  path: '/admin-loader',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
-  id: '/admin-notifications',
-  path: '/admin-notifications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DisclaimerRoute = DisclaimerRouteImport.update({
-  id: '/disclaimer',
-  path: '/disclaimer',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FavoritesRoute = FavoritesRouteImport.update({
-  id: '/favorites',
-  path: '/favorites',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GeneratorRoute = GeneratorRouteImport.update({
-  id: '/generator',
-  path: '/generator',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ModsRoute = ModsRouteImport.update({
-  id: '/mods',
-  path: '/mods',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotificationsRoute = NotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
+const UnlockRoute = UnlockRouteImport.update({
+  id: '/unlock',
+  path: '/unlock',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RewardsRoute = RewardsRouteImport.update({
@@ -115,9 +41,89 @@ const RewardsRoute = RewardsRouteImport.update({
   path: '/rewards',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UnlockRoute = UnlockRouteImport.update({
-  id: '/unlock',
-  path: '/unlock',
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ModsRoute = ModsRouteImport.update({
+  id: '/mods',
+  path: '/mods',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GeneratorRoute = GeneratorRouteImport.update({
+  id: '/generator',
+  path: '/generator',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FavoritesRoute = FavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DisclaimerRoute = DisclaimerRouteImport.update({
+  id: '/disclaimer',
+  path: '/disclaimer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClaimRoute = ClaimRouteImport.update({
+  id: '/claim',
+  path: '/claim',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/admin-notifications',
+  path: '/admin-notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoaderRoute = AdminLoaderRouteImport.update({
+  id: '/admin-loader',
+  path: '/admin-loader',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminKeysRoute = AdminKeysRouteImport.update({
+  id: '/admin-keys',
+  path: '/admin-keys',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminControlRoute = AdminControlRouteImport.update({
+  id: '/admin-control',
+  path: '/admin-control',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AchievementsRoute = AchievementsRouteImport.update({
+  id: '/achievements',
+  path: '/achievements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ModsIndexRoute = ModsIndexRouteImport.update({
@@ -141,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
   '/auth': typeof AuthRoute
+  '/claim': typeof ClaimRoute
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
   '/auth': typeof AuthRoute
+  '/claim': typeof ClaimRoute
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
   '/auth': typeof AuthRoute
+  '/claim': typeof ClaimRoute
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
@@ -209,6 +218,7 @@ export interface FileRouteTypes {
     | '/admin-loader'
     | '/admin-notifications'
     | '/auth'
+    | '/claim'
     | '/contact'
     | '/disclaimer'
     | '/favorites'
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/admin-loader'
     | '/admin-notifications'
     | '/auth'
+    | '/claim'
     | '/contact'
     | '/disclaimer'
     | '/favorites'
@@ -252,6 +263,7 @@ export interface FileRouteTypes {
     | '/admin-loader'
     | '/admin-notifications'
     | '/auth'
+    | '/claim'
     | '/contact'
     | '/disclaimer'
     | '/favorites'
@@ -275,6 +287,7 @@ export interface RootRouteChildren {
   AdminLoaderRoute: typeof AdminLoaderRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AuthRoute: typeof AuthRoute
+  ClaimRoute: typeof ClaimRoute
   ContactRoute: typeof ContactRoute
   DisclaimerRoute: typeof DisclaimerRoute
   FavoritesRoute: typeof FavoritesRoute
@@ -288,116 +301,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/achievements': {
-      id: '/achievements'
-      path: '/achievements'
-      fullPath: '/achievements'
-      preLoaderRoute: typeof AchievementsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin-control': {
-      id: '/admin-control'
-      path: '/admin-control'
-      fullPath: '/admin-control'
-      preLoaderRoute: typeof AdminControlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin-keys': {
-      id: '/admin-keys'
-      path: '/admin-keys'
-      fullPath: '/admin-keys'
-      preLoaderRoute: typeof AdminKeysRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin-loader': {
-      id: '/admin-loader'
-      path: '/admin-loader'
-      fullPath: '/admin-loader'
-      preLoaderRoute: typeof AdminLoaderRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin-notifications': {
-      id: '/admin-notifications'
-      path: '/admin-notifications'
-      fullPath: '/admin-notifications'
-      preLoaderRoute: typeof AdminNotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/disclaimer': {
-      id: '/disclaimer'
-      path: '/disclaimer'
-      fullPath: '/disclaimer'
-      preLoaderRoute: typeof DisclaimerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/favorites': {
-      id: '/favorites'
-      path: '/favorites'
-      fullPath: '/favorites'
-      preLoaderRoute: typeof FavoritesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/generator': {
-      id: '/generator'
-      path: '/generator'
-      fullPath: '/generator'
-      preLoaderRoute: typeof GeneratorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mods': {
-      id: '/mods'
-      path: '/mods'
-      fullPath: '/mods'
-      preLoaderRoute: typeof ModsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notifications': {
-      id: '/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof NotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
+    '/unlock': {
+      id: '/unlock'
+      path: '/unlock'
+      fullPath: '/unlock'
+      preLoaderRoute: typeof UnlockRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rewards': {
@@ -407,11 +315,123 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RewardsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/unlock': {
-      id: '/unlock'
-      path: '/unlock'
-      fullPath: '/unlock'
-      preLoaderRoute: typeof UnlockRouteImport
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mods': {
+      id: '/mods'
+      path: '/mods'
+      fullPath: '/mods'
+      preLoaderRoute: typeof ModsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/generator': {
+      id: '/generator'
+      path: '/generator'
+      fullPath: '/generator'
+      preLoaderRoute: typeof GeneratorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/favorites': {
+      id: '/favorites'
+      path: '/favorites'
+      fullPath: '/favorites'
+      preLoaderRoute: typeof FavoritesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disclaimer': {
+      id: '/disclaimer'
+      path: '/disclaimer'
+      fullPath: '/disclaimer'
+      preLoaderRoute: typeof DisclaimerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/claim': {
+      id: '/claim'
+      path: '/claim'
+      fullPath: '/claim'
+      preLoaderRoute: typeof ClaimRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-notifications': {
+      id: '/admin-notifications'
+      path: '/admin-notifications'
+      fullPath: '/admin-notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-loader': {
+      id: '/admin-loader'
+      path: '/admin-loader'
+      fullPath: '/admin-loader'
+      preLoaderRoute: typeof AdminLoaderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-keys': {
+      id: '/admin-keys'
+      path: '/admin-keys'
+      fullPath: '/admin-keys'
+      preLoaderRoute: typeof AdminKeysRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-control': {
+      id: '/admin-control'
+      path: '/admin-control'
+      fullPath: '/admin-control'
+      preLoaderRoute: typeof AdminControlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/achievements': {
+      id: '/achievements'
+      path: '/achievements'
+      fullPath: '/achievements'
+      preLoaderRoute: typeof AchievementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mods/': {
@@ -453,6 +473,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLoaderRoute: AdminLoaderRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AuthRoute: AuthRoute,
+  ClaimRoute: ClaimRoute,
   ContactRoute: ContactRoute,
   DisclaimerRoute: DisclaimerRoute,
   FavoritesRoute: FavoritesRoute,

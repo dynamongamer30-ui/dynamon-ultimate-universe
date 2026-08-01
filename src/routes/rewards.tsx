@@ -12,7 +12,7 @@ import { toast } from "sonner";
 // IMPORTANT: must .bind(supabase) or calling this later throws
 // "Cannot read properties of undefined (reading 'rest')" — extracting a
 // Supabase client method into a plain variable loses its `this` binding.
-const looseRpc = supabase.rpc.bind(supabase) as (
+const looseRpc = supabase.rpc.bind(supabase) as unknown as (
   fn: string,
   args?: Record<string, unknown>,
 ) => Promise<{ data: unknown; error: { message: string } | null }>;

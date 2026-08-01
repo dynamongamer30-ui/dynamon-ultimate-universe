@@ -16,6 +16,7 @@ import { AuroraBackground } from "@/components/AuroraBackground";
 import { AuroraCursor } from "@/components/AuroraCursor";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { PWAInstall } from "@/components/PWAInstall";
+import { SITE_URL, canonicalUrl, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { SiteSettingsProvider } from "@/hooks/useSiteSettings";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
@@ -116,8 +117,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "Dynamon Universe — Dynamons World Mod APK Hub" },
       { property: "og:description", content: "Premium fan-made Dynamons World mod builds with community ratings, reviews and weekly drops." },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Dynamon Universe" },
+      { property: "og:image", content: canonicalUrl("/apple-icon.png") },
+      { property: "og:url", content: SITE_URL },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "robots", content: "index, follow" },
     ],
+    scripts: [organizationJsonLd(), websiteJsonLd()],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },

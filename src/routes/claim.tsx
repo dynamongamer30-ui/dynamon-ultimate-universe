@@ -14,7 +14,7 @@ type ClaimSearch = { kind: ClaimKind; ref: string; label: string };
 
 export const Route = createFileRoute("/claim")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Claim your reward — Dynamon Universe" }] }),
+  head: () => ({ meta: [{ title: "Claim your reward — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
   validateSearch: (s: Record<string, unknown>): ClaimSearch => ({
     kind: (["trainer_level", "phoenix_pass", "daily_key", "granted_key"].includes(s.kind as string)
       ? (s.kind as ClaimKind) : ""),
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/claim")({
 
 // These RPCs aren't in the generated Supabase types yet; call loosely.
 // IMPORTANT: .bind(supabase) — a plain variable extraction loses `this`.
-const looseRpc = supabase.rpc.bind(supabase) as (
+const looseRpc = supabase.rpc.bind(supabase) as unknown as (
   fn: string,
   args?: Record<string, unknown>,
 ) => Promise<{ data: unknown; error: { message: string } | null }>;

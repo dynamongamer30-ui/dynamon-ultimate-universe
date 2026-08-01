@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin-control")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Control Panel — Dynamon Universe" }] }),
+  head: () => ({ meta: [{ title: "Control Panel — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: ControlRoute,
 });
 

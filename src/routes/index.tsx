@@ -8,16 +8,22 @@ import { formatCount, elementTheme } from "@/lib/mods";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import heroImg from "@/assets/hero.jpg";
 import { playClick, playHover } from "@/lib/sound";
+import { canonicalHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Dynamon Universe — Premium Dynamons World Mod APKs" },
-      { name: "description", content: "The home of Dynamons World mod APKs. Carefully crafted fan-made builds, community-rated, with weekly drops." },
-      { property: "og:title", content: "Dynamon Universe — Premium Dynamons World Mods" },
-      { property: "og:description", content: "Carefully crafted fan-made Dynamons World mod builds, community-rated and updated weekly." },
-    ],
-  }),
+  head: () => {
+    const { links, meta: canonicalMeta } = canonicalHead("/");
+    return {
+      meta: [
+        { title: "Dynamon Universe — Premium Dynamons World Mod APKs" },
+        { name: "description", content: "The home of Dynamons World mod APKs. Carefully crafted fan-made builds, community-rated, with weekly drops." },
+        { property: "og:title", content: "Dynamon Universe — Premium Dynamons World Mods" },
+        { property: "og:description", content: "Carefully crafted fan-made Dynamons World mod builds, community-rated and updated weekly." },
+        ...canonicalMeta,
+      ],
+      links,
+    };
+  },
   component: Index,
 });
 

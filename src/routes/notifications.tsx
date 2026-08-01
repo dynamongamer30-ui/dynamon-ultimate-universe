@@ -9,7 +9,7 @@ import { NotificationClaim } from "@/components/NotificationClaim";
 
 export const Route = createFileRoute("/notifications")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Notifications — Dynamon Universe" }] }),
+  head: () => ({ meta: [{ title: "Notifications — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: NotificationsPage,
 });
 

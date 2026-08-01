@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin-notifications")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Notifications — Dynamon Universe Admin" }] }),
+  head: () => ({ meta: [{ title: "Notifications — Dynamon Universe Admin" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: AdminNotificationsRoute,
 });
 

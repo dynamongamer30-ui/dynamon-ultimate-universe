@@ -17,6 +17,7 @@ export const Route = createFileRoute("/profile")({
     meta: [
       { title: "My profile — Dynamon Universe" },
       { name: "description", content: "Edit your trainer identity: display name, avatar and more." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: ProfilePage,

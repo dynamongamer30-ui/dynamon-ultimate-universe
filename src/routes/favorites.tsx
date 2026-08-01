@@ -9,7 +9,7 @@ import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export const Route = createFileRoute("/favorites")({
   ssr: false,
-  head: () => ({ meta: [{ title: "My Favorites — Dynamon Universe" }] }),
+  head: () => ({ meta: [{ title: "My Favorites — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: FavoritesPage,
 });
 

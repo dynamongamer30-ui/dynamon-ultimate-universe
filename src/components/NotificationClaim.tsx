@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import type { ReactElement } from "react";
 import { Feather, Gift, KeyRound, ArrowRight } from "lucide-react";
 import type { AppNotification } from "@/lib/notifications";
 
@@ -14,7 +15,7 @@ export function NotificationClaim({ notification }: { notification: AppNotificat
   const { reward_kind, reward_ref } = notification;
   if (!reward_kind) return null;
 
-  let to: { kind: string; ref: string; label: string; icon: JSX.Element; text: string } | null = null;
+  let to: { kind: "granted_key" | "phoenix_pass" | "daily_key"; ref: string; label: string; icon: ReactElement; text: string } | null = null;
 
   if (reward_kind === "trainer_dg_key" && reward_ref) {
     to = { kind: "granted_key", ref: reward_ref, label: "DG Key", icon: <KeyRound className="h-3.5 w-3.5" />, text: "View your key" };

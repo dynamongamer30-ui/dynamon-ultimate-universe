@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Cipher } from "@/lib/cipher";
 import { getFingerprint } from "@/lib/fingerprint";
 import { getMod, mods, formatCount, elementTheme, type Mod } from "@/lib/mods";
+import { canonicalHead, softwareAppJsonLd } from "@/lib/seo";
 import { playClick } from "@/lib/sound";
 import { toast } from "sonner";
 
@@ -23,16 +24,28 @@ export const Route = createFileRoute("/mods/$slug")({
     if (!mod) throw notFound();
     return { mod };
   },
-  head: ({ loaderData }) => ({
-    meta: loaderData ? [
-      { title: `${loaderData.mod.name} — Dynamon Universe` },
-      { name: "description", content: loaderData.mod.tagline },
-      { property: "og:title", content: `${loaderData.mod.name} — Dynamon Universe` },
-      { property: "og:description", content: loaderData.mod.tagline },
-      { property: "og:image", content: loaderData.mod.image },
-      { property: "twitter:image", content: loaderData.mod.image },
-    ] : [],
-  }),
+  head: ({ loaderData, params }) => {
+    if (!loaderData) return { meta: [] };
+    const { links, meta: canonicalMeta } = canonicalHead(`/mods/${params.slug}`);
+    return {
+      meta: [
+        { title: `${loaderData.mod.name} — Dynamon Universe` },
+        { name: "description", content: loaderData.mod.tagline },
+        { property: "og:title", content: `${loaderData.mod.name} — Dynamon Universe` },
+        { property: "og:description", content: loaderData.mod.tagline },
+        { property: "og:image", content: loaderData.mod.image },
+        { property: "twitter:image", content: loaderData.mod.image },
+        ...canonicalMeta,
+      ],
+      links,
+      scripts: [softwareAppJsonLd({
+        name: loaderData.mod.name, slug: loaderData.mod.slug, tagline: loaderData.mod.tagline,
+        image: loaderData.mod.image, rating: loaderData.mod.baseRating,
+        ratingCount: loaderData.mod.ratingCount, downloads: loaderData.mod.downloads,
+        version: loaderData.mod.version,
+      })],
+    };
+  },
   notFoundComponent: () => (
     <PageShell>
       <div className="py-20 text-center">
@@ -500,7 +513,7 @@ function PhoenixPassModal({
   // IMPORTANT: must .bind(supabase) or calling this later throws
   // "Cannot read properties of undefined (reading 'rest')" — extracting a
   // Supabase client method into a plain variable loses its `this` binding.
-  const rpc = supabase.rpc.bind(supabase) as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: string,
     args?: Record<string, unknown>,
   ) => Promise<{ data: unknown; error: { message: string } | null }>;

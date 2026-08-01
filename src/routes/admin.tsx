@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Owner Dashboard — Dynamon Universe" }] }),
+  head: () => ({ meta: [{ title: "Owner Dashboard — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: AdminRoute,
 });
 

@@ -21,7 +21,7 @@ import { useConfirm } from "@/hooks/useConfirm";
 
 export const Route = createFileRoute("/admin-loader")({
   ssr: false,
-  head: () => ({ meta: [{ title: "OTA Loader — Dynamon Universe" }] }),
+  head: () => ({ meta: [{ title: "OTA Loader — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: LoaderGate,
 });
 

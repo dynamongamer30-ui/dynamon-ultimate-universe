@@ -26,7 +26,7 @@ import {
 
 export const Route = createFileRoute("/admin-keys")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Key System — Dynamon Universe" }] }),
+  head: () => ({ meta: [{ title: "Key System — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: KeysAdminGate,
 });
 
