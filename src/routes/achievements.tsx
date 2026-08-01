@@ -1,13 +1,120 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Trophy, Lock, Zap, Flame } from "lucide-react";
+import { Trophy, Lock, Zap, Flame, KeyRound, Feather, Check, ArrowRight } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { LevelBadge } from "@/components/LevelBadge";
 import { StreakBadge } from "@/components/StreakBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
+
+// Not in the generated Supabase types yet; .bind(supabase) or `this` is lost.
+const looseRpc = supabase.rpc.bind(supabase) as (
+  fn: string,
+  args?: Record<string, unknown>,
+) => Promise<{ data: unknown; error: { message: string } | null }>;
+
+type TrainerLevelRow = { level: number; days_required: number; reward_kind: string; reward_qty: number };
+type TrainerProgress = {
+  current_level: number; next_level: number | null; days_required: number;
+  days_elapsed: number; reward_kind: string; reward_qty: number; claimable: boolean;
+};
+
+const rewardIcon = (kind: string) => {
+  if (kind === "trainer_vip_key") return <KeyRound className="h-4 w-4 text-fuchsia-300" />;
+  if (kind === "trainer_dg_key") return <KeyRound className="h-4 w-4 text-primary" />;
+  if (kind === "phoenix_pass") return <Feather className="h-4 w-4 text-amber-300" />;
+  return null;
+};
+const rewardLabel = (kind: string, qty: number) => {
+  if (kind === "trainer_vip_key") return `${qty} VIP Key`;
+  if (kind === "trainer_dg_key") return `${qty} DG Key`;
+  if (kind === "phoenix_pass") return `${qty} Phoenix Pass`;
+  return "";
+};
+
+function TrainerRankLadder() {
+  const { user } = useAuth();
+  const [levels, setLevels] = useState<TrainerLevelRow[]>([]);
+  const [progress, setProgress] = useState<TrainerProgress | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("trainer_levels").select("*").order("level");
+      setLevels((data ?? []) as TrainerLevelRow[]);
+      if (user) {
+        const { data: p, error } = await looseRpc("my_trainer_progress");
+        if (!error) setProgress(((p as TrainerProgress[] | null) ?? [])[0] ?? null);
+      }
+      setLoading(false);
+    })();
+  }, [user]);
+
+  if (!user || loading || levels.length === 0) return null;
+
+  const currentLevel = progress?.current_level ?? 0;
+
+  return (
+    <section className="mt-10">
+      <div className="flex items-center gap-2">
+        <Trophy className="h-4 w-4 text-amber-300" />
+        <h2 className="font-display text-xl font-bold uppercase tracking-tight">Trainer Rank</h2>
+      </div>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Climb 10 levels by staying active. Real Phoenix Passes, DG keys, and — only at Level 10 — a VIP key you can't get any other way.
+      </p>
+
+      <div className="mt-5 space-y-2">
+        {levels.map((lv) => {
+          const claimed = lv.level <= currentLevel;
+          const isNext = lv.level === currentLevel + 1;
+          const claimable = isNext && !!progress?.claimable;
+          return (
+            <motion.div
+              key={lv.level}
+              initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: lv.level * 0.02 }}
+              className={`flex items-center gap-4 rounded-2xl border p-4 ${
+                claimed ? "border-emerald-400/30 bg-emerald-500/5"
+                : claimable ? "border-primary/40 bg-primary/5"
+                : "border-border bg-card/30"
+              }`}
+            >
+              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl font-display font-black ${
+                claimed ? "bg-emerald-500/15 text-emerald-300" : "bg-card text-muted-foreground"
+              }`}>
+                {claimed ? <Check className="h-5 w-5" /> : lv.level}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold">Level {lv.level}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isNext
+                    ? `${progress?.days_elapsed ?? 0} / ${lv.days_required} day login streak`
+                    : claimed ? "Claimed" : `${lv.days_required}-day login streak`}
+                </p>
+              </div>
+              {lv.reward_kind !== "none" && (
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-background/60 px-2.5 py-1 text-xs font-semibold">
+                  {rewardIcon(lv.reward_kind)} {rewardLabel(lv.reward_kind, lv.reward_qty)}
+                </span>
+              )}
+              {claimable && (
+                <Link
+                  to="/claim" search={{ kind: "trainer_level", ref: "", label: "" }}
+                  className="press inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:brightness-110"
+                >
+                  Claim <ArrowRight className="h-3 w-3" />
+                </Link>
+              )}
+              {!claimed && !isNext && <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />}
+            </motion.div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 export const Route = createFileRoute("/achievements")({
   ssr: false,
@@ -62,6 +169,8 @@ function AchievementsPage() {
             <LevelBadge />
             <StreakBadge />
           </section>
+
+          <TrainerRankLadder />
 
           <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {list.map((a, i) => {

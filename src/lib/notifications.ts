@@ -23,7 +23,7 @@ export interface AppNotification {
   title: string;
   body: string;
   created_at: string; // ISO timestamp
-  reward_kind: "vip_key" | "phoenix_pass" | null;
+  reward_kind: "vip_key" | "phoenix_pass" | "trainer_dg_key" | "trainer_vip_key" | null;
   reward_ref: string | null;
 }
 
