@@ -5,6 +5,7 @@ import { PageShell } from "@/components/PageShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationBody } from "@/components/NotificationBody";
+import { NotificationClaim } from "@/components/NotificationClaim";
 
 export const Route = createFileRoute("/notifications")({
   ssr: false,
@@ -99,6 +100,7 @@ function NotificationsPage() {
                     <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                       <NotificationBody text={n.body} />
                     </p>
+                    <NotificationClaim notification={n} />
                   </div>
                 </div>
               </li>
