@@ -16,10 +16,10 @@
  */
 
 const RELOAD_GUARD_KEY = "__dg_reload_once";
-const STALE_CHUNK_PATTERN =
+export const STALE_CHUNK_PATTERN =
   /Failed to fetch dynamically imported module|Loading chunk|Importing a module script failed|dynamically imported module/i;
 
-function reloadOnce() {
+export function reloadOnce() {
   try {
     if (sessionStorage.getItem(RELOAD_GUARD_KEY)) return;
     sessionStorage.setItem(RELOAD_GUARD_KEY, "1");
@@ -41,3 +41,8 @@ export function installDeployFreshnessGuard() {
     if (STALE_CHUNK_PATTERN.test(msg)) reloadOnce();
   });
 }
+
+// Install immediately on module load (not gated behind a React effect) so the
+// window-level net is up before any route chunk has a chance to fail during
+// the very first navigation.
+installDeployFreshnessGuard();

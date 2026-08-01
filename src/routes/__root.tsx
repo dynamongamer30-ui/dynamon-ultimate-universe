@@ -22,7 +22,7 @@ import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { GamificationProvider } from "@/hooks/useGamification";
 import { OwnerReturnRedirect } from "@/components/OwnerReturnRedirect";
 import { ConfirmProvider } from "@/hooks/useConfirm";
-import { installDeployFreshnessGuard } from "@/lib/deployFreshness";
+import { STALE_CHUNK_PATTERN, reloadOnce } from "@/lib/deployFreshness";
 
 function NotFoundComponent() {
   return (
@@ -55,17 +55,28 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     typeof error?.message === "string" &&
     error.message.includes("Expected to find a match below the root match");
 
+  // A route's lazy chunk failing to load (stale tab after a redeploy) is
+  // caught right here by the router's own error boundary — it never reaches
+  // window-level 'error'/'unhandledrejection' listeners, so deployFreshness's
+  // guard alone can't catch it. Handle it the same way: reload once, silently.
+  const isStaleChunk =
+    typeof error?.message === "string" && STALE_CHUNK_PATTERN.test(error.message);
+
   useEffect(() => {
     if (isSpaShellInvariant) {
       router.invalidate();
       reset();
       return;
     }
+    if (isStaleChunk) {
+      reloadOnce();
+      return;
+    }
     console.error(error);
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error, isSpaShellInvariant, router, reset]);
+  }, [error, isSpaShellInvariant, isStaleChunk, router, reset]);
 
-  if (isSpaShellInvariant) {
+  if (isSpaShellInvariant || isStaleChunk) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -137,7 +148,6 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  useEffect(() => { installDeployFreshnessGuard(); }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
