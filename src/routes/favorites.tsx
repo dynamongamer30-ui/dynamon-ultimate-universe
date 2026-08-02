@@ -6,6 +6,7 @@ import { ModCard } from "@/components/ModCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { SkeletonCard } from "@/components/Skeleton";
 
 export const Route = createFileRoute("/favorites")({
   ssr: false,
@@ -45,10 +46,15 @@ function FavoritesPage() {
           <Link to="/auth" className="font-semibold text-primary hover:underline">Sign in</Link> to start saving mods.
         </div>
       ) : loading ? (
-        <p className="mt-10 text-center text-sm text-muted-foreground">Loading…</p>
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((i) => <SkeletonCard key={i} />)}
+        </div>
       ) : favs.length === 0 ? (
-        <div className="mt-10 rounded-3xl border border-dashed border-border bg-card/30 p-10 text-center text-muted-foreground">
-          No favorites yet. Tap the heart on any mod to save it here.
+        <div className="mt-10 flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border bg-card/30 p-12 text-center">
+          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary" style={{ boxShadow: "var(--shadow-glow)" }}>
+            <Heart className="h-6 w-6" />
+          </span>
+          <p className="text-muted-foreground">No favorites yet. Tap the heart on any mod to save it here.</p>
         </div>
       ) : (
         <section className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">

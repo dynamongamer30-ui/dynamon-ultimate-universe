@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, Check } from "lucide-react";
+import { Bell, BellOff, Check } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationBody } from "@/components/NotificationBody";
 import { NotificationClaim } from "@/components/NotificationClaim";
+import { Skeleton } from "@/components/Skeleton";
 
 export const Route = createFileRoute("/notifications")({
   ssr: false,
@@ -57,10 +58,23 @@ function NotificationsPage() {
           <Link to="/auth" className="font-semibold text-primary hover:underline">Sign in</Link> to view your notifications.
         </div>
       ) : loading ? (
-        <p className="mt-10 text-center text-sm text-muted-foreground">Loading…</p>
+        <div className="mt-8 space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-start gap-3 rounded-2xl border border-border bg-card/40 p-5">
+              <Skeleton className="h-9 w-9 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="mt-2 h-3 w-2/3" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : items.length === 0 ? (
-        <div className="mt-10 rounded-3xl border border-dashed border-border bg-card/30 p-10 text-center text-muted-foreground">
-          No notifications yet. Check back soon.
+        <div className="mt-10 flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border bg-card/30 p-12 text-center">
+          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary" style={{ boxShadow: "var(--shadow-glow)" }}>
+            <BellOff className="h-6 w-6" />
+          </span>
+          <p className="text-muted-foreground">No notifications yet. Check back soon.</p>
         </div>
       ) : (
         <ul className="mt-8 space-y-3">

@@ -169,7 +169,7 @@ function ClaimPage() {
               {kind === "trainer_level" ? "Claim your next Trainer Rank reward." : "Tap below to collect your reward."}
             </p>
             <button onClick={claim} disabled={busy}
-              className="press mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110 disabled:opacity-60">
+              className="press animate-pulse-glow mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110 disabled:opacity-60">
               {busy ? (<><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</>) : "Claim now"}
             </button>
           </div>

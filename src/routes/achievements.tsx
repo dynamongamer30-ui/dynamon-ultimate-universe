@@ -8,6 +8,7 @@ import { StreakBadge } from "@/components/StreakBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
+import { Skeleton } from "@/components/Skeleton";
 
 // Not in the generated Supabase types yet; .bind(supabase) or `this` is lost.
 const looseRpc = supabase.rpc.bind(supabase) as unknown as (
@@ -53,7 +54,28 @@ function TrainerRankLadder() {
     })();
   }, [user]);
 
-  if (!user || loading || levels.length === 0) return null;
+  if (!user) return null;
+  if (loading || levels.length === 0) {
+    return (
+      <section className="mt-10">
+        <div className="flex items-center gap-2">
+          <Trophy className="h-4 w-4 text-amber-300" />
+          <h2 className="font-display text-xl font-bold uppercase tracking-tight">Trainer Rank</h2>
+        </div>
+        <div className="mt-5 space-y-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-4 rounded-2xl border border-border bg-card/30 p-4">
+              <Skeleton className="h-10 w-10 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="mt-2 h-3 w-40" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   const currentLevel = progress?.current_level ?? 0;
 

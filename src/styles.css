@@ -93,11 +93,11 @@ h1, h2, h3, h4, .font-display {
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.3 0.01 265);
+  background: oklch(0.3 0.02 295);
   border-radius: 6px;
   border: 2px solid var(--background);
 }
-::-webkit-scrollbar-thumb:hover { background: oklch(0.42 0.06 42); }
+::-webkit-scrollbar-thumb:hover { background: oklch(0.5 0.15 296); }
 
 /* Focus visibility — accessibility */
 :focus-visible {
@@ -121,7 +121,12 @@ h1, h2, h3, h4, .font-display {
 /* Redefined: sharp premium surface (was heavy glassmorphism) */
 @utility glass {
   background: color-mix(in oklab, var(--card) 92%, transparent);
-  border: 1px solid oklch(0.3 0.012 265 / 60%);
+  border: 1px solid oklch(0.32 0.03 295 / 55%);
+  transition: box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.glass:hover {
+  border-color: oklch(0.54 0.22 296 / 45%);
+  box-shadow: 0 0 28px -8px oklch(0.54 0.22 296 / 0.35);
 }
 @utility glow-primary { box-shadow: var(--shadow-glow); }
 @utility glow-violet { box-shadow: var(--shadow-violet); }
@@ -133,9 +138,14 @@ h1, h2, h3, h4, .font-display {
 }
 .press:active { transform: scale(0.96); }
 
-/* Edge highlight: hairline top light on cards for machined feel */
+/* Edge highlight: hairline top light on cards for machined feel,
+   now also blooms with a soft purple glow on hover */
 @utility edge-light {
   position: relative;
+  transition: box-shadow 0.35s ease;
+}
+.edge-light:hover {
+  box-shadow: 0 0 32px -10px oklch(0.54 0.22 296 / 0.4);
 }
 .edge-light::after {
   content: "";
@@ -147,13 +157,20 @@ h1, h2, h3, h4, .font-display {
   pointer-events: none;
 }
 
+/* Soft glow ring on focus for every text input/textarea/select site-wide —
+   replaces the plain hard border-only focus state. */
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  box-shadow: 0 0 0 3px oklch(0.54 0.22 296 / 0.28);
+  border-color: oklch(0.54 0.22 296 / 0.7);
+}
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(0.7 0.19 42 / 0.45); }
-  50% { box-shadow: 0 0 24px 6px oklch(0.7 0.19 42 / 0.12); }
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.54 0.22 296 / 0.45); }
+  50% { box-shadow: 0 0 24px 6px oklch(0.54 0.22 296 / 0.16); }
 }
 @keyframes float {
   0%, 100% { transform: translateY(0px); }

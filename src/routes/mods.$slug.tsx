@@ -176,7 +176,7 @@ function ModDetail() {
           <div className="mt-7 flex flex-wrap gap-3">
             <button
               onClick={handleGet}
-              className="press inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110"
+              className="press animate-pulse-glow inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110"
             >
               <Download className="h-4 w-4" /> {user ? "Download mod" : "Log in to download"}
             </button>
