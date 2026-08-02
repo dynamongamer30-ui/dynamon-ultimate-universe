@@ -100,7 +100,7 @@ function Index() {
 
           {/* Featured cartridge */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.94, rotate: 1 }}
+            initial={{ opacity: 1, scale: 0.94, rotate: 1 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             transition={{ ...spring, delay: 0.1 }}
             className="relative mx-auto w-full max-w-md"
@@ -115,6 +115,8 @@ function Index() {
                   src={heroImg}
                   alt={`${top.name} key art`}
                   width={1536} height={1024}
+                  fetchPriority="high"
+                  decoding="async"
                   className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-card to-transparent" />
