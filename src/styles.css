@@ -186,3 +186,15 @@ h1, h2, h3, h4, .font-display {
 @media (prefers-reduced-motion: reduce) {
   .animate-float, .animate-pulse-glow, .animate-ticker, .shimmer { animation: none; }
 }
+
+/* AuroraCursor ring — border-color/box-shadow toggle only on hover-state
+   change (not every animation frame), transitioned smoothly by CSS. */
+.aurora-ring {
+  border-color: oklch(0.7 0.19 42 / 0.55);
+  box-shadow: 0 0 14px 0px oklch(0.7 0.19 42 / 0.18);
+  transition: opacity 300ms, border-color 150ms, box-shadow 150ms;
+}
+.aurora-ring.aurora-ring-hover {
+  border-color: oklch(0.76 0.17 50 / 0.9);
+  box-shadow: 0 0 22px 2px oklch(0.7 0.19 42 / 0.35);
+}

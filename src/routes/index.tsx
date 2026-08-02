@@ -6,7 +6,7 @@ import { ModCard } from "@/components/ModCard";
 import { ForYouRail } from "@/components/ForYouRail";
 import { formatCount, elementTheme } from "@/lib/mods";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
-import heroImg from "@/assets/hero.jpg";
+import heroImg from "@/assets/hero.webp";
 import { playClick, playHover } from "@/lib/sound";
 import { canonicalHead } from "@/lib/seo";
 

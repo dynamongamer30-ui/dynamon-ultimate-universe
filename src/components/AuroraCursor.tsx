@@ -67,6 +67,7 @@ export function AuroraCursor() {
     document.documentElement.addEventListener("pointerleave", onLeaveWindow);
 
     let raf = 0;
+    let prevHover = false;
     const loop = () => {
       // critically-damped spring for the ring
       const STIFF = 0.14;
@@ -79,10 +80,13 @@ export function AuroraCursor() {
       const scale = isDown ? 0.72 : isHover ? 1.55 : 1;
       dot.style.transform = `translate3d(${mx - 3}px, ${my - 3}px, 0) scale(${isDown ? 0.6 : 1})`;
       ring.style.transform = `translate3d(${rx - 19}px, ${ry - 19}px, 0) scale(${scale})`;
-      ring.style.borderColor = isHover ? "oklch(0.76 0.17 50 / 0.9)" : "oklch(0.7 0.19 42 / 0.55)";
-      ring.style.boxShadow = isHover
-        ? "0 0 22px 2px oklch(0.7 0.19 42 / 0.35)"
-        : "0 0 14px 0px oklch(0.7 0.19 42 / 0.18)";
+
+      // box-shadow/border-color are non-composited — only write them when
+      // hover state actually changes, not on every one of 60 frames/sec.
+      if (isHover !== prevHover) {
+        prevHover = isHover;
+        ring.classList.toggle("aurora-ring-hover", isHover);
+      }
 
       raf = requestAnimationFrame(loop);
     };
@@ -103,7 +107,7 @@ export function AuroraCursor() {
     <>
       <div
         ref={ringRef}
-        className="pointer-events-none fixed left-0 top-0 z-[61] hidden h-[38px] w-[38px] rounded-full border opacity-0 transition-opacity duration-300 md:block"
+        className="aurora-ring pointer-events-none fixed left-0 top-0 z-[61] hidden h-[38px] w-[38px] rounded-full border opacity-0 transition-opacity duration-300 md:block"
         aria-hidden
       />
       <div

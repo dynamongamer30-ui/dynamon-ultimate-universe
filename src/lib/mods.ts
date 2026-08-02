@@ -1,11 +1,11 @@
-import dark from "@/assets/mods/dark.jpg";
-import fire from "@/assets/mods/fire.jpg";
-import thunder from "@/assets/mods/thunder.jpg";
-import water from "@/assets/mods/water.jpg";
-import earth from "@/assets/mods/earth.jpg";
-import diamond from "@/assets/mods/diamond.jpg";
-import gold from "@/assets/mods/gold.jpg";
-import spirit from "@/assets/mods/spirit.jpg";
+import dark from "@/assets/mods/dark.webp";
+import fire from "@/assets/mods/fire.webp";
+import thunder from "@/assets/mods/thunder.webp";
+import water from "@/assets/mods/water.webp";
+import earth from "@/assets/mods/earth.webp";
+import diamond from "@/assets/mods/diamond.webp";
+import gold from "@/assets/mods/gold.webp";
+import spirit from "@/assets/mods/spirit.webp";
 
 export type Element =
   | "dark" | "fire" | "thunder" | "water" | "earth" | "diamond" | "gold" | "spirit";
