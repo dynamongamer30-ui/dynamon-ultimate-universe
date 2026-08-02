@@ -2,80 +2,13 @@
 @source "../src";
 @import "tw-animate-css";
 
-@font-face {
-  font-family: "PP Neue Machina";
-  src: url("/fonts/PPNeueMachina-InktrapLight.otf") format("opentype");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "PP Neue Machina";
-  src: url("/fonts/PPNeueMachina-InktrapLightItalic.otf") format("opentype");
-  font-weight: 300;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "PP Neue Machina";
-  src: url("/fonts/PPNeueMachina-InktrapRegular.otf") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "PP Neue Machina";
-  src: url("/fonts/PPNeueMachina-InktrapRegularItalic.otf") format("opentype");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-/* Ultrabold is the only bold weight shipped. It's registered at 700, 800,
-   AND 900 (three @font-face blocks, same file) so every existing
-   font-bold/font-extrabold/font-black class across the site resolves to
-   this real bold face instead of a browser-faked (blurry) synthetic bold. */
-@font-face {
-  font-family: "PP Neue Machina";
-  src: url("/fonts/PPNeueMachina-InktrapUltrabold.otf") format("opentype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "PP Neue Machina";
-  src: url("/fonts/PPNeueMachina-InktrapUltrabold.otf") format("opentype");
-  font-weight: 800;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "PP Neue Machina";
-  src: url("/fonts/PPNeueMachina-InktrapUltrabold.otf") format("opentype");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "PP Neue Machina";
-  src: url("/fonts/PPNeueMachina-InktrapUltraboldItalic.otf") format("opentype");
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "PP Neue Machina";
-  src: url("/fonts/PPNeueMachina-InktrapUltraboldItalic.otf") format("opentype");
-  font-weight: 800;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "PP Neue Machina";
-  src: url("/fonts/PPNeueMachina-InktrapUltraboldItalic.otf") format("opentype");
-  font-weight: 900;
-  font-style: italic;
-  font-display: swap;
-}
+/* Display font: TEMPORARILY back on Google Fonts Archivo. A previous
+   commit wired in "PP Neue Machina" using files that are byte-identical
+   to Pangram Pangram's free-for-personal-use download (verified via
+   md5sum against the known free package) — that license explicitly
+   prohibits use on a public website without a paid commercial license.
+   Reverted to avoid shipping an unlicensed commercial font. Swap back in
+   once a genuine commercially-licensed file is provided. */
 
 /* General Sans — body/UI text font. Self-hosted from the uploaded files
    (public/fonts/general-sans/), not a CDN. */
