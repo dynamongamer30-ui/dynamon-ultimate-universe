@@ -1,6 +1,6 @@
 # dynamon-ultimate-universe
 
-Hi 👋
+Hi 🐉
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
 
@@ -36,4 +36,4 @@ To learn more, take a look at the following resources:
 
 <!-- redeploy 2026-07-31 -->
 
-👋
+🐉
