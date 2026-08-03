@@ -2,14 +2,6 @@
 @source "../src";
 @import "tw-animate-css";
 
-/* Display font: TEMPORARILY back on Google Fonts Archivo. A previous
-   commit wired in "PP Neue Machina" using files that are byte-identical
-   to Pangram Pangram's free-for-personal-use download (verified via
-   md5sum against the known free package) — that license explicitly
-   prohibits use on a public website without a paid commercial license.
-   Reverted to avoid shipping an unlicensed commercial font. Swap back in
-   once a genuine commercially-licensed file is provided. */
-
 /* General Sans — body/UI text font. Self-hosted from the uploaded files
    (public/fonts/general-sans/), not a CDN. */
 @font-face {
@@ -97,6 +89,121 @@
   font-display: swap;
 }
 
+/* Aeonik Pro — commercially licensed by Rachit for use on this site.
+   Self-hosted from public/fonts/aeonik-pro/. */
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-Air.woff") format("woff");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-AirItalic.woff") format("woff");
+  font-weight: 100;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-Thin.woff") format("woff");
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-ThinItalic.woff") format("woff");
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-Light.woff") format("woff");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-LightItalic.woff") format("woff");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-RegularItalic.woff") format("woff");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-Medium.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-MediumItalic.woff") format("woff");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-SemiBold.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-SemiBoldItalic.woff") format("woff");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-Bold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-BoldItalic.woff") format("woff");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-Black.woff") format("woff");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("/fonts/aeonik-pro/AeonikPro-BlackItalic.woff") format("woff");
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 #lovable-badge { display: none !important; }
 
 @custom-variant dark (&:is(.dark *));
@@ -128,8 +235,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-gold: var(--gold);
-  --font-display: "PP Neue Machina", "Archivo", ui-sans-serif, system-ui;
+  --font-display: "Aeonik Pro", ui-sans-serif, system-ui;
   --font-sans: "General Sans", ui-sans-serif, system-ui;
+  --font-aeonik: "Aeonik Pro", ui-sans-serif, system-ui;
 }
 
 :root {
