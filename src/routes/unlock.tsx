@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Lock,
   Timer,
@@ -8,10 +9,11 @@ import {
   Cpu,
   Unlock,
   Loader2,
-  CheckCircle2,
-  XCircle,
+  Check,
+  X,
   Download,
   ArrowLeft,
+  Sparkles,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +29,7 @@ export const Route = createFileRoute("/unlock")({
   }),
   head: () => ({
     meta: [
-      { title: "Unlocking Your Download — Dynamon Universe" },
+      { title: "Opening the Vault — Dynamon Universe" },
       { name: "description", content: "Hold on while we unlock your download link." },
       { name: "robots", content: "noindex,nofollow" },
     ],
@@ -45,16 +47,26 @@ type Stage = {
 };
 
 const INITIAL_STAGES: Stage[] = [
-  { id: 0, title: "Starting secure connection", Icon: Lock, status: "pending" },
-  { id: 1, title: "Loading download settings", Icon: Timer, status: "pending" },
-  { id: 2, title: "Checking your download pass", Icon: ShieldCheck, status: "pending" },
-  { id: 3, title: "Making sure it's the same device", Icon: Fingerprint, status: "pending" },
+  { id: 0, title: "Opening a private connection", Icon: Lock, status: "pending" },
+  { id: 1, title: "Reading your download settings", Icon: Timer, status: "pending" },
+  { id: 2, title: "Checking your pass", Icon: ShieldCheck, status: "pending" },
+  { id: 3, title: "Confirming it's the same device", Icon: Fingerprint, status: "pending" },
   { id: 4, title: "Confirming the wait time", Icon: Cpu, status: "pending" },
-  { id: 5, title: "Unlocking your download link", Icon: Unlock, status: "pending" },
+  { id: 5, title: "Unsealing your download", Icon: Unlock, status: "pending" },
 ];
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Short, silent-if-unsupported haptic pulse — iOS Safari has no Vibration
+ * API at all, and that's fine; this just becomes a no-op there. */
+function buzz(pattern: number | number[]) {
+  try {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(pattern);
+    }
+  } catch { /* unsupported or blocked — ignore */ }
+}
 
 function mapRedeemError(code?: string): string {
   switch (code) {
@@ -71,7 +83,10 @@ function mapRedeemError(code?: string): string {
   }
 }
 
-function MatrixRain() {
+/** Slow-drifting embers instead of the old Matrix-code rain — same idea
+ * (ambient motion behind the card) but reads as "royal/mystical" rather
+ * than "hacker terminal", matching the rest of the site. */
+function EmberField() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current;
@@ -83,69 +98,103 @@ function MatrixRain() {
 
     let w = (c.width = window.innerWidth);
     let h = (c.height = window.innerHeight);
-    const chars = "アァカサタナハマヤラワ0123456789ABCDEF$#@*+=<>".split("");
-    const fontSize = 14;
-    let columns = Math.floor(w / fontSize);
-    let drops = Array(columns).fill(1);
 
-    const onResize = () => {
-      w = c.width = window.innerWidth;
-      h = c.height = window.innerHeight;
-      columns = Math.floor(w / fontSize);
-      drops = Array(columns).fill(1);
-    };
+    type Ember = { x: number; y: number; r: number; vy: number; vx: number; hue: "gold" | "violet"; a: number };
+    const count = Math.min(70, Math.floor((w * h) / 18000));
+    const embers: Ember[] = Array.from({ length: count }, () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: 0.6 + Math.random() * 1.8,
+      vy: -(0.15 + Math.random() * 0.35),
+      vx: (Math.random() - 0.5) * 0.15,
+      hue: Math.random() > 0.65 ? "gold" : "violet",
+      a: 0.25 + Math.random() * 0.45,
+    }));
+
+    const onResize = () => { w = c.width = window.innerWidth; h = c.height = window.innerHeight; };
     window.addEventListener("resize", onResize);
 
     let raf = 0;
     const draw = () => {
-      ctx.fillStyle = "rgba(0,0,0,0.08)";
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = "rgba(255,69,0,0.35)";
-      ctx.font = `${fontSize}px monospace`;
-      for (let i = 0; i < drops.length; i++) {
-        const text = chars[Math.floor(Math.random() * chars.length)];
-        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-        if (drops[i] * fontSize > h && Math.random() > 0.975) drops[i] = 0;
-        drops[i]++;
+      ctx.clearRect(0, 0, w, h);
+      for (const e of embers) {
+        e.y += e.vy;
+        e.x += e.vx;
+        if (e.y < -10) { e.y = h + 10; e.x = Math.random() * w; }
+        const color = e.hue === "gold" ? `rgba(224,180,90,${e.a})` : `rgba(168,110,230,${e.a})`;
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = color;
+        ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+        ctx.fill();
       }
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-    };
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", onResize); };
   }, []);
-  return <canvas ref={ref} className="pointer-events-none fixed inset-0 -z-10 opacity-60" />;
+  return <canvas ref={ref} className="pointer-events-none fixed inset-0 -z-10 opacity-70" />;
 }
 
 function ProgressRing({ pct }: { pct: number }) {
-  const size = 84;
-  const stroke = 6;
+  const size = 88;
+  const stroke = 5;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const offset = c - (pct / 100) * c;
   return (
-    <div className="relative" style={{ width: size, height: size }}>
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} fill="none" />
+        <defs>
+          <linearGradient id="unlockRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="var(--primary)" />
+            <stop offset="100%" stopColor="var(--gold)" />
+          </linearGradient>
+        </defs>
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--border)" strokeWidth={stroke} fill="none" />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke="#FF4500"
+          stroke="url(#unlockRingGradient)"
           strokeWidth={stroke}
           fill="none"
           strokeDasharray={c}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          style={{ filter: "drop-shadow(0 0 8px rgba(255,69,0,0.7))", transition: "stroke-dashoffset 400ms ease" }}
+          style={{ filter: "drop-shadow(0 0 10px oklch(0.54 0.22 296 / 55%))", transition: "stroke-dashoffset 450ms cubic-bezier(0.4,0,0.2,1)" }}
         />
       </svg>
-      <div className="absolute inset-0 grid place-items-center font-mono text-sm font-bold text-orange-400">
+      <div className="absolute inset-0 grid place-items-center font-display text-base font-bold" style={{ color: "var(--gold)" }}>
         {Math.round(pct)}%
       </div>
     </div>
+  );
+}
+
+function StatusIcon({ status }: { status: StageStatus }) {
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      {status === "running" && (
+        <motion.span key="running" initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.6 }}>
+          <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--gold)" }} />
+        </motion.span>
+      )}
+      {status === "done" && (
+        <motion.span key="done" initial={{ opacity: 0, scale: 0.4, rotate: -30 }} animate={{ opacity: 1, scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 400, damping: 15 }}>
+          <Check className="h-4 w-4" style={{ color: "#4ade80" }} />
+        </motion.span>
+      )}
+      {status === "error" && (
+        <motion.span key="error" initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: 1, scale: 1 }}>
+          <X className="h-4 w-4" style={{ color: "#f87171" }} />
+        </motion.span>
+      )}
+      {status === "pending" && (
+        <motion.span key="pending" className="h-2 w-2 rounded-full" style={{ background: "var(--border)" }} />
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -182,10 +231,12 @@ function UnlockPage() {
     try {
       const r = await fn();
       setStage(id, { status: "done" });
+      buzz(12);
       return r;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setStage(id, { status: "error", message: msg });
+      buzz([30, 40, 30]);
       throw e;
     }
   }
@@ -264,6 +315,7 @@ function UnlockPage() {
 
       setDownloadUrl(url);
       setDone(true);
+      buzz([15, 60, 15, 60, 40]);
 
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (!reduced) {
@@ -271,7 +323,7 @@ function UnlockPage() {
           particleCount: 140,
           spread: 80,
           origin: { y: 0.6 },
-          colors: ["#FF4500", "#F59E0B", "#FBBF24", "#FFFFFF"],
+          colors: ["#a86ee6", "#e0b45a", "#c9a4ee", "#ffffff"],
         });
       }
 
@@ -284,96 +336,134 @@ function UnlockPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#080808] text-white" style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
-      <MatrixRain />
-      {/* aurora blobs */}
+    <div className="relative min-h-screen overflow-hidden" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+      <EmberField />
+      {/* royal aurora glow */}
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -top-32 -left-32 h-[420px] w-[420px] rounded-full bg-orange-600/20 blur-[120px]" />
-        <div className="absolute top-1/3 -right-32 h-[460px] w-[460px] rounded-full bg-amber-500/15 blur-[140px]" />
-        <div className="absolute -bottom-32 left-1/4 h-[420px] w-[420px] rounded-full bg-orange-500/10 blur-[150px]" />
+        <div className="absolute -top-32 -left-32 h-[420px] w-[420px] rounded-full opacity-25 blur-[120px]" style={{ background: "var(--primary)" }} />
+        <div className="absolute top-1/3 -right-32 h-[460px] w-[460px] rounded-full opacity-20 blur-[140px]" style={{ background: "var(--gold)" }} />
+        <div className="absolute -bottom-32 left-1/4 h-[420px] w-[420px] rounded-full opacity-15 blur-[150px]" style={{ background: "var(--primary)" }} />
       </div>
 
       <main className="relative mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-5 py-12">
-        <div
-          className="w-full rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_30px_80px_-30px_rgba(255,69,0,0.45)] backdrop-blur-xl sm:p-8"
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full rounded-2xl border p-6 shadow-elev backdrop-blur-xl sm:p-8"
+          style={{ borderColor: "var(--border)", background: "color-mix(in oklch, var(--card) 88%, transparent)" }}
         >
           {/* Top progress bar */}
-          <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-500"
-              style={{ width: `${pct}%`, boxShadow: "0 0 18px rgba(255,69,0,0.55)" }}
+          <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
+            <motion.div
+              className="h-full rounded-full"
+              style={{ background: "linear-gradient(90deg, var(--primary), var(--gold))", boxShadow: "0 0 18px oklch(0.54 0.22 296 / 50%)" }}
+              animate={{ width: `${pct}%` }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             />
           </div>
 
           <div className="mb-6 flex items-center gap-4">
             <ProgressRing pct={pct} />
             <div className="min-w-0">
-              <h1
-                className="text-2xl font-bold tracking-tight text-white sm:text-[1.6rem]"
-                style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif" }}
-              >
-                Unlocking your download
+              <h1 className="font-display text-2xl font-bold tracking-tight sm:text-[1.6rem]">
+                Opening the vault
               </h1>
-              <p className="mt-1 text-sm text-white/60">Verifying your download session…</p>
+              <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
+                A few quick checks, then your download is yours.
+              </p>
             </div>
           </div>
 
           <ul className="space-y-2.5">
-            {stages.map((s) => {
+            {stages.map((s, i) => {
               const I = s.Icon;
+              const active = s.status === "running";
               return (
-                <li
+                <motion.li
                   key={s.id}
-                  className="flex items-start gap-3 rounded-xl border border-white/5 bg-black/30 px-3.5 py-3"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors"
+                  style={{
+                    borderColor: active ? "color-mix(in oklch, var(--primary) 45%, var(--border))" : "var(--border)",
+                    background: active ? "color-mix(in oklch, var(--primary) 8%, transparent)" : "color-mix(in oklch, var(--background) 55%, transparent)",
+                  }}
                 >
-                  <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-orange-500/10 text-orange-400 ring-1 ring-orange-500/20">
+                  <span
+                    className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ring-1"
+                    style={{
+                      background: "color-mix(in oklch, var(--primary) 14%, transparent)",
+                      color: "var(--gold)",
+                      boxShadow: active ? "0 0 0 3px oklch(0.54 0.22 296 / 20%)" : "none",
+                    }}
+                  >
                     <I className="h-4 w-4" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-white/90">{s.title}</span>
-                      {s.status === "running" && <Loader2 className="h-4 w-4 animate-spin text-orange-400" />}
-                      {s.status === "done" && <CheckCircle2 className="h-4 w-4" style={{ color: "#22C55E" }} />}
-                      {s.status === "error" && <XCircle className="h-4 w-4" style={{ color: "#EF4444" }} />}
-                      {s.status === "pending" && <span className="h-2 w-2 rounded-full bg-white/20" />}
+                      <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{s.title}</span>
+                      <StatusIcon status={s.status} />
                     </div>
                     {s.status === "error" && s.message && (
-                      <p className="mt-1 text-xs text-red-400">{s.message}</p>
+                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-1 text-xs" style={{ color: "#f87171" }}>
+                        {s.message}
+                      </motion.p>
                     )}
                   </div>
-                </li>
+                </motion.li>
               );
             })}
           </ul>
 
-          {done && downloadUrl && (
-            <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
-              <p className="text-base font-semibold text-emerald-400">All done — your download is ready!</p>
-              <p className="mt-1 text-xs text-white/60">Taking you to the download in 2 seconds…</p>
-              <a
-                href={downloadUrl}
-                className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2.5 text-sm font-semibold text-black shadow-[0_10px_30px_-10px_rgba(255,69,0,0.8)] transition hover:brightness-110"
+          <AnimatePresence>
+            {done && downloadUrl && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                className="mt-6 rounded-xl border p-4 text-center"
+                style={{ borderColor: "color-mix(in oklch, var(--gold) 40%, transparent)", background: "color-mix(in oklch, var(--gold) 8%, transparent)" }}
               >
-                <Download className="h-4 w-4" /> Download Now
-              </a>
-            </div>
-          )}
+                <p className="flex items-center justify-center gap-1.5 font-display text-base font-semibold" style={{ color: "var(--gold)" }}>
+                  <Sparkles className="h-4 w-4" /> Unsealed — your download is ready
+                </p>
+                <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>Taking you there in a moment…</p>
+                <a
+                  href={downloadUrl}
+                  className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02]"
+                  style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
+                >
+                  <Download className="h-4 w-4" /> Download now
+                </a>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {fatalError && (
-            <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-center">
-              <p className="text-sm font-semibold text-red-400">We could not unlock this download</p>
-              <p className="mt-1 text-xs text-white/60">{fatalError}</p>
-              <Link
-                to="/"
-                className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-white/80 transition hover:bg-white/10"
+          <AnimatePresence>
+            {fatalError && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mt-6 rounded-xl border p-4 text-center"
+                style={{ borderColor: "color-mix(in oklch, #f87171 35%, transparent)", background: "color-mix(in oklch, #f87171 8%, transparent)" }}
               >
-                <ArrowLeft className="h-3.5 w-3.5" /> Return Home
-              </Link>
-            </div>
-          )}
-        </div>
+                <p className="text-sm font-semibold" style={{ color: "#f87171" }}>The vault didn&apos;t open</p>
+                <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>{fatalError}</p>
+                <Link
+                  to="/"
+                  className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-xs font-medium transition-colors"
+                  style={{ borderColor: "var(--border)", color: "var(--foreground)" }}
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" /> Return home
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
-        <p className="mt-6 text-center text-[11px] text-white/30">
+        <p className="mt-6 text-center text-[11px] tracking-wide" style={{ color: "var(--muted-foreground)", opacity: 0.7 }}>
           Private link • Works once • Only on this device
         </p>
       </main>
