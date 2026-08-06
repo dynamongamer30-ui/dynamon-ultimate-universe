@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
-import { Shield, Save, Loader2, Eye, EyeOff, Star, ArrowLeft, Settings2, Megaphone, Link2, Image as ImageIcon, Box, KeyRound, Trash2, Upload, Plus, User } from "lucide-react";
+import { Shield, Save, Loader2, Eye, EyeOff, Star, ArrowLeft, Settings2, Megaphone, Link2, Image as ImageIcon, Box, KeyRound, Trash2, Upload, Plus, User, Feather, Send } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { OwnerGate } from "@/components/OwnerGate";
 import { ThemedSelect } from "@/components/ThemedSelect";
@@ -25,7 +25,7 @@ function ControlRoute() {
   return <OwnerGate><ControlPanel /></OwnerGate>;
 }
 
-type Tab = "branding" | "announcement" | "socials" | "featured" | "mods" | "security" | "avatars";
+type Tab = "branding" | "announcement" | "socials" | "featured" | "mods" | "security" | "avatars" | "rewards";
 
 function ControlPanel() {
   const { branding, announcement, socials, overrides, refresh } = useSiteSettings();
@@ -40,6 +40,7 @@ function ControlPanel() {
     { id: "mods", label: "Mods Editor", icon: Box },
     { id: "security", label: "Unlock Timing", icon: Shield },
     { id: "avatars", label: "Avatars", icon: ImageIcon },
+    { id: "rewards", label: "Rewards", icon: Feather },
   ];
 
   return (
@@ -80,6 +81,7 @@ function ControlPanel() {
         {tab === "mods" && <ModsEditor overrides={overrides} onSaved={refresh} />}
         {tab === "security" && <><SecurityEditor /><AccountsEditor /></>}
         {tab === "avatars" && <AvatarsEditor />}
+        {tab === "rewards" && <RewardsEditor />}
         
       </div>
     </PageShell>
@@ -644,6 +646,68 @@ function safeDecrypt(ct?: string | null): string {
   try { return Cipher.decrypt(ct) || ""; } catch { return ""; }
 }
 const inp = "w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary";
+
+function RewardsEditor() {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [lastGrant, setLastGrant] = useState<{ email: string; at: string } | null>(null);
+
+  const looseRpc = (supabase.rpc as unknown as (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>).bind(supabase);
+
+  const grant = async () => {
+    const trimmed = email.trim();
+    if (!trimmed) { toast.error("Enter a user's email first."); return; }
+    setBusy(true);
+    try {
+      const { data, error } = await looseRpc("admin_grant_phoenix_pass", { p_email: trimmed });
+      if (error) throw new Error("rpc_failed");
+      const res = data as { ok?: boolean; error?: string } | null;
+      if (!res?.ok) {
+        const map: Record<string, string> = {
+          user_not_found: "No signed-up user with that email — check it's the exact address they used to sign in.",
+          not_owner: "Only the owner account can grant rewards.",
+        };
+        toast.error(map[res?.error || ""] || "Couldn't grant the pass. Please try again.");
+        return;
+      }
+      toast.success(`Phoenix Pass granted to ${trimmed} — active for 30 days.`);
+      setLastGrant({ email: trimmed, at: new Date().toLocaleString() });
+      setEmail("");
+    } catch {
+      toast.error("Couldn't grant the pass. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card
+      title="Grant Phoenix Pass"
+      desc="Instantly gives any signed-in user a Phoenix Pass — auto-claimed, no 24h wait, active for 30 days, exactly like a normal claimed pass. They'll get a notification too."
+    >
+      <Field label="User's email (must already be signed up)">
+        <div className="flex gap-2">
+          <input
+            type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") grant(); }}
+            placeholder="user@example.com" className={inp}
+          />
+          <button
+            onClick={grant} disabled={busy}
+            className="press inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Grant
+          </button>
+        </div>
+      </Field>
+      {lastGrant && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Last granted: <span className="font-semibold text-foreground">{lastGrant.email}</span> at {lastGrant.at}
+        </p>
+      )}
+    </Card>
+  );
+}
 function Card({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
   return (
     <section className="edge-light rounded-2xl glass p-6 sm:p-8">
