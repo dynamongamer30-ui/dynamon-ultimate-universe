@@ -1,5 +1,5 @@
 export const SITE_URL = "https://dynamongamer.space";
-export const SITE_NAME = "Dynamon Universe";
+export const SITE_NAME = "Dynamon Gamer";
 
 /** Absolute canonical URL for a given path (e.g. "/mods/fire-phoenix"). */
 export function canonicalUrl(path: string): string {
@@ -28,6 +28,7 @@ export function organizationJsonLd() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_NAME,
+    alternateName: ["Dynamon Gamer Space", "Dynamon Gamer 07"],
     url: SITE_URL,
   });
 }

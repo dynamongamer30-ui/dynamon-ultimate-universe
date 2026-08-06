@@ -13,10 +13,10 @@ export const Route = createFileRoute("/mods/")({
     const { links, meta: canonicalMeta } = canonicalHead("/mods");
     return {
       meta: [
-        { title: "Mods — Dynamon Universe" },
-        { name: "description", content: "All Dynamons World mod APK builds available on Dynamon Universe. Compare versions, features and ratings." },
-        { property: "og:title", content: "All Dynamons World Mods — Dynamon Universe" },
-        { property: "og:description", content: "Compare every fan-made Dynamons World mod build on Dynamon Universe." },
+        { title: "All Dynamons World Mod APK & Hack Downloads — Dynamon Gamer" },
+        { name: "description", content: "Every Dynamons World Mod APK and Hack build on Dynamon Gamer Space. Compare versions, features and community ratings." },
+        { property: "og:title", content: "All Dynamons World Mod APK & Hack Downloads — Dynamon Gamer" },
+        { property: "og:description", content: "Compare every Dynamons World Mod APK and Hack build on Dynamon Gamer Space." },
         ...canonicalMeta,
       ],
       links,

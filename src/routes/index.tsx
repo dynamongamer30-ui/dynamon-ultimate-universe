@@ -15,10 +15,10 @@ export const Route = createFileRoute("/")({
     const { links, meta: canonicalMeta } = canonicalHead("/");
     return {
       meta: [
-        { title: "Dynamon Universe — Premium Dynamons World Mod APKs" },
-        { name: "description", content: "The home of Dynamons World mod APKs. Carefully crafted fan-made builds, community-rated, with weekly drops." },
-        { property: "og:title", content: "Dynamon Universe — Premium Dynamons World Mods" },
-        { property: "og:description", content: "Carefully crafted fan-made Dynamons World mod builds, community-rated and updated weekly." },
+        { title: "Dynamon Gamer — Dynamons World Mod APK & Hack Downloads" },
+        { name: "description", content: "Dynamon Gamer Space: the home of Dynamons World Mod APK and Hack builds. Free downloads, community-rated, updated weekly." },
+        { property: "og:title", content: "Dynamon Gamer — Dynamons World Mod APK & Hack Downloads" },
+        { property: "og:description", content: "Free Dynamons World Mod APK and Hack downloads — community-rated, updated weekly. Only on Dynamon Gamer Space." },
         ...canonicalMeta,
       ],
       links,
@@ -51,7 +51,7 @@ function Index() {
               className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary"
             >
               <span className="inline-block h-px w-8 bg-primary" aria-hidden />
-              Only Dynamons World
+              Dynamon Gamer Space
             </motion.p>
 
             <motion.h1
@@ -60,16 +60,16 @@ function Index() {
             >
               Dynamons World
               <br />
-              <span className="text-gradient">mods.</span>
+              <span className="text-gradient">Mod APK & Hack.</span>
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.12 }}
               className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg text-pretty"
             >
-              Modded versions of Dynamons World, made and tested by fans. Free to
-              download, rated by real players, and updated every week. Only Dynamons
-              here — nothing else to scroll past.
+              Dynamons World Mod APK and Hack builds from Dynamon Gamer, made and
+              tested by fans. Free to download, rated by real players, and
+              updated every week. Only Dynamons here — nothing else to scroll past.
             </motion.p>
 
             <motion.div
