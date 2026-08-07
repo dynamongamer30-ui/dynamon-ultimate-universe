@@ -1,5 +1,7 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import confetti from "canvas-confetti";
 import { Copy, KeyRound, Loader2, ShieldCheck, Sparkles, ExternalLink, RefreshCw, Timer, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
@@ -13,6 +15,13 @@ import {
 import { getFingerprint } from "@/lib/fingerprint";
 import { supabase } from "@/integrations/supabase/client";
 import { mods } from "@/lib/mods";
+
+/** Short, silent-if-unsupported haptic pulse. */
+function buzz(pattern: number | number[]) {
+  try {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(pattern);
+  } catch { /* unsupported or blocked */ }
+}
 
 // ---------- Route registration (both /generator and /generator.html) ----------
 
@@ -81,27 +90,28 @@ function loadTurnstile(): Promise<void> {
 function Particles() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute -top-32 -left-24 h-[480px] w-[480px] rounded-full bg-amber-500/20 blur-3xl" />
-      <div className="absolute top-1/3 right-0 h-[420px] w-[420px] rounded-full bg-orange-500/15 blur-3xl" />
-      <div className="absolute bottom-0 left-1/3 h-[360px] w-[360px] rounded-full bg-yellow-400/10 blur-3xl" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(251,191,36,0.08),transparent_60%)]" />
+      <div className="absolute -top-32 -left-24 h-[480px] w-[480px] rounded-full blur-3xl" style={{ background: "color-mix(in oklch, var(--primary) 22%, transparent)" }} />
+      <div className="absolute top-1/3 right-0 h-[420px] w-[420px] rounded-full blur-3xl" style={{ background: "color-mix(in oklch, var(--gold) 16%, transparent)" }} />
+      <div className="absolute bottom-0 left-1/3 h-[360px] w-[360px] rounded-full blur-3xl" style={{ background: "color-mix(in oklch, var(--primary) 12%, transparent)" }} />
     </div>
   );
 }
 
 function Orb({ pulse }: { pulse: boolean }) {
   return (
-    <div className="relative mx-auto h-28 w-28">
+    <motion.div
+      className="relative mx-auto h-28 w-28"
+      animate={pulse ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+      transition={{ duration: 1.6, repeat: pulse ? Infinity : 0, ease: "easeInOut" }}
+    >
       <div
-        className={`absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-yellow-600 ${
-          pulse ? "animate-pulse" : ""
-        }`}
-        style={{ boxShadow: "0 0 80px 10px rgba(251,191,36,0.45)" }}
+        className="absolute inset-0 rounded-full"
+        style={{ background: "linear-gradient(135deg, var(--primary), var(--gold))", boxShadow: "0 0 80px 10px oklch(0.54 0.22 296 / 40%)" }}
       />
-      <div className="absolute inset-3 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center">
-        <Sparkles className="h-10 w-10 text-amber-300" />
+      <div className="absolute inset-3 flex items-center justify-center rounded-full backdrop-blur-md" style={{ background: "color-mix(in oklch, var(--background) 75%, transparent)" }}>
+        <KeyRound className="h-10 w-10" style={{ color: "var(--gold)" }} />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -232,6 +242,16 @@ function GeneratorPage() {
       setPhase({ kind: "success", key: res.key, remaining: res.remaining, hours: 24, generatedAt: Date.now() });
       toast.success("Your key is ready and copied!");
       resetTurnstile();
+      buzz([15, 60, 15, 60, 40]);
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!reduced) {
+        confetti({
+          particleCount: 130,
+          spread: 75,
+          origin: { y: 0.55 },
+          colors: ["#a86ee6", "#e0b45a", "#c9a4ee", "#ffffff"],
+        });
+      }
       return;
     }
 
@@ -354,132 +374,147 @@ function GeneratorPage() {
     <PageShell>
       <Particles />
       <div className="mx-auto max-w-xl py-8">
-        <div className="rounded-2xl border border-amber-500/20 bg-black/40 p-8 backdrop-blur-xl shadow-[0_0_60px_-10px_rgba(251,191,36,0.25)]">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="rounded-2xl border p-8 shadow-elev backdrop-blur-xl"
+          style={{ borderColor: "var(--border)", background: "color-mix(in oklch, var(--card) 88%, transparent)" }}
+        >
           <div className="mb-6 flex flex-col items-center gap-3 text-center">
             <Orb pulse={phase.kind === "loading" || submitting} />
-            <h1 className="bg-gradient-to-r from-amber-200 via-amber-400 to-orange-400 bg-clip-text text-3xl font-bold tracking-tight text-transparent">
-              Get your key
+            <h1 className="font-display text-3xl font-bold tracking-tight" style={{ background: "linear-gradient(90deg, var(--foreground), var(--gold))", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
+              Claim your key
             </h1>
-            <p className="text-sm text-amber-100/70">
-              Tick the box below to prove you're not a robot. Then we'll give you a key that unlocks the mod in the app.
+            <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+              Tick the box below to prove you're not a robot. Then we'll forge a key that unlocks the mod in the app.
             </p>
           </div>
 
-          {phase.kind === "loading" && (
-            <div className="flex flex-col items-center gap-3 py-10 text-amber-200/80">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <span>Checking your link…</span>
-            </div>
-          )}
+          <AnimatePresence mode="wait">
+            {phase.kind === "loading" && (
+              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-3 py-10" style={{ color: "var(--muted-foreground)" }}>
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span>Checking your link…</span>
+              </motion.div>
+            )}
 
-          {phase.kind === "invalid" && (
-            <div className="flex flex-col items-center gap-4 py-6 text-center">
-              <p className="text-lg text-amber-100">{reasonMessage(phase.reason)}</p>
-              <Button
-                onClick={() => window.location.assign(startGate())}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:from-amber-400 hover:to-orange-400"
-              >
-                <KeyRound className="mr-2 h-4 w-4" />
-                Start again
-              </Button>
-            </div>
-          )}
-
-          {phase.kind === "ready" && (
-            <div className="flex flex-col items-center gap-5">
-              <div className="flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/5 px-3 py-1 text-xs text-amber-200">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Link looks good — just tick the box below
-              </div>
-
-              <div ref={widgetRef} className="min-h-[70px]" />
-
-              <div className="text-xs text-amber-100/50">
-                Your device ID: {fingerprint ? `${fingerprint.slice(0, 10)}…` : "checking…"}
-              </div>
-
-              <Button
-                onClick={onGenerate}
-                disabled={!turnstileToken || !fingerprint || submitting}
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:from-amber-400 hover:to-orange-400 disabled:opacity-50"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Making your key…
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Get my key
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {phase.kind === "success" && (
-            <div className="flex flex-col items-center gap-5 py-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
-                <Sparkles className="h-3.5 w-3.5" />
-                {phase.remaining} more key{phase.remaining === 1 ? "" : "s"} left for you today
-              </div>
-
-              <button
-                onClick={() => copyKey(phase.key)}
-                className="group w-full rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 text-center transition hover:border-amber-400/60"
-              >
-                <div className="font-mono text-3xl tracking-widest text-amber-200 group-hover:text-amber-100">
-                  {phase.key}
-                </div>
-                <div className="mt-2 inline-flex items-center gap-1 text-xs text-emerald-300/80">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Already copied — just paste it in the app
-                </div>
-              </button>
-
-              {/* Live countdown to the 10-minute unused-key deletion deadline */}
-              {secondsLeft !== null && (
-                secondsLeft > 0 ? (
-                  <div className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold ${
-                    secondsLeft <= 60
-                      ? "border-red-500/40 bg-red-500/10 text-red-300"
-                      : "border-amber-500/30 bg-amber-500/5 text-amber-200"
-                  }`}>
-                    <Timer className="h-4 w-4" />
-                    Use it within <span className="font-mono tabular-nums">{fmtCountdown(secondsLeft)}</span> or it disappears
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-4 py-1.5 text-sm font-semibold text-red-300">
-                    <XCircle className="h-4 w-4" />
-                    This key ran out of time — get a new one
-                  </div>
-                )
-              )}
-
-              <div className="flex w-full flex-col gap-2 sm:flex-row">
+            {phase.kind === "invalid" && (
+              <motion.div key="invalid" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-4 py-6 text-center">
+                <p className="text-lg" style={{ color: "var(--foreground)" }}>{reasonMessage(phase.reason)}</p>
                 <Button
                   onClick={() => window.location.assign(startGate())}
-                  variant="outline"
-                  className="flex-1 border-amber-500/30 text-amber-100 hover:bg-amber-500/10"
+                  className="text-primary-foreground"
+                  style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
                 >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  New key
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Start again
                 </Button>
-                <Button
-                  onClick={() => copyAndOpenApp(phase.key)}
-                  disabled={secondsLeft === 0}
-                  className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:from-amber-400 hover:to-orange-400 disabled:opacity-50"
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Copy &amp; Open App
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
+              </motion.div>
+            )}
 
-        <p className="mt-4 text-center text-xs text-amber-100/40">
+            {phase.kind === "ready" && (
+              <motion.div key="ready" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-5">
+                <div className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "color-mix(in oklch, var(--gold) 35%, transparent)", background: "color-mix(in oklch, var(--gold) 8%, transparent)", color: "var(--gold)" }}>
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Link looks good — just tick the box below
+                </div>
+
+                <div ref={widgetRef} className="min-h-[70px]" />
+
+                <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  Your device ID: {fingerprint ? `${fingerprint.slice(0, 10)}…` : "checking…"}
+                </div>
+
+                <Button
+                  onClick={onGenerate}
+                  disabled={!turnstileToken || !fingerprint || submitting}
+                  className="w-full text-primary-foreground transition-transform hover:scale-[1.01] disabled:opacity-50"
+                  style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Forging your key…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Get my key
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+            )}
+
+            {phase.kind === "success" && (
+              <motion.div key="success" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 22 }} className="flex flex-col items-center gap-5 py-2">
+                <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "color-mix(in oklch, var(--gold) 35%, transparent)", background: "color-mix(in oklch, var(--gold) 10%, transparent)", color: "var(--gold)" }}>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {phase.remaining} more key{phase.remaining === 1 ? "" : "s"} left for you today
+                </div>
+
+                <button
+                  onClick={() => copyKey(phase.key)}
+                  className="group w-full rounded-xl border p-5 text-center transition-colors"
+                  style={{ borderColor: "color-mix(in oklch, var(--gold) 30%, transparent)", background: "linear-gradient(135deg, color-mix(in oklch, var(--primary) 10%, transparent), color-mix(in oklch, var(--gold) 6%, transparent))" }}
+                >
+                  <div className="font-display text-3xl tracking-widest" style={{ color: "var(--gold)" }}>
+                    {phase.key}
+                  </div>
+                  <div className="mt-2 inline-flex items-center gap-1 text-xs" style={{ color: "#4ade80" }}>
+                    <CheckCircle2 className="h-3 w-3" />
+                    Already copied — just paste it in the app
+                  </div>
+                </button>
+
+                {secondsLeft !== null && (
+                  secondsLeft > 0 ? (
+                    <div
+                      className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold"
+                      style={
+                        secondsLeft <= 60
+                          ? { borderColor: "color-mix(in oklch, #f87171 40%, transparent)", background: "color-mix(in oklch, #f87171 10%, transparent)", color: "#f87171" }
+                          : { borderColor: "color-mix(in oklch, var(--gold) 30%, transparent)", background: "color-mix(in oklch, var(--gold) 6%, transparent)", color: "var(--gold)" }
+                      }
+                    >
+                      <Timer className="h-4 w-4" />
+                      Use it within <span className="font-mono tabular-nums">{fmtCountdown(secondsLeft)}</span> or it disappears
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold" style={{ borderColor: "color-mix(in oklch, #f87171 40%, transparent)", background: "color-mix(in oklch, #f87171 10%, transparent)", color: "#f87171" }}>
+                      <XCircle className="h-4 w-4" />
+                      This key ran out of time — get a new one
+                    </div>
+                  )
+                )}
+
+                <div className="flex w-full flex-col gap-2 sm:flex-row">
+                  <Button
+                    onClick={() => window.location.assign(startGate())}
+                    variant="outline"
+                    className="flex-1"
+                    style={{ borderColor: "color-mix(in oklch, var(--gold) 30%, transparent)", color: "var(--foreground)" }}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    New key
+                  </Button>
+                  <Button
+                    onClick={() => copyAndOpenApp(phase.key)}
+                    disabled={secondsLeft === 0}
+                    className="flex-1 text-primary-foreground disabled:opacity-50"
+                    style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Copy &amp; Open App
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        <p className="mt-4 text-center text-xs" style={{ color: "var(--muted-foreground)", opacity: 0.7 }}>
           One key per device. Don't share your key — shared keys get blocked.
         </p>
       </div>
