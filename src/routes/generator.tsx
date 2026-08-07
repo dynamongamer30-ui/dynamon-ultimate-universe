@@ -447,43 +447,87 @@ function GeneratorPage() {
             )}
 
             {phase.kind === "success" && (
-              <div className="flex flex-col items-center gap-5 py-2">
-                <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "color-mix(in oklch, var(--gold) 35%, transparent)", background: "color-mix(in oklch, var(--gold) 10%, transparent)", color: "var(--gold)" }}>
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {phase.remaining} more key{phase.remaining === 1 ? "" : "s"} left for you today
+              <div className="flex flex-col items-center gap-6 py-2">
+                {/* Key reveal card */}
+                <div className="w-full">
+                  <div className="mb-2 flex items-center justify-between px-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--muted-foreground)" }}>
+                      Your key
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--gold)" }}>
+                      <Sparkles className="h-3 w-3" />
+                      {phase.remaining} left today
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => copyKey(phase.key)}
+                    className="group relative w-full overflow-hidden rounded-2xl p-[1.5px] transition-transform active:scale-[0.99]"
+                    style={{ background: "linear-gradient(135deg, var(--gold), var(--primary), var(--gold))" }}
+                  >
+                    <div
+                      className="rounded-[15px] px-5 py-6"
+                      style={{ background: "color-mix(in oklch, var(--background) 92%, transparent)" }}
+                    >
+                      <div
+                        className="break-all text-center font-display text-[2.1rem] font-bold leading-tight tracking-[0.12em] sm:text-4xl"
+                        style={{
+                          background: "linear-gradient(180deg, #f4d98f, var(--gold))",
+                          WebkitBackgroundClip: "text",
+                          backgroundClip: "text",
+                          color: "transparent",
+                          filter: "drop-shadow(0 0 18px oklch(0.78 0.13 82 / 35%))",
+                        }}
+                      >
+                        {phase.key}
+                      </div>
+                      <div className="mt-3 flex items-center justify-center gap-1.5 text-xs font-medium" style={{ color: "#4ade80" }}>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Copied — tap to copy again
+                      </div>
+                    </div>
+                  </button>
                 </div>
 
-                <button
-                  onClick={() => copyKey(phase.key)}
-                  className="group w-full rounded-xl border p-5 text-center transition-colors"
-                  style={{ borderColor: "color-mix(in oklch, var(--gold) 30%, transparent)", background: "linear-gradient(135deg, color-mix(in oklch, var(--primary) 10%, transparent), color-mix(in oklch, var(--gold) 6%, transparent))" }}
-                >
-                  <div className="font-display text-3xl tracking-widest" style={{ color: "var(--gold)" }}>
-                    {phase.key}
-                  </div>
-                  <div className="mt-2 inline-flex items-center gap-1 text-xs" style={{ color: "#4ade80" }}>
-                    <CheckCircle2 className="h-3 w-3" />
-                    Already copied — just paste it in the app
-                  </div>
-                </button>
-
+                {/* Countdown */}
                 {secondsLeft !== null && (
                   secondsLeft > 0 ? (
                     <div
-                      className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold"
+                      className="w-full rounded-xl border px-4 py-3"
                       style={
                         secondsLeft <= 60
-                          ? { borderColor: "color-mix(in oklch, #f87171 40%, transparent)", background: "color-mix(in oklch, #f87171 10%, transparent)", color: "#f87171" }
-                          : { borderColor: "color-mix(in oklch, var(--gold) 30%, transparent)", background: "color-mix(in oklch, var(--gold) 6%, transparent)", color: "var(--gold)" }
+                          ? { borderColor: "color-mix(in oklch, #f87171 35%, transparent)", background: "color-mix(in oklch, #f87171 7%, transparent)" }
+                          : { borderColor: "var(--border)", background: "color-mix(in oklch, var(--background) 45%, transparent)" }
                       }
                     >
-                      <Timer className="h-4 w-4" />
-                      Use it within <span className="font-mono tabular-nums">{fmtCountdown(secondsLeft)}</span> or it disappears
+                      <div className="flex items-center justify-between gap-3">
+                        <span
+                          className="inline-flex items-center gap-1.5 text-xs font-medium"
+                          style={{ color: secondsLeft <= 60 ? "#f87171" : "var(--muted-foreground)" }}
+                        >
+                          <Timer className="h-3.5 w-3.5" />
+                          {secondsLeft <= 60 ? "Expiring soon" : "Expires in"}
+                        </span>
+                        <span
+                          className="font-display text-xl font-bold tabular-nums tracking-wide"
+                          style={{ color: secondsLeft <= 60 ? "#f87171" : "var(--gold)" }}
+                        >
+                          {fmtCountdown(secondsLeft)}
+                        </span>
+                      </div>
+                      <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ background: secondsLeft <= 60 ? "#f87171" : "linear-gradient(90deg, var(--primary), var(--gold))" }}
+                          animate={{ width: `${(secondsLeft / KEY_TTL_SECONDS) * 100}%` }}
+                          transition={{ duration: 0.6, ease: "linear" }}
+                        />
+                      </div>
                     </div>
                   ) : (
-                    <div className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold" style={{ borderColor: "color-mix(in oklch, #f87171 40%, transparent)", background: "color-mix(in oklch, #f87171 10%, transparent)", color: "#f87171" }}>
-                      <XCircle className="h-4 w-4" />
-                      This key ran out of time — get a new one
+                    <div className="flex w-full items-center gap-2 rounded-xl border px-4 py-3" style={{ borderColor: "color-mix(in oklch, #f87171 40%, transparent)", background: "color-mix(in oklch, #f87171 10%, transparent)" }}>
+                      <XCircle className="h-4 w-4 shrink-0" style={{ color: "#f87171" }} />
+                      <span className="text-sm font-semibold" style={{ color: "#f87171" }}>This key ran out of time — get a new one</span>
                     </div>
                   )
                 )}
