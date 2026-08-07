@@ -1,6 +1,6 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import confetti from "canvas-confetti";
 import { Copy, KeyRound, Loader2, ShieldCheck, Sparkles, ExternalLink, RefreshCw, Timer, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -391,16 +391,15 @@ function GeneratorPage() {
             </p>
           </div>
 
-          <AnimatePresence mode="wait">
             {phase.kind === "loading" && (
-              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-3 py-10" style={{ color: "var(--muted-foreground)" }}>
+              <div className="flex flex-col items-center gap-3 py-10" style={{ color: "var(--muted-foreground)" }}>
                 <Loader2 className="h-6 w-6 animate-spin" />
                 <span>Checking your link…</span>
-              </motion.div>
+              </div>
             )}
 
             {phase.kind === "invalid" && (
-              <motion.div key="invalid" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-4 py-6 text-center">
+              <div className="flex flex-col items-center gap-4 py-6 text-center">
                 <p className="text-lg" style={{ color: "var(--foreground)" }}>{reasonMessage(phase.reason)}</p>
                 <Button
                   onClick={() => window.location.assign(startGate())}
@@ -410,11 +409,11 @@ function GeneratorPage() {
                   <KeyRound className="mr-2 h-4 w-4" />
                   Start again
                 </Button>
-              </motion.div>
+              </div>
             )}
 
             {phase.kind === "ready" && (
-              <motion.div key="ready" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-5">
+              <div className="flex flex-col items-center gap-5">
                 <div className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "color-mix(in oklch, var(--gold) 35%, transparent)", background: "color-mix(in oklch, var(--gold) 8%, transparent)", color: "var(--gold)" }}>
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Link looks good — just tick the box below
@@ -444,11 +443,11 @@ function GeneratorPage() {
                     </>
                   )}
                 </Button>
-              </motion.div>
+              </div>
             )}
 
             {phase.kind === "success" && (
-              <motion.div key="success" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 22 }} className="flex flex-col items-center gap-5 py-2">
+              <div className="flex flex-col items-center gap-5 py-2">
                 <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "color-mix(in oklch, var(--gold) 35%, transparent)", background: "color-mix(in oklch, var(--gold) 10%, transparent)", color: "var(--gold)" }}>
                   <Sparkles className="h-3.5 w-3.5" />
                   {phase.remaining} more key{phase.remaining === 1 ? "" : "s"} left for you today
@@ -509,9 +508,8 @@ function GeneratorPage() {
                     Copy &amp; Open App
                   </Button>
                 </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
         </motion.div>
 
         <p className="mt-4 text-center text-xs" style={{ color: "var(--muted-foreground)", opacity: 0.7 }}>
