@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { useRef, useState } from "react";
+
 import { Download, Heart, MessageSquare, Star, TrendingUp } from "lucide-react";
 import type { Mod } from "@/lib/mods";
 import { formatCount, elementTheme } from "@/lib/mods";
@@ -25,23 +25,6 @@ export function ModCard({ mod, index = 0, featured = false }: { mod: Mod; index?
   const totalLikes = mod.baseLikes;
   const totalDownloads = mod.downloads;
 
-  // Pointer-tracking tilt (subtle, spring-released)
-  const cardRef = useRef<HTMLElement>(null);
-  const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
-  const [hovered, setHovered] = useState(false);
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    const el = cardRef.current;
-    if (!el || window.matchMedia("(pointer: coarse)").matches) return;
-    const rect = el.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ rx: -y * 4, ry: x * 4 });
-  };
-  const onPointerLeave = () => {
-    setTilt({ rx: 0, ry: 0 });
-    setHovered(false);
-  };
 
   const toggleLike = async () => {
     if (!user) { navigate({ to: "/auth" }); return; }
@@ -69,20 +52,13 @@ export function ModCard({ mod, index = 0, featured = false }: { mod: Mod; index?
 
   return (
     <motion.article
-      ref={cardRef}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ type: "spring", stiffness: 100, damping: 18, delay: index * 0.05 }}
-      onPointerMove={onPointerMove}
-      onPointerEnter={() => { setHovered(true); playHover(); }}
-      onPointerLeave={onPointerLeave}
-      className="edge-light group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card"
-      style={{
-        transform: `perspective(900px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
-        transition: hovered ? "box-shadow 0.3s" : "transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s",
-        boxShadow: hovered ? theme.glow : "var(--shadow-card)",
-      }}
+      onMouseEnter={playHover}
+      className="edge-light group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-primary/45"
+      style={{ boxShadow: featured ? theme.glow : "var(--shadow-card)" }}
     >
       {/* Image — entire thing links to detail */}
       <Link
@@ -143,7 +119,7 @@ export function ModCard({ mod, index = 0, featured = false }: { mod: Mod; index?
         <div className="mt-auto flex items-center gap-2 pt-5">
           <Link
             to="/mods/$slug" params={{ slug: mod.slug }} onClick={handleGet}
-            className="press inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition-[filter] hover:brightness-110 glow-primary"
+            className="press inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_30px_-8px_oklch(0.66_0.21_318_/_0.78)] glow-primary"
           >
             <Download className="h-4 w-4 shrink-0" />
             <span className="truncate">{user ? "Download" : "Sign in to download"}</span>

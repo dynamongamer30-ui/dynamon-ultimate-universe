@@ -266,13 +266,14 @@
   --ring: oklch(0.54 0.22 296);
 
   /* Global surfaces — every page consumes these */
-  --gradient-hero: radial-gradient(120% 90% at 50% -10%, oklch(0.32 0.12 296 / 0.5), transparent 55%),
-    linear-gradient(180deg, oklch(0.11 0.018 295), oklch(0.135 0.022 295));
-  --gradient-primary: linear-gradient(135deg, oklch(0.54 0.22 296), oklch(0.62 0.19 312));
-  --gradient-violet: linear-gradient(135deg, oklch(0.78 0.13 82), oklch(0.68 0.17 55));
-  --shadow-glow: 0 8px 32px -10px oklch(0.54 0.22 296 / 0.5);
-  --shadow-card: 0 8px 30px -12px oklch(0 0 0 / 0.7);
-  --shadow-violet: 0 8px 32px -10px oklch(0.78 0.13 82 / 0.4);
+  --gradient-hero: radial-gradient(110% 82% at 52% -12%, oklch(0.36 0.16 300 / 0.58), transparent 52%),
+    radial-gradient(54% 42% at 84% 10%, oklch(0.42 0.18 328 / 0.22), transparent 70%),
+    linear-gradient(180deg, oklch(0.105 0.022 295), oklch(0.135 0.026 295));
+  --gradient-primary: linear-gradient(135deg, oklch(0.57 0.23 296), oklch(0.66 0.21 318));
+  --gradient-violet: linear-gradient(135deg, oklch(0.61 0.22 296), oklch(0.7 0.18 322));
+  --shadow-glow: 0 12px 40px -14px oklch(0.57 0.23 296 / 0.58);
+  --shadow-card: 0 12px 36px -16px oklch(0 0 0 / 0.76);
+  --shadow-violet: 0 12px 38px -14px oklch(0.66 0.21 318 / 0.42);
 }
 
 .dark { color-scheme: dark; }
@@ -283,14 +284,17 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   background-image: var(--gradient-hero);
-  background-attachment: fixed;
+  background-attachment: scroll;
+}
+@media (min-width: 1024px) {
+  body { background-attachment: fixed; }
 }
 h1, h2, h3, h4, .font-display {
   font-family: var(--font-display);
   letter-spacing: -0.03em;
 }
 
-::selection { background: oklch(0.7 0.19 42 / 0.4); color: var(--foreground); }
+::selection { background: oklch(0.62 0.22 302 / 0.46); color: var(--foreground); }
 
 /* Premium scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -337,9 +341,12 @@ h1, h2, h3, h4, .font-display {
 
 /* Interactive press physics — used on all buttons/cards */
 @utility press {
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translateZ(0);
+  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), filter 0.16s ease;
+  will-change: transform;
 }
-.press:active { transform: scale(0.96); }
+.press:hover { transform: translateY(-1px); }
+.press:active { transform: translateY(0) scale(0.965); }
 
 /* Edge highlight: hairline top light on cards for machined feel,
    now also blooms with a soft purple glow on hover */
@@ -372,8 +379,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   100% { background-position: 200% 0; }
 }
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(0.54 0.22 296 / 0.45); }
-  50% { box-shadow: 0 0 24px 6px oklch(0.54 0.22 296 / 0.16); }
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.6 0.23 300 / 0.38); }
+  50% { box-shadow: 0 0 30px 7px oklch(0.66 0.21 318 / 0.2); }
 }
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
@@ -388,7 +395,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .animate-ticker { animation: ticker 30s linear infinite; }
 .animate-ticker:hover { animation-play-state: paused; }
 .shimmer {
-  background: linear-gradient(90deg, transparent, oklch(0.7 0.19 42 / 0.15), transparent);
+  background: linear-gradient(90deg, transparent, oklch(0.67 0.21 318 / 0.2), transparent);
   background-size: 200% 100%;
   animation: shimmer 2.5s linear infinite;
 }
@@ -410,11 +417,55 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* AuroraCursor ring — border-color/box-shadow toggle only on hover-state
    change (not every animation frame), transitioned smoothly by CSS. */
 .aurora-ring {
-  border-color: oklch(0.7 0.19 42 / 0.55);
-  box-shadow: 0 0 14px 0px oklch(0.7 0.19 42 / 0.18);
+  border-color: oklch(0.66 0.21 318 / 0.58);
+  box-shadow: 0 0 16px 0px oklch(0.6 0.23 300 / 0.2);
   transition: opacity 300ms, border-color 150ms, box-shadow 150ms;
 }
 .aurora-ring.aurora-ring-hover {
-  border-color: oklch(0.76 0.17 50 / 0.9);
-  box-shadow: 0 0 22px 2px oklch(0.7 0.19 42 / 0.35);
+  border-color: oklch(0.76 0.17 322 / 0.94);
+  box-shadow: 0 0 26px 3px oklch(0.64 0.22 308 / 0.38);
+}
+
+/* Hero-specific energy field: rich on desktop, restrained on smaller screens. */
+.hero-field {
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid oklch(0.48 0.1 300 / 0.34);
+  border-radius: 1.75rem;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  background: linear-gradient(135deg, oklch(0.17 0.04 295 / 0.84), oklch(0.12 0.028 305 / 0.88));
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.07), var(--shadow-card);
+}
+.hero-field::before,
+.hero-field::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 999px;
+  filter: blur(12px);
+}
+.hero-field::before {
+  width: min(42rem, 74vw);
+  aspect-ratio: 1;
+  right: -11rem;
+  top: -15rem;
+  background: radial-gradient(circle, oklch(0.62 0.23 302 / 0.38), transparent 68%);
+}
+.hero-field::after {
+  width: min(28rem, 56vw);
+  aspect-ratio: 1;
+  left: 28%;
+  bottom: -20rem;
+  background: radial-gradient(circle, oklch(0.66 0.2 326 / 0.2), transparent 70%);
+}
+.hero-field > * { position: relative; z-index: 1; }
+
+@media (max-width: 767px) {
+  .hero-field { border-radius: 1.25rem; }
+  .hero-field::before { right: -15rem; top: -18rem; opacity: 0.72; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press, .press:hover, .press:active { transform: none; transition: none; }
 }

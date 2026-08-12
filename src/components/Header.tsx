@@ -67,7 +67,7 @@ export function Header() {
           {nav.map((n) => (
             <Link
               key={n.to} to={n.to} onMouseDown={playClick}
-              className="relative rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground [&.active]:bg-card/60"
+              className="relative rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-[color,background-color,box-shadow] hover:text-foreground [&.active]:bg-primary/12 [&.active]:text-foreground [&.active]:shadow-[inset_0_0_0_1px_oklch(0.6_0.2_300_/_0.32),0_0_18px_-10px_oklch(0.62_0.23_300_/_0.9)]"
               activeProps={{ className: "active" }}
               activeOptions={{ exact: n.to === "/" }}
             >
@@ -86,7 +86,7 @@ export function Header() {
           <button
             onClick={() => { setSearchOpen((v) => !v); playClick(); }}
             aria-label="Search"
-            className="press grid h-10 w-10 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+            className="press grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-[color,border-color,box-shadow] hover:border-primary/55 hover:text-foreground hover:shadow-[0_0_22px_-10px_oklch(0.62_0.23_300_/_0.9)]"
           >
             <Search className="h-4 w-4" />
           </button>
@@ -169,7 +169,7 @@ export function Header() {
           ) : (
             <Link
               to="/auth" onMouseDown={playClick}
-              className="press hidden items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110 sm:inline-flex"
+              className="press hidden items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground glow-primary transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_30px_-8px_oklch(0.66_0.21_318_/_0.82)] sm:inline-flex"
             >
               <UserIcon className="h-4 w-4" /> Sign in
             </Link>

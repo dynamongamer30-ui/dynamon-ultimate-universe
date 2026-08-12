@@ -132,17 +132,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", href: "/apple-icon.png", sizes: "180x180" },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      // Non-blocking: fetches at high priority via preload, then swaps to a
-      // real stylesheet once loaded instead of blocking first paint on it.
-      { rel: "preload", as: "style", href: "https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap",
-        media: "print",
-        onload: "this.media='all'",
-      },
     ],
   }),
   shellComponent: RootShell,
@@ -181,13 +170,15 @@ function PageTransition({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const showAmbientField = pathname === "/";
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SiteSettingsProvider>
           <GamificationProvider>
             <ConfirmProvider>
-            <AuroraBackground />
+            {showAmbientField && <AuroraBackground />}
             <AuroraCursor />
             <AnnouncementBanner />
             <OwnerReturnRedirect />
