@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Cipher } from "@/lib/cipher";
 import { getFingerprint } from "@/lib/fingerprint";
 import { getMod, mods, formatCount, elementTheme, type Mod } from "@/lib/mods";
-import { canonicalHead, softwareAppJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, pageSeoHead, softwareAppJsonLd } from "@/lib/seo";
 import { playClick } from "@/lib/sound";
 import { toast } from "sonner";
 
@@ -26,24 +26,29 @@ export const Route = createFileRoute("/mods/$slug")({
   },
   head: ({ loaderData, params }) => {
     if (!loaderData) return { meta: [] };
-    const { links, meta: canonicalMeta } = canonicalHead(`/mods/${params.slug}`);
+    const mod = loaderData.mod;
+    const { links, meta } = pageSeoHead({
+      path: `/mods/${params.slug}`,
+      title: `${mod.name} for Dynamons World — Features, Version & Build Notes`,
+      description: `${mod.tagline} Review features, release version, update notes, community rating, and unlock details for this Dynamons World build.`,
+      image: mod.image,
+      type: "article",
+    });
     return {
-      meta: [
-        { title: `${loaderData.mod.name} — Dynamon Universe` },
-        { name: "description", content: loaderData.mod.tagline },
-        { property: "og:title", content: `${loaderData.mod.name} — Dynamon Universe` },
-        { property: "og:description", content: loaderData.mod.tagline },
-        { property: "og:image", content: loaderData.mod.image },
-        { property: "twitter:image", content: loaderData.mod.image },
-        ...canonicalMeta,
-      ],
+      meta,
       links,
-      scripts: [softwareAppJsonLd({
-        name: loaderData.mod.name, slug: loaderData.mod.slug, tagline: loaderData.mod.tagline,
-        image: loaderData.mod.image, rating: loaderData.mod.baseRating,
-        ratingCount: loaderData.mod.ratingCount, downloads: loaderData.mod.downloads,
-        version: loaderData.mod.version,
-      })],
+      scripts: [
+        breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Dynamons World Builds", path: "/mods" },
+          { name: mod.name, path: `/mods/${mod.slug}` },
+        ]),
+        softwareAppJsonLd({
+          name: mod.name, slug: mod.slug, tagline: mod.tagline,
+          image: mod.image, rating: mod.baseRating,
+          ratingCount: mod.ratingCount, version: mod.version, updated: mod.updated,
+        }),
+      ],
     };
   },
   notFoundComponent: () => (
@@ -125,7 +130,7 @@ function ModDetail() {
           style={{ boxShadow: theme.glow }}
         >
           <div className="absolute inset-0 z-10 opacity-40 mix-blend-overlay" style={{ background: theme.gradient }} />
-          <img src={mod.image} alt={blendedMod.name} width={1024} height={1024} className="relative aspect-square w-full object-cover" />
+          <img src={mod.image} alt={`${blendedMod.name} Dynamons World build artwork`} width={1024} height={1024} decoding="async" sizes="(min-width: 1024px) 44vw, 100vw" className="relative aspect-square w-full object-cover" />
           <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-card to-transparent p-6">
             <span className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${theme.chip}`}>
               <Sparkles className="h-3 w-3" /> {theme.label} element
@@ -139,7 +144,7 @@ function ModDetail() {
             Dynamons World · Mod APK
           </p>
           <h1 className="mt-4 font-display text-4xl font-black uppercase leading-[0.95] tracking-tight text-balance sm:text-5xl">{blendedMod.name}</h1>
-          <p className="mt-4 text-lg leading-relaxed text-muted-foreground text-pretty">{blendedMod.tagline}</p>
+            <p className="mt-4 text-lg leading-relaxed text-muted-foreground text-pretty">{blendedMod.tagline} Review the feature list, latest version, and changelog before unlocking this edition.</p>
 
           {/* Tabs */}
           <div className="mt-6 inline-flex rounded-lg border border-border bg-card p-1 text-xs font-bold">
@@ -178,7 +183,7 @@ function ModDetail() {
               onClick={handleGet}
               className="press animate-pulse-glow inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110"
             >
-              <Download className="h-4 w-4" /> {user ? "Download mod" : "Log in to download"}
+              <Download className="h-4 w-4" /> {user ? "Unlock this build" : "Log in to unlock"}
             </button>
             <LikeButton slug={mod.slug} />
             <FavoriteButton slug={mod.slug} />
@@ -221,7 +226,7 @@ function ModDetail() {
             </div>
           ) : (
             <div className="relative aspect-video w-full">
-              <img src={mod.image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+              <img src={mod.image} alt="" decoding="async" sizes="(min-width: 1024px) 70vw, 100vw" className="absolute inset-0 h-full w-full object-cover opacity-60" />
               <div className="absolute inset-0 grid place-items-center bg-gradient-to-t from-background/90 to-background/30">
                 <div className="text-center">
                   <div className="mx-auto grid h-16 w-16 place-items-center rounded-full text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
@@ -249,7 +254,7 @@ function ModDetail() {
                 className="group relative overflow-hidden rounded-2xl glass"
                 style={{ boxShadow: t.glow }}
               >
-                <img src={m.image} alt={m.name} width={1024} height={1024} loading="lazy" className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-105" />
+                <img src={m.image} alt={`${m.name} Dynamons World build artwork`} width={1024} height={1024} loading="lazy" decoding="async" sizes="(min-width: 1024px) 30vw, 100vw" className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-105" />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card to-transparent p-4">
                   <p className="font-display text-sm font-bold">{m.name}</p>
                   <p className="text-[11px] text-muted-foreground">v{m.version} · {t.label}</p>

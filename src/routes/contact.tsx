@@ -5,15 +5,13 @@ import { SocialStrip } from "@/components/SocialStrip";
 import { Mail, Send } from "lucide-react";
 import { playClick, playSuccess } from "@/lib/sound";
 import { toast } from "sonner";
+import { pageSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/contact")({
-  head: () => ({
-    meta: [
-      { title: "Contact Us — Dynamon Universe" },
-      { name: "description", content: "Message the Dynamon Universe team about bugs, mod requests, or working together." },
-      { property: "og:title", content: "Contact Dynamon Universe" },
-      { property: "og:description", content: "Send us a message — a real person will read it." },
-    ],
+  head: () => pageSeoHead({
+    path: "/contact",
+    title: "Contact Dynamon Universe — Build Feedback & Community Support",
+    description: "Contact Dynamon Universe with build feedback, technical issues, requests, or community questions about Dynamons World editions.",
   }),
   component: Contact,
 });
