@@ -44,7 +44,8 @@ function Index() {
     <PageShell>
       {/* ── HERO ─────────────────────────────────────────── */}
       <section className="relative pt-6 sm:pt-12 lg:pt-16">
-        <div className="grid gap-12 lg:grid-cols-[1.25fr_1fr] lg:items-center">
+        <div className="hero-field">
+          <div className="grid gap-12 lg:grid-cols-[1.25fr_1fr] lg:items-center">
           <div>
             <motion.p
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={spring}
@@ -80,9 +81,9 @@ function Index() {
                 to="/mods"
                 onMouseDown={playClick}
                 onMouseEnter={playHover}
-                className="press group inline-flex items-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-semibold transition-colors hover:border-primary/50 hover:text-primary"
+                className="press group inline-flex items-center gap-2 rounded-xl border border-primary/45 bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_34px_-8px_oklch(0.66_0.21_318_/_0.8)]"
               >
-                See all mods
+                Explore the vault
                 <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </motion.div>
@@ -140,6 +141,7 @@ function Index() {
               </div>
             </Link>
           </motion.div>
+          </div>
         </div>
       </section>
 

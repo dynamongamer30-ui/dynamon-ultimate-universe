@@ -18,8 +18,12 @@ export function AuroraBackground() {
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const isMobile = window.innerWidth < 640;
-    const COUNT = reduced ? 0 : isMobile ? 34 : 90;
-    const LINK_DIST = isMobile ? 90 : 130;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    const lowPower = (navigator.hardwareConcurrency || 8) <= 4 || connection?.saveData === true;
+    // The rich particle field is a desktop signature, not a permanent tax on every device.
+    const shouldAnimate = !reduced && !isMobile && !lowPower;
+    const COUNT = shouldAnimate ? 56 : 0;
+    const LINK_DIST = 120;
 
     let width = 0,
       height = 0,
@@ -52,8 +56,10 @@ export function AuroraBackground() {
     const onLeave = () => {
       pointerActive = false;
     };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    window.addEventListener("pointerleave", onLeave);
+    if (shouldAnimate) {
+      window.addEventListener("pointermove", onMove, { passive: true });
+      window.addEventListener("pointerleave", onLeave);
+    }
 
     type Ember = {
       x: number;
@@ -61,7 +67,7 @@ export function AuroraBackground() {
       vx: number;
       vy: number;
       r: number;
-      /** 0 = deep ember red, 1 = bright amber */
+      /** 0 = deep violet, 1 = electric lilac */
       warm: number;
       baseA: number;
       /** excitement level raised by cursor proximity, decays */
@@ -79,9 +85,9 @@ export function AuroraBackground() {
     }));
 
     const emberColor = (warm: number, a: number) => {
-      // deep ember (hue 18) → hot amber (hue 40)
-      const hue = 18 + warm * 26;
-      return `hsla(${hue}, 95%, ${58 + warm * 10}%, ${a})`;
+      // royal violet (hue 275) → electric lilac (hue 320)
+      const hue = 275 + warm * 45;
+      return `hsla(${hue}, 92%, ${58 + warm * 12}%, ${a})`;
     };
 
     let raf = 0;
@@ -94,18 +100,18 @@ export function AuroraBackground() {
 
       ctx.clearRect(0, 0, width, height);
 
-      // ── Cursor heat glow (two layered radials for depth) ──
-      if (!reduced) {
+      // ── Cursor energy glow (two layered radials for depth) ──
+      if (shouldAnimate) {
         const glowA = pointerActive ? 0.1 : 0.05;
-        const g1 = ctx.createRadialGradient(px, py, 0, px, py, isMobile ? 220 : 380);
-        g1.addColorStop(0, `hsla(28, 95%, 58%, ${glowA})`);
-        g1.addColorStop(0.55, `hsla(20, 90%, 50%, ${glowA * 0.35})`);
+        const g1 = ctx.createRadialGradient(px, py, 0, px, py, 380);
+        g1.addColorStop(0, `hsla(292, 92%, 64%, ${glowA})`);
+        g1.addColorStop(0.55, `hsla(315, 88%, 56%, ${glowA * 0.35})`);
         g1.addColorStop(1, "transparent");
         ctx.fillStyle = g1;
         ctx.fillRect(0, 0, width, height);
 
         const g2 = ctx.createRadialGradient(px, py, 0, px, py, 120);
-        g2.addColorStop(0, `hsla(38, 100%, 65%, ${glowA * 0.6})`);
+        g2.addColorStop(0, `hsla(275, 100%, 74%, ${glowA * 0.6})`);
         g2.addColorStop(1, "transparent");
         ctx.fillStyle = g2;
         ctx.fillRect(0, 0, width, height);
@@ -115,7 +121,7 @@ export function AuroraBackground() {
       const bx = width * (0.85 + Math.sin(t * 0.7) * 0.03);
       const by = height * (0.9 + Math.cos(t * 0.5) * 0.03);
       const bg = ctx.createRadialGradient(bx, by, 0, bx, by, Math.max(width, 500) * 0.4);
-      bg.addColorStop(0, "hsla(24, 90%, 45%, 0.05)");
+      bg.addColorStop(0, "hsla(300, 82%, 50%, 0.07)");
       bg.addColorStop(1, "transparent");
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, width, height);
@@ -132,7 +138,7 @@ export function AuroraBackground() {
           if (d2 < LINK_DIST * LINK_DIST) {
             const d = Math.sqrt(d2);
             const alpha = (1 - d / LINK_DIST) * 0.07 * (1 + (a.heat + b.heat) * 2);
-            ctx.strokeStyle = `hsla(30, 90%, 60%, ${Math.min(alpha, 0.25)})`;
+            ctx.strokeStyle = `hsla(294, 90%, 68%, ${Math.min(alpha, 0.25)})`;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
@@ -189,15 +195,25 @@ export function AuroraBackground() {
       }
       ctx.shadowBlur = 0;
 
-      raf = requestAnimationFrame(loop);
+      raf = document.hidden ? 0 : requestAnimationFrame(loop);
     };
 
-    if (!reduced) {
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0;
+      } else if (shouldAnimate && !raf) {
+        raf = requestAnimationFrame(loop);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    if (shouldAnimate) {
       raf = requestAnimationFrame(loop);
     } else {
-      // static single frame for reduced motion: ambient glow only
+      // Static violet atmosphere for mobile, low-power, and reduced-motion contexts.
       const g = ctx.createRadialGradient(width / 2, 0, 0, width / 2, 0, height * 0.8);
-      g.addColorStop(0, "hsla(28, 90%, 50%, 0.07)");
+      g.addColorStop(0, "hsla(295, 88%, 56%, 0.12)");
       g.addColorStop(1, "transparent");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, width, height);
@@ -206,8 +222,11 @@ export function AuroraBackground() {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", setSize);
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerleave", onLeave);
+      if (shouldAnimate) {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerleave", onLeave);
+      }
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 

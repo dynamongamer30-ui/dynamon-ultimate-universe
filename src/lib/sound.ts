@@ -3,6 +3,7 @@
  * Zero external assets. Every interaction gets a precise, layered response.
  */
 let ctx: AudioContext | null = null;
+let lastHoverAt = 0;
 
 function getCtx() {
   if (typeof window === "undefined") return null;
@@ -88,6 +89,10 @@ export const playSoft = () => {
 
 /** Hover: near-subliminal high tick, no haptic (fires often) */
 export const playHover = () => {
+  const now = typeof performance === "undefined" ? Date.now() : performance.now();
+  // Hover feedback is atmospheric; cap it so dense card grids never sound noisy.
+  if (now - lastHoverAt < 110) return;
+  lastHoverAt = now;
   tone({ freq: 2400, duration: 0.018, type: "sine", gain: 0.006 });
 };
 
