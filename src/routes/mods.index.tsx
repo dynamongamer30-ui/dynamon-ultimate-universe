@@ -4,22 +4,21 @@ import { Search, TrendingUp, Clock, Heart, Download, Star, Sparkles } from "luci
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ThemedSelect } from "@/components/ThemedSelect";
-import { formatCount, elementTheme, type Element } from "@/lib/mods";
+import { formatCount, elementTheme, mods as catalogMods, type Element } from "@/lib/mods";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
-import { canonicalHead } from "@/lib/seo";
+import { itemListJsonLd, pageSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/mods/")({
   head: () => {
-    const { links, meta: canonicalMeta } = canonicalHead("/mods");
+    const { links, meta } = pageSeoHead({
+      path: "/mods",
+      title: "All Dynamons World Builds — Compare Features, Versions & Ratings",
+      description: "Browse Dynamons World builds by element, version, popularity, downloads, and community rating. Compare feature notes and choose the edition that fits your play style.",
+    });
     return {
-      meta: [
-        { title: "All Dynamons World Mod APK & Hack Downloads — Dynamon Gamer" },
-        { name: "description", content: "Every Dynamons World Mod APK and Hack build on Dynamon Gamer Space. Compare versions, features and community ratings." },
-        { property: "og:title", content: "All Dynamons World Mod APK & Hack Downloads — Dynamon Gamer" },
-        { property: "og:description", content: "Compare every Dynamons World Mod APK and Hack build on Dynamon Gamer Space." },
-        ...canonicalMeta,
-      ],
+      meta,
       links,
+      scripts: [itemListJsonLd(catalogMods.map((mod) => ({ name: mod.name, path: `/mods/${mod.slug}`, image: mod.image })))],
     };
   },
   component: ModsPage,

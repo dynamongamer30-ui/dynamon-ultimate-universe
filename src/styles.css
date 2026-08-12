@@ -2,48 +2,13 @@
 @source "../src";
 @import "tw-animate-css";
 
-/* General Sans — body/UI text font. Self-hosted from the uploaded files
-   (public/fonts/general-sans/), not a CDN. */
-@font-face {
-  font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-Extralight.woff2") format("woff2");
-  font-weight: 200;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-ExtralightItalic.woff2") format("woff2");
-  font-weight: 200;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-Light.woff2") format("woff2");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-LightItalic.woff2") format("woff2");
-  font-weight: 300;
-  font-style: italic;
-  font-display: swap;
-}
+/* Self-hosted typography: General Sans for readable UI, Aeonik Pro for display.
+   Only the weights used by the interface are declared to avoid unnecessary font requests. */
 @font-face {
   font-family: "General Sans";
   src: url("/fonts/general-sans/GeneralSans-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-Italic.woff2") format("woff2");
-  font-weight: 400;
-  font-style: italic;
   font-display: swap;
 }
 @font-face {
@@ -55,13 +20,6 @@
 }
 @font-face {
   font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-MediumItalic.woff2") format("woff2");
-  font-weight: 500;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "General Sans";
   src: url("/fonts/general-sans/GeneralSans-Semibold.woff2") format("woff2");
   font-weight: 600;
   font-style: normal;
@@ -69,68 +27,9 @@
 }
 @font-face {
   font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-SemiboldItalic.woff2") format("woff2");
-  font-weight: 600;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "General Sans";
   src: url("/fonts/general-sans/GeneralSans-Bold.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-BoldItalic.woff2") format("woff2");
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
-}
-
-/* Aeonik Pro — commercially licensed by Rachit for use on this site.
-   Self-hosted from public/fonts/aeonik-pro/. */
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-Air.woff") format("woff");
-  font-weight: 100;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-AirItalic.woff") format("woff");
-  font-weight: 100;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-Thin.woff") format("woff");
-  font-weight: 200;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-ThinItalic.woff") format("woff");
-  font-weight: 200;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-Light.woff") format("woff");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-LightItalic.woff") format("woff");
-  font-weight: 300;
-  font-style: italic;
   font-display: swap;
 }
 @font-face {
@@ -142,37 +41,9 @@
 }
 @font-face {
   font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-RegularItalic.woff") format("woff");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-Medium.woff") format("woff");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-MediumItalic.woff") format("woff");
-  font-weight: 500;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
   src: url("/fonts/aeonik-pro/AeonikPro-SemiBold.woff") format("woff");
   font-weight: 600;
   font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-SemiBoldItalic.woff") format("woff");
-  font-weight: 600;
-  font-style: italic;
   font-display: swap;
 }
 @font-face {
@@ -184,23 +55,9 @@
 }
 @font-face {
   font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-BoldItalic.woff") format("woff");
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
   src: url("/fonts/aeonik-pro/AeonikPro-Black.woff") format("woff");
   font-weight: 900;
   font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-BlackItalic.woff") format("woff");
-  font-weight: 900;
-  font-style: italic;
   font-display: swap;
 }
 
@@ -279,10 +136,17 @@
 .dark { color-scheme: dark; }
 
 * { border-color: var(--border); }
-html, body { background: var(--background); color: var(--foreground); }
+html {
+  background: var(--background);
+  color: var(--foreground);
+  scroll-behavior: smooth;
+  font-synthesis: none;
+}
 body {
+  min-width: 320px;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   background-image: var(--gradient-hero);
   background-attachment: scroll;
 }
@@ -342,10 +206,11 @@ h1, h2, h3, h4, .font-display {
 /* Interactive press physics — used on all buttons/cards */
 @utility press {
   transform: translateZ(0);
-  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), filter 0.16s ease;
-  will-change: transform;
+  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), filter 0.16s ease, box-shadow 0.16s ease;
 }
-.press:hover { transform: translateY(-1px); }
+@media (hover: hover) and (pointer: fine) {
+  .press:hover { transform: translateY(-1px); will-change: transform; }
+}
 .press:active { transform: translateY(0) scale(0.965); }
 
 /* Edge highlight: hairline top light on cards for machined feel,
@@ -392,8 +257,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 .animate-float { animation: float 7s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
-.animate-ticker { animation: ticker 30s linear infinite; }
+.animate-ticker { animation: ticker 34s linear infinite; }
 .animate-ticker:hover { animation-play-state: paused; }
+@media (max-width: 767px), (prefers-reduced-data: reduce) {
+  .animate-ticker { animation-play-state: paused; transform: none; width: 100%; white-space: normal; justify-content: center; }
+  .animate-ticker span:nth-child(n + 5) { display: none; }
+}
 .shimmer {
   background: linear-gradient(90deg, transparent, oklch(0.67 0.21 318 / 0.2), transparent);
   background-size: 200% 100%;
@@ -411,7 +280,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .animate-float, .animate-pulse-glow, .animate-ticker, .shimmer { animation: none; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
 
 /* AuroraCursor ring — border-color/box-shadow toggle only on hover-state

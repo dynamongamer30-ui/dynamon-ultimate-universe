@@ -141,7 +141,7 @@ function TrainerRankLadder() {
 
 export const Route = createFileRoute("/achievements")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Achievements — Dynamon Universe" }] }),
+  head: () => ({ meta: [{ title: "Achievements — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: AchievementsPage,
 });
 

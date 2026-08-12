@@ -70,7 +70,8 @@ export function ModCard({ mod, index = 0, featured = false }: { mod: Mod; index?
           style={{ background: theme.gradient }}
         />
         <img
-          src={mod.image} alt={mod.name} loading="lazy" width={1024} height={1024}
+          src={mod.image} alt={mod.name} loading="lazy" decoding="async" width={1024} height={1024}
+          sizes="(min-width: 640px) 50vw, 100vw"
           className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
         />
         <div className="absolute inset-x-0 bottom-0 z-10 h-1/2 bg-gradient-to-t from-card to-transparent" />

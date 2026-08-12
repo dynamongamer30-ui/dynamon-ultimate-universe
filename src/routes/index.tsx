@@ -4,30 +4,47 @@ import { Shield, Zap, Users, ChevronRight, Star, Download, TrendingUp, ArrowRigh
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ForYouRail } from "@/components/ForYouRail";
-import { formatCount, elementTheme } from "@/lib/mods";
+import { formatCount, elementTheme, mods as catalogMods } from "@/lib/mods";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import heroImg from "@/assets/hero.webp";
 import { playClick, playHover } from "@/lib/sound";
-import { canonicalHead } from "@/lib/seo";
+import { faqPageJsonLd, itemListJsonLd, pageSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
   head: () => {
-    const { links, meta: canonicalMeta } = canonicalHead("/");
+    const { links, meta } = pageSeoHead({
+      path: "/",
+      title: "Dynamons World Mod APK Builds, Guides & Rewards | Dynamon Universe",
+      description: "Compare Dynamons World mod APK builds by features, version, element, ratings, and community signals. Explore release notes, rewards, and guided unlock access.",
+    });
     return {
-      meta: [
-        { title: "Dynamon Gamer — Dynamons World Mod APK & Hack Downloads" },
-        { name: "description", content: "Dynamon Gamer Space: the home of Dynamons World Mod APK and Hack builds. Free downloads, community-rated, updated weekly." },
-        { property: "og:title", content: "Dynamon Gamer — Dynamons World Mod APK & Hack Downloads" },
-        { property: "og:description", content: "Free Dynamons World Mod APK and Hack downloads — community-rated, updated weekly. Only on Dynamon Gamer Space." },
-        ...canonicalMeta,
-      ],
+      meta,
       links,
+      scripts: [
+        faqPageJsonLd(FAQ_ITEMS),
+        itemListJsonLd(catalogMods.map((mod) => ({ name: mod.name, path: `/mods/${mod.slug}`, image: mod.image }))),
+      ],
     };
   },
   component: Index,
 });
 
 const spring = { type: "spring" as const, stiffness: 120, damping: 20 };
+
+const FAQ_ITEMS = [
+  {
+    question: "How do I choose the right Dynamons World build?",
+    answer: "Start with the feature list and version number. Choose a build that matches the way you want to play, whether that is collecting, competitive battles, exploration, or a specific element focus.",
+  },
+  {
+    question: "Where can I see what changed in a release?",
+    answer: "Every build page includes a changelog tab, a version label, and a concise feature overview so you can compare editions before starting the unlock flow.",
+  },
+  {
+    question: "Why do some download actions require sign-in?",
+    answer: "Sign-in keeps community features, saved builds, rewards, and device-bound download access connected to one trainer profile.",
+  },
+];
 
 function Index() {
   const { mods } = useSiteSettings();
@@ -61,16 +78,16 @@ function Index() {
             >
               Dynamons World
               <br />
-              <span className="text-gradient">Mod APK & Hack.</span>
+              <span className="text-gradient">Builds, guides & rewards.</span>
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.12 }}
               className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg text-pretty"
             >
-              Dynamons World Mod APK and Hack builds from Dynamon Gamer, made and
-              tested by fans. Free to download, rated by real players, and
-              updated every week. Only Dynamons here — nothing else to scroll past.
+              Explore a focused collection of Dynamons World builds with clear feature notes,
+              version details, and community signals. Find the edition that fits your play style,
+              then unlock it through a simple, guided flow.
             </motion.p>
 
             <motion.div
@@ -83,7 +100,7 @@ function Index() {
                 onMouseEnter={playHover}
                 className="press group inline-flex items-center gap-2 rounded-xl border border-primary/45 bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_34px_-8px_oklch(0.66_0.21_318_/_0.8)]"
               >
-                Explore the vault
+                Browse every build
                 <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </motion.div>
@@ -93,9 +110,9 @@ function Index() {
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.24 }}
               className="mt-10 flex divide-x divide-border border-y border-border"
             >
-              <HeroStat value={`${formatCount(totalDownloads)}+`} label="Downloads" />
-              <HeroStat value={`${mods.length}`} label="Editions" />
-              <HeroStat value={`v${latestVersion}`} label="Latest build" />
+              <HeroStat value={`${formatCount(totalDownloads)}+`} label="Community downloads" />
+              <HeroStat value={`${mods.length}`} label="Curated editions" />
+              <HeroStat value={`v${latestVersion}`} label="Latest release" />
             </motion.div>
           </div>
 
@@ -125,7 +142,7 @@ function Index() {
               <div className="relative p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-primary-foreground">
-                    <TrendingUp className="h-3 w-3" /> No.1 this week
+                    <TrendingUp className="h-3 w-3" /> Featured build
                   </div>
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-gold">
                     <Star className="h-3.5 w-3.5 fill-gold" /> {top.baseRating.toFixed(1)}
@@ -159,10 +176,10 @@ function Index() {
 
       {/* ── FEATURE STRIP ────────────────────────────────── */}
       <section className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3">
-        {[
-          { Icon: Shield, title: "Clean injection", text: "No ads, no popups, no extras. Just the game, better." },
-          { Icon: Zap, title: "Weekly drops", text: "Mods refreshed within days of every official update." },
-          { Icon: Users, title: "Community-first", text: "Real ratings and reviews from real trainers." },
+          {[
+          { Icon: Shield, title: "Clear build notes", text: "See the features, version, and gameplay focus before you choose an edition." },
+          { Icon: Zap, title: "Release-aware", text: "Track active editions and recent updates without hunting through unrelated pages." },
+          { Icon: Users, title: "Community signal", text: "Use ratings, favorites, and trainer feedback to make a faster, better-informed choice." },
         ].map(({ Icon, title, text }, i) => (
           <motion.div
             key={title}
@@ -188,15 +205,15 @@ function Index() {
               The vault
             </p>
             <h2 className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-5xl">
-              Most popular
-              <br className="sm:hidden" /> this week
+              Start with the
+              <br className="sm:hidden" /> most played builds
             </h2>
           </div>
           <Link
             to="/mods" onMouseDown={playClick} onMouseEnter={playHover}
             className="group hidden shrink-0 items-center gap-2 text-sm font-bold uppercase tracking-wider text-primary sm:inline-flex"
           >
-            View all
+            Compare builds
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
@@ -212,10 +229,43 @@ function Index() {
             to="/mods" onMouseDown={playClick}
             className="press flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-bold uppercase tracking-wider"
           >
-            View all mods <ArrowRight className="h-4 w-4" />
+            Compare all builds <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
+
+      <motion.section
+        initial={{ opacity: 0, y: 18 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ ...spring, delay: 0.04 }}
+        className="mt-20 grid gap-10 border-t border-border pt-16 lg:grid-cols-[0.75fr_1.25fr] lg:items-start"
+      >
+        <div>
+          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
+            <span className="inline-block h-px w-8 bg-primary" aria-hidden />
+            Before you choose
+          </p>
+          <h2 className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-4xl">
+            Questions, answered.
+          </h2>
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
+            The fastest route to the right build is knowing what it changes, when it was updated,
+            and how it fits your play style.
+          </p>
+        </div>
+        <div className="grid gap-3">
+          {FAQ_ITEMS.map((item) => (
+            <details key={item.question} className="group rounded-2xl glass px-5 py-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-bold tracking-tight marker:content-none">
+                {item.question}
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-primary/30 text-primary transition-transform duration-300 group-open:rotate-45" aria-hidden>+</span>
+              </summary>
+              <p className="max-w-2xl pt-3 text-sm leading-relaxed text-muted-foreground">{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </motion.section>
 
       <ForYouRail />
     </PageShell>

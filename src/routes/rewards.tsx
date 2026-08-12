@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { playClick } from "@/lib/sound";
 import { toast } from "sonner";
+import { pageSeoHead } from "@/lib/seo";
 
 // These reward RPCs aren't in the generated Supabase types yet; call loosely.
 // IMPORTANT: must .bind(supabase) or calling this later throws
@@ -20,13 +21,10 @@ const looseRpc = supabase.rpc.bind(supabase) as unknown as (
 type DailyKey = { id: string; key: string; claimed: boolean; expires_at: string };
 
 export const Route = createFileRoute("/rewards")({
-  head: () => ({
-    meta: [
-      { title: "Daily Rewards — Dynamon Universe" },
-      { name: "description", content: "Every day at midnight IST we give away free Daily Keys and Phoenix Passes. Here’s how the Dynamon Universe daily rewards work." },
-      { property: "og:title", content: "Daily Rewards — Dynamon Universe" },
-      { property: "og:description", content: "Free Daily Keys and Phoenix Passes, drawn every day at midnight IST." },
-    ],
+  head: () => pageSeoHead({
+    path: "/rewards",
+    title: "Dynamon Universe Daily Rewards — Keys, Passes & Trainer Progress",
+    description: "Learn how Dynamon Universe daily rewards, trainer progress, keys, and Phoenix Passes work, including the steps to claim available rewards.",
   }),
   component: Rewards,
 });

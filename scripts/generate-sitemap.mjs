@@ -15,8 +15,6 @@ const slugs = [...modsSource.matchAll(/slug:\s*"([^"]+)"/g)].map((m) => m[1]);
 const staticPages = [
   { path: "/", changefreq: "daily", priority: "1.0" },
   { path: "/mods", changefreq: "daily", priority: "0.9" },
-  { path: "/achievements", changefreq: "weekly", priority: "0.5" },
-  { path: "/generator", changefreq: "weekly", priority: "0.6" },
   { path: "/rewards", changefreq: "weekly", priority: "0.5" },
   { path: "/about", changefreq: "monthly", priority: "0.3" },
   { path: "/contact", changefreq: "monthly", priority: "0.3" },

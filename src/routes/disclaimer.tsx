@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/PageShell";
+import { pageSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/disclaimer")({
-  head: () => ({
-    meta: [
-      { title: "Disclaimer & Safety — Dynamon Universe" },
-      { name: "description", content: "Important legal, safety and DMCA information for Dynamon Universe — a fan-made Dynamons World community hub." },
-    ],
+  head: () => pageSeoHead({
+    path: "/disclaimer",
+    title: "Dynamon Universe Disclaimer, Safety, Privacy & DMCA Information",
+    description: "Read Dynamon Universe legal, safety, privacy, and DMCA information for this fan-made Dynamons World community hub.",
   }),
   component: Disclaimer,
 });
