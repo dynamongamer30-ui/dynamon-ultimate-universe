@@ -1,6 +1,6 @@
 export const SITE_URL = "https://dynamongamer.space";
 export const SITE_NAME = "Dynamon Universe";
-export const DEFAULT_SOCIAL_IMAGE = `${SITE_URL}/apple-icon.png`;
+export const DEFAULT_SOCIAL_IMAGE = `${SITE_URL}/dynamon-gamer-avatar.png`;
 
 export type SeoPage = {
   path: string;
