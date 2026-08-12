@@ -58,6 +58,72 @@ function parseDurationToSeconds(mode) {
   }
 }
 
+const APPROVED_PUBLIC_HOSTS = new Set([
+  "dynamongamer.space",
+  "www.dynamongamer.space",
+  "generator.dynamongamer30.workers.dev",
+  "youtube.com",
+  "www.youtube.com",
+  "youtu.be",
+  "t.me",
+  "telegram.me",
+  "whatsapp.com",
+  "www.whatsapp.com",
+  "instagram.com",
+  "www.instagram.com",
+]);
+
+function safePublicUrl(value) {
+  try {
+    const url = new URL(String(value || "").trim());
+    return url.protocol === "https:" && APPROVED_PUBLIC_HOSTS.has(url.hostname.toLowerCase())
+      ? url.toString()
+      : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function text(value, fallback, limit) {
+  const result = String(value == null ? fallback : value).trim();
+  return result.slice(0, limit || 400);
+}
+
+function publicAppConfig(config) {
+  const cfg = config && typeof config === "object" ? config : {};
+  const update = cfg.Update && typeof cfg.Update === "object" ? cfg.Update : {};
+  const links = cfg.Links && typeof cfg.Links === "object" ? cfg.Links : {};
+  const tutorial = cfg.Tutorial && typeof cfg.Tutorial === "object" ? cfg.Tutorial : {};
+  const tutorialId = text(tutorial.videoId, "", 64);
+  const tutorialUrl = safePublicUrl(cfg.TutorialUrl)
+    || (tutorialId ? safePublicUrl("https://youtu.be/" + encodeURIComponent(tutorialId)) : "");
+  const updateUrl = safePublicUrl(update.UpdateUrl);
+
+  return {
+    AppVersion: Number.isFinite(Number(cfg.AppVersion)) ? Number(cfg.AppVersion) : 0,
+    Maintenance: Boolean(cfg.Maintenance),
+    TutorialUrl: tutorialUrl,
+    Update: {
+      Enabled: Boolean(update.Enabled) && Boolean(updateUrl),
+      VersionCode: Number.isFinite(Number(update.VersionCode)) ? Number(update.VersionCode) : 0,
+      VersionName: text(update.VersionName, "", 40),
+      Title: text(update.Title, "Update Available", 120),
+      Subtitle: text(update.Subtitle, "A new version is available.", 180),
+      WhatsNew: text(update.WhatsNew, "Bug fixes and improvements.", 1000),
+      BtnText: text(update.BtnText, "UPDATE", 40),
+      UpdateUrl: updateUrl,
+    },
+    Links: {
+      Info: safePublicUrl(links.Info),
+      Admin: safePublicUrl(links.Admin),
+      Youtube: safePublicUrl(links.Youtube),
+      Telegram: safePublicUrl(links.Telegram),
+      Whatsapp: safePublicUrl(links.Whatsapp),
+      Instagram: safePublicUrl(links.Instagram),
+    },
+  };
+}
+
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
@@ -260,12 +326,12 @@ export default {
         return json({ ok: true });
       }
 
-      // ---------- app: read public config (maintenance/update/etc.) ----------
-      // Returns the merged Config object (each app_config row = one Config child),
-      // exactly like the old Firebase /Config.json read the app relied on.
+      // ---------- app: read allowlisted public config ----------
+      // Configuration storage also contains internal and third-party operational
+      // values. Never return the raw Config object to an unauthenticated client.
       if (path === "/config" && req.method === "GET") {
         const cfg = (await fbGet("Config")) || {};
-        return json(cfg);
+        return json(publicAppConfig(cfg));
       }
 
       // ---------- app: verify + activate a key (server-side, atomic bind) ----------
@@ -392,7 +458,7 @@ export default {
 
       return json({ error: "not found" }, 404);
     } catch (e) {
-      return json({ error: "server", detail: String(e) }, 500);
+      return json({ error: "server" }, 500);
     }
   },
 };
