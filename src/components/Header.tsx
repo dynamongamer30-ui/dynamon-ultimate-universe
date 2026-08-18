@@ -46,7 +46,7 @@ export function Header() {
   const avatarUrl = profile?.custom_avatar_url || profile?.avatar_url || undefined;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 backdrop-blur-xl bg-background/95">
+    <header className="sticky top-0 z-50 glass-l2 border-b border-border/60">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
         <Link to="/" onMouseDown={playClick} className="flex items-center gap-2 min-w-0">
           <motion.span
@@ -190,7 +190,7 @@ export function Header() {
         {searchOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden border-t border-border/60 bg-background/95"
+            className="glass-l2 overflow-hidden border-t border-border/60"
           >
             <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
               <div className="relative">
@@ -230,7 +230,7 @@ export function Header() {
       {open && (
         <motion.div
           initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-          className="border-t border-border/60 bg-background/95 lg:hidden"
+          className="glass-l2 border-t border-border/60 lg:hidden"
         >
           <div className="flex flex-col gap-1 px-4 py-3">
             {nav.map((n) => (

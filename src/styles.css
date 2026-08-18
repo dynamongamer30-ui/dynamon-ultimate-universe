@@ -131,6 +131,23 @@
   --shadow-glow: 0 12px 40px -14px oklch(0.57 0.23 296 / 0.58);
   --shadow-card: 0 12px 36px -16px oklch(0 0 0 / 0.76);
   --shadow-violet: 0 12px 38px -14px oklch(0.66 0.21 318 / 0.42);
+
+  /* Translucent material system: L1 cards, L2 chrome, L3 command surfaces. */
+  --glass-l1-bg: rgba(255, 255, 255, 0.08);
+  --glass-l2-bg: rgba(255, 255, 255, 0.11);
+  --glass-l3-bg: rgba(255, 255, 255, 0.14);
+  --glass-light-l1-bg: rgba(255, 255, 255, 0.55);
+  --glass-light-l2-bg: rgba(255, 255, 255, 0.58);
+  --glass-light-l3-bg: rgba(255, 255, 255, 0.61);
+  --glass-border-top: rgba(255, 255, 255, 0.22);
+  --glass-border-bottom: rgba(0, 0, 0, 0.18);
+  --glass-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 .04'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+}
+
+.light {
+  --glass-l1-bg: var(--glass-light-l1-bg);
+  --glass-l2-bg: var(--glass-light-l2-bg);
+  --glass-l3-bg: var(--glass-light-l3-bg);
 }
 
 .dark { color-scheme: dark; }
@@ -149,6 +166,34 @@ body {
   text-rendering: optimizeLegibility;
   background-image: var(--gradient-hero);
   background-attachment: scroll;
+}
+
+/* Keeps glass readable on every route, including pages with sparse content. */
+.app-shell {
+  position: relative;
+  isolation: isolate;
+}
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.72;
+  background:
+    radial-gradient(42rem 28rem at 12% 8%, oklch(0.42 0.2 302 / 0.2), transparent 70%),
+    radial-gradient(38rem 30rem at 88% 20%, oklch(0.42 0.18 328 / 0.16), transparent 72%),
+    radial-gradient(34rem 24rem at 52% 92%, oklch(0.38 0.16 278 / 0.13), transparent 74%);
+}
+.app-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: var(--glass-noise);
+  background-size: 128px 128px;
 }
 @media (min-width: 1024px) {
   body { background-attachment: fixed; }
@@ -189,15 +234,95 @@ h1, h2, h3, h4, .font-display {
   color: transparent;
 }
 
-/* Redefined: sharp premium surface (was heavy glassmorphism) */
-@utility glass {
-  background: color-mix(in oklab, var(--card) 92%, transparent);
-  border: 1px solid oklch(0.32 0.03 295 / 55%);
-  transition: box-shadow 0.35s ease, border-color 0.35s ease;
+/* Translucent material primitives. L1 is the default card surface; L2 is
+   reserved for chrome and sticky bars; L3 is for modal/command surfaces. */
+.glass,
+.glass-l1,
+.glass-l2,
+.glass-l3 {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--glass-l1-bg);
+  background-image: var(--glass-noise), linear-gradient(135deg, rgba(255,255,255,0.035), rgba(0,0,0,0.035));
+  background-size: 128px 128px, auto;
+  background-blend-mode: soft-light, normal;
+  border: 1px solid color-mix(in srgb, var(--glass-border-top) 55%, var(--glass-border-bottom));
+  box-shadow: var(--shadow-card);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  transition: box-shadow 180ms ease-out, border-color 180ms ease-out, background-color 180ms ease-out;
 }
-.glass:hover {
-  border-color: oklch(0.54 0.22 296 / 45%);
-  box-shadow: 0 0 28px -8px oklch(0.54 0.22 296 / 0.35);
+.glass-l2 {
+  background-color: var(--glass-l2-bg);
+  border-radius: 16px;
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+.glass-l3 {
+  background-color: var(--glass-l3-bg);
+  border-radius: 16px;
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+.glass,
+.glass-l1 { border-radius: 12px; }
+.glass::after,
+.glass-l1::after,
+.glass-l2::after,
+.glass-l3::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--glass-border-top), transparent 38%, transparent 62%, var(--glass-border-bottom));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.glass:hover,
+.glass-l1:hover,
+.glass-l2:hover,
+.glass-l3:hover,
+.glass-interactive:hover {
+  border-color: color-mix(in srgb, var(--primary) 52%, var(--glass-border-top));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 0 28px -8px oklch(0.54 0.22 296 / 0.35);
+}
+
+/* Existing utility surfaces inherit the same translucent material treatment
+   without requiring changes to feature components or state logic. */
+[class*="bg-card"],
+[class*="bg-popover"],
+[class*="bg-background/"] {
+  background-color: var(--glass-l1-bg) !important;
+  background-image: var(--glass-noise), linear-gradient(135deg, rgba(255,255,255,0.025), rgba(0,0,0,0.025));
+  background-size: 128px 128px, auto;
+  background-blend-mode: soft-light, normal;
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  border-color: color-mix(in srgb, var(--glass-border-top) 50%, var(--glass-border-bottom));
+}
+[class*="bg-popover"],
+[data-radix-dialog-content],
+[role="dialog"] {
+  background-color: var(--glass-l3-bg) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+@supports not ((backdrop-filter: blur(1px))) {
+  .glass, .glass-l1, [class*="bg-card"], [class*="bg-background/"] {
+    background: rgba(19, 14, 31, 0.92) !important;
+    background-image: none !important;
+  }
+  .glass-l2 { background: rgba(24, 18, 39, 0.94) !important; }
+  .glass-l3, [class*="bg-popover"], [role="dialog"] { background: rgba(30, 22, 48, 0.96) !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass, .glass-l1, .glass-l2, .glass-l3, .glass-interactive { transition: none !important; }
 }
 @utility glow-primary { box-shadow: var(--shadow-glow); }
 @utility glow-violet { box-shadow: var(--shadow-violet); }
