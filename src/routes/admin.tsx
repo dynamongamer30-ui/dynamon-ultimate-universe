@@ -168,7 +168,7 @@ function AdminPage() {
                   <span className="font-bold uppercase tracking-widest text-amber-300">{r.reason}</span>
                   <span className="text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{r.target_type} · <code className="text-[10px]">{r.target_id.slice(0, 8)}</code></p>
+                <p className="mt-1 text-xs text-muted-foreground">{r.target_type} · <code className="text-xs">{r.target_id.slice(0, 8)}</code></p>
                 {r.details && <p className="mt-2 whitespace-pre-line text-sm">{r.details}</p>}
                 {r.status === "open" && (
                   <div className="mt-3 flex gap-2">

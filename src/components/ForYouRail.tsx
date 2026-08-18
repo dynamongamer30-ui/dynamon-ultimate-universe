@@ -73,7 +73,7 @@ export function ForYouRail() {
                 style={{ boxShadow: t.glow }}>
                 <img src={s.mod.image} alt={s.mod.name} loading="lazy" className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-105" />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card to-transparent p-3">
-                  <p className="text-[10px] uppercase tracking-widest text-primary">{t.label}</p>
+                  <p className="text-xs uppercase tracking-widest text-primary">{t.label}</p>
                   <p className="font-display text-sm font-bold leading-tight">{s.mod.name}</p>
                 </div>
               </Link>

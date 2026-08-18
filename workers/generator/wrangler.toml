@@ -1,6 +1,6 @@
 name = "generator"
 main = "src/index.js"
-compatibility_date = "2024-11-01"
+compatibility_date = "2026-05-15"
 
 # ---------------------------------------------------------------------------
 # Secrets (set with `wrangler secret put <NAME>` — do NOT commit real values):

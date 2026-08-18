@@ -154,7 +154,7 @@ export function ModInteractions({ slug }: { slug: string }) {
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold">{c.name}</p>
-                        <p className="text-[11px] text-muted-foreground">{new Date(c.at).toLocaleDateString()}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(c.at).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="flex shrink-0 gap-0.5">

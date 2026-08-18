@@ -84,7 +84,7 @@ function ModsPage() {
         <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-6xl">
           All Dynamon mods
         </h1>
-        <p className="mt-4 max-w-2xl leading-relaxed text-muted-foreground text-pretty">
+        <p className="page-copy mt-4 max-w-2xl leading-relaxed text-muted-foreground text-pretty">
           Every build below is fan-made and exclusively for Dynamons World. {formatCount(totalDownloads)}+ downloads
           across all builds.
         </p>
@@ -118,7 +118,7 @@ function ModsPage() {
         {/* Advanced filters */}
         <div className="edge-light mt-5 space-y-3 rounded-xl border border-border bg-card p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+            <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <Sparkles className="h-3 w-3" /> Element
             </span>
             {ALL_ELEMENTS.map((el) => {
@@ -127,7 +127,7 @@ function ModsPage() {
               return (
                 <button
                   key={el} onClick={() => toggleElement(el)}
-                  className={`rounded-md border px-3 py-1 text-[11px] font-bold uppercase tracking-widest transition-colors ${active ? t.chip : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
+                  className={`rounded-md border px-3 py-1 text-xs font-bold uppercase tracking-widest transition-colors ${active ? t.chip : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
                 >
                   {t.label}
                 </button>
@@ -135,28 +135,28 @@ function ModsPage() {
             })}
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+            <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <Star className="h-3 w-3" /> Min rating
             </span>
             {[0, 4, 4.5, 4.7, 4.9].map((r) => (
               <button
                 key={r} onClick={() => setMinRating(r)}
-                className={`rounded-md border px-3 py-1 text-[11px] font-semibold transition-colors ${minRating === r ? "border-amber-400/50 bg-amber-500/10 text-amber-300" : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
+                className={`rounded-md border px-3 py-1 text-xs font-semibold transition-colors ${minRating === r ? "border-amber-400/50 bg-amber-500/10 text-amber-300" : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
               >
                 {r === 0 ? "Any" : `${r}+`}
               </button>
             ))}
-            <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Version</span>
+            <span className="ml-2 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Version</span>
             <ThemedSelect
               value={version}
               onValueChange={setVersion}
               ariaLabel="Filter by version"
-              className="h-auto w-auto rounded-md bg-secondary px-3 py-1 text-[11px] font-semibold"
+              className="h-auto w-auto rounded-md bg-secondary px-3 py-1 text-xs font-semibold"
               options={[{ value: "all", label: "All" }, ...versions.map((v) => ({ value: v, label: `v${v}` }))]}
             />
             {activeFilters > 0 && (
               <button onClick={() => { setElements(new Set()); setMinRating(0); setVersion("all"); }}
-                className="ml-auto rounded-md px-3 py-1 text-[11px] font-semibold text-rose-300 hover:text-rose-200">
+                className="ml-auto rounded-md px-3 py-1 text-xs font-semibold text-rose-300 hover:text-rose-200">
                 Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}
               </button>
             )}
@@ -169,7 +169,7 @@ function ModsPage() {
           No mods match your filters.
         </div>
       ) : (
-        <section className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <section className="mods-grid mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((m, i) => <ModCard key={m.slug} mod={m} index={i} featured={i === 0 && sort !== "newest"} />)}
         </section>
       )}

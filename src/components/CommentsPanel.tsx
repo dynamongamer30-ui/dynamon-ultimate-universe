@@ -214,7 +214,7 @@ export function CommentsPanel({
                 <p className="truncate text-sm font-semibold">{c.author?.display_name ?? "Trainer"}</p>
                 {c.author?.is_owner && <OwnerBadge size="xs" />}
               </div>
-              <p className="truncate text-[11px] text-muted-foreground">
+              <p className="truncate text-xs text-muted-foreground">
                 @{c.author?.username ?? "trainer"} · {new Date(c.created_at).toLocaleDateString()}
               </p>
             </div>

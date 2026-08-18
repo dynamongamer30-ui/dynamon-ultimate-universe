@@ -2,8 +2,8 @@
 @source "../src";
 @import "tw-animate-css";
 
-/* Self-hosted typography: General Sans for readable UI, Aeonik Pro for display.
-   Only the weights used by the interface are declared to avoid unnecessary font requests. */
+/* One expressive display family and one readable text family. Only four font
+   files are loaded; browser synthesis covers intermediate UI weights. */
 @font-face {
   font-family: "General Sans";
   src: url("/fonts/general-sans/GeneralSans-Regular.woff2") format("woff2");
@@ -13,22 +13,8 @@
 }
 @font-face {
   font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-Medium.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "General Sans";
   src: url("/fonts/general-sans/GeneralSans-Semibold.woff2") format("woff2");
   font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-Bold.woff2") format("woff2");
-  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -41,24 +27,28 @@
 }
 @font-face {
   font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-SemiBold.woff") format("woff");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
   src: url("/fonts/aeonik-pro/AeonikPro-Bold.woff") format("woff");
-  font-weight: 700;
+  font-weight: 700 900;
   font-style: normal;
   font-display: swap;
 }
+
+/* Metric-compatible fallbacks reduce layout shift during font swap. */
 @font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-Black.woff") format("woff");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
+  font-family: "General Sans Fallback";
+  src: local("Arial");
+  size-adjust: 97%;
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Aeonik Pro Fallback";
+  src: local("Arial");
+  size-adjust: 93%;
+  ascent-override: 88%;
+  descent-override: 20%;
+  line-gap-override: 0%;
 }
 
 #lovable-badge { display: none !important; }
@@ -92,13 +82,38 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-gold: var(--gold);
-  --font-display: "Aeonik Pro", ui-sans-serif, system-ui;
-  --font-sans: "General Sans", ui-sans-serif, system-ui;
-  --font-aeonik: "Aeonik Pro", ui-sans-serif, system-ui;
+  --font-display: "Aeonik Pro", "Aeonik Pro Fallback", ui-sans-serif, system-ui;
+  --font-sans: "General Sans", "General Sans Fallback", ui-sans-serif, system-ui;
+  --font-aeonik: "Aeonik Pro", "Aeonik Pro Fallback", ui-sans-serif, system-ui;
+  --text-xs: var(--type-0);
+  --text-sm: var(--type-1);
+  --text-base: var(--type-2);
+  --text-lg: var(--type-3);
+  --text-xl: var(--type-4);
+  --text-2xl: var(--type-5);
+  --text-3xl: var(--type-5);
+  --text-4xl: var(--type-6);
+  --text-5xl: var(--type-6);
+  --text-6xl: var(--type-7);
+  --text-7xl: var(--type-7);
+  --leading-none: 1.2;
+  --leading-tight: 1.2;
+  --leading-relaxed: 1.6;
+  --leading-loose: 1.6;
 }
 
 :root {
   --radius: 0.75rem;
+
+  /* Fluid modular scale: 12 / 15 / 18 / 22 / 27 / 34 / 42px. */
+  --type-0: clamp(0.75rem, 0.72rem + 0.1vw, 0.8125rem);
+  --type-1: clamp(0.9375rem, 0.88rem + 0.12vw, 1rem);
+  --type-2: clamp(1rem, 0.94rem + 0.18vw, 1.125rem);
+  --type-3: clamp(1.125rem, 1.02rem + 0.34vw, 1.375rem);
+  --type-4: clamp(1.375rem, 1.16rem + 0.7vw, 1.6875rem);
+  --type-5: clamp(1.6875rem, 1.36rem + 1.25vw, 2.125rem);
+  --type-6: clamp(2.125rem, 1.6rem + 2vw, 2.625rem);
+  --type-7: clamp(2.625rem, 1.94rem + 2.65vw, 3.25rem);
 
   /* ── Royal Void: near-black violet base, royal amethyst primary, gold secondary ── */
   --background: oklch(0.12 0.02 295);
@@ -464,4 +479,85 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .press, .press:hover, .press:active { transform: none; transition: none; }
+}
+
+
+/* Typography contract: the scale above is the single source of truth for
+   headings, body copy, controls, labels, and prose measure. */
+body {
+  font-size: var(--type-2);
+  line-height: 1.6;
+}
+button,
+input,
+select,
+textarea,
+option,
+[role="button"] {
+  font-family: var(--font-sans);
+  line-height: 1.45;
+}
+input,
+select,
+textarea {
+  font-size: 1rem;
+}
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+h1,
+h2 {
+  font-weight: 700;
+}
+h3,
+h4 {
+  font-weight: 600;
+}
+@supports (text-wrap: pretty) {
+  p {
+    text-wrap: pretty;
+  }
+}
+.font-display,
+.font-display h1,
+.font-display h2,
+.font-display h3,
+.font-display h4 {
+  letter-spacing: -0.02em;
+}
+[class*="tracking-[0.3em]"],
+[class*="tracking-widest"],
+[class*="tracking-[0.2em]"],
+[class*="tracking-[0.15em]"] {
+  letter-spacing: 0.06em;
+}
+.prose-measure,
+.prose-measure p,
+.prose-measure li {
+  max-width: 68ch;
+}
+.page-copy {
+  max-width: 68ch;
+  line-height: 1.6;
+}
+
+/* Consistent card rhythm and stable action alignment. */
+.mods-grid {
+  align-items: stretch;
+}
+.mods-grid > * {
+  min-width: 0;
+}
+@media (min-width: 1280px) {
+  .mods-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  h1, h2, h3 { text-wrap: initial; }
 }

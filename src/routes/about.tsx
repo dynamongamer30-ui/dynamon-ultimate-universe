@@ -21,7 +21,7 @@ function About() {
           Our story
         </p>
           <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl">A focused hub for Dynamons World builds.</h1>
-          <p className="mt-5 max-w-2xl leading-relaxed text-muted-foreground text-pretty">
+          <p className="page-copy mt-5 max-w-2xl leading-relaxed text-muted-foreground text-pretty">
           Dynamon Universe is built for players who want less noise and clearer choices. Every edition has a dedicated
           page with its version, headline features, changelog, community signals, and a guided unlock path. The goal is
           simple: help trainers compare Dynamons World builds without bouncing through unrelated pages.

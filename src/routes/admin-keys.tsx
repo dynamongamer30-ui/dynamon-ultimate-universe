@@ -409,9 +409,9 @@ function KeyCard({ k, selected, onToggle }: { k: ValidKey; selected: boolean; on
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <button onDoubleClick={copy} className="truncate font-mono text-sm font-semibold text-primary" title="Double-click to copy">{k.key}</button>
-            <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${status.cls}`}>{status.label}</span>
+            <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${status.cls}`}>{status.label}</span>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span>Device: {k.device ? k.device.slice(0, 10) + "…" : "—"}</span>
             <span>Source: {k.source || "—"}</span>
             <span>Created: {k.date ? new Date(k.date * 1000).toLocaleDateString() : "—"}</span>
@@ -444,8 +444,8 @@ function KeyRow({ k, selected, onToggle }: { k: ValidKey; selected: boolean; onT
           {k.key}
         </button>
       </td>
-      <td className="py-3 pr-3"><span className={`rounded-full border px-2 py-0.5 text-[11px] ${status.cls}`}>{status.label}</span></td>
-      <td className="py-3 pr-3 font-mono text-[11px] text-muted-foreground">{k.device ? k.device.slice(0, 12) + "…" : "—"}</td>
+      <td className="py-3 pr-3"><span className={`rounded-full border px-2 py-0.5 text-xs ${status.cls}`}>{status.label}</span></td>
+      <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">{k.device ? k.device.slice(0, 12) + "…" : "—"}</td>
       <td className="py-3 pr-3 text-xs text-muted-foreground">{k.date ? new Date(k.date * 1000).toLocaleString() : "—"}</td>
       <td className="py-3 pr-3 text-xs"><Countdown unixSec={k.expiry} /></td>
       <td className="py-3 pr-3 text-xs text-muted-foreground">{k.source || "—"}</td>
@@ -459,7 +459,7 @@ function KeyRow({ k, selected, onToggle }: { k: ValidKey; selected: boolean; onT
 function IconBtn({ children, onClick, title, disabled, danger }: { children: React.ReactNode; onClick: () => void; title: string; disabled?: boolean; danger?: boolean }) {
   return (
     <button onClick={onClick} disabled={disabled} title={title}
-      className={`inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition disabled:opacity-50 ${
+      className={`inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition disabled:opacity-50 ${
         danger ? "border-red-400/30 text-red-300 hover:bg-red-400/10" : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary"
       }`}>
       {children}
@@ -715,11 +715,11 @@ function DevicesPanel() {
                         <input type="checkbox" checked={selected.has(r.fingerprint)} onChange={() => toggle(r.fingerprint)}
                           className="h-4 w-4 cursor-pointer accent-[var(--primary)]" aria-label={`Select ${r.fingerprint}`} />
                       </td>
-                      <td className="py-3 pr-3 font-mono text-[11px] text-muted-foreground">{r.fingerprint.slice(0, 16)}…</td>
+                      <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">{r.fingerprint.slice(0, 16)}…</td>
                       <td className="py-3 pr-3 font-mono text-xs text-primary">{String(r.Key ?? r.key ?? "—")}</td>
                       <td className="py-3 pr-3 text-xs text-muted-foreground">{last ? new Date(last).toLocaleString() : "—"}</td>
                       <td className="py-3 pr-3">
-                        <span className={`rounded-full border px-2 py-0.5 text-[11px] ${isLocked ? "border-red-400/40 text-red-300" : "border-green-400/40 text-green-300"}`}>
+                        <span className={`rounded-full border px-2 py-0.5 text-xs ${isLocked ? "border-red-400/40 text-red-300" : "border-green-400/40 text-green-300"}`}>
                           {isLocked ? "Banned" : "Active"}
                         </span>
                       </td>
@@ -764,11 +764,11 @@ function DevicesPanel() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate font-mono text-xs text-primary">{String(r.Key ?? r.key ?? "—")}</span>
-                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${isLocked ? "border-red-400/40 text-red-300" : "border-green-400/40 text-green-300"}`}>
+                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${isLocked ? "border-red-400/40 text-red-300" : "border-green-400/40 text-green-300"}`}>
                           {isLocked ? "Banned" : "Active"}
                         </span>
                       </div>
-                      <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                         <div className="truncate font-mono">Device: {r.fingerprint.slice(0, 20)}…</div>
                         <div>Last login: {last ? new Date(last).toLocaleString() : "—"}</div>
                       </div>
@@ -858,7 +858,7 @@ function LocksPanel() {
               <tbody>
                 {filtered.map((r) => (
                   <tr key={r.fingerprint} className="border-t border-border/40">
-                    <td className="py-3 pr-3 font-mono text-[11px] text-muted-foreground">{r.fingerprint.slice(0, 16)}…</td>
+                    <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">{r.fingerprint.slice(0, 16)}…</td>
                     <td className="py-3 pr-3 text-xs">{r.reason || "—"}</td>
                     <td className="py-3 pr-3 text-xs text-muted-foreground">{r.time ? new Date(r.time * 1000).toLocaleString() : "—"}</td>
                     <td className="py-3 pr-3">
@@ -1135,7 +1135,7 @@ function LogsPanel() {
                   <td className="py-2 pr-3 text-xs text-muted-foreground">{l.time ? new Date(l.time * 1000).toLocaleString() : "—"}</td>
                   <td className="py-2 pr-3 font-mono text-primary">{l.key}</td>
                   <td className="py-2 pr-3 font-mono text-xs">{l.ip || "—"}</td>
-                  <td className="py-2 pr-3 font-mono text-[11px] text-muted-foreground">{l.fingerprint ? l.fingerprint.slice(0,16)+"…" : "—"}</td>
+                  <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">{l.fingerprint ? l.fingerprint.slice(0,16)+"…" : "—"}</td>
                 </tr>
               ))}
             </tbody>

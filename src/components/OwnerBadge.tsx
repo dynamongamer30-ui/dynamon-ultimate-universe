@@ -4,8 +4,8 @@ import { motion } from "motion/react";
 type Size = "xs" | "sm" | "md" | "lg";
 
 const SIZES: Record<Size, { pad: string; text: string; icon: string }> = {
-  xs: { pad: "px-1.5 py-0.5", text: "text-[9px]", icon: "h-2.5 w-2.5" },
-  sm: { pad: "px-2 py-0.5",   text: "text-[10px]", icon: "h-3 w-3" },
+  xs: { pad: "px-1.5 py-0.5", text: "text-xs", icon: "h-2.5 w-2.5" },
+  sm: { pad: "px-2 py-0.5",   text: "text-xs", icon: "h-3 w-3" },
   md: { pad: "px-2.5 py-1",   text: "text-xs",   icon: "h-3.5 w-3.5" },
   lg: { pad: "px-3 py-1.5",   text: "text-sm",   icon: "h-4 w-4" },
 };
@@ -38,7 +38,7 @@ export function OwnerBadge({ size = "sm", label = "OWNER" }: { size?: Size; labe
 
 export function VerifiedFounderChip() {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-amber-300">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-amber-300">
       <ShieldCheck className="h-3.5 w-3.5" /> Verified Founder
     </span>
   );

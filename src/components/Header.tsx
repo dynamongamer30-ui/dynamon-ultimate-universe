@@ -107,7 +107,7 @@ export function Header() {
                   (profile?.display_name?.[0] ?? user.email?.[0] ?? "T").toUpperCase()
                 )}
                 {profile?.is_owner && (
-                  <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full text-[8px] font-extrabold text-amber-50" style={{ background: "linear-gradient(135deg,#f59e0b,#f97316)", boxShadow: "0 0 8px rgba(251,191,36,0.7)" }}>
+                  <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full text-xs font-extrabold text-amber-50" style={{ background: "linear-gradient(135deg,#f59e0b,#f97316)", boxShadow: "0 0 8px rgba(251,191,36,0.7)" }}>
                     ★
                   </span>
                 )}

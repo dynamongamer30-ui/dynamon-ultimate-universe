@@ -75,7 +75,7 @@ export function NotificationOptIn() {
               <X className="h-4 w-4" />
             </button>
             <div className="relative p-7">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-primary">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary">
                 <Sparkles className="h-3 w-3" /> Stay in the loop
               </span>
               <h2 className="mt-4 font-display text-2xl font-extrabold">Get notified on new mods</h2>

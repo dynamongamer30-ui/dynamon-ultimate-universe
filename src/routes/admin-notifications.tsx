@@ -196,7 +196,7 @@ function AdminNotifications() {
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{n.title}</p>
                         <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{n.body}</p>
-                        <p className="mt-2 text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                        <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground/70">
                           {new Date(n.created_at).toLocaleString()}
                         </p>
                       </div>

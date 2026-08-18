@@ -74,7 +74,7 @@ function Index() {
 
             <motion.h1
               initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.06 }}
-              className="mt-6 font-display text-5xl font-black uppercase leading-[0.95] tracking-tight text-balance sm:text-6xl lg:text-7xl xl:text-8xl"
+              className="mt-6 font-display text-5xl font-black uppercase leading-tight tracking-tight text-balance sm:text-6xl lg:text-7xl xl:text-8xl"
             >
               Dynamons World
               <br />
@@ -141,7 +141,7 @@ function Index() {
               </div>
               <div className="relative p-5">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-primary-foreground">
+                  <div className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-black uppercase tracking-widest text-primary-foreground">
                     <TrendingUp className="h-3 w-3" /> Featured build
                   </div>
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-gold">
@@ -249,7 +249,7 @@ function Index() {
           <h2 className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-4xl">
             Questions, answered.
           </h2>
-          <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
+          <p className="page-copy mt-4 max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
             The fastest route to the right build is knowing what it changes, when it was updated,
             and how it fits your play style.
           </p>
@@ -261,7 +261,7 @@ function Index() {
                 {item.question}
                 <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-primary/30 text-primary transition-transform duration-300 group-open:rotate-45" aria-hidden>+</span>
               </summary>
-              <p className="max-w-2xl pt-3 text-sm leading-relaxed text-muted-foreground">{item.answer}</p>
+              <p className="page-copy max-w-2xl pt-3 text-sm leading-relaxed text-muted-foreground">{item.answer}</p>
             </details>
           ))}
         </div>
@@ -276,7 +276,7 @@ function HeroStat({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex-1 px-4 py-4 first:pl-0 sm:px-6">
       <p className="font-display text-2xl font-black tracking-tight sm:text-3xl">{value}</p>
-      <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
     </div>
   );
 }

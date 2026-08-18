@@ -76,7 +76,7 @@ export function ModCard({ mod, index = 0, featured = false }: { mod: Mod; index?
         />
         <div className="absolute inset-x-0 bottom-0 z-10 h-1/2 bg-gradient-to-t from-card to-transparent" />
 
-        <div className={`absolute left-4 top-4 z-20 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${theme.chip}`}>
+        <div className={`absolute left-4 top-4 z-20 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-black uppercase tracking-[0.2em] ${theme.chip}`}>
           {theme.label}
         </div>
         <div className="absolute right-4 top-4 z-20 flex items-center gap-1.5">
@@ -84,12 +84,12 @@ export function ModCard({ mod, index = 0, featured = false }: { mod: Mod; index?
             <Star className="h-3 w-3 fill-gold text-gold" />
             {mod.baseRating.toFixed(1)}
           </span>
-          <span className="rounded-md bg-background/80 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary backdrop-blur-sm">
+          <span className="rounded-md bg-background/80 px-2 py-1 text-xs font-bold uppercase tracking-wider text-primary backdrop-blur-sm">
             v{mod.version}
           </span>
         </div>
         {featured && (
-          <div className="absolute bottom-4 left-4 z-20 inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-primary-foreground">
+          <div className="absolute bottom-4 left-4 z-20 inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-black uppercase tracking-[0.2em] text-primary-foreground">
             <TrendingUp className="h-3 w-3" /> Most popular
           </div>
         )}
@@ -105,7 +105,7 @@ export function ModCard({ mod, index = 0, featured = false }: { mod: Mod; index?
 
         <div className="mt-4 flex flex-wrap gap-1.5">
           {mod.features.slice(0, 3).map((f) => (
-            <span key={f} className="rounded-md border border-border bg-secondary px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+            <span key={f} className="rounded-md border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
               {f}
             </span>
           ))}
@@ -154,7 +154,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex-1 px-2 py-2.5">
       <p className="text-sm font-bold">{value}</p>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">{label}</p>
     </div>
   );
 }

@@ -451,10 +451,10 @@ function GeneratorPage() {
                 {/* Key reveal card */}
                 <div className="w-full">
                   <div className="mb-2 flex items-center justify-between px-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--muted-foreground)" }}>
+                    <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--muted-foreground)" }}>
                       Your key
                     </span>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--gold)" }}>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--gold)" }}>
                       <Sparkles className="h-3 w-3" />
                       {phase.remaining} left today
                     </span>
@@ -470,7 +470,7 @@ function GeneratorPage() {
                       style={{ background: "color-mix(in oklch, var(--background) 92%, transparent)" }}
                     >
                       <div
-                        className="break-all text-center font-display text-[2.1rem] font-bold leading-tight tracking-[0.12em] sm:text-4xl"
+                        className="break-all text-center font-display text-4xl font-bold leading-tight tracking-[0.12em] sm:text-4xl"
                         style={{
                           background: "linear-gradient(180deg, #f4d98f, var(--gold))",
                           WebkitBackgroundClip: "text",

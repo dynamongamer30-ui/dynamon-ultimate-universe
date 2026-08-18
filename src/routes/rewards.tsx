@@ -312,7 +312,7 @@ function PrizeCard({
         <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl bg-card/80 ${accent} ${ring} border`}>
           {icon}
         </div>
-        <p className={`mt-4 text-[11px] font-black uppercase tracking-[0.2em] ${accent}`}>{eyebrow}</p>
+        <p className={`mt-4 text-xs font-black uppercase tracking-[0.2em] ${accent}`}>{eyebrow}</p>
         <h3 className="mt-1 font-display text-2xl font-black uppercase tracking-tight">{title}</h3>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground text-pretty">{body}</p>
         <ul className="mt-4 space-y-2">

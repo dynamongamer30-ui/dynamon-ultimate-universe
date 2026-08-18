@@ -7,7 +7,7 @@
     "dev": "vite dev",
     "build": "node scripts/generate-sitemap.mjs && vite build",
     "build:dev": "vite build --mode development",
-    "preview": "vite preview",
+    "preview": "nitro preview",
     "lint": "eslint .",
     "sitemap": "node scripts/generate-sitemap.mjs",
     "format": "prettier --write ."
@@ -92,6 +92,7 @@
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "wrangler": "4.124.0"
   }
 }

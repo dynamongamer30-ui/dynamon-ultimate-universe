@@ -1,12 +1,12 @@
 name = "dg"
 main = "src/index.js"
-compatibility_date = "2024-11-01"
+compatibility_date = "2026-06-26"
 
 # KV namespace binding (create with `wrangler kv namespace create DG`, then
 # paste the returned id here).
 [[kv_namespaces]]
 binding = "DG"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "e44241097de7487286f3d270aa645146"
 
 # ---------------------------------------------------------------------------
 # Secrets (set with `wrangler secret put <NAME>` — do NOT commit real values):

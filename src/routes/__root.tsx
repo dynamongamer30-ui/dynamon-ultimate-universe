@@ -130,7 +130,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     scripts: [organizationJsonLd(), websiteJsonLd()],
     links: [
       { rel: "preload", href: "/fonts/aeonik-pro/AeonikPro-Bold.woff", as: "font", type: "font/woff", crossOrigin: "anonymous" },
-      { rel: "preload", href: "/fonts/aeonik-pro/AeonikPro-Black.woff", as: "font", type: "font/woff", crossOrigin: "anonymous" },
       { rel: "icon", href: "/dynamon-gamer-avatar.png", sizes: "256x256", type: "image/png" },
       { rel: "apple-touch-icon", href: "/dynamon-gamer-avatar.png", sizes: "256x256" },
       { rel: "stylesheet", href: appCss },

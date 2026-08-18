@@ -43,7 +43,7 @@ export function NotificationBell() {
       >
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+          <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-xs font-bold text-primary-foreground">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -92,7 +92,7 @@ export function NotificationBell() {
                                   alt=""
                                   className="h-4 w-4 shrink-0 rounded-full object-cover"
                                 />
-                                <span className="text-[11px] font-medium text-primary">
+                                <span className="text-xs font-medium text-primary">
                                   {sender.display_name || "Dynamon Gamer 07"}
                                 </span>
                               </div>
@@ -101,7 +101,7 @@ export function NotificationBell() {
                             <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                               <NotificationBody text={n.body} />
                             </p>
-                            <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">{timeAgo(n.created_at)}</p>
+                            <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/70">{timeAgo(n.created_at)}</p>
                             <NotificationClaim notification={n} />
                           </div>
                         </div>

@@ -64,7 +64,7 @@ function AuthPage() {
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
             <Sparkles className="h-3.5 w-3.5" /> Trainers only
           </div>
-          <h1 className="mt-5 font-display text-4xl font-black uppercase tracking-tight leading-[1.05] sm:text-5xl">
+          <h1 className="mt-5 font-display text-4xl font-black uppercase tracking-tight leading-tight sm:text-5xl">
             Forge your <span className="text-gradient">trainer identity.</span>
           </h1>
           <p className="mt-4 max-w-md text-muted-foreground">
@@ -140,7 +140,7 @@ function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => vo
       <p className="mt-5 text-center text-xs text-muted-foreground">
         By continuing you agree to our <Link to="/disclaimer" className="text-primary hover:underline">Disclaimer &amp; Safety</Link>.
       </p>
-      <p className="mt-2 text-center text-[11px] text-muted-foreground/80">
+      <p className="mt-2 text-center text-xs text-muted-foreground/80">
         Accounts that don&apos;t sign in for 30 days are automatically deleted, along with their data.
       </p>
     </motion.div>
@@ -259,7 +259,7 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
         <div className="flex items-end justify-between">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pick your avatar</p>
           {gender && (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {gender === "female" ? "10 female heroes" : gender === "male" ? "10 male heroes" : "All 20 heroes"}
             </p>
           )}
@@ -296,7 +296,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     <label className="block">
       <div className="flex items-baseline justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
-        {hint && <span className="text-[10px] text-muted-foreground/80">{hint}</span>}
+        {hint && <span className="text-xs text-muted-foreground/80">{hint}</span>}
       </div>
       <div className="mt-1.5">{children}</div>
     </label>
@@ -313,7 +313,7 @@ function UsernameBadge({ status }: { status: "idle" | "checking" | "ok" | "taken
   } as const;
   const s = map[status];
   return (
-    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-wider ${s.c}`}>
+    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wider ${s.c}`}>
       {s.text}
     </span>
   );

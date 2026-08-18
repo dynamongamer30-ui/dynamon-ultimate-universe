@@ -86,7 +86,7 @@ function AdminKeyCard({ current, onSave }: { current: string; onSave: (k: string
       <div className="flex items-center gap-2">
         <KeyRound className="h-4 w-4 text-primary" />
         <h3 className="font-display text-base font-bold">License Worker admin key</h3>
-        {current && <span className="ml-auto rounded-full border border-green-400/40 px-2 py-0.5 text-[11px] text-green-300">Saved</span>}
+        {current && <span className="ml-auto rounded-full border border-green-400/40 px-2 py-0.5 text-xs text-green-300">Saved</span>}
       </div>
       <p className="mt-1 mb-3 text-xs text-muted-foreground">Sent as <code className="font-mono">X-Admin</code> on every Worker call. Session-only.</p>
       <div className="flex gap-2">
@@ -157,11 +157,11 @@ function DevicesPanel({ onAuthFail }: { onAuthFail: () => void }) {
                 const status = String(d.status ?? "active");
                 return (
                   <tr key={`${d.fp}-${i}`} className="border-t border-border/40">
-                    <td className="py-2 pr-3 font-mono text-[11px]">{d.fp}</td>
+                    <td className="py-2 pr-3 font-mono text-xs">{d.fp}</td>
                     <td className="py-2 pr-3 font-mono text-xs">{String(build)}</td>
                     <td className="py-2 pr-3 text-xs text-muted-foreground">{formatMaybeTime(last)}</td>
                     <td className="py-2 pr-3">
-                      <span className="rounded-full border border-green-400/40 px-2 py-0.5 text-[11px] text-green-300">{status}</span>
+                      <span className="rounded-full border border-green-400/40 px-2 py-0.5 text-xs text-green-300">{status}</span>
                     </td>
                   </tr>
                 );
@@ -219,7 +219,7 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
     <div>
       <div className="mb-1 flex items-center justify-between">
         <label className="text-xs font-semibold text-muted-foreground">{label}</label>
-        <label className="inline-flex cursor-pointer items-center gap-1 text-[11px] text-muted-foreground hover:text-primary">
+        <label className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-primary">
           <FileUp className="h-3 w-3" /> Load file
           <input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && readFileTo(k, e.target.files[0])} />
         </label>
@@ -364,12 +364,12 @@ function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
               <tbody>
                 {banned.map((b) => (
                   <tr key={b.fingerprint} className="border-t border-border/40">
-                    <td className="py-2 pr-3 font-mono text-[11px]">{b.fingerprint}</td>
+                    <td className="py-2 pr-3 font-mono text-xs">{b.fingerprint}</td>
                     <td className="py-2 pr-3 text-xs">{b.reason || "—"}</td>
                     <td className="py-2 pr-3 text-xs text-muted-foreground">{formatMaybeTime(b.time)}</td>
                     <td className="py-2 pr-3 text-right">
                       <button onClick={() => doUnban(b.fingerprint)} disabled={busy}
-                        className="inline-flex items-center gap-1 rounded-md border border-green-400/40 px-2 py-1 text-[11px] text-green-300 hover:bg-green-400/10 disabled:opacity-50">
+                        className="inline-flex items-center gap-1 rounded-md border border-green-400/40 px-2 py-1 text-xs text-green-300 hover:bg-green-400/10 disabled:opacity-50">
                         <X className="h-3 w-3" />Unban
                       </button>
                     </td>

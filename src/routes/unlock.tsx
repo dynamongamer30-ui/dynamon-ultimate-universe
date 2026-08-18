@@ -366,7 +366,7 @@ function UnlockPage() {
           <div className="mb-6 flex items-center gap-4">
             <ProgressRing pct={pct} />
             <div className="min-w-0">
-              <h1 className="font-display text-2xl font-bold tracking-tight sm:text-[1.6rem]">
+              <h1 className="font-display text-2xl font-bold tracking-tight sm:text-2xl">
                 Opening the vault
               </h1>
               <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
@@ -463,7 +463,7 @@ function UnlockPage() {
           </AnimatePresence>
         </motion.div>
 
-        <p className="mt-6 text-center text-[11px] tracking-wide" style={{ color: "var(--muted-foreground)", opacity: 0.7 }}>
+        <p className="mt-6 text-center text-xs tracking-wide" style={{ color: "var(--muted-foreground)", opacity: 0.7 }}>
           Private link • Works once • Only on this device
         </p>
       </main>

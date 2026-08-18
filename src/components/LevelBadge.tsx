@@ -8,7 +8,7 @@ export function LevelBadge({ compact = false }: { compact?: boolean }) {
 
   if (compact) {
     return (
-      <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
+      <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
         <Zap className="h-3 w-3" /> Lv {level}
       </div>
     );
@@ -21,7 +21,7 @@ export function LevelBadge({ compact = false }: { compact?: boolean }) {
             <Zap className="h-4 w-4" />
           </span>
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Trainer Level</p>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">Trainer Level</p>
             <p className="font-display text-xl font-bold">Lv {level}</p>
           </div>
         </div>

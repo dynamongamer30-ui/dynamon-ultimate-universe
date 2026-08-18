@@ -6,7 +6,7 @@ export function StreakBadge({ compact = false }: { compact?: boolean }) {
   const { streak } = useGamification();
   if (compact) {
     return (
-      <div className="inline-flex items-center gap-1.5 rounded-full border border-orange-400/40 bg-orange-500/10 px-2.5 py-1 text-[11px] font-bold text-orange-300">
+      <div className="inline-flex items-center gap-1.5 rounded-full border border-orange-400/40 bg-orange-500/10 px-2.5 py-1 text-xs font-bold text-orange-300">
         <Flame className="h-3 w-3" /> {streak.current}d
       </div>
     );
@@ -18,7 +18,7 @@ export function StreakBadge({ compact = false }: { compact?: boolean }) {
           <Flame className="h-4 w-4" />
         </motion.span>
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Daily Streak</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Daily Streak</p>
           <p className="font-display text-xl font-bold">{streak.current} days</p>
         </div>
       </div>

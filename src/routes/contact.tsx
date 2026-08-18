@@ -69,7 +69,7 @@ function Contact() {
           >
             <Send className="h-4 w-4" /> Send message
           </button>
-          <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+          <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <Mail className="h-3 w-3" /> Or email hello@dynamon.universe
           </p>
         </form>

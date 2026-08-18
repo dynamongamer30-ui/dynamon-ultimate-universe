@@ -132,7 +132,7 @@ function ModDetail() {
           <div className="absolute inset-0 z-10 opacity-40 mix-blend-overlay" style={{ background: theme.gradient }} />
           <img src={mod.image} alt={`${blendedMod.name} Dynamons World build artwork`} width={1024} height={1024} decoding="async" sizes="(min-width: 1024px) 44vw, 100vw" className="relative aspect-square w-full object-cover" />
           <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-card to-transparent p-6">
-            <span className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${theme.chip}`}>
+            <span className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-xs font-black uppercase tracking-[0.2em] ${theme.chip}`}>
               <Sparkles className="h-3 w-3" /> {theme.label} element
             </span>
           </div>
@@ -143,7 +143,7 @@ function ModDetail() {
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Dynamons World · Mod APK
           </p>
-          <h1 className="mt-4 font-display text-4xl font-black uppercase leading-[0.95] tracking-tight text-balance sm:text-5xl">{blendedMod.name}</h1>
+          <h1 className="mt-4 font-display text-4xl font-black uppercase leading-tight tracking-tight text-balance sm:text-5xl">{blendedMod.name}</h1>
             <p className="mt-4 text-lg leading-relaxed text-muted-foreground text-pretty">{blendedMod.tagline} Review the feature list, latest version, and changelog before unlocking this edition.</p>
 
           {/* Tabs */}
@@ -257,7 +257,7 @@ function ModDetail() {
                 <img src={m.image} alt={`${m.name} Dynamons World build artwork`} width={1024} height={1024} loading="lazy" decoding="async" sizes="(min-width: 1024px) 30vw, 100vw" className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-105" />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card to-transparent p-4">
                   <p className="font-display text-sm font-bold">{m.name}</p>
-                  <p className="text-[11px] text-muted-foreground">v{m.version} · {t.label}</p>
+                  <p className="text-xs text-muted-foreground">v{m.version} · {t.label}</p>
                 </div>
               </Link>
             );
@@ -663,7 +663,7 @@ function PhoenixPassModal({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-xl border border-border bg-card/60 p-3">
-      <p className="truncate text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="truncate text-xs uppercase tracking-widest text-muted-foreground">{label}</p>
       <p className="mt-1 break-words text-sm font-semibold leading-tight">{value}</p>
     </div>
   );

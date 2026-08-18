@@ -148,7 +148,7 @@ function ProfilePage() {
             {profile.is_owner && (
               <div className="mt-3 flex flex-wrap justify-center gap-2">
                 <VerifiedFounderChip />
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300">
                   <ShieldCheck className="h-3.5 w-3.5" /> Trusted Authority
                 </span>
               </div>
@@ -236,7 +236,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     <label className="block">
       <div className="flex items-baseline justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
-        {hint && <span className="text-[10px] text-muted-foreground/80">{hint}</span>}
+        {hint && <span className="text-xs text-muted-foreground/80">{hint}</span>}
       </div>
       <div className="mt-1.5">{children}</div>
     </label>
@@ -253,7 +253,7 @@ function UsernameBadge({ status }: { status: "idle" | "checking" | "ok" | "taken
   } as const;
   const s = map[status];
   return (
-    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-wider ${s.c}`}>
+    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wider ${s.c}`}>
       {s.text}
     </span>
   );
