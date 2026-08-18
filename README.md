@@ -37,4 +37,3 @@ To learn more, take a look at the following resources:
 <!-- redeploy 2026-07-31 -->
 
 
-<!-- Temporary deployment verification marker; reverted in the follow-up commit. -->
