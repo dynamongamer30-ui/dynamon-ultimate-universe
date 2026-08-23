@@ -4,6 +4,7 @@ import { Shield, Zap, Users, ChevronRight, Star, Download, TrendingUp, ArrowRigh
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ForYouRail } from "@/components/ForYouRail";
+import { HeroDepthLayers, HeroWebGL, usePerspectiveTilt } from "@/components/HeroWebGL";
 import { formatCount, elementTheme, mods as catalogMods } from "@/lib/mods";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import heroImg from "@/assets/hero.webp";
@@ -62,6 +63,8 @@ function Index() {
       {/* ── HERO ─────────────────────────────────────────── */}
       <section className="relative pt-6 sm:pt-12 lg:pt-16">
         <div className="hero-field">
+          <HeroDepthLayers />
+          <HeroWebGL />
           <div className="grid gap-12 lg:grid-cols-[1.25fr_1fr] lg:items-center">
           <div>
             <motion.p
@@ -181,18 +184,7 @@ function Index() {
           { Icon: Zap, title: "Release-aware", text: "Track active editions and recent updates without hunting through unrelated pages." },
           { Icon: Users, title: "Community signal", text: "Use ratings, favorites, and trainer feedback to make a faster, better-informed choice." },
         ].map(({ Icon, title, text }, i) => (
-          <motion.div
-            key={title}
-            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ ...spring, delay: i * 0.08 }}
-            className="group bg-card p-6 transition-colors hover:bg-secondary"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-              <Icon className="h-5 w-5" />
-            </div>
-            <h3 className="mt-4 font-display text-base font-extrabold uppercase tracking-tight">{title}</h3>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{text}</p>
-          </motion.div>
+          <FeaturePanel key={title} Icon={Icon} title={title} text={text} index={i} />
         ))}
       </section>
 
@@ -269,6 +261,36 @@ function Index() {
 
       <ForYouRail />
     </PageShell>
+  );
+}
+
+function FeaturePanel({
+  Icon,
+  title,
+  text,
+  index,
+}: {
+  Icon: typeof Shield;
+  title: string;
+  text: string;
+  index: number;
+}) {
+  const tiltRef = usePerspectiveTilt<HTMLDivElement>();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }} transition={{ ...spring, delay: index * 0.08 }}
+      className="group bg-card p-2 transition-colors hover:bg-secondary"
+    >
+      <div ref={tiltRef} className="feature-tilt h-full rounded-xl p-4 sm:p-6">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+          <Icon className="h-5 w-5" />
+        </div>
+        <h3 className="mt-4 font-display text-base font-extrabold uppercase tracking-tight">{title}</h3>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{text}</p>
+      </div>
+    </motion.div>
   );
 }
 
