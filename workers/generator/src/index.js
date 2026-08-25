@@ -36,6 +36,14 @@ const TOKEN_TTL_MS = 10 * 60 * 1000;
 const RATE_WINDOW_MS = 2 * 60 * 60 * 1000;
 const RATE_LIMIT_MAX = 5;
 
+const SECURITY_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+};
+
 /* ---------- Supabase REST shim (drop-in for the old Firebase fb* helpers) ---------- */
 const TABLE_MAP = {
   ValidKeys: "valid_keys",
@@ -115,6 +123,7 @@ function corsHeaders() {
     Vary: "Origin",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    ...SECURITY_HEADERS,
   };
 }
 function json(data, status = 200) {
