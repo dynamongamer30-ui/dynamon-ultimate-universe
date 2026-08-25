@@ -197,6 +197,13 @@ export function Header() {
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      setSearchOpen(false);
+                      setQ("");
+                    }
+                  }}
                   placeholder="Search mods, elements, features…"
                   className="w-full rounded-xl border border-border bg-card/60 py-3 pl-11 pr-4 text-sm outline-none focus:border-primary"
                 />

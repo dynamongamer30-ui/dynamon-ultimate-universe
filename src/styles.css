@@ -172,7 +172,11 @@ html {
   background: var(--background);
   color: var(--foreground);
   scroll-behavior: smooth;
+  overflow-x: clip;
   font-synthesis: none;
+}
+body {
+  overflow-x: clip;
 }
 body {
   min-width: 320px;
@@ -439,6 +443,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 /* Hero-specific energy field: rich on desktop, restrained on smaller screens. */
 .hero-field {
+  position: relative;
   isolation: isolate;
   overflow: hidden;
   border: 1px solid oklch(0.48 0.1 300 / 0.34);
