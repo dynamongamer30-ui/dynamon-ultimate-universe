@@ -101,7 +101,7 @@ function ModDetail() {
   const followUrl = safeDecrypt(ov?.follow_enc);
 
   const handleGet = () => {
-    if (!user) { toast.error("Sign in to download"); return; }
+    if (!user) { navigate({ to: "/auth" }); return; }
     playClick();
     award(10, "Downloaded");
     grant("first_download");

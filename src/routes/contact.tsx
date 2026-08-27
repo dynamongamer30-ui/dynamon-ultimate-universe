@@ -47,19 +47,26 @@ function Contact() {
 
         <form onSubmit={submit} className="edge-light rounded-2xl glass p-6 sm:p-8">
           <div className="grid gap-4 sm:grid-cols-2">
-            <input
-              required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Your name"
-              className="rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
-            />
-            <input
-              required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="Your email (so we can reply)"
-              className="rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
-            />
+            <div>
+              <label htmlFor="contact-name" className="sr-only">Your name</label>
+              <input
+                id="contact-name" name="name" autoComplete="name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Your name"
+                className="w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label htmlFor="contact-email" className="sr-only">Your email</label>
+              <input
+                id="contact-email" name="email" autoComplete="email" required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="Your email (so we can reply)"
+                className="w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+            </div>
           </div>
+          <label htmlFor="contact-message" className="sr-only">Message</label>
           <textarea
-            required rows={6} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
+            id="contact-message" name="message" required rows={6} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
             placeholder="Which mod, which phone, and what happened?"
             className="mt-4 w-full resize-none rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
           />
