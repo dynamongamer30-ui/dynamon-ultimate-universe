@@ -133,6 +133,13 @@ function json(data, status = 200) {
   });
 }
 
+function isUuid(value) {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+function isBoundedString(value, max) {
+  return typeof value === "string" && value.length > 0 && value.length <= max;
+}
+
 async function handleStart(request, env) {
   const gate = crypto.randomUUID();
   const nonce = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
@@ -162,7 +169,7 @@ async function handleStart(request, env) {
 async function handleInit(request, env) {
   const url = new URL(request.url);
   const gate = url.searchParams.get("gate");
-  if (!gate) return new Response("Access denied. Use the proper link.", { status: 403 });
+  if (!isUuid(gate)) return new Response("Access denied. Use the proper link.", { status: 403 });
 
   const gateData = await fbGet(`/GateTokens/${gate}`, env);
   if (!gateData) return new Response("Invalid or expired gate.", { status: 403 });
@@ -195,6 +202,7 @@ async function handleCheckToken(request, env) {
   const url = new URL(request.url);
   const token = url.searchParams.get("ref") || "";
   if (!token) return json({ valid: false, reason: "missing" });
+  if (!isUuid(token)) return json({ valid: false, reason: "not_found" });
   const data = await fbGet(`/AccessTokens/${token}`, env);
   if (!data) return json({ valid: false, reason: "not_found" });
   if (data.used === true) return json({ valid: false, reason: "used" });
@@ -213,7 +221,7 @@ async function handleGenerateKey(request, env) {
   const { accessToken, turnstileToken, fingerprint } = body || {};
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
 
-  if (!accessToken || !turnstileToken || !fingerprint) {
+  if (!isUuid(accessToken) || !isBoundedString(turnstileToken, 4096) || !isBoundedString(fingerprint, 200)) {
     return json({ ok: false, error: "missing_fields" }, 400);
   }
 
@@ -315,8 +323,9 @@ export default {
     }
     if (url.pathname === "/start") return handleStart(request, env);
     if (url.pathname.startsWith("/init")) return handleInit(request, env);
-    if (url.pathname === "/check-token" && request.method === "GET")
+        if (url.pathname === "/check-token" && request.method === "GET")
       return handleCheckToken(request, env);
+
     if (url.pathname === "/generate-key" && request.method === "POST")
       return handleGenerateKey(request, env);
     return Response.redirect(GENERATOR_PAGE, 302);

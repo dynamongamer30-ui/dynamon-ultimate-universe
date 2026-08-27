@@ -199,13 +199,11 @@ function StatusIcon({ status }: { status: StageStatus }) {
 }
 
 function UnlockPage() {
-  // Router-parsed search (goes through TanStack Router's own JSON-based
-  // codec, matching how the value was written on navigate()). Reading this
-  // instead of the raw URLSearchParams avoids a mismatch: navigate({search})
-  // JSON-encodes values, so the raw query string literally contains quote
-  // characters around the slug — comparing that against the plain slug
-  // stored server-side always failed with "version_mismatch".
-  const { v: modVersionFromUrl } = useSearch({ from: "/unlock" });
+  // The secure-session RPC currently stores the mod slug in its legacy
+  // `modVersion` field, while this page previously supplied the human build
+  // version. Leave the optional version pin unset until the database contract
+  // can be migrated safely; token, fingerprint, timing, and one-time burn
+  // checks remain enforced server-side.
   const [stages, setStages] = useState<Stage[]>(INITIAL_STAGES);
   const [done, setDone] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -266,9 +264,8 @@ function UnlockPage() {
       });
 
       // 2-4. Server-side verification. A single SECURITY DEFINER RPC checks the
-      // session, fingerprint, timing window and version, then ATOMICALLY burns
-      // the token — none of this logic or the link is exposed to the browser.
-      const version = modVersionFromUrl;
+      // session, fingerprint, timing window and ATOMICALLY burns the token — none
+      // of this logic or the link is exposed to the browser.
       let redeemed: { ok: boolean; error?: string; link?: string; encrypted?: boolean } | null = null;
 
       await runStage(2, async () => {
@@ -278,7 +275,7 @@ function UnlockPage() {
           args: Record<string, unknown>,
         ) => Promise<{ data: unknown; error: { message: string } | null }>)(
           "redeem_secure_session",
-          { p_token: token, p_fingerprint: fingerprint, p_version: version },
+          { p_token: token, p_fingerprint: fingerprint },
         );
         if (error) throw new Error("Secure channel error. Please try again.");
         redeemed = data as typeof redeemed;

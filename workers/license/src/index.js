@@ -88,6 +88,12 @@ function text(value, fallback, limit) {
   const result = String(value == null ? fallback : value).trim();
   return result.slice(0, limit || 400);
 }
+function isBoundedString(value, max) {
+  return typeof value === "string" && value.length > 0 && value.length <= max;
+}
+function isBuildId(value) {
+  return isBoundedString(value, 128) && /^[A-Za-z0-9._-]+$/.test(value);
+}
 
 function publicAppConfig(config) {
   const cfg = config && typeof config === "object" ? config : {};
@@ -258,8 +264,10 @@ export default {
     try {
       // ---------- loader: fetch encrypted payload (public, no secret here) ----------
       if (path === "/payload" && req.method === "GET") {
-        const build = url.searchParams.get("build") || (await KV.get("current_build"));
-        if (!build) return json({ error: "no build" }, 404);
+        const requestedBuild = url.searchParams.get("build");
+        if (requestedBuild && !isBuildId(requestedBuild)) return json({ error: "no payload" }, 404);
+        const build = requestedBuild || (await KV.get("current_build"));
+        if (!isBuildId(build)) return json({ error: "no build" }, 404);
         const ct = await KV.get("ct:" + build, "json");
         if (!ct) return json({ error: "no payload" }, 404);
         return json({
@@ -277,7 +285,8 @@ export default {
         const fp = d.fp,
           build = d.build,
           ctsha = d.ctsha;
-        if (!fp || !build) return json({ banned: true, reason: "bad request" });
+        if (!isBoundedString(fp, 200) || !isBuildId(build) || (ctsha != null && ctsha !== "" && !isBoundedString(ctsha, 128)))
+          return json({ banned: true, reason: "bad request" });
 
         const ban = await isBanned(fp);
         if (ban) return json({ banned: true, reason: ban });
@@ -316,6 +325,8 @@ export default {
       if (path === "/heartbeat" && req.method === "POST") {
         const d = await body();
         if (!d.fp) return json({ ok: true });
+        if (!isBoundedString(d.fp, 200) || (d.build != null && !isBuildId(d.build)))
+          return json({ ok: false, error: "bad_request" }, 400);
         const ban = await isBanned(d.fp);
         if (ban) return json({ banned: true, reason: ban });
         await KV.put("dev:" + d.fp, JSON.stringify({ build: d.build, last: Date.now() }), {
@@ -327,7 +338,9 @@ export default {
       // ---------- loader: tamper report (auto-ban) ----------
       if (path === "/tamper" && req.method === "POST") {
         const d = await body();
-        if (d.fp) await banDevice(d.fp, "tamper:" + (d.kind || "?"));
+        if (!isBoundedString(d.fp, 200) || (d.kind != null && !isBoundedString(d.kind, 64)))
+          return json({ ok: false, error: "bad_request" }, 400);
+        await banDevice(d.fp, "tamper:" + (d.kind || "?"));
         return json({ ok: true });
       }
 
@@ -411,7 +424,7 @@ export default {
       if (path === "/admin/upload-payload" && req.method === "POST") {
         if (!isAdmin()) return json({ error: "forbidden" }, 403);
         const d = await body();
-        if (!d.build || !d.ct_b64 || !d.key_b64)
+        if (!isBuildId(d.build) || !isBoundedString(d.ct_b64, 4_000_000) || !isBoundedString(d.key_b64, 4_000_000))
           return json({ error: "need build, ct_b64, key_b64" }, 400);
         await KV.put(
           "ct:" + d.build,
@@ -434,14 +447,14 @@ export default {
       if (path === "/admin/ban" && req.method === "POST") {
         if (!isAdmin()) return json({ error: "forbidden" }, 403);
         const d = await body();
-        if (!d.fp) return json({ error: "need fp" }, 400);
-        await banDevice(d.fp, d.reason || "admin ban");
+        if (!isBoundedString(d.fp, 200)) return json({ error: "need fp" }, 400);
+        await banDevice(d.fp, isBoundedString(d.reason, 200) ? d.reason : "admin ban");
         return json({ ok: true, banned: d.fp });
       }
       if (path === "/admin/unban" && req.method === "POST") {
         if (!isAdmin()) return json({ error: "forbidden" }, 403);
         const d = await body();
-        if (!d.fp) return json({ error: "need fp" }, 400);
+        if (!isBoundedString(d.fp, 200)) return json({ error: "need fp" }, 400);
         await fbDel("BannedDevices/" + d.fp);
         return json({ ok: true, unbanned: d.fp });
       }

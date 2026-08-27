@@ -287,7 +287,6 @@ function ModDetail() {
         <FollowGate
           modName={blendedMod.name}
           slug={mod.slug}
-          version={blendedMod.version}
           followUrl={followUrl}
           onClose={() => setGateOpen(false)}
         />
@@ -297,8 +296,8 @@ function ModDetail() {
 }
 
 function FollowGate({
-  modName, slug, version, followUrl, onClose,
-}: { modName: string; slug: string; version?: string; followUrl: string; onClose: () => void }) {
+  modName, slug, followUrl, onClose,
+}: { modName: string; slug: string; followUrl: string; onClose: () => void }) {
   const navigate = useNavigate();
   // If there's no follow link configured, skip straight to verifying.
   const [step, setStep] = useState<"gate" | "verifying" | "error">(followUrl ? "gate" : "verifying");
@@ -335,7 +334,7 @@ function FollowGate({
         localStorage.setItem("dg_token", res.token);
       }
 
-      navigate({ to: "/unlock", search: { v: version || undefined } });
+      navigate({ to: "/unlock" });
     } catch (e) {
       setErrMsg(e instanceof Error ? e.message : "Something went wrong.");
       setStep("error");
