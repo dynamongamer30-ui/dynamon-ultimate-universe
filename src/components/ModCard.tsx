@@ -12,11 +12,12 @@ import { playClick, playSoft, playHover } from "@/lib/sound";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 
-export function ModCard({ mod, index = 0, featured = false }: { mod: Mod; index?: number; featured?: boolean }) {
+export function ModCard({ mod, index = 0, featured = false, headingLevel = "h3" }: { mod: Mod; index?: number; featured?: boolean; headingLevel?: "h2" | "h3" }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { award, grant } = useGamification();
   const theme = elementTheme[mod.element];
+  const Heading = headingLevel;
   const { has, toggle } = useLikes();
   const liked = has(mod.slug);
 
@@ -97,9 +98,9 @@ export function ModCard({ mod, index = 0, featured = false }: { mod: Mod; index?
 
       <div className="relative flex flex-1 flex-col p-5 sm:p-6">
         <Link to="/mods/$slug" params={{ slug: mod.slug }} onMouseDown={playClick}>
-          <h3 className="font-display text-xl font-extrabold uppercase leading-tight tracking-tight transition-colors hover:text-primary">
+          <Heading className="font-display text-xl font-extrabold uppercase leading-tight tracking-tight transition-colors hover:text-primary">
             {mod.name}
-          </h3>
+          </Heading>
         </Link>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{mod.tagline}</p>
 

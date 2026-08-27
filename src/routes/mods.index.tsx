@@ -91,18 +91,21 @@ function ModsPage() {
 
         <div className="mt-8 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <label htmlFor="mods-search" className="sr-only">Search mods, features</label>
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <input
+              id="mods-search" name="q" type="search" autoComplete="off"
               value={q} onChange={(e) => setQ(e.target.value)}
               placeholder="Search mods, features…"
               className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-sm outline-none transition-colors focus:border-primary"
             />
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Sort builds">
             {sorts.map((s) => (
               <button
                 key={s.id}
                 onClick={() => setSort(s.id)}
+                aria-pressed={sort === s.id}
                 className={`press inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
                   sort === s.id
                     ? "border-primary/60 bg-primary/10 text-primary"
@@ -117,7 +120,7 @@ function ModsPage() {
 
         {/* Advanced filters */}
         <div className="edge-light mt-5 space-y-3 rounded-xl border border-border bg-card p-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by element">
             <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <Sparkles className="h-3 w-3" /> Element
             </span>
@@ -127,6 +130,7 @@ function ModsPage() {
               return (
                 <button
                   key={el} onClick={() => toggleElement(el)}
+                  aria-pressed={active}
                   className={`rounded-md border px-3 py-1 text-xs font-bold uppercase tracking-widest transition-colors ${active ? t.chip : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
                 >
                   {t.label}
@@ -134,13 +138,14 @@ function ModsPage() {
               );
             })}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Filter by minimum rating">
             <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <Star className="h-3 w-3" /> Min rating
             </span>
             {[0, 4, 4.5, 4.7, 4.9].map((r) => (
               <button
                 key={r} onClick={() => setMinRating(r)}
+                aria-pressed={minRating === r}
                 className={`rounded-md border px-3 py-1 text-xs font-semibold transition-colors ${minRating === r ? "border-amber-400/50 bg-amber-500/10 text-amber-300" : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
               >
                 {r === 0 ? "Any" : `${r}+`}
@@ -170,7 +175,7 @@ function ModsPage() {
         </div>
       ) : (
         <section className="mods-grid mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((m, i) => <ModCard key={m.slug} mod={m} index={i} featured={i === 0 && sort !== "newest"} />)}
+          {filtered.map((m, i) => <ModCard key={m.slug} mod={m} index={i} featured={i === 0 && sort !== "newest"} headingLevel="h2" />)}
         </section>
       )}
     </PageShell>

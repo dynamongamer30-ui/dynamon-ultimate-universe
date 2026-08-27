@@ -287,7 +287,7 @@ function FeaturePanel({
         <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
           <Icon className="h-5 w-5" />
         </div>
-        <h3 className="mt-4 font-display text-base font-extrabold uppercase tracking-tight">{title}</h3>
+        <h2 className="mt-4 font-display text-base font-extrabold uppercase tracking-tight">{title}</h2>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{text}</p>
       </div>
     </motion.div>

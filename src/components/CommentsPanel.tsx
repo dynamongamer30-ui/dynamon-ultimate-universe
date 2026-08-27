@@ -191,6 +191,7 @@ export function CommentsPanel({
 
   const renderComment = (c: EnrichedComment, isReply = false) => {
     const avatar = c.author?.custom_avatar_url || c.author?.avatar_url;
+    const authorName = c.author?.display_name ?? "Trainer";
     const isMine = user?.id === c.user_id;
     const canRemove = isMine || profile?.is_owner;
     const replies = repliesByParent.get(c.id) ?? [];
@@ -211,7 +212,7 @@ export function CommentsPanel({
             )}
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <p className="truncate text-sm font-semibold">{c.author?.display_name ?? "Trainer"}</p>
+                <p className="truncate text-sm font-semibold">{authorName}</p>
                 {c.author?.is_owner && <OwnerBadge size="xs" />}
               </div>
               <p className="truncate text-xs text-muted-foreground">
@@ -230,7 +231,10 @@ export function CommentsPanel({
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
+            type="button"
             onClick={() => toggleLike(c)}
+            aria-label={`${c.likedByMe ? "Unlike" : "Like"} review by ${authorName}`}
+            aria-pressed={c.likedByMe}
             className={`inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold transition-colors ${
               c.likedByMe ? "border-rose-400/40 text-rose-400" : "text-muted-foreground hover:text-foreground"
             }`}
@@ -240,7 +244,10 @@ export function CommentsPanel({
           </button>
           {!isReply && (
             <button
+              type="button"
               onClick={() => { setReplyOpen(replyOpen === c.id ? null : c.id); setReplyBody(""); }}
+              aria-expanded={replyOpen === c.id}
+              aria-controls={`reply-${c.id}`}
               className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
             >
               <ReplyIcon className="h-3.5 w-3.5" /> Reply
@@ -257,7 +264,9 @@ export function CommentsPanel({
         <AnimatePresence>
           {replyOpen === c.id && !isReply && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mt-3 overflow-hidden">
+              <label htmlFor={`reply-${c.id}`} className="sr-only">Reply to {authorName}</label>
               <textarea
+                id={`reply-${c.id}`} name={`reply-${c.id}`}
                 value={replyBody} onChange={(e) => setReplyBody(e.target.value)}
                 placeholder={`Reply to @${c.author?.username ?? "trainer"}…`} rows={2} maxLength={500}
                 className="w-full resize-none rounded-xl border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-primary"
@@ -305,8 +314,9 @@ export function CommentsPanel({
             </div>
           ) : (
             <form onSubmit={submit} className="mt-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your rating</p>
-              <div className="mt-2 flex gap-1">
+              <fieldset className="mt-3">
+                <legend className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your rating</legend>
+                <div className="mt-2 flex gap-1">
                 {Array.from({ length: 5 }).map((_, i) => {
                   const v = i + 1;
                   const active = (hover || rating) >= v;
@@ -315,14 +325,18 @@ export function CommentsPanel({
                       key={v} type="button"
                       onMouseEnter={() => setHover(v)} onMouseLeave={() => setHover(0)}
                       onClick={() => { setRating(v); playSoft(); }}
-                      className="p-1" aria-label={`Rate ${v} star`}
+                      className="p-1" aria-label={`Rate ${v} star`} aria-pressed={rating === v}
                     >
                       <Star className={`h-7 w-7 transition-all ${active ? "fill-[var(--gold)] text-[var(--gold)] scale-110" : "text-muted-foreground"}`} />
                     </button>
                   );
-                })}
-              </div>
+                                    })}
+                </div>
+              </fieldset>
+              <label htmlFor="review-body" className="sr-only">Review details</label>
               <textarea
+                id="review-body" name="review"
+
                 value={body} onChange={(e) => setBody(e.target.value)}
                 placeholder="Share your experience… (optional — you can rate without writing anything)" rows={4} maxLength={1000}
                 className="mt-3 w-full resize-none rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
@@ -368,9 +382,10 @@ function StatCard({ label, value, sub, stars }: { label: string; value: string; 
       <p className="text-xs uppercase tracking-widest text-muted-foreground">{label}</p>
       <p className="mt-3 font-display text-5xl font-bold text-gradient">{value}</p>
       {typeof stars === "number" && (
-        <div className="mt-2 flex justify-center gap-0.5">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Star key={i} className={`h-4 w-4 ${i < stars ? "fill-[var(--gold)] text-[var(--gold)]" : "text-muted-foreground/40"}`} />
+                    <div className="mt-2 flex justify-center gap-0.5" aria-hidden="true">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star key={i} className={`h-4 w-4 ${i < stars ? "fill-[var(--gold)] text-[var(--gold)]" : "text-muted-foreground/40"}`} />
+
           ))}
         </div>
       )}

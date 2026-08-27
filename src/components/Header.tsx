@@ -86,6 +86,8 @@ export function Header() {
           <button
             onClick={() => { setSearchOpen((v) => !v); playClick(); }}
             aria-label="Search"
+            aria-expanded={searchOpen}
+            aria-controls="site-search-panel"
             className="press grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-[color,border-color,box-shadow] hover:border-primary/55 hover:text-foreground hover:shadow-[0_0_22px_-10px_oklch(0.62_0.23_300_/_0.9)]"
           >
             <Search className="h-4 w-4" />
@@ -97,6 +99,8 @@ export function Header() {
             <div ref={menuRef} className="relative">
               <button
                 onClick={() => setMenuOpen((v) => !v)}
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
                 className={`relative grid h-10 w-10 place-items-center overflow-hidden rounded-full text-primary-foreground ${profile?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/40"}`}
                 style={!avatarUrl ? { background: "var(--gradient-violet)" } : undefined}
                 aria-label="Account"
@@ -178,7 +182,9 @@ export function Header() {
           <button
             onClick={() => { setOpen((v) => !v); playClick(); }}
             className="grid h-10 w-10 place-items-center rounded-xl border border-border lg:hidden"
-            aria-label="Toggle menu"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="mobile-navigation"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -189,13 +195,16 @@ export function Header() {
       <AnimatePresence>
         {searchOpen && (
           <motion.div
+            id="site-search-panel"
             initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
             className="glass-l2 overflow-hidden border-t border-border/60"
           >
             <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <label htmlFor="site-search" className="sr-only">Search mods, elements, and features</label>
                 <input
+                  id="site-search" name="site-search" type="search" autoComplete="off" aria-controls="search-results"
                   autoFocus value={q} onChange={(e) => setQ(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Escape") {
@@ -209,7 +218,7 @@ export function Header() {
                 />
               </div>
               {results.length > 0 && (
-                <ul className="mt-3 max-h-72 space-y-1 overflow-auto rounded-xl border border-border bg-card/40 p-2">
+                <ul id="search-results" className="mt-3 max-h-72 space-y-1 overflow-auto rounded-xl border border-border bg-card/40 p-2">
                   {results.map((m) => (
                     <li key={m.slug}>
                       <button
@@ -236,6 +245,7 @@ export function Header() {
 
       {open && (
         <motion.div
+          id="mobile-navigation"
           initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
           className="glass-l2 border-t border-border/60 lg:hidden"
         >

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { playClick, playSuccess } from "@/lib/sound";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 
 export function NotificationOptIn() {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ export function NotificationOptIn() {
   const [email, setEmail] = useState(true);
   const [push, setPush] = useState(true);
   const [busy, setBusy] = useState(false);
+  const dialogRef = useDialogFocus(open, () => setOpen(false));
 
   useEffect(() => {
     if (!user) return;
@@ -67,18 +69,20 @@ export function NotificationOptIn() {
           onClick={skip}
         >
           <motion.div
+            ref={dialogRef}
             initial={{ scale: 0.94, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.94, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
+            role="dialog" aria-modal="true" aria-labelledby="notification-opt-in-title" tabIndex={-1}
             className="relative w-full max-w-md overflow-hidden rounded-3xl glass shadow-elev"
           >
-            <button onClick={skip} className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground" aria-label="Close">
+            <button type="button" onClick={skip} className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground" aria-label="Close notification preferences">
               <X className="h-4 w-4" />
             </button>
             <div className="relative p-7">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary">
                 <Sparkles className="h-3 w-3" /> Stay in the loop
               </span>
-              <h2 className="mt-4 font-display text-2xl font-extrabold">Get notified on new mods</h2>
+              <h2 id="notification-opt-in-title" className="mt-4 font-display text-2xl font-extrabold">Get notified on new mods</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 We drop fresh Dynamons World builds every week. Pick how you want to hear about them.
               </p>
@@ -87,7 +91,7 @@ export function NotificationOptIn() {
                 <Toggle icon={<Bell className="h-4 w-4" />} label="Browser push notifications" value={push} onChange={setPush} hint="Instant on this device" />
               </div>
               <div className="mt-7 flex gap-2">
-                <button onClick={skip} className="flex-1 rounded-full border border-border bg-card/60 px-4 py-2.5 text-sm font-semibold">
+                <button type="button" onClick={skip} className="flex-1 rounded-full border border-border bg-card/60 px-4 py-2.5 text-sm font-semibold">
                   Maybe later
                 </button>
                 <button
@@ -109,7 +113,7 @@ export function NotificationOptIn() {
 
 function Toggle({ icon, label, value, onChange, hint }: { icon: React.ReactNode; label: string; value: boolean; onChange: (v: boolean) => void; hint: string }) {
   return (
-    <button onClick={() => onChange(!value)} className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-colors ${value ? "border-primary/50 bg-primary/10" : "border-border bg-card/60"}`}>
+    <button type="button" onClick={() => onChange(!value)} aria-pressed={value} className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-colors ${value ? "border-primary/50 bg-primary/10" : "border-border bg-card/60"}`}>
       <span className={`grid h-9 w-9 place-items-center rounded-xl ${value ? "text-primary-foreground" : "text-muted-foreground bg-background/60"}`} style={value ? { background: "var(--gradient-primary)" } : undefined}>
         {icon}
       </span>

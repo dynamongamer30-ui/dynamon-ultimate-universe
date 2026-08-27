@@ -58,7 +58,7 @@ function FavoritesPage() {
         </div>
       ) : (
         <section className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {favs.map((m, i) => <ModCard key={m.slug} mod={m} index={i} />)}
+          {favs.map((m, i) => <ModCard key={m.slug} mod={m} index={i} headingLevel="h2" />)}
         </section>
       )}
     </PageShell>

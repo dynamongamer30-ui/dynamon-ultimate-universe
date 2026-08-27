@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, Check, Download, Shield, PlayCircle, Sparkles, Lock, ExternalLink, Loader2, X, Feather, Copy } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommentsPanel } from "@/components/CommentsPanel";
 import { ChangelogTimeline } from "@/components/ChangelogTimeline";
 import { FavoriteButton } from "@/components/FavoriteButton";
@@ -17,6 +18,7 @@ import { getMod, mods, formatCount, elementTheme, type Mod } from "@/lib/mods";
 import { breadcrumbJsonLd, pageSeoHead, softwareAppJsonLd } from "@/lib/seo";
 import { playClick } from "@/lib/sound";
 import { toast } from "sonner";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 
 export const Route = createFileRoute("/mods/$slug")({
   loader: ({ params }) => {
@@ -147,36 +149,33 @@ function ModDetail() {
             <p className="mt-4 text-lg leading-relaxed text-muted-foreground text-pretty">{blendedMod.tagline} Review the feature list, latest version, and changelog before unlocking this edition.</p>
 
           {/* Tabs */}
-          <div className="mt-6 inline-flex rounded-lg border border-border bg-card p-1 text-xs font-bold">
-            {(["overview", "changelog"] as const).map((t) => (
-              <button key={t} onClick={() => { setTab(t); playClick(); }}
-                className={`press rounded-md px-4 py-1.5 capitalize transition-colors ${tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                {t}
-              </button>
-            ))}
-          </div>
+          <Tabs value={tab} onValueChange={(value) => { setTab(value as "overview" | "changelog"); playClick(); }}>
+            <TabsList aria-label="Build details" className="mt-6 border border-border bg-card text-xs font-bold">
+              <TabsTrigger value="overview" className="px-4 py-1.5 capitalize data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Overview</TabsTrigger>
+              <TabsTrigger value="changelog" className="px-4 py-1.5 capitalize data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Changelog</TabsTrigger>
+            </TabsList>
 
-          {tab === "overview" ? (
-            <>
+            <TabsContent value="overview">
               <div className="mt-5 rounded-2xl glass p-5">
                 <p className="text-sm leading-relaxed text-muted-foreground">{blendedMod.description}</p>
               </div>
               <ul className="mt-5 grid gap-2 sm:grid-cols-2">
                 {blendedMod.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-primary/15 text-primary">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-primary/15 text-primary" aria-hidden="true">
                       <Check className="h-3.5 w-3.5" />
                     </span>
                     {f}
                   </li>
                 ))}
               </ul>
-            </>
-          ) : (
-            <div className="mt-5">
-              <ChangelogTimeline entries={blendedMod.changelog} glow={theme.glow} />
-            </div>
-          )}
+            </TabsContent>
+            <TabsContent value="changelog">
+              <div className="mt-5">
+                <ChangelogTimeline entries={blendedMod.changelog} glow={theme.glow} />
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <div className="mt-7 flex flex-wrap gap-3">
             <button
@@ -304,6 +303,7 @@ function FollowGate({
   const [waiting, setWaiting] = useState(false);
   const [errMsg, setErrMsg] = useState("");
   const started = useRef(false);
+  const dialogRef = useDialogFocus(true, onClose);
 
   const goToUnlock = async () => {
     setStep("verifying");
@@ -359,7 +359,8 @@ function FollowGate({
 
   return (
     <div
-      role="dialog" aria-modal="true" aria-label={`Download ${modName}`}
+      ref={dialogRef}
+      role="dialog" aria-modal="true" aria-label={`Download ${modName}`} tabIndex={-1}
       className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
@@ -420,9 +421,11 @@ function FollowGate({
 function ModalShell({
   label, onClose, children,
 }: { label: string; onClose: () => void; children: ReactNode }) {
+  const dialogRef = useDialogFocus(true, onClose);
   return (
     <div
-      role="dialog" aria-modal="true" aria-label={label}
+      ref={dialogRef}
+      role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}
       className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
