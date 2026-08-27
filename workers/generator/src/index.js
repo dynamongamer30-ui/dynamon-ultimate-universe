@@ -26,10 +26,9 @@ const ALLOWED_ORIGINS = [
   "https://project--c17e7d12-bb63-4ccb-a821-5b86fff3a795.lovable.app",
   "https://id-preview--c17e7d12-bb63-4ccb-a821-5b86fff3a795.lovable.app",
 ];
-let CURRENT_ORIGIN = ALLOWED_ORIGINS[0];
 function pickOrigin(request) {
   const o = request.headers.get("Origin");
-  CURRENT_ORIGIN = ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
+  return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
 }
 
 const TOKEN_TTL_MS = 10 * 60 * 1000;
@@ -117,19 +116,19 @@ function randomAlphaNum(len) {
   return out;
 }
 
-function corsHeaders() {
+function corsHeaders(origin) {
   return {
-    "Access-Control-Allow-Origin": CURRENT_ORIGIN,
+    "Access-Control-Allow-Origin": origin,
     Vary: "Origin",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     ...SECURITY_HEADERS,
   };
 }
-function json(data, status = 200) {
+function json(data, status = 200, origin = ALLOWED_ORIGINS[0]) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders() },
+    headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
   });
 }
 
@@ -198,41 +197,41 @@ async function handleInit(request, env) {
   return Response.redirect(`${GENERATOR_PAGE}?ref=${token}`, 302);
 }
 
-async function handleCheckToken(request, env) {
+async function handleCheckToken(request, env, origin) {
   const url = new URL(request.url);
   const token = url.searchParams.get("ref") || "";
-  if (!token) return json({ valid: false, reason: "missing" });
-  if (!isUuid(token)) return json({ valid: false, reason: "not_found" });
+  if (!token) return json({ valid: false, reason: "missing" }, 200, origin);
+  if (!isUuid(token)) return json({ valid: false, reason: "not_found" }, 200, origin);
   const data = await fbGet(`/AccessTokens/${token}`, env);
-  if (!data) return json({ valid: false, reason: "not_found" });
-  if (data.used === true) return json({ valid: false, reason: "used" });
-  if (Date.now() - data.createdAt > TOKEN_TTL_MS) return json({ valid: false, reason: "expired" });
-  return json({ valid: true });
+  if (!data) return json({ valid: false, reason: "not_found" }, 200, origin);
+  if (data.used === true) return json({ valid: false, reason: "used" }, 200, origin);
+  if (Date.now() - data.createdAt > TOKEN_TTL_MS) return json({ valid: false, reason: "expired" }, 200, origin);
+  return json({ valid: true }, 200, origin);
 }
 
-async function handleGenerateKey(request, env) {
+async function handleGenerateKey(request, env, origin) {
   let body;
   try {
     body = await request.json();
   } catch {
-    return json({ ok: false, error: "bad_request" }, 400);
+    return json({ ok: false, error: "bad_request" }, 400, origin);
   }
 
   const { accessToken, turnstileToken, fingerprint } = body || {};
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
 
   if (!isUuid(accessToken) || !isBoundedString(turnstileToken, 4096) || !isBoundedString(fingerprint, 200)) {
-    return json({ ok: false, error: "missing_fields" }, 400);
+    return json({ ok: false, error: "missing_fields" }, 400, origin);
   }
 
   const maintenance = await fbGet("/Config/Maintenance", env);
-  if (maintenance === true) return json({ ok: false, error: "maintenance" }, 503);
+  if (maintenance === true) return json({ ok: false, error: "maintenance" }, 503, origin);
 
   const tokenData = await fbGet(`/AccessTokens/${accessToken}`, env);
-  if (!tokenData) return json({ ok: false, error: "invalid_token" }, 403);
-  if (tokenData.used === true) return json({ ok: false, error: "token_used" }, 403);
+  if (!tokenData) return json({ ok: false, error: "invalid_token" }, 403, origin);
+  if (tokenData.used === true) return json({ ok: false, error: "token_used" }, 403, origin);
   if (Date.now() - tokenData.createdAt > TOKEN_TTL_MS) {
-    return json({ ok: false, error: "token_expired" }, 403);
+    return json({ ok: false, error: "token_expired" }, 403, origin);
   }
 
   // Verify Turnstile captcha.
@@ -245,7 +244,7 @@ async function handleGenerateKey(request, env) {
     body: tsForm,
   });
   const tsData = await tsRes.json();
-  if (!tsData.success) return json({ ok: false, error: "captcha_failed" }, 403);
+  if (!tsData.success) return json({ ok: false, error: "captcha_failed" }, 403, origin);
 
   // Rate limiting (per IP + fingerprint), unless whitelisted / disabled.
   const rateCfg = await fbGet("/Config/RateLimit", env);
@@ -262,7 +261,7 @@ async function handleGenerateKey(request, env) {
 
   if (rateLimitEnabled && !isWhitelisted && timestamps.length >= RATE_LIMIT_MAX) {
     const resetIn = Math.ceil((timestamps[0] + RATE_WINDOW_MS - now) / 60000);
-    return json({ ok: false, error: "rate_limited", resetInMinutes: resetIn }, 429);
+    return json({ ok: false, error: "rate_limited", resetInMinutes: resetIn }, 429, origin);
   }
 
   // Mint the key. IMPORTANT: field shapes MUST match the web admin panel
@@ -310,24 +309,24 @@ async function handleGenerateKey(request, env) {
     ok: true,
     key: key,
     remaining: Math.max(0, RATE_LIMIT_MAX - timestamps.length),
-  });
+  }, 200, origin);
 }
 
 export default {
   async fetch(request, env, ctx) {
-    pickOrigin(request);
+    const origin = pickOrigin(request);
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders() });
+      return new Response(null, { headers: corsHeaders(origin) });
     }
     if (url.pathname === "/start") return handleStart(request, env);
     if (url.pathname.startsWith("/init")) return handleInit(request, env);
         if (url.pathname === "/check-token" && request.method === "GET")
-      return handleCheckToken(request, env);
+      return handleCheckToken(request, env, origin);
 
     if (url.pathname === "/generate-key" && request.method === "POST")
-      return handleGenerateKey(request, env);
+      return handleGenerateKey(request, env, origin);
     return Response.redirect(GENERATOR_PAGE, 302);
   },
 };
