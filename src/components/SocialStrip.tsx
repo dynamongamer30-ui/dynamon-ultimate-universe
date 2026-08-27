@@ -45,7 +45,7 @@ export function SocialStrip({ variant = "full" }: { variant?: "full" | "compact"
       <div className="relative grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Join the Universe</p>
-          <h3 className="mt-2 text-2xl font-bold sm:text-3xl">Get drops, guides & weekly mod news</h3>
+          <h2 className="mt-2 text-2xl font-bold sm:text-3xl">Get drops, guides & weekly mod news</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Follow Dynamon Gamer — every new mod is announced first on these channels.
           </p>
