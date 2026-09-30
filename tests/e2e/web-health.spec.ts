@@ -16,6 +16,10 @@ const publicRoutes = [
   "/disclaimer",
   "/rewards",
   "/auth",
+  "/claim",
+  "/generator",
+  "/unlock",
+  "/mods/",
 ];
 
 const guardedRoutes = [
