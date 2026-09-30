@@ -135,6 +135,10 @@ function Index() {
                 <img
                   src={heroImg}
                   alt={`${top.name} key art`}
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = "/dynamon-gamer-avatar.png";
+                  }}
                   width={1536} height={1024}
                   fetchPriority="high"
                   decoding="async"
