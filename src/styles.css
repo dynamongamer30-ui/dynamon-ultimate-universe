@@ -310,34 +310,32 @@ h1, h2, h3, h4, .font-display {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 0 28px -8px oklch(0.54 0.22 296 / 0.35);
 }
 
-/* Existing utility surfaces inherit the same translucent material treatment
-   without requiring changes to feature components or state logic. */
-[class*="bg-card"],
-[class*="bg-popover"],
-[class*="bg-background/"] {
-  background-color: var(--glass-l1-bg) !important;
-  background-image: var(--glass-noise), linear-gradient(135deg, rgba(255,255,255,0.025), rgba(0,0,0,0.025));
+/* Keep glassmorphism opt-in.
+   Do not promote ordinary Tailwind surfaces such as bg-card or bg-background/50
+   into glass automatically: nested translucent layers compound blur, noise and
+   contrast loss, especially inside cards, headers and dialogs. */
+[data-radix-dialog-content],
+[role="dialog"],
+[class*="bg-popover"] {
+  background-color: var(--glass-l3-bg) !important;
+  background-image: var(--glass-noise), linear-gradient(135deg, rgba(255,255,255,0.035), rgba(0,0,0,0.035));
   background-size: 128px 128px, auto;
   background-blend-mode: soft-light, normal;
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  backdrop-filter: blur(12px) saturate(140%);
-  border-color: color-mix(in srgb, var(--glass-border-top) 50%, var(--glass-border-bottom));
-}
-[class*="bg-popover"],
-[data-radix-dialog-content],
-[role="dialog"] {
-  background-color: var(--glass-l3-bg) !important;
+  border-color: color-mix(in srgb, var(--glass-border-top) 55%, var(--glass-border-bottom));
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   backdrop-filter: blur(20px) saturate(140%);
 }
 
 @supports not ((backdrop-filter: blur(1px))) {
-  .glass, .glass-l1, [class*="bg-card"], [class*="bg-background/"] {
+  .glass, .glass-l1 {
     background: rgba(19, 14, 31, 0.92) !important;
     background-image: none !important;
   }
   .glass-l2 { background: rgba(24, 18, 39, 0.94) !important; }
-  .glass-l3, [class*="bg-popover"], [role="dialog"] { background: rgba(30, 22, 48, 0.96) !important; }
+  .glass-l3, [class*="bg-popover"], [role="dialog"] {
+    background: rgba(30, 22, 48, 0.96) !important;
+    background-image: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
