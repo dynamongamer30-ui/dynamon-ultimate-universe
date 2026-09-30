@@ -72,6 +72,10 @@ export function ModCard({ mod, index = 0, featured = false, headingLevel = "h3" 
         />
         <img
           src={mod.image} alt={mod.name} loading="lazy" decoding="async" width={1024} height={1024}
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = "/dynamon-gamer-avatar.png";
+          }}
           sizes="(min-width: 640px) 50vw, 100vw"
           className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
         />
