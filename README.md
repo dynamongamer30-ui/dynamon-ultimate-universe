@@ -1,6 +1,6 @@
 # dynamon-ultimate-universe
 
-Hi 🐉
+Hi 🐉 Welcome to the Dynamon Ultimate Universe.
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
 
@@ -12,7 +12,17 @@ This repository is linked to a [v0](https://v0.app) project. You can continue de
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies:
+
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm install
+```
+
+Then run the development server:
 
 ```bash
 npm run dev
@@ -35,5 +45,3 @@ To learn more, take a look at the following resources:
 - [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
 
 <!-- redeploy 2026-07-31 -->
-
-
