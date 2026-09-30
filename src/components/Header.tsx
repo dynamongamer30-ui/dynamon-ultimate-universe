@@ -131,7 +131,17 @@ export function Header() {
                     className="absolute right-0 mt-2 w-72 overflow-hidden rounded-2xl glass shadow-elev"
                   >
                     <div className="flex items-center gap-3 border-b border-border/60 px-4 py-3">
-                      {avatarUrl && <img src={avatarUrl} alt="" className={`h-10 w-10 rounded-full object-cover ${profile?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/40"}`} />}
+                      {avatarUrl && (
+                        <img
+                          src={avatarUrl}
+                          alt=""
+                          className={`h-10 w-10 rounded-full object-cover ${profile?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/40"}`}
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = "/dynamon-gamer-avatar.png";
+                          }}
+                        />
+                      )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           <p className="truncate text-sm font-semibold">{profile?.display_name ?? "Trainer"}</p>
