@@ -106,7 +106,15 @@ export function Header() {
                 aria-label="Account"
               >
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = "/dynamon-gamer-avatar.png";
+                    }}
+                  />
                 ) : (
                   (profile?.display_name?.[0] ?? user.email?.[0] ?? "T").toUpperCase()
                 )}
