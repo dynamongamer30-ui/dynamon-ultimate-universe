@@ -180,7 +180,7 @@ function ModDetail() {
           <div className="mt-7 flex flex-wrap gap-3">
             <button
               onClick={handleGet}
-              className="btn-primary press animate-pulse-glow rounded-lg px-6 py-3"
+              className="press animate-pulse-glow inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110"
             >
               <Download className="h-4 w-4" /> {user ? "Unlock this build" : "Log in to unlock"}
             </button>
@@ -188,7 +188,7 @@ function ModDetail() {
             <FavoriteButton slug={mod.slug} />
             <Link
               to="/disclaimer" onMouseDown={playClick}
-              className="btn-secondary press rounded-lg px-5 py-3"
+              className="press inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-3 text-sm font-semibold transition-colors hover:border-primary/40"
             >
               <Shield className="h-4 w-4" /> Safety notes
             </Link>
