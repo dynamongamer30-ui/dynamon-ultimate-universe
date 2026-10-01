@@ -285,7 +285,7 @@ export function CommentsPanel({
           )}
           <ReportButton targetType="comment" targetId={c.id} />
           {canRemove && (
-            <button onClick={() => remove(c)} className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-rose-400">
+            <button onClick={() => remove(c)} className="btn-danger ml-auto min-h-9 rounded-full px-3 py-1.5 text-xs">
               <Trash2 className="h-3 w-3" /> Delete
             </button>
           )}
