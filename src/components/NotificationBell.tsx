@@ -2,7 +2,6 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Bell, Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { playClick } from "@/lib/sound";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationBody } from "@/components/NotificationBody";
@@ -25,44 +24,20 @@ export function NotificationBell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const [panelPosition, setPanelPosition] = useState({ top: 0, right: 12 });
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (!ref.current?.contains(target) && !panelRef.current?.contains(target)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const updatePosition = () => {
-      const rect = buttonRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      setPanelPosition({
-        top: rect.bottom + 10,
-        right: Math.max(12, window.innerWidth - rect.right),
-      });
-    };
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, { passive: true });
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition);
-    };
-  }, [open]);
 
   const recent = items.slice(0, 6);
 
   return (
     <div ref={ref} className="relative">
       <button
-        ref={buttonRef}
         onClick={() => { setOpen((v) => !v); playClick(); }}
         aria-label="Notifications"
         aria-expanded={open}
@@ -77,12 +52,10 @@ export function NotificationBell() {
       </button>
 
       <AnimatePresence>
-        {open && typeof document !== "undefined" && createPortal(
+        {open && (
           <motion.div
-            ref={panelRef}
             initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-            style={{ top: panelPosition.top, right: panelPosition.right }}
-            className="fixed z-[900] max-h-[min(32rem,calc(100dvh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl glass-l3 shadow-elev"
+            className="absolute right-0 top-full z-[900] mt-2 max-h-[min(32rem,calc(100dvh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl glass-l3 shadow-elev sm:w-80"
           >
             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
               <p className="text-sm font-semibold">Notifications</p>
@@ -168,8 +141,7 @@ export function NotificationBell() {
             >
               View all notifications
             </Link>
-          </motion.div>,
-          document.body,
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
