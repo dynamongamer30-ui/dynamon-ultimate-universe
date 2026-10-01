@@ -120,7 +120,7 @@ export function Header() {
                 {menuOpen && (
                   <motion.div
                     initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                    className="absolute right-0 mt-2 w-72 overflow-hidden rounded-2xl glass shadow-elev"
+                    className="absolute right-0 z-[900] mt-2 max-h-[calc(100dvh-5rem)] w-[min(18rem,calc(100vw-1.5rem))] overflow-x-hidden overflow-y-auto rounded-2xl glass-l3 shadow-elev"
                   >
                     <div className="flex items-center gap-3 border-b border-border/60 px-4 py-3">
                       {avatarUrl && <img src={avatarUrl} alt="" className={`h-10 w-10 rounded-full object-cover ${profile?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/40"}`} />}

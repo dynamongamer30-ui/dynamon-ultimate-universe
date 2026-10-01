@@ -186,6 +186,30 @@ body {
   background-image: var(--gradient-hero);
   background-attachment: scroll;
 }
+/* Keep Sonner above sticky chrome and outside the animated route stacking
+   context. The mobile rules also respect browser safe areas. */
+[data-sonner-toaster] {
+  z-index: 1000 !important;
+  --width: min(24rem, calc(100vw - 1.5rem));
+}
+.site-toast {
+  width: var(--width) !important;
+  max-width: calc(100vw - 1.5rem) !important;
+  border: 1px solid color-mix(in srgb, var(--primary) 34%, var(--border)) !important;
+  background: color-mix(in srgb, var(--card) 94%, transparent) !important;
+  box-shadow: 0 18px 50px -18px oklch(0 0 0 / 0.82), 0 0 24px -12px oklch(0.54 0.22 296 / 0.68) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+@media (max-width: 640px) {
+  [data-sonner-toaster] {
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    bottom: max(0.75rem, env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+  }
+  .site-toast { width: 100% !important; }
+}
 
 /* Keeps glass readable on every route, including pages with sparse content. */
 .app-shell {

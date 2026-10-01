@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { motion } from "motion/react";
+import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -185,6 +186,15 @@ function RootComponent() {
             <AnnouncementBanner />
             <OwnerReturnRedirect />
             <PageTransition><Outlet /></PageTransition>
+            <Toaster
+              theme="dark"
+              position="bottom-right"
+              visibleToasts={3}
+              toastOptions={{
+                className: "site-toast",
+                duration: 4200,
+              }}
+            />
             <NotificationOptIn />
             <PWAInstall />
             <DailyCheckIn />

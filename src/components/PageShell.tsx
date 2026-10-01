@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { BackHome } from "./BackHome";
-import { Toaster } from "sonner";
 
 export function PageShell({ children }: { children: ReactNode }) {
   return (
@@ -13,7 +12,6 @@ export function PageShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <Footer />
-      <Toaster theme="dark" position="bottom-right" />
     </div>
   );
 }
