@@ -39,13 +39,16 @@ function AdminPage() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: rep }, { count: usersCount }, { count: commentsCount }, { count: favCount }, { data: subsData }] = await Promise.all([
+      const [{ data: rep, error: reportsError }, { count: usersCount }, { count: commentsCount }, { count: favCount }, { data: subsData }] = await Promise.all([
         supabase.from("reports").select("*").order("created_at", { ascending: false }).limit(50),
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("comments").select("*", { count: "exact", head: true }),
         supabase.from("favorites").select("*", { count: "exact", head: true }),
         supabase.from("mod_subscribers").select("user_id, email"),
       ]);
+      if (reportsError) {
+        toast.error(`Could not load reports: ${reportsError.message}`);
+      }
       setReports((rep ?? []) as Report[]);
       setStats({
         users: usersCount ?? 0,
@@ -58,10 +61,12 @@ function AdminPage() {
   }, []);
 
   const resolve = async (id: string, status: "resolved" | "dismissed") => {
-    await supabase.from("reports").update({ status }).eq("id", id);
-    await (supabase.from as any)("moderation_log").insert({
+    const { error } = await supabase.from("reports").update({ status }).eq("id", id);
+    if (error) { toast.error(`Could not update report: ${error.message}`); return; }
+    const { error: logError } = await (supabase.from as any)("moderation_log").insert({
       actor_id: user!.id, action: `report_${status}`, target_type: "report", target_id: id,
     });
+    if (logError) toast.error(`Report updated, but moderation log failed: ${logError.message}`);
     setReports((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
   };
 
