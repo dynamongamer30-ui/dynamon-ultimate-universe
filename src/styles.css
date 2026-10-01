@@ -390,6 +390,14 @@ h1, h2, h3, h4, .font-display {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+.account-menu {
+  min-width: 0;
+}
+.account-menu-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 @media (max-width: 640px) {
   .notification-popover {
     position: fixed;
@@ -409,6 +417,17 @@ h1, h2, h3, h4, .font-display {
   }
   .notification-date {
     white-space: normal;
+  }
+  .account-menu {
+    position: fixed;
+    top: calc(4.5rem + env(safe-area-inset-top));
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    max-width: none;
+    margin-top: 0;
+    max-height: min(32rem, calc(100dvh - 6rem));
+    border-radius: 1rem;
   }
 }
 
