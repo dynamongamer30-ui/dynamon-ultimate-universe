@@ -138,8 +138,8 @@
   --ring: oklch(0.54 0.22 296);
 
   /* Global surfaces — every page consumes these */
-  --gradient-hero: radial-gradient(110% 82% at 52% -12%, oklch(0.36 0.16 300 / 0.58), transparent 52%),
-    radial-gradient(54% 42% at 84% 10%, oklch(0.42 0.18 328 / 0.22), transparent 70%),
+  --gradient-hero: radial-gradient(110% 82% at 52% -12%, oklch(0.36 0.16 300 / 0.48), transparent 52%),
+    radial-gradient(54% 42% at 84% 10%, oklch(0.42 0.18 328 / 0.16), transparent 70%),
     linear-gradient(180deg, oklch(0.105 0.022 295), oklch(0.135 0.026 295));
   --gradient-primary: linear-gradient(135deg, oklch(0.57 0.23 296), oklch(0.66 0.21 318));
   --gradient-violet: linear-gradient(135deg, oklch(0.61 0.22 296), oklch(0.7 0.18 322));
@@ -561,7 +561,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   box-shadow: 0 0 26px 3px oklch(0.64 0.22 308 / 0.38);
 }
 
-/* Hero-specific energy field: rich on desktop, restrained on smaller screens. */
+/* Hero-specific static fields: restrained accents behind the content, never a
+   moving blob competing with the headline or featured artwork. */
 .hero-field {
   position: relative;
   isolation: isolate;
@@ -599,7 +600,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 @media (max-width: 767px) {
   .hero-field { border-radius: 1.25rem; }
-  .hero-field::before { right: -15rem; top: -18rem; opacity: 0.72; }
+  .hero-field::before { width: 24rem; right: -11rem; top: -10rem; opacity: 0.58; }
+  .hero-field::after { width: 18rem; left: 42%; bottom: -13rem; opacity: 0.6; }
 }
 
 @media (prefers-reduced-motion: reduce) {

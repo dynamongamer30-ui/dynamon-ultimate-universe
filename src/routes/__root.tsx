@@ -15,7 +15,6 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/useAuth";
-import { AuroraBackground } from "@/components/AuroraBackground";
 import { AuroraCursor } from "@/components/AuroraCursor";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { PWAInstall } from "@/components/PWAInstall";
@@ -174,14 +173,12 @@ function PageTransition({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const showAmbientField = pathname === "/";
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SiteSettingsProvider>
           <GamificationProvider>
             <ConfirmProvider>
-            {showAmbientField && <AuroraBackground />}
             <AuroraCursor />
             <AnnouncementBanner />
             <OwnerReturnRedirect />
