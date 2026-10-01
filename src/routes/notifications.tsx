@@ -77,13 +77,13 @@ function NotificationsPage() {
           <p className="text-muted-foreground">No notifications yet. Check back soon.</p>
         </div>
       ) : (
-        <ul className="mt-8 space-y-3">
+        <ul className="notification-list mt-8 space-y-3">
           {items.map((n) => {
             const unread = unreadOnArrival.has(n.id);
             return (
               <li
                 key={n.id}
-                className={`rounded-2xl border p-5 transition-colors ${unread ? "border-primary/40 bg-primary/5" : "border-border bg-card/40"}`}
+                className={`notification-card rounded-2xl border p-5 transition-colors ${unread ? "border-primary/40 bg-primary/5" : "border-border bg-card/40"}`}
               >
                 <div className="flex items-start gap-3">
                   {sender ? (
@@ -101,17 +101,17 @@ function NotificationsPage() {
                       {unread ? <Bell className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                     </span>
                   )}
-                  <div className="min-w-0 flex-1">
+                  <div className="notification-copy min-w-0 flex-1">
                     {sender && (
                       <p className="text-xs font-semibold text-primary">
                         {sender.display_name || "Dynamon Gamer 07"}
                       </p>
                     )}
-                    <div className="flex items-start justify-between gap-3">
-                      <h2 className="font-display text-lg font-bold">{n.title}</h2>
-                      <span className="shrink-0 text-xs text-muted-foreground">{fmt(n.created_at)}</span>
+                    <div className="notification-heading flex items-start justify-between gap-3">
+                      <h2 className="notification-copy min-w-0 font-display text-lg font-bold">{n.title}</h2>
+                      <span className="notification-date shrink-0 text-xs text-muted-foreground">{fmt(n.created_at)}</span>
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                    <p className="notification-copy mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                       <NotificationBody text={n.body} />
                     </p>
                     <NotificationClaim notification={n} />

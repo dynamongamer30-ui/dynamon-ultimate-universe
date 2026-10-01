@@ -36,7 +36,7 @@ export function NotificationBell() {
   const recent = items.slice(0, 6);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative shrink-0">
       <button
         onClick={() => { setOpen((v) => !v); playClick(); }}
         aria-label="Notifications"
@@ -55,7 +55,7 @@ export function NotificationBell() {
         {open && (
           <motion.div
             initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-            className="absolute right-0 top-full overlay-popover mt-2 max-h-[min(32rem,calc(100dvh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl glass-l3 shadow-elev sm:w-80"
+            className="notification-popover absolute right-0 top-full overlay-popover mt-2 max-h-[min(32rem,calc(100dvh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl glass-l3 shadow-elev sm:w-80"
           >
             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
               <p className="text-sm font-semibold">Notifications</p>
@@ -106,7 +106,7 @@ export function NotificationBell() {
                       >
                         <div className="flex items-start gap-2">
                           {unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />}
-                          <div className={`min-w-0 ${unread ? "" : "pl-4"}`}>
+                          <div className={`notification-copy min-w-0 ${unread ? "" : "pl-4"}`}>
                             {sender && (
                               <div className="mb-1 flex items-center gap-1.5">
                                 <img
@@ -120,7 +120,7 @@ export function NotificationBell() {
                               </div>
                             )}
                             <p className="truncate text-sm font-semibold">{n.title}</p>
-                            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                            <p className="notification-copy mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                               <NotificationBody text={n.body} />
                             </p>
                             <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/70">{timeAgo(n.created_at)}</p>
