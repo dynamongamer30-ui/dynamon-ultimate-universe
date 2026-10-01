@@ -369,7 +369,12 @@ h1, h2, h3, h4, .font-display {
 .site-chrome { z-index: var(--z-chrome); }
 .overlay-popover { z-index: var(--z-popover); }
 .overlay-toast { z-index: var(--z-toast); }
-.overlay-scrim { z-index: var(--z-scrim); }
+.overlay-scrim {
+  z-index: var(--z-scrim);
+  background: var(--overlay-scrim) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(90%);
+  backdrop-filter: blur(12px) saturate(90%);
+}
 .overlay-surface { z-index: var(--z-modal); }
 
 /* Command surfaces remain readable over artwork, video, and animated backgrounds. */
@@ -444,12 +449,15 @@ h1, h2, h3, h4, .font-display {
   .glass-l3 { background: rgba(30, 22, 48, 0.96) !important; }
 }
 
-/* Report keeps its existing opaque treatment until the Phase 2 reference-modal pass. */
+/* Report is the reference Level 3 command surface: readable first, glassy
+   second, with the scrim carrying most of the background blur. */
 .report-dialog {
-  background-color: var(--card) !important;
-  background-image: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
+  background-color: color-mix(in srgb, var(--card) 91%, transparent) !important;
+  background-image: var(--glass-noise), linear-gradient(135deg, rgba(255,255,255,0.045), rgba(0,0,0,0.045)) !important;
+  background-blend-mode: soft-light, normal;
+  border: 1px solid var(--material-l3-border);
+  -webkit-backdrop-filter: blur(var(--material-l3-blur)) saturate(120%);
+  backdrop-filter: blur(var(--material-l3-blur)) saturate(120%);
 }
 
 @media (prefers-reduced-motion: reduce) {

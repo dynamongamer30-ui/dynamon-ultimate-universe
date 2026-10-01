@@ -189,7 +189,7 @@ function RootComponent() {
             <Toaster
               theme="dark"
               position="bottom-right"
-              visibleToasts={3}
+              visibleToasts={1}
               toastOptions={{
                 className: "site-toast",
                 duration: 4200,

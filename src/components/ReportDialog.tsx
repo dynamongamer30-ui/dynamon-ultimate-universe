@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Flag, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,13 @@ export function ReportButton({ targetType, targetId, label = "Report" }: { targe
   const headingId = `report-${targetType}-${targetId}-title`;
   const detailsId = `report-${targetType}-${targetId}-details`;
   const dialogRef = useDialogFocus(open, () => setOpen(false));
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [open]);
 
   const submit = async () => {
     if (!user) { toast.error("Sign in to report"); return; }
@@ -42,19 +49,24 @@ export function ReportButton({ targetType, targetId, label = "Report" }: { targe
             <motion.div ref={dialogRef} initial={{ scale: 0.94, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.94, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
               role="dialog" aria-modal="true" aria-labelledby={headingId} tabIndex={-1}
-              className="report-dialog overlay-surface w-full max-w-md rounded-3xl p-6 shadow-elev">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 id={headingId} className="font-display text-lg font-bold">Report this {targetType}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">Owner will review it within 24h.</p>
+              className="report-dialog overlay-surface max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-3xl p-5 shadow-elev sm:p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
+                    <Flag className="h-5 w-5" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 id={headingId} className="font-display text-lg font-bold">Report this {targetType}</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Owner will review it within 24h.</p>
+                  </div>
                 </div>
-                <button type="button" onClick={() => setOpen(false)} aria-label="Close report dialog" className="grid h-8 w-8 place-items-center rounded-full border border-border"><X className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setOpen(false)} aria-label="Close report dialog" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border bg-background/30 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"><X className="h-5 w-5" /></button>
               </div>
               <ThemedSelect
                 value={reason}
                 onValueChange={setReason}
                 ariaLabel="Report reason"
-                className="mt-4 h-auto w-full rounded-xl py-2.5 text-sm"
+                className="mt-5 h-11 w-full rounded-xl border-border/80 bg-background/45 px-3 text-sm"
                 options={[
                   { value: "spam", label: "Spam or promotion" },
                   { value: "abuse", label: "Abusive / harassment" },
@@ -64,12 +76,12 @@ export function ReportButton({ targetType, targetId, label = "Report" }: { targe
                 ]}
               />
               <label htmlFor={detailsId} className="sr-only">Additional report details</label>
-              <textarea id={detailsId} name="details" value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Add context (optional)" rows={3} maxLength={500}
-                className="mt-3 w-full resize-none rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary" />
-              <div className="mt-4 flex gap-2">
-                <button type="button" onClick={() => setOpen(false)} className="flex-1 rounded-full border border-border px-4 py-2 text-sm">Cancel</button>
+              <textarea id={detailsId} name="details" value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Add context (optional)" rows={4} maxLength={500}
+                className="mt-3 min-h-28 w-full resize-y rounded-xl border border-border/80 bg-background/45 px-3 py-3 text-sm leading-relaxed outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary" />
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button type="button" onClick={() => setOpen(false)} className="order-2 inline-flex h-11 min-w-0 items-center justify-center whitespace-nowrap rounded-xl border border-border bg-background/25 px-4 text-sm font-semibold transition-colors hover:border-primary/45 hover:bg-background/45 sm:order-1">Cancel</button>
                 <button onClick={submit} disabled={busy}
-                  className="flex-1 rounded-full px-4 py-2 text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-60"
+                  className="order-1 inline-flex h-11 min-w-0 items-center justify-center whitespace-nowrap rounded-xl px-4 text-sm font-semibold text-primary-foreground shadow-[var(--interactive-glow)] transition-[filter,transform] hover:brightness-110 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 sm:order-2"
                   style={{ background: "var(--gradient-primary)" }}>
                   {busy ? "Sending…" : "Submit report"}
                 </button>
