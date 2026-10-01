@@ -55,7 +55,7 @@ export function NotificationBell() {
         {open && (
           <motion.div
             initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-            className="absolute right-0 top-full z-[900] mt-2 max-h-[min(32rem,calc(100dvh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl glass-l3 shadow-elev sm:w-80"
+            className="absolute right-0 top-full overlay-popover mt-2 max-h-[min(32rem,calc(100dvh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl glass-l3 shadow-elev sm:w-80"
           >
             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
               <p className="text-sm font-semibold">Notifications</p>

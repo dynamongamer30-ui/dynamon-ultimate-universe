@@ -37,12 +37,12 @@ export function ReportButton({ targetType, targetId, label = "Report" }: { targe
       <AnimatePresence>
         {open && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] grid place-items-center bg-black/70 px-4"
+            className="fixed inset-0 overlay-scrim grid place-items-center bg-black/70 px-4"
             onClick={() => setOpen(false)}>
             <motion.div ref={dialogRef} initial={{ scale: 0.94, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.94, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
               role="dialog" aria-modal="true" aria-labelledby={headingId} tabIndex={-1}
-              className="report-dialog w-full max-w-md rounded-3xl p-6 shadow-elev">
+              className="report-dialog overlay-surface w-full max-w-md rounded-3xl p-6 shadow-elev">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 id={headingId} className="font-display text-lg font-bold">Report this {targetType}</h3>

@@ -46,7 +46,7 @@ export function Header() {
   const avatarUrl = profile?.custom_avatar_url || profile?.avatar_url || undefined;
 
   return (
-    <header className="sticky top-0 z-50 glass-l2 border-b border-border/60">
+    <header className="sticky top-0 site-chrome glass-l2 border-b border-border/60">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
         <Link to="/" onMouseDown={playClick} className="flex items-center gap-2 min-w-0">
           <motion.span
@@ -120,7 +120,7 @@ export function Header() {
                 {menuOpen && (
                   <motion.div
                     initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                    className="absolute right-0 z-[900] mt-2 max-h-[calc(100dvh-5rem)] w-[min(18rem,calc(100vw-1.5rem))] overflow-x-hidden overflow-y-auto rounded-2xl glass-l3 shadow-elev"
+                    className="absolute right-0 overlay-popover mt-2 max-h-[calc(100dvh-5rem)] w-[min(18rem,calc(100vw-1.5rem))] overflow-x-hidden overflow-y-auto rounded-2xl glass-l3 shadow-elev"
                   >
                     <div className="flex items-center gap-3 border-b border-border/60 px-4 py-3">
                       {avatarUrl && <img src={avatarUrl} alt="" className={`h-10 w-10 rounded-full object-cover ${profile?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/40"}`} />}
