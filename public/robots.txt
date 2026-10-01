@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin-control
+Disallow: /admin-keys
+Disallow: /admin-loader
+Disallow: /admin-notifications
+Disallow: /auth
+Disallow: /profile
+Disallow: /favorites
+Disallow: /notifications
+Disallow: /claim
+Disallow: /unlock
+
+Sitemap: https://dynamongamer.space/sitemap.xml

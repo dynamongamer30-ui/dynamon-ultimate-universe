@@ -1,0 +1,13 @@
+{
+  "name": "Dynamon Universe",
+  "short_name": "Dynamon",
+  "description": "Dynamons World builds, guides, rewards, and release notes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0813",
+  "theme_color": "#171020",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/dynamon-gamer-avatar.png", "sizes": "256x256", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
