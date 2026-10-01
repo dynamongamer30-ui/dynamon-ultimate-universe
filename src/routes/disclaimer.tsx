@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageShell } from "@/components/PageShell";
 import { pageSeoHead } from "@/lib/seo";
 
@@ -24,6 +24,7 @@ function Disclaimer() {
             respective owners.
           </p>
           <p className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed text-foreground"><span className="font-bold text-primary">In simple words: </span>This is a fan site. We are not the company that made Dynamons World, and they don&apos;t run or approve this site. The game and its name belong to them.</p>
+          <p className="mt-4 text-sm text-muted-foreground">For complete data-collection and account-information details, read our <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</p>
         </header>
 
         <section id="legal" className="edge-light rounded-2xl glass p-8">

@@ -19,6 +19,7 @@ const staticPages = [
   { path: "/about", changefreq: "monthly", priority: "0.3" },
   { path: "/contact", changefreq: "monthly", priority: "0.3" },
   { path: "/disclaimer", changefreq: "monthly", priority: "0.2" },
+  { path: "/privacy", changefreq: "monthly", priority: "0.2" },
 ];
 
 const modPages = slugs.map((slug) => ({ path: `/mods/${slug}`, changefreq: "weekly", priority: "0.8" }));

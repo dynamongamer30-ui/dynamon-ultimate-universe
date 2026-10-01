@@ -39,7 +39,7 @@ export function Footer() {
             <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
               <li><Link to="/disclaimer" className="transition-colors hover:text-primary">Disclaimer</Link></li>
               <li><Link to="/disclaimer" hash="legal" className="transition-colors hover:text-primary">Terms of use</Link></li>
-              <li><Link to="/disclaimer" hash="privacy" className="transition-colors hover:text-primary">Privacy policy</Link></li>
+              <li><Link to="/privacy" className="transition-colors hover:text-primary">Privacy policy</Link></li>
               <li><Link to="/disclaimer" hash="dmca" className="transition-colors hover:text-primary">DMCA</Link></li>
             </ul>
           </div>
