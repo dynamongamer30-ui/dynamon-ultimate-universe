@@ -38,7 +38,7 @@ export function ReportButton({ targetType, targetId, label = "Report" }: { targe
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-rose-400">
+      <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" className="btn-tertiary text-xs hover:text-rose-400">
         <Flag className="h-3 w-3" /> {label}
       </button>
       <AnimatePresence>
@@ -60,7 +60,7 @@ export function ReportButton({ targetType, targetId, label = "Report" }: { targe
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Owner will review it within 24h.</p>
                   </div>
                 </div>
-                <button type="button" onClick={() => setOpen(false)} aria-label="Close report dialog" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border bg-background/30 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"><X className="h-5 w-5" /></button>
+                <button type="button" onClick={() => setOpen(false)} aria-label="Close report dialog" className="btn-icon h-11 w-11 shrink-0 rounded-xl border border-border bg-background/30"><X className="h-5 w-5" /></button>
               </div>
               <ThemedSelect
                 value={reason}
@@ -79,10 +79,9 @@ export function ReportButton({ targetType, targetId, label = "Report" }: { targe
               <textarea id={detailsId} name="details" value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Add context (optional)" rows={4} maxLength={500}
                 className="mt-3 min-h-28 w-full resize-y rounded-xl border border-border/80 bg-background/45 px-3 py-3 text-sm leading-relaxed outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary" />
               <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <button type="button" onClick={() => setOpen(false)} className="order-2 inline-flex h-11 min-w-0 items-center justify-center whitespace-nowrap rounded-xl border border-border bg-background/25 px-4 text-sm font-semibold transition-colors hover:border-primary/45 hover:bg-background/45 sm:order-1">Cancel</button>
+                <button type="button" onClick={() => setOpen(false)} className="btn-secondary order-2 h-11 min-w-0 sm:order-1">Cancel</button>
                 <button onClick={submit} disabled={busy}
-                  className="order-1 inline-flex h-11 min-w-0 items-center justify-center whitespace-nowrap rounded-xl px-4 text-sm font-semibold text-primary-foreground shadow-[var(--interactive-glow)] transition-[filter,transform] hover:brightness-110 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 sm:order-2"
-                  style={{ background: "var(--gradient-primary)" }}>
+                  className="btn-primary order-1 h-11 min-w-0 sm:order-2">
                   {busy ? "Sending…" : "Submit report"}
                 </button>
               </div>

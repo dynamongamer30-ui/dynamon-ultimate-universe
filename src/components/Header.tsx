@@ -88,7 +88,7 @@ export function Header() {
             aria-label="Search"
             aria-expanded={searchOpen}
             aria-controls="site-search-panel"
-            className="press grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-[color,border-color,box-shadow] hover:border-primary/55 hover:text-foreground hover:shadow-[0_0_22px_-10px_oklch(0.62_0.23_300_/_0.9)]"
+            className="btn-icon press h-10 w-10 rounded-xl border border-border bg-card"
           >
             <Search className="h-4 w-4" />
           </button>
@@ -101,7 +101,7 @@ export function Header() {
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-expanded={menuOpen}
                 aria-haspopup="menu"
-                className={`relative grid h-10 w-10 place-items-center overflow-hidden rounded-full text-primary-foreground ${profile?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/40"}`}
+                className={`btn-icon relative h-10 w-10 overflow-hidden rounded-full p-0 text-primary-foreground ${profile?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/40"}`}
                 style={!avatarUrl ? { background: "var(--gradient-violet)" } : undefined}
                 aria-label="Account"
               >
@@ -132,37 +132,37 @@ export function Header() {
                         <p className="truncate text-xs text-muted-foreground">@{profile?.username ?? user.email}</p>
                       </div>
                     </div>
-                    <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-card/60">
+                    <Link to="/profile" onClick={() => setMenuOpen(false)} className="btn-tertiary w-full justify-start rounded-none px-4 py-3 text-left text-sm">
                       <Settings className="h-4 w-4" /> Edit profile
                     </Link>
-                    <Link to="/favorites" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-card/60">
+                    <Link to="/favorites" onClick={() => setMenuOpen(false)} className="btn-tertiary w-full justify-start rounded-none px-4 py-3 text-left text-sm">
                       <Heart className="h-4 w-4" /> My favorites
                     </Link>
-                    <Link to="/notifications" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-card/60">
+                    <Link to="/notifications" onClick={() => setMenuOpen(false)} className="btn-tertiary w-full justify-start rounded-none px-4 py-3 text-left text-sm">
                       <Bell className="h-4 w-4" /> Notifications
                     </Link>
-                    <Link to="/rewards" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-card/60">
+                    <Link to="/rewards" onClick={() => setMenuOpen(false)} className="btn-tertiary w-full justify-start rounded-none px-4 py-3 text-left text-sm">
                       <Gift className="h-4 w-4" /> Daily rewards
                     </Link>
-                    <Link to="/achievements" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-card/60">
+                    <Link to="/achievements" onClick={() => setMenuOpen(false)} className="btn-tertiary w-full justify-start rounded-none px-4 py-3 text-left text-sm">
                       <Trophy className="h-4 w-4" /> Achievements · Lv {xp.level}
                     </Link>
                     {profile?.is_owner && (
                       <>
-                        <Link to="/admin" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 border-t border-border/60 px-4 py-3 text-left text-sm text-amber-300 hover:bg-card/60">
+                        <Link to="/admin" onClick={() => setMenuOpen(false)} className="btn-tertiary w-full justify-start rounded-none border-t border-border/60 px-4 py-3 text-left text-sm text-amber-300">
                           <Shield className="h-4 w-4" /> Owner dashboard
                         </Link>
-                        <Link to="/admin-control" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-amber-300 hover:bg-card/60">
+                        <Link to="/admin-control" onClick={() => setMenuOpen(false)} className="btn-tertiary w-full justify-start rounded-none px-4 py-3 text-left text-sm text-amber-300">
                           <Settings className="h-4 w-4" /> Control panel
                         </Link>
-                        <Link to="/admin-notifications" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-amber-300 hover:bg-card/60">
+                        <Link to="/admin-notifications" onClick={() => setMenuOpen(false)} className="btn-tertiary w-full justify-start rounded-none px-4 py-3 text-left text-sm text-amber-300">
                           <Bell className="h-4 w-4" /> Send notifications
                         </Link>
                       </>
                     )}
                     <button
                       onClick={async () => { setMenuOpen(false); await signOut(); }}
-                      className="flex w-full items-center gap-2 border-t border-border/60 px-4 py-3 text-left text-sm hover:bg-card/60"
+                      className="btn-tertiary w-full justify-start rounded-none border-t border-border/60 px-4 py-3 text-left text-sm"
                     >
                       <LogOut className="h-4 w-4" /> Sign out
                     </button>
@@ -173,7 +173,7 @@ export function Header() {
           ) : (
             <Link
               to="/auth" onMouseDown={playClick}
-              className="press hidden items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground glow-primary transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_30px_-8px_oklch(0.66_0.21_318_/_0.82)] sm:inline-flex"
+              className="btn-primary press hidden rounded-xl px-4 py-2 sm:inline-flex"
             >
               <UserIcon className="h-4 w-4" /> Sign in
             </Link>
@@ -181,7 +181,7 @@ export function Header() {
 
           <button
             onClick={() => { setOpen((v) => !v); playClick(); }}
-            className="grid h-10 w-10 place-items-center rounded-xl border border-border lg:hidden"
+            className="btn-icon h-10 w-10 rounded-xl border border-border lg:hidden"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             aria-controls="mobile-navigation"
@@ -253,7 +253,7 @@ export function Header() {
             {nav.map((n) => (
               <Link
                 key={n.to} to={n.to} onClick={() => setOpen(false)}
-                className="rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-card hover:text-foreground"
+                className="btn-tertiary w-full justify-start rounded-xl px-3 py-2.5 text-sm font-medium"
               >
                 {n.label}
               </Link>

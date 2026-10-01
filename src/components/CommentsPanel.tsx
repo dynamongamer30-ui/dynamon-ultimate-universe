@@ -66,7 +66,8 @@ export function CommentsPanel({
   const [body, setBody] = useState("");
   const [rating, setRating] = useState<number | null>(null);
   const [hover, setHover] = useState(0);
-  const [busy, setBusy] = useState(false);
+  const [ratingBusy, setRatingBusy] = useState(false);
+  const [commentBusy, setCommentBusy] = useState(false);
   const [replyOpen, setReplyOpen] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
 
@@ -124,30 +125,57 @@ export function CommentsPanel({
   const ratings = topLevel.map((c) => c.rating).filter((r): r is number => typeof r === "number");
   const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
 
-  const submit = async (e: React.FormEvent) => {
+  const submitRating = async () => {
+    if (!user || !profile) { toast.error("Sign in and complete your profile first"); return; }
+    if (rating === null) { toast.error("Choose a star rating first"); return; }
+    setRatingBusy(true);
+    try {
+      const { data: existing, error: lookupError } = await supabase
+        .from("comments")
+        .select("id")
+        .eq("mod_slug", slug)
+        .eq("user_id", user.id)
+        .is("parent_id", null)
+        .not("rating", "is", null)
+        .maybeSingle();
+      if (lookupError) throw lookupError;
+      const { error } = existing
+        ? await supabase.from("comments").update({ rating }).eq("id", existing.id)
+        : await supabase.from("comments").insert({ mod_slug: slug, user_id: user.id, body: "", rating, parent_id: null });
+      if (error) throw error;
+      setRating(null);
+      playSuccess();
+      toast.success(`${rating}-star review submitted`);
+      award(15, "Reviewed");
+      grant("first_review");
+      await load();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Could not submit rating");
+    } finally {
+      setRatingBusy(false);
+    }
+  };
+
+  const submitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !profile) { toast.error("Sign in and complete your profile first"); return; }
     const trimmedBody = body.trim();
-    if (rating === null && !trimmedBody) {
-      toast.error("Give at least 1 star or write a comment");
-      return;
-    }
-    setBusy(true);
+    if (!trimmedBody) { toast.error("Write a comment first"); return; }
+    setCommentBusy(true);
     try {
       const { error } = await supabase.from("comments").insert({
-        mod_slug: slug, user_id: user.id, body: trimmedBody, rating, parent_id: null,
+        mod_slug: slug, user_id: user.id, body: trimmedBody, rating: null, parent_id: null,
       });
       if (error) throw error;
-      setBody(""); setRating(null);
+      setBody("");
       playSuccess();
-      toast.success("Review posted");
-      award(15, "Reviewed");
-      grant("first_review");
-      load();
+      toast.success("Comment submitted");
+      award(15, "Commented");
+      await load();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Could not post review");
+      toast.error(err instanceof Error ? err.message : "Could not submit comment");
     } finally {
-      setBusy(false);
+      setCommentBusy(false);
     }
   };
 
@@ -237,7 +265,7 @@ export function CommentsPanel({
             onClick={() => toggleLike(c)}
             aria-label={`${c.likedByMe ? "Unlike" : "Like"} review by ${authorName}`}
             aria-pressed={c.likedByMe}
-            className={`inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`btn-tertiary rounded-full border border-border px-3 py-1.5 text-xs ${
               c.likedByMe ? "border-rose-400/40 text-rose-400" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -250,7 +278,7 @@ export function CommentsPanel({
               onClick={() => { setReplyOpen(replyOpen === c.id ? null : c.id); setReplyBody(""); }}
               aria-expanded={replyOpen === c.id}
               aria-controls={`reply-${c.id}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+              className="btn-tertiary rounded-full border border-border px-3 py-1.5 text-xs"
             >
               <ReplyIcon className="h-3.5 w-3.5" /> Reply
             </button>
@@ -274,8 +302,8 @@ export function CommentsPanel({
                 className="w-full resize-none rounded-xl border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-primary"
               />
               <div className="mt-2 flex justify-end gap-2">
-                <button onClick={() => setReplyOpen(null)} className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
-                <button onClick={() => submitReply(c.id)} className="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+                <button onClick={() => setReplyOpen(null)} className="btn-tertiary rounded-full px-3 py-1.5 text-xs">Cancel</button>
+                <button onClick={() => submitReply(c.id)} className="btn-primary rounded-full px-4 py-1.5 text-xs">
                   <Send className="h-3 w-3" /> Post reply
                 </button>
               </div>
@@ -315,43 +343,54 @@ export function CommentsPanel({
               Finish your <Link to="/auth" className="font-semibold text-primary hover:underline">trainer profile</Link> to post a review.
             </div>
           ) : (
-            <form onSubmit={submit} className="mt-5">
-              <fieldset className="mt-3">
-                <legend className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your rating</legend>
-                <div className="mt-2 flex gap-1">
-                {Array.from({ length: 5 }).map((_, i) => {
-                  const v = i + 1;
-                  const active = (hover || rating || 0) >= v;
-                  return (
-                    <button
-                      key={v} type="button"
-                      onMouseEnter={() => setHover(v)} onMouseLeave={() => setHover(0)}
-                      onClick={() => { setRating(v); playSoft(); }}
-                      className="p-1" aria-label={`Rate ${v} star`} aria-pressed={rating === v}
-                    >
-                      <Star className={`h-7 w-7 transition-all ${active ? "fill-[var(--gold)] text-[var(--gold)] scale-110" : "text-muted-foreground"}`} />
-                    </button>
-                  );
-                                    })}
-                </div>
-              </fieldset>
-              <label htmlFor="review-body" className="sr-only">Review details</label>
-              <textarea
-                id="review-body" name="review"
+            <div className="mt-5 grid gap-4">
+              <div className="rounded-2xl border border-gold/30 bg-gold/5 p-4">
+                <fieldset>
+                  <legend className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Rate this build</legend>
+                  <p className="mt-1 text-sm text-muted-foreground">Your star rating is separate from your comment.</p>
+                  <div className="mt-3 flex gap-1" role="group" aria-label="Choose a star rating">
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const v = i + 1;
+                      const active = (hover || rating || 0) >= v;
+                      return (
+                        <button
+                          key={v} type="button"
+                          onMouseEnter={() => setHover(v)} onMouseLeave={() => setHover(0)}
+                          onClick={() => { setRating(v); playSoft(); }}
+                          className="btn-icon h-11 w-11 rounded-xl p-1" aria-label={`Rate ${v} star`} aria-pressed={rating === v}
+                        >
+                          <Star className={`h-7 w-7 transition-all ${active ? "scale-110 fill-[var(--gold)] text-[var(--gold)]" : "text-muted-foreground"}`} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    type="button" disabled={rating === null || ratingBusy} onClick={submitRating} onMouseDown={playClick}
+                    className="btn-primary mt-3 w-full"
+                  >
+                    {ratingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
+                    {ratingBusy ? "Submitting…" : rating ? `Submit ${rating}-star review` : "Choose a star to rate"}
+                  </button>
+                </fieldset>
+              </div>
 
-                value={body} onChange={(e) => setBody(e.target.value)}
-                placeholder="Share your experience… (optional — you can rate without writing anything)" rows={4} maxLength={1000}
-                className="mt-3 w-full resize-none rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
-              />
-              <button
-                type="submit" disabled={busy} onMouseDown={playClick}
-                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02] glow-primary disabled:opacity-60"
-                style={{ background: "var(--gradient-primary)" }}
-              >
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                {body.trim() ? "Post review" : "Submit rating"}
-              </button>
-            </form>
+              <form onSubmit={submitComment} className="rounded-2xl border border-border bg-background/20 p-4">
+                <label htmlFor="review-body" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Leave a comment <span className="font-normal normal-case">(optional)</span></label>
+                <textarea
+                  id="review-body" name="comment"
+                  value={body} onChange={(e) => setBody(e.target.value)}
+                  placeholder="Share your experience…" rows={4} maxLength={1000}
+                  className="mt-3 w-full resize-none rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
+                />
+                <button
+                  type="submit" disabled={!body.trim() || commentBusy} onMouseDown={playClick}
+                  className="btn-secondary mt-3 w-full"
+                >
+                  {commentBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {commentBusy ? "Submitting…" : "Submit comment"}
+                </button>
+              </form>
+            </div>
           )}
         </div>
 
