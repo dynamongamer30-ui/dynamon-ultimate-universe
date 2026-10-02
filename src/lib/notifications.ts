@@ -25,6 +25,7 @@ export interface AppNotification {
   created_at: string; // ISO timestamp
   reward_kind: "vip_key" | "phoenix_pass" | "trainer_dg_key" | "trainer_vip_key" | null;
   reward_ref: string | null;
+  burn_after_read: boolean;
 }
 
 export interface SenderProfile {
@@ -47,7 +48,7 @@ export async function getSenderProfile(): Promise<SenderProfile | null> {
 
 export async function listNotifications(): Promise<AppNotification[]> {
   const { data, error } = await db("notifications")
-    .select("id,title,body,created_at,reward_kind,reward_ref")
+    .select("id,title,body,created_at,reward_kind,reward_ref,burn_after_read")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as AppNotification[];

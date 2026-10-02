@@ -37,8 +37,9 @@ export function useNotifications() {
     setError(null);
     try {
       const [list, reads] = await Promise.all([listNotifications(), listMyReadIds()]);
-      setItems(list);
-      setReadIds(new Set(reads));
+      const readSet = new Set(reads);
+      setItems(list.filter((n) => !n.burn_after_read || !readSet.has(n.id)));
+      setReadIds(readSet);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load notifications");
     } finally {
@@ -65,6 +66,7 @@ export function useNotifications() {
       unreadIds.forEach((id) => next.add(id));
       return next;
     });
+    setItems((prev) => prev.filter((n) => !n.burn_after_read || !unreadIds.includes(n.id)));
     try {
       await markRead(unreadIds, user.id);
     } catch {
@@ -76,6 +78,7 @@ export function useNotifications() {
     async (id: string) => {
       if (!user || readIds.has(id)) return;
       setReadIds((prev) => new Set(prev).add(id));
+      setItems((prev) => prev.filter((n) => !n.burn_after_read || n.id !== id));
       try {
         await markRead([id], user.id);
       } catch {
