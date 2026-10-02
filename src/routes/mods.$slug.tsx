@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, Check, Download, Shield, PlayCircle, Sparkles, Lock, ExternalLink, Loader2, X, Feather, Copy } from "lucide-react";
+import { ArrowLeft, Check, Download, Shield, PlayCircle, Sparkles, Lock, ExternalLink, Loader2, X, Feather, Copy, CalendarDays, FileArchive, Gauge, ShieldCheck } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommentsPanel } from "@/components/CommentsPanel";
@@ -196,8 +196,43 @@ function ModDetail() {
             <Stat label="Size" value={blendedMod.size} />
             <Stat label="Updated" value={new Date(blendedMod.updated).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} />
           </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Build trust metadata">
+            <TrustSignal icon={<Gauge className="h-4 w-4" />} label="Build type" value="Fan-made edition" />
+            <TrustSignal icon={<CalendarDays className="h-4 w-4" />} label="Release" value={`Updated ${new Date(blendedMod.updated).toLocaleDateString(undefined, { month: "short", year: "numeric" })}`} />
+            <TrustSignal icon={<FileArchive className="h-4 w-4" />} label="Package" value={blendedMod.size} />
+          </div>
         </motion.div>
       </article>
+
+      <section aria-labelledby="safety-title" className="mt-12 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="material-l1 rounded-[var(--radius-surface)] p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary" aria-hidden="true">
+              <ShieldCheck className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Decision notes</p>
+              <h2 id="safety-title" className="mt-1 font-display text-xl font-bold">Know what you are choosing</h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Review the feature list, version, package size, and changelog before starting the secure unlock flow. The page keeps the action clear without hiding the context around it.</p>
+            </div>
+          </div>
+          <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+            <li className="flex items-start gap-2 rounded-xl border border-border bg-background/35 p-3 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" /> Confirm the version matches your intended release.</li>
+            <li className="flex items-start gap-2 rounded-xl border border-border bg-background/35 p-3 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" /> Read the changelog for the latest update notes.</li>
+          </ul>
+        </div>
+        <div className="material-l1 rounded-[var(--radius-surface)] p-5 sm:p-6">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Compatibility</p>
+          <h2 className="mt-1 font-display text-xl font-bold">Release context</h2>
+          <dl className="mt-5 space-y-3 text-sm">
+            <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-3"><dt className="text-muted-foreground">Game</dt><dd className="font-semibold">Dynamons World</dd></div>
+            <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-3"><dt className="text-muted-foreground">Element</dt><dd className={theme.text}>{theme.label}</dd></div>
+            <div className="flex items-center justify-between gap-4"><dt className="text-muted-foreground">Features</dt><dd className="font-semibold">{blendedMod.features.length} listed</dd></div>
+          </dl>
+          <Link to="/disclaimer" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline"><Shield className="h-4 w-4" /> Read safety notes</Link>
+        </div>
+      </section>
 
       {/* YouTube embed / placeholder */}
       <section className="mt-14">
@@ -357,12 +392,12 @@ function FollowGate({
     <div
       ref={dialogRef}
       role="dialog" aria-modal="true" aria-label={`Download ${modName}`} tabIndex={-1}
-      className="modal-frame fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+      className="modal-frame overlay-scrim fixed inset-0 flex items-center justify-center"
       onClick={onClose}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="modal-panel relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
+        className="modal-panel overlay-surface relative w-full max-w-md rounded-[var(--radius-command)] border p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -427,7 +462,7 @@ function ModalShell({
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="modal-panel relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
+        className="modal-panel overlay-surface relative w-full max-w-md rounded-[var(--radius-command)] border p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -655,6 +690,18 @@ function PhoenixPassModal({
         </div>
       )}
     </ModalShell>
+  );
+}
+
+function TrustSignal({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="material-l1 flex min-w-0 items-center gap-3 rounded-xl p-3">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary" aria-hidden="true">{icon}</span>
+      <div className="min-w-0">
+        <p className="truncate text-[0.65rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+        <p className="mt-0.5 truncate text-sm font-semibold">{value}</p>
+      </div>
+    </div>
   );
 }
 

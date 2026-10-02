@@ -178,6 +178,30 @@ function ModsPage() {
             )}
           </div>
         </div>
+
+        {activeFilters > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Active filters">
+            <span className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">Active</span>
+            {[...elements].map((el) => (
+              <button key={el} type="button" onClick={() => toggleElement(el)} className="touch-target inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                {elementTheme[el].label}<X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            ))}
+            {minRating > 0 && (
+              <button type="button" onClick={() => setMinRating(0)} className="touch-target inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
+                {minRating}+ rating<X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            )}
+            {version !== "all" && (
+              <button type="button" onClick={() => setVersion("all")} className="touch-target inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground">
+                v{version}<X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            )}
+            <button type="button" onClick={() => { setElements(new Set()); setMinRating(0); setVersion("all"); }} className="touch-target ml-auto inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground">
+              Reset all
+            </button>
+          </div>
+        )}
       </header>
 
       <p id="mods-result-status" aria-live="polite" className="mt-5 text-sm text-muted-foreground">

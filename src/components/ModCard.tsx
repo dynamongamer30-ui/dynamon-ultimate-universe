@@ -58,7 +58,7 @@ export function ModCard({ mod, index = 0, featured = false, headingLevel = "h3" 
       viewport={{ once: true, margin: "-50px" }}
       transition={{ type: "spring", stiffness: 100, damping: 18, delay: index * 0.05 }}
       onMouseEnter={playHover}
-      className="edge-light group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-primary/45"
+      className="edge-light group relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-surface)] border border-border bg-card transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-primary/45"
       style={{ boxShadow: featured ? theme.glow : "var(--shadow-card)" }}
     >
       {/* Image — entire thing links to detail */}
@@ -75,7 +75,7 @@ export function ModCard({ mod, index = 0, featured = false, headingLevel = "h3" 
           sizes="(min-width: 640px) 50vw, 100vw"
           className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
         />
-        <div className="absolute inset-x-0 bottom-0 z-10 h-1/2 bg-gradient-to-t from-card to-transparent" />
+        <div className="absolute inset-0 z-10 bg-[var(--artwork-overlay)]" aria-hidden="true" />
 
         <div className={`absolute left-4 top-4 z-20 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-black uppercase tracking-[0.2em] ${theme.chip}`}>
           {theme.label}
@@ -112,7 +112,7 @@ export function ModCard({ mod, index = 0, featured = false, headingLevel = "h3" 
           ))}
         </div>
 
-        <div className="mt-4 flex divide-x divide-border rounded-xl border border-border bg-background/50 text-center">
+        <div className="mt-4 flex divide-x divide-border rounded-xl border border-border bg-background/50 text-center" aria-label="Build signals">
           <Stat label="Downloads" value={formatCount(totalDownloads)} />
           <Stat label="Likes" value={formatCount(totalLikes)} />
           <Stat label={mod.ratingCount ? "Reviews" : "Rating"} value={mod.ratingCount ? formatCount(mod.ratingCount) : mod.baseRating.toFixed(1)} />
@@ -121,27 +121,27 @@ export function ModCard({ mod, index = 0, featured = false, headingLevel = "h3" 
         <div className="mt-auto flex items-center gap-2 pt-5">
           <Link
             to="/mods/$slug" params={{ slug: mod.slug }} onClick={handleGet}
-            className="press inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_30px_-8px_oklch(0.66_0.21_318_/_0.78)] glow-primary"
+            className="press touch-target inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_30px_-8px_oklch(0.66_0.21_318_/_0.78)] glow-primary"
           >
             <Download className="h-4 w-4 shrink-0" />
             <span className="truncate">{user ? "Download" : "Sign in to download"}</span>
           </Link>
           <button
             onClick={toggleLike} aria-label={liked ? "Unlike" : "Like"} aria-pressed={liked}
-            className={`press flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-colors ${liked ? "border-rose-400/50 bg-rose-400/10 text-rose-400" : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
+            className={`press touch-target flex shrink-0 items-center justify-center rounded-lg border transition-colors ${liked ? "border-rose-400/50 bg-rose-400/10 text-rose-400" : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
           >
             <Heart className={`h-4 w-4 ${liked ? "fill-rose-400" : ""}`} />
           </button>
           <FavoriteButton slug={mod.slug} />
           <Link
             to="/mods/$slug" params={{ slug: mod.slug }} hash="comments" aria-label="Comments" onMouseDown={playClick}
-            className="press hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground transition-colors hover:text-foreground sm:flex"
+            className="press touch-target hidden shrink-0 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground transition-colors hover:text-foreground sm:flex"
           >
             <MessageSquare className="h-4 w-4" />
           </Link>
           <button
             onClick={share} aria-label="Share"
-            className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground transition-colors hover:text-foreground"
+            className="press touch-target flex shrink-0 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground transition-colors hover:text-foreground"
           >
             <ShareIcon />
           </button>
