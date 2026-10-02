@@ -60,7 +60,7 @@ export function CommentsPanel({
 }) {
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { award, grant } = useGamification();
+  const { award } = useGamification();
   const confirm = useConfirm();
   const [comments, setComments] = useState<EnrichedComment[]>([]);
   const [ratings, setRatings] = useState<RatingRow[]>([]);
@@ -154,8 +154,7 @@ export function CommentsPanel({
       setRating(null);
       playSuccess();
       toast.success(`${rating}-star review submitted`);
-      award(15, "Reviewed");
-      grant("first_review");
+      if (!existing) await award(15, "Reviewed", "rating", slug);
       await load();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : (typeof err === "object" && err && "message" in err ? String(err.message) : "Could not submit rating");
@@ -179,7 +178,6 @@ export function CommentsPanel({
       setBody("");
       playSuccess();
       toast.success("Comment submitted");
-      award(15, "Commented");
       await load();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Could not submit comment");
@@ -197,7 +195,6 @@ export function CommentsPanel({
     if (error) { toast.error(error.message); return; }
     setReplyBody(""); setReplyOpen(null);
     playSuccess();
-    award(5, "Replied");
     load();
   };
 

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 export function FavoriteButton({ slug, className = "" }: { slug: string; className?: string }) {
   const { user } = useAuth();
   const { has, toggle, slugs } = useFavorites();
-  const { award, grant } = useGamification();
+  const { award } = useGamification();
   const navigate = useNavigate();
   const fav = has(slug);
   return (
@@ -26,8 +26,7 @@ export function FavoriteButton({ slug, className = "" }: { slug: string; classNa
         }
         if (added) {
           toast.success("Saved to your vault");
-          award(5, "Bookmarked");
-          if (slugs.length + 1 >= 5) grant("collector");
+          await award(5, "Bookmarked", "favorite", slug);
         }
       }}
       aria-label={fav ? "Remove bookmark" : "Bookmark"}

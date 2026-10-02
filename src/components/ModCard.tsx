@@ -15,7 +15,7 @@ import { useNavigate } from "@tanstack/react-router";
 export function ModCard({ mod, index = 0, featured = false, headingLevel = "h3" }: { mod: Mod; index?: number; featured?: boolean; headingLevel?: "h2" | "h3" }) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { award, grant } = useGamification();
+  const { award } = useGamification();
   const theme = elementTheme[mod.element];
   const Heading = headingLevel;
   const { has, toggle } = useLikes();
@@ -31,7 +31,7 @@ export function ModCard({ mod, index = 0, featured = false, headingLevel = "h3" 
     if (!user) { navigate({ to: "/auth" }); return; }
     playSoft();
     const added = await toggle(mod.slug);
-    if (added) { award(2, "Liked a mod"); grant("first_like"); }
+    if (added) await award(2, "Liked a mod", "mod_like", mod.slug);
   };
 
   const handleGet = (e: React.MouseEvent) => {

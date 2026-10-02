@@ -9,7 +9,6 @@ import { ChangelogTimeline } from "@/components/ChangelogTimeline";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { LikeButton } from "@/components/LikeButton";
 import { useAuth } from "@/hooks/useAuth";
-import { useGamification } from "@/hooks/useGamification";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { Cipher } from "@/lib/cipher";
@@ -76,7 +75,6 @@ function safeDecrypt(ct?: string | null): string {
 function ModDetail() {
   const { mod } = Route.useLoaderData() as { mod: Mod };
   const { user } = useAuth();
-  const { award, grant } = useGamification();
   const { overrides, allMods } = useSiteSettings();
   const navigate = useNavigate();
   const theme = elementTheme[mod.element];
@@ -105,8 +103,6 @@ function ModDetail() {
   const handleGet = () => {
     if (!user) { navigate({ to: "/auth" }); return; }
     playClick();
-    award(10, "Downloaded");
-    grant("first_download");
     if (!hasDownload) {
       toast.error("No download ready for this mod yet", {
         description: "The owner hasn't published a download link for this build.",

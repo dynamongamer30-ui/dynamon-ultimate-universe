@@ -24,7 +24,7 @@ export function LikeButton({ slug, className = "" }: { slug: string; className?:
           toast.error("Could not update your like");
           return;
         }
-        if (added) { toast.success("Liked"); award(2, "Liked a mod"); }
+        if (added) { toast.success("Liked"); await award(2, "Liked a mod", "mod_like", slug); }
       }}
       aria-label={liked ? "Unlike" : "Like"}
       className={`inline-flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-3 py-2 text-sm font-semibold transition-colors ${liked ? "text-rose-400 border-rose-400/40" : "text-muted-foreground hover:text-foreground"} ${className}`}

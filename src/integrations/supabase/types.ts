@@ -842,6 +842,15 @@ export type Database = {
         }[]
       }
       grant_achievement: { Args: { _key: string }; Returns: boolean }
+      record_engagement: {
+        Args: { _event_key: string; _target_key: string }
+        Returns: {
+          awarded: boolean
+          level: number
+          leveled_up: boolean
+          xp: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
