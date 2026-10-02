@@ -109,6 +109,7 @@ export function CommentsPanel({
   useEffect(() => { load(); }, [load]);
 
   const topLevel = useMemo(() => comments.filter((c) => !c.parent_id), [comments]);
+  const visibleComments = useMemo(() => topLevel.filter((c) => c.body.trim().length > 0), [topLevel]);
   const repliesByParent = useMemo(() => {
     const map = new Map<string, EnrichedComment[]>();
     for (const c of comments) {
@@ -357,7 +358,9 @@ export function CommentsPanel({
                           key={v} type="button"
                           onMouseEnter={() => setHover(v)} onMouseLeave={() => setHover(0)}
                           onClick={() => { setRating(v); playSoft(); }}
-                          className="p-1" aria-label={`Rate ${v} star`} aria-pressed={rating === v}
+                          className={`grid h-11 w-11 place-items-center rounded-xl border p-1 transition-[background-color,border-color,transform] active:scale-95 ${
+                            active ? "border-[var(--gold)]/70 bg-[var(--gold)]/10" : "border-border bg-background/30 hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/5"
+                          }`} aria-label={`Rate ${v} star`} aria-pressed={rating === v}
                         >
                           <Star className={`h-7 w-7 transition-all ${active ? "scale-110 fill-[var(--gold)] text-[var(--gold)]" : "text-muted-foreground"}`} />
                         </button>
@@ -366,10 +369,10 @@ export function CommentsPanel({
                   </div>
                   <button
                     type="button" disabled={rating === null || ratingBusy} onClick={submitRating} onMouseDown={playClick}
-                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02] glow-primary disabled:opacity-60" style={{ background: "var(--gradient-primary)" }}
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--gold)]/50 px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[0_0_24px_-10px_var(--gold)] transition-[filter,transform] hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--gold), var(--primary))" }}
                   >
                     {ratingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
-                    {ratingBusy ? "Submitting…" : rating ? `Submit ${rating}-star review` : "Choose a star to rate"}
+                    {ratingBusy ? "Submitting…" : rating ? `Submit ${rating}-star rating` : "Choose a star to rate"}
                   </button>
                 </fieldset>
               </div>
@@ -402,13 +405,13 @@ export function CommentsPanel({
                 Loading reviews…
               </p>
             )}
-            {!loading && topLevel.length === 0 && (
+            {!loading && visibleComments.length === 0 && (
               <p className="rounded-2xl border border-dashed border-border bg-background/40 p-6 text-center text-sm text-muted-foreground">
                 No reviews yet. Be the first to share your experience.
               </p>
             )}
             <AnimatePresence initial={false}>
-              {topLevel.map((c) => renderComment(c))}
+              {visibleComments.map((c) => renderComment(c))}
             </AnimatePresence>
           </div>
         </div>
