@@ -65,6 +65,7 @@ export function CommentsPanel({
   const [comments, setComments] = useState<EnrichedComment[]>([]);
   const [ratings, setRatings] = useState<RatingRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [body, setBody] = useState("");
   const [rating, setRating] = useState<number | null>(null);
   const [hover, setHover] = useState(0);
@@ -75,45 +76,53 @@ export function CommentsPanel({
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: rawComments }, { data: rawRatings }] = await Promise.all([
-      supabase
-        .from("comments")
-        .select("id, mod_slug, user_id, body, created_at, parent_id")
-        .eq("mod_slug", slug)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("mod_ratings")
-        .select("id, mod_slug, user_id, rating, created_at")
-        .eq("mod_slug", slug)
-        .order("created_at", { ascending: false }),
-    ]);
+    setLoadError(null);
+    try {
+      const [{ data: rawComments, error: commentsError }, { data: rawRatings, error: ratingsError }] = await Promise.all([
+        supabase
+          .from("comments")
+          .select("id, mod_slug, user_id, body, created_at, parent_id")
+          .eq("mod_slug", slug)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("mod_ratings")
+          .select("id, mod_slug, user_id, rating, created_at")
+          .eq("mod_slug", slug)
+          .order("created_at", { ascending: false }),
+      ]);
+      if (commentsError || ratingsError) throw commentsError || ratingsError;
 
-    const list = (rawComments ?? []) as CommentRow[];
-    setRatings((rawRatings ?? []) as RatingRow[]);
-    if (list.length === 0) { setComments([]); setLoading(false); return; }
+      const list = (rawComments ?? []) as CommentRow[];
+      setRatings((rawRatings ?? []) as RatingRow[]);
+      if (list.length === 0) { setComments([]); return; }
 
-    const authorIds = [...new Set(list.map((c) => c.user_id))];
-    const commentIds = list.map((c) => c.id);
+      const authorIds = [...new Set(list.map((c) => c.user_id))];
+      const commentIds = list.map((c) => c.id);
 
-    const [{ data: authors }, { data: likes }] = await Promise.all([
-      supabase.from("public_profiles").select("id, username, display_name, avatar_url, custom_avatar_url, is_owner").in("id", authorIds),
-      supabase.from("comment_likes").select("comment_id, user_id").in("comment_id", commentIds),
-    ]);
+      const [{ data: authors, error: authorsError }, { data: likes, error: likesError }] = await Promise.all([
+        supabase.from("public_profiles").select("id, username, display_name, avatar_url, custom_avatar_url, is_owner").in("id", authorIds),
+        supabase.from("comment_likes").select("comment_id, user_id").in("comment_id", commentIds),
+      ]);
+      if (authorsError || likesError) throw authorsError || likesError;
 
-    const authorMap = new Map<string, AuthorRow>((authors ?? []).map((a) => [a.id as string, a as unknown as AuthorRow]));
-    const likeRows = (likes ?? []) as LikeRow[];
+      const authorMap = new Map<string, AuthorRow>((authors ?? []).map((a) => [a.id as string, a as unknown as AuthorRow]));
+      const likeRows = (likes ?? []) as LikeRow[];
 
-    const enriched: EnrichedComment[] = list.map((c) => {
-      const likesFor = likeRows.filter((l) => l.comment_id === c.id);
-      return {
-        ...c,
-        author: authorMap.get(c.user_id),
-        likeCount: likesFor.length,
-        likedByMe: !!user && likesFor.some((l) => l.user_id === user.id),
-      };
-    });
-    setComments(enriched);
-    setLoading(false);
+      const enriched: EnrichedComment[] = list.map((c) => {
+        const likesFor = likeRows.filter((l) => l.comment_id === c.id);
+        return {
+          ...c,
+          author: authorMap.get(c.user_id),
+          likeCount: likesFor.length,
+          likedByMe: !!user && likesFor.some((l) => l.user_id === user.id),
+        };
+      });
+      setComments(enriched);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not load community activity");
+    } finally {
+      setLoading(false);
+    }
   }, [slug, user]);
 
   useEffect(() => { load(); }, [load]);
@@ -153,7 +162,7 @@ export function CommentsPanel({
       if (error) throw error;
       setRating(null);
       playSuccess();
-      toast.success(`${rating}-star review submitted`);
+      toast.success(existing ? "Rating updated" : `${rating}-star rating submitted`);
       if (!existing) await award(15, "Reviewed", "rating", slug);
       await load();
     } catch (err: unknown) {
@@ -282,14 +291,14 @@ export function CommentsPanel({
               onClick={() => { setReplyOpen(replyOpen === c.id ? null : c.id); setReplyBody(""); }}
               aria-expanded={replyOpen === c.id}
               aria-controls={`reply-${c.id}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+              className="touch-target inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
             >
               <ReplyIcon className="h-3.5 w-3.5" /> Reply
             </button>
           )}
           <ReportButton targetType="comment" targetId={c.id} />
           {canRemove && (
-            <button onClick={() => remove(c)} className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-rose-400">
+            <button type="button" onClick={() => remove(c)} className="touch-target ml-auto inline-flex items-center gap-1 rounded-lg px-2 text-xs text-muted-foreground hover:text-rose-400">
               <Trash2 className="h-3 w-3" /> Delete
             </button>
           )}
@@ -305,9 +314,9 @@ export function CommentsPanel({
                 placeholder={`Reply to @${c.author?.username ?? "trainer"}…`} rows={2} maxLength={500}
                 className="w-full resize-none rounded-xl border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-primary"
               />
-              <div className="mt-2 flex justify-end gap-2">
-                <button onClick={() => setReplyOpen(null)} className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
-                <button onClick={() => submitReply(c.id)} className="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+              <div className="mt-2 flex flex-col-reverse justify-end gap-2 sm:flex-row">
+                <button type="button" onClick={() => setReplyOpen(null)} className="touch-target rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+                <button type="button" onClick={() => submitReply(c.id)} disabled={!replyBody.trim()} className="touch-target inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50" style={{ background: "var(--gradient-primary)" }}>
                   <Send className="h-3 w-3" /> Post reply
                 </button>
               </div>
@@ -328,7 +337,15 @@ export function CommentsPanel({
   const displayCount = combinedCount != null ? combinedCount : ratings.length;
 
   return (
-    <section id="comments" className="mt-14 scroll-mt-24">
+    <section id="comments" aria-labelledby="community-title" className="mt-14 scroll-mt-24">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary">Community layer</p>
+          <h2 id="community-title" className="mt-2 font-display text-3xl font-black uppercase tracking-tight">Ratings and conversation</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">Ratings, comments, reactions, favorites, and reports are separate actions so your feedback stays clear and controlled.</p>
+        </div>
+        {loadError && <button type="button" onClick={load} className="touch-target rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10">Retry community</button>}
+      </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Community Rating" value={(displayRating || 0).toFixed(1)} sub={`${displayCount} ratings`} stars={Math.round(displayRating)} />
         <StatCard label="Reviews" value={String(displayCount)} sub="Be helpful. Be honest." />
@@ -361,7 +378,7 @@ export function CommentsPanel({
                           key={v} type="button"
                           onMouseEnter={() => setHover(v)} onMouseLeave={() => setHover(0)}
                           onClick={() => { setRating(v); playSoft(); }}
-                          className={`grid h-11 w-11 place-items-center rounded-xl border p-1 transition-[background-color,border-color,transform] active:scale-95 ${
+                          className={`touch-target grid place-items-center rounded-xl border p-1 transition-[background-color,border-color,transform] active:scale-95 ${
                             active ? "border-[var(--gold)]/70 bg-[var(--gold)]/10" : "border-border bg-background/30 hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/5"
                           }`} aria-label={`Rate ${v} star`} aria-pressed={rating === v}
                         >
@@ -377,6 +394,9 @@ export function CommentsPanel({
                     {ratingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
                     {ratingBusy ? "Submitting…" : rating ? `Submit ${rating}-star rating` : "Choose a star to rate"}
                   </button>
+                  <p className="mt-2 text-center text-xs text-muted-foreground" aria-live="polite">
+                    {ratingBusy ? "Saving your separate rating…" : rating ? `Selected: ${rating} out of 5 stars` : "Your rating will not create a comment."}
+                  </p>
                 </fieldset>
               </div>
 
@@ -403,12 +423,19 @@ export function CommentsPanel({
         <div className="rounded-3xl glass p-6">
           <h3 className="font-display text-xl font-bold">What trainers are saying</h3>
           <div className="mt-5 space-y-4">
-            {loading && (
+            {loadError && (
+              <div role="alert" className="rounded-2xl border border-rose-400/30 bg-rose-400/5 p-6 text-center text-sm text-muted-foreground">
+                <p>Community activity could not be loaded.</p>
+                <p className="mt-1 text-xs text-muted-foreground/80">Your existing ratings and comments are unchanged.</p>
+                <button type="button" onClick={load} className="touch-target mt-4 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10">Try again</button>
+              </div>
+            )}
+            {!loadError && loading && (
               <p className="rounded-2xl border border-dashed border-border bg-background/40 p-6 text-center text-sm text-muted-foreground">
                 Loading reviews…
               </p>
             )}
-            {!loading && visibleComments.length === 0 && (
+            {!loadError && !loading && visibleComments.length === 0 && (
               <p className="rounded-2xl border border-dashed border-border bg-background/40 p-6 text-center text-sm text-muted-foreground">
                 No reviews yet. Be the first to share your experience.
               </p>

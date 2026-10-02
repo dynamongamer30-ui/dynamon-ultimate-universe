@@ -51,8 +51,9 @@ export function ElementalReactions({ commentId }: { commentId: string }) {
             key={r.key} whileTap={{ scale: 0.85 }}
             onClick={() => toggle(r.key)}
             disabled={!user}
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${mine ? "border-primary/50 bg-primary/10" : "border-border bg-card/60 text-muted-foreground hover:text-foreground"} disabled:opacity-50 disabled:cursor-not-allowed`}
-            aria-label={`React ${r.emoji}`}
+            className={`touch-target inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${mine ? "border-primary/50 bg-primary/10" : "border-border bg-card/60 text-muted-foreground hover:text-foreground"} disabled:cursor-not-allowed disabled:opacity-50`}
+            aria-label={`${mine ? "Remove" : "Add"} ${r.key} reaction`}
+            aria-pressed={mine}
           >
             <span>{r.emoji}</span>
             {count > 0 && <span className={mine ? r.color : ""}>{count}</span>}

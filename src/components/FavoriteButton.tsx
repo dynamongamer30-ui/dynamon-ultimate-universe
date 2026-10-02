@@ -30,7 +30,9 @@ export function FavoriteButton({ slug, className = "" }: { slug: string; classNa
         }
       }}
       aria-label={fav ? "Remove bookmark" : "Bookmark"}
-      className={`grid h-10 w-10 place-items-center rounded-full border border-border bg-card/60 transition-colors ${fav ? "text-amber-300 border-amber-400/40" : "text-muted-foreground hover:text-foreground"} ${className}`}
+      type="button"
+      aria-pressed={fav}
+      className={`touch-target grid place-items-center rounded-full border border-border bg-card/60 transition-colors ${fav ? "text-amber-300 border-amber-400/40" : "text-muted-foreground hover:text-foreground"} ${className}`}
     >
       <Bookmark className={`h-4 w-4 ${fav ? "fill-amber-300" : ""}`} />
     </motion.button>
