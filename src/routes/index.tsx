@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { Shield, Zap, Users, ChevronRight, Star, Download, TrendingUp, ArrowRight } from "lucide-react";
+import type { ReactNode } from "react";
+import { Shield, Zap, Users, ChevronRight, Star, Download, TrendingUp, ArrowRight, Gift, MessageCircle, ArrowUpRight } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ForYouRail } from "@/components/ForYouRail";
@@ -128,7 +129,7 @@ function Index() {
             <Link
               to="/mods/$slug" params={{ slug: top.slug }} onMouseDown={playClick} onMouseEnter={playHover}
               aria-label={`View featured build: ${top.name}`}
-              className="edge-light group relative block overflow-hidden rounded-2xl border border-border bg-card shadow-elev transition-transform duration-300 hover:-translate-y-1.5"
+              className="edge-light group relative block overflow-hidden rounded-[var(--radius-surface)] border border-border bg-card shadow-elev transition-transform duration-300 hover:-translate-y-1.5"
               style={{ boxShadow: elementTheme[top.element].glow }}
             >
               <div className="relative aspect-[4/3] overflow-hidden">
@@ -140,7 +141,7 @@ function Index() {
                   decoding="async"
                   className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
-                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-card to-transparent" />
+                <div className="absolute inset-0 bg-[var(--artwork-overlay)]" aria-hidden="true" />
               </div>
               <div className="relative p-5">
                 <div className="flex items-center justify-between gap-3">
@@ -227,6 +228,57 @@ function Index() {
         </div>
       </section>
 
+      {/* ── COMMUNITY + REWARD PREVIEW ───────────────────── */}
+      <motion.section
+        aria-labelledby="journey-title"
+        initial={{ opacity: 0, y: 18 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ ...spring, delay: 0.04 }}
+        className="mt-20 grid gap-6 border-t border-border pt-16 lg:grid-cols-[0.8fr_1.2fr] lg:items-stretch"
+      >
+        <div className="flex flex-col justify-between rounded-[var(--radius-surface)] border border-border bg-card/55 p-6 sm:p-8">
+          <div>
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
+              <span className="inline-block h-px w-8 bg-primary" aria-hidden />
+              Your trainer journey
+            </p>
+            <h2 id="journey-title" className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-4xl">
+              Choose with confidence. <span className="text-gradient">Keep your progress.</span>
+            </h2>
+            <p className="page-copy mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
+              Save the builds you care about, share useful feedback, and keep reward progress connected to your trainer profile.
+            </p>
+          </div>
+          <Link
+            to="/rewards"
+            onMouseDown={playClick}
+            className="press touch-target mt-8 inline-flex w-fit items-center gap-2 rounded-xl border border-primary/35 bg-primary/10 px-4 py-3 text-sm font-bold text-primary transition-colors hover:bg-primary/20"
+          >
+            View rewards <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <JourneyCard
+            icon={<MessageCircle className="h-5 w-5" />}
+            eyebrow="Community signal"
+            title="Read the room before you unlock"
+            text="Ratings, comments, and build notes stay separate so every signal remains understandable."
+            href="/mods"
+            action="Explore builds"
+          />
+          <JourneyCard
+            icon={<Gift className="h-5 w-5" />}
+            eyebrow="Reward loop"
+            title="Earn without the noise"
+            text="See your level, streaks, and available rewards in one calm progression surface."
+            href="/rewards"
+            action="Open rewards"
+          />
+        </div>
+      </motion.section>
+
       <motion.section
         initial={{ opacity: 0, y: 18 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -292,6 +344,42 @@ function FeaturePanel({
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{text}</p>
       </div>
     </motion.div>
+  );
+}
+
+function JourneyCard({
+  icon,
+  eyebrow,
+  title,
+  text,
+  href,
+  action,
+}: {
+  icon: ReactNode;
+  eyebrow: string;
+  title: string;
+  text: string;
+  href: "/mods" | "/rewards";
+  action: string;
+}) {
+  return (
+    <Link
+      to={href}
+      onMouseDown={playClick}
+      className="group material-l1 press flex min-h-56 flex-col justify-between rounded-[var(--radius-surface)] p-6 transition-[border-color,box-shadow,transform] hover:border-primary/45 hover:shadow-[var(--interactive-glow)]"
+    >
+      <div>
+        <span className="grid h-10 w-10 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary" aria-hidden="true">
+          {icon}
+        </span>
+        <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-primary">{eyebrow}</p>
+        <h3 className="mt-2 font-display text-xl font-bold tracking-tight">{title}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{text}</p>
+      </div>
+      <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-foreground group-hover:text-primary">
+        {action} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+      </span>
+    </Link>
   );
 }
 
