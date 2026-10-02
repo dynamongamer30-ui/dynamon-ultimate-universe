@@ -61,9 +61,9 @@ function Index() {
   return (
     <PageShell>
       {/* ── HERO ─────────────────────────────────────────── */}
-      <section className="relative pt-6 sm:pt-12 lg:pt-16">
+      <section aria-labelledby="homepage-title" className="relative pt-4 sm:pt-10 lg:pt-14">
         <div className="hero-field">
-          <div className="grid gap-12 lg:grid-cols-[1.25fr_1fr] lg:items-center">
+          <div className="grid gap-8 lg:grid-cols-[1.25fr_1fr] lg:items-center lg:gap-12">
           <div>
             <motion.p
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={spring}
@@ -75,7 +75,8 @@ function Index() {
 
             <motion.h1
               initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.06 }}
-              className="mt-6 font-display text-5xl font-black uppercase leading-tight tracking-tight text-balance sm:text-6xl lg:text-7xl xl:text-8xl"
+              id="homepage-title"
+              className="mt-6 font-display text-4xl font-black uppercase leading-[1.05] tracking-tight text-balance sm:text-6xl lg:text-7xl xl:text-8xl"
             >
               Dynamons World
               <br />
@@ -99,7 +100,7 @@ function Index() {
                 to="/mods"
                 onMouseDown={playClick}
                 onMouseEnter={playHover}
-                className="press group inline-flex items-center gap-2 rounded-xl border border-primary/45 bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_34px_-8px_oklch(0.66_0.21_318_/_0.8)]"
+                className="press touch-target group inline-flex items-center gap-2 rounded-xl border border-primary/45 bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_34px_-8px_oklch(0.66_0.21_318_/_0.8)]"
               >
                 Browse every build
                 <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -109,7 +110,7 @@ function Index() {
             {/* Honest stats — machined row */}
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.24 }}
-              className="mt-10 flex divide-x divide-border border-y border-border"
+              className="mt-8 grid grid-cols-3 divide-x divide-border border-y border-border sm:mt-10"
             >
               <HeroStat value={`${formatCount(totalDownloads)}+`} label="Community downloads" />
               <HeroStat value={`${mods.length}`} label="Curated editions" />
@@ -126,6 +127,7 @@ function Index() {
           >
             <Link
               to="/mods/$slug" params={{ slug: top.slug }} onMouseDown={playClick} onMouseEnter={playHover}
+              aria-label={`View featured build: ${top.name}`}
               className="edge-light group relative block overflow-hidden rounded-2xl border border-border bg-card shadow-elev transition-transform duration-300 hover:-translate-y-1.5"
               style={{ boxShadow: elementTheme[top.element].glow }}
             >
@@ -176,7 +178,8 @@ function Index() {
       </section>
 
       {/* ── FEATURE STRIP ────────────────────────────────── */}
-      <section className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3">
+      <section aria-labelledby="value-signals-title" className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:mt-14 sm:grid-cols-3">
+        <h2 id="value-signals-title" className="sr-only">Why trainers use the vault</h2>
           {[
           { Icon: Shield, title: "Clear build notes", text: "See the features, version, and gameplay focus before you choose an edition." },
           { Icon: Zap, title: "Release-aware", text: "Track active editions and recent updates without hunting through unrelated pages." },
@@ -187,14 +190,14 @@ function Index() {
       </section>
 
       {/* ── MODS SHOWCASE ────────────────────────────────── */}
-      <section className="mt-20">
+      <section aria-labelledby="showcase-title" className="mt-16 sm:mt-20">
         <div className="flex items-end justify-between gap-4">
           <div className="min-w-0">
             <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
               <span className="inline-block h-px w-8 bg-primary" aria-hidden />
               The vault
             </p>
-            <h2 className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-5xl">
+            <h2 id="showcase-title" className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-5xl">
               Start with the
               <br className="sm:hidden" /> most played builds
             </h2>
@@ -236,7 +239,7 @@ function Index() {
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Before you choose
           </p>
-          <h2 className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-4xl">
+          <h2 id="faq-title" className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-4xl">
             Questions, answered.
           </h2>
           <p className="page-copy mt-4 max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
@@ -285,7 +288,7 @@ function FeaturePanel({
         <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
           <Icon className="h-5 w-5" />
         </div>
-        <h2 className="mt-4 font-display text-base font-extrabold uppercase tracking-tight">{title}</h2>
+          <h3 className="mt-4 font-display text-base font-extrabold uppercase tracking-tight">{title}</h3>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{text}</p>
       </div>
     </motion.div>
@@ -294,9 +297,9 @@ function FeaturePanel({
 
 function HeroStat({ value, label }: { value: string; label: string }) {
   return (
-    <div className="flex-1 px-4 py-4 first:pl-0 sm:px-6">
-      <p className="font-display text-2xl font-black tracking-tight sm:text-3xl">{value}</p>
-      <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
+    <div className="min-w-0 px-2 py-3 first:pl-0 last:pr-0 sm:px-6 sm:py-4">
+      <p className="truncate font-display text-xl font-black tracking-tight sm:text-3xl">{value}</p>
+      <p className="mt-0.5 text-[0.65rem] font-semibold uppercase leading-tight tracking-[0.12em] text-muted-foreground sm:text-xs sm:tracking-[0.2em]">{label}</p>
     </div>
   );
 }
