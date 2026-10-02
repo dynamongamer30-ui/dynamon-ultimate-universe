@@ -4,7 +4,7 @@ import { Shield, Zap, Users, ChevronRight, Star, Download, TrendingUp, ArrowRigh
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ForYouRail } from "@/components/ForYouRail";
-import { HeroDepthLayers, HeroWebGL, usePerspectiveTilt } from "@/components/HeroWebGL";
+import { usePerspectiveTilt } from "@/components/HeroWebGL";
 import { formatCount, elementTheme, mods as catalogMods } from "@/lib/mods";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import heroImg from "@/assets/hero.webp";
@@ -63,8 +63,6 @@ function Index() {
       {/* ── HERO ─────────────────────────────────────────── */}
       <section className="relative pt-6 sm:pt-12 lg:pt-16">
         <div className="hero-field">
-          <HeroDepthLayers />
-          <HeroWebGL />
           <div className="grid gap-12 lg:grid-cols-[1.25fr_1fr] lg:items-center">
           <div>
             <motion.p
