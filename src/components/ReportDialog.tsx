@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Flag, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,13 +16,6 @@ export function ReportButton({ targetType, targetId, label = "Report" }: { targe
   const headingId = `report-${targetType}-${targetId}-title`;
   const detailsId = `report-${targetType}-${targetId}-details`;
   const dialogRef = useDialogFocus(open, () => setOpen(false));
-
-  useEffect(() => {
-    if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previousOverflow; };
-  }, [open]);
 
   const submit = async () => {
     if (!user) { toast.error("Sign in to report"); return; }
@@ -44,12 +37,12 @@ export function ReportButton({ targetType, targetId, label = "Report" }: { targe
       <AnimatePresence>
         {open && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 overlay-scrim grid place-items-center bg-black/70 px-4"
+            className="modal-frame fixed inset-0 overlay-scrim grid place-items-center bg-black/70"
             onClick={() => setOpen(false)}>
             <motion.div ref={dialogRef} initial={{ scale: 0.94, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.94, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
               role="dialog" aria-modal="true" aria-labelledby={headingId} tabIndex={-1}
-              className="report-dialog overlay-surface max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-3xl p-5 shadow-elev sm:p-6">
+              className="report-dialog modal-panel overlay-surface w-full max-w-md rounded-3xl p-5 shadow-elev sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex min-w-0 items-start gap-3">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary">

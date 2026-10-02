@@ -357,12 +357,12 @@ function FollowGate({
     <div
       ref={dialogRef}
       role="dialog" aria-modal="true" aria-label={`Download ${modName}`} tabIndex={-1}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+      className="modal-frame fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
+        className="modal-panel relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -422,12 +422,12 @@ function ModalShell({
     <div
       ref={dialogRef}
       role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+      className="modal-frame fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
+        className="modal-panel relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button

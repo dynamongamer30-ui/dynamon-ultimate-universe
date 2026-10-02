@@ -74,7 +74,7 @@ export function NotificationOptIn() {
       {open && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] grid place-items-center bg-background/70 backdrop-blur-sm px-4"
+          className="modal-frame fixed inset-0 z-[100] grid place-items-center bg-background/70 backdrop-blur-sm"
           onClick={skip}
         >
           <motion.div
@@ -82,7 +82,7 @@ export function NotificationOptIn() {
             initial={{ scale: 0.94, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.94, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
             role="dialog" aria-modal="true" aria-labelledby="notification-opt-in-title" tabIndex={-1}
-            className="relative w-full max-w-md overflow-hidden rounded-3xl glass shadow-elev"
+            className="modal-panel relative w-full max-w-md overflow-hidden rounded-3xl glass shadow-elev"
           >
             <button type="button" onClick={skip} className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground" aria-label="Close notification preferences">
               <X className="h-4 w-4" />

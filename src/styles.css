@@ -213,6 +213,7 @@ body {
   background-image: var(--gradient-hero);
   background-attachment: scroll;
 }
+body:has(.modal-frame), body:has(.overlay-scrim) { overscroll-behavior: none; }
 /* Keep Sonner above sticky chrome and outside the animated route stacking
    context. The mobile rules also respect browser safe areas. */
 [data-sonner-toaster] {
@@ -404,6 +405,19 @@ h1, h2, h3, h4, .font-display {
   backdrop-filter: blur(12px) saturate(90%);
 }
 .overlay-surface { z-index: var(--z-modal); }
+.modal-frame {
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-left: max(1rem, env(safe-area-inset-left));
+  overscroll-behavior: contain;
+}
+.modal-panel {
+  max-height: min(42rem, calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* Command surfaces remain readable over artwork, video, and animated backgrounds. */
 .overlay-surface {
@@ -490,6 +504,13 @@ h1, h2, h3, h4, .font-display {
 
 @media (prefers-reduced-motion: reduce) {
   .glass, .glass-l1, .glass-l2, .glass-l3, .glass-interactive { transition: none !important; }
+}
+
+@media (max-width: 640px) {
+  .page-content { padding-bottom: calc(3rem + env(safe-area-inset-bottom)); }
+  .route-hero { max-width: none; }
+  .route-actions > * { min-height: 2.75rem; }
+  .modal-panel { width: 100%; border-radius: 1.25rem; }
 }
 @utility glow-primary { box-shadow: var(--shadow-glow); }
 @utility glow-violet { box-shadow: var(--shadow-violet); }

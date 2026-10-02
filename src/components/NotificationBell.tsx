@@ -62,7 +62,7 @@ export function NotificationBell() {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  className="touch-target inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                 >
                   <Check className="h-3.5 w-3.5" /> Mark all read
                 </button>

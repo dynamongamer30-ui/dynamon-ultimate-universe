@@ -22,6 +22,10 @@ export function useDialogFocus<T extends HTMLElement = HTMLDivElement>(open: boo
     const dialog = dialogRef.current;
     if (!dialog) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscroll = document.body.style.overscrollBehavior;
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
     const focusable = () => [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)]
       .filter((element) => element.getClientRects().length > 0);
 
@@ -58,6 +62,8 @@ export function useDialogFocus<T extends HTMLElement = HTMLDivElement>(open: boo
     return () => {
       window.cancelAnimationFrame(focusFrame);
       dialog.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscroll;
       if (previous && document.contains(previous)) previous.focus();
     };
   }, [open]);
