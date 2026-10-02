@@ -128,7 +128,7 @@ function ProfilePage() {
         {/* Identity card */}
         <motion.aside
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden edge-light rounded-2xl glass p-6 lg:sticky lg:top-24"
+          className="surface-l1 relative overflow-hidden edge-light rounded-2xl p-6 lg:sticky lg:top-24"
         >
           <div className="relative flex flex-col items-center text-center">
             <div className="relative">
@@ -161,7 +161,7 @@ function ProfilePage() {
         <motion.form
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           onSubmit={submit}
-          className="space-y-6 edge-light rounded-2xl glass p-7 sm:p-8"
+          className="route-hero space-y-6 edge-light rounded-2xl glass p-7 sm:p-8"
         >
           <div>
             <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">Edit profile</h2>

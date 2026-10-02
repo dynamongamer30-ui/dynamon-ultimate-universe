@@ -356,14 +356,42 @@ h1, h2, h3, h4, .font-display {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
-.glass:hover,
-.glass-l1:hover,
-.glass-l2:hover,
-.glass-l3:hover,
 .glass-interactive:hover {
   border-color: color-mix(in srgb, var(--primary) 52%, var(--glass-border-top));
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), var(--interactive-glow);
 }
+
+/* Phase 5 route grammar: content-led pages use L0 by default and opt into
+   these quiet groupings only where a boundary improves scanning. */
+.page-content { isolation: isolate; }
+.route-hero { position: relative; max-width: 78ch; }
+.route-hero::after {
+  content: "";
+  display: block;
+  width: 3.5rem;
+  height: 1px;
+  margin-top: 1.25rem;
+  background: color-mix(in srgb, var(--primary) 70%, transparent);
+}
+.surface-l1 {
+  background: var(--material-l1-bg);
+  border: 1px solid var(--material-l1-border);
+  box-shadow: var(--material-l1-shadow);
+  -webkit-backdrop-filter: blur(var(--material-l1-blur)) saturate(115%);
+  backdrop-filter: blur(var(--material-l1-blur)) saturate(115%);
+}
+.filter-tray {
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  border-color: var(--material-l1-border);
+  box-shadow: var(--material-l1-shadow);
+}
+.control-input {
+  min-height: 2.75rem;
+  background: color-mix(in srgb, var(--background) 72%, var(--card));
+  border-color: var(--material-l1-border);
+}
+.touch-target { min-width: 2.75rem; min-height: 2.75rem; }
+.route-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
 
 /* Shared stacking contract: do not introduce ad hoc z-index values for these layers. */
 .site-chrome { z-index: var(--z-chrome); }
@@ -484,7 +512,7 @@ h1, h2, h3, h4, .font-display {
   transition: box-shadow 0.35s ease;
 }
 .edge-light:hover {
-  box-shadow: 0 0 32px -10px oklch(0.54 0.22 296 / 0.4);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.1);
 }
 .edge-light::after {
   content: "";

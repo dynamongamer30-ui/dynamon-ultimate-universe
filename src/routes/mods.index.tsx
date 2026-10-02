@@ -76,7 +76,7 @@ function ModsPage() {
 
   return (
     <PageShell>
-      <header className="pt-4 sm:pt-8">
+      <header className="route-hero pt-4 sm:pt-8">
         <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
           <span className="inline-block h-px w-8 bg-primary" aria-hidden />
           The vault
@@ -97,7 +97,7 @@ function ModsPage() {
               id="mods-search" name="q" type="search" autoComplete="off"
               value={q} onChange={(e) => setQ(e.target.value)}
               placeholder="Search mods, features…"
-              className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-sm outline-none transition-colors focus:border-primary"
+              className="control-input w-full rounded-lg border py-3 pl-11 pr-4 text-sm outline-none transition-colors focus:border-primary"
             />
           </div>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Sort builds">
@@ -119,7 +119,7 @@ function ModsPage() {
         </div>
 
         {/* Advanced filters */}
-        <div className="edge-light mt-5 space-y-3 rounded-xl border border-border bg-card p-4">
+        <div className="filter-tray edge-light mt-5 space-y-3 rounded-xl border p-4">
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by element">
             <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <Sparkles className="h-3 w-3" /> Element

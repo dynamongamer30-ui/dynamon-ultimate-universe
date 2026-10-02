@@ -28,7 +28,7 @@ function Contact() {
   return (
     <PageShell>
       <section className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
-        <div>
+        <div className="route-hero">
           <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Get in touch
@@ -52,7 +52,7 @@ function Contact() {
               <input
                 id="contact-name" name="name" autoComplete="name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Your name"
-                className="w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
+                className="control-input w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-primary"
               />
             </div>
             <div>
@@ -60,7 +60,7 @@ function Contact() {
               <input
                 id="contact-email" name="email" autoComplete="email" required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="Your email (so we can reply)"
-                className="w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
+                className="control-input w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-primary"
               />
             </div>
           </div>
@@ -68,7 +68,7 @@ function Contact() {
           <textarea
             id="contact-message" name="message" required rows={6} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
             placeholder="Which mod, which phone, and what happened?"
-            className="mt-4 w-full resize-none rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
+            className="control-input mt-4 w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none focus:border-primary"
           />
           <button
             type="submit" onMouseDown={playClick}

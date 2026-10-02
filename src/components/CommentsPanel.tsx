@@ -235,7 +235,7 @@ export function CommentsPanel({
       <motion.div
         key={c.id}
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-        className={`rounded-2xl border border-border bg-background/40 p-4 ${isReply ? "ml-6 border-l-2 border-l-primary/30" : ""}`}
+        className={`surface-l1 rounded-2xl border p-4 ${isReply ? "ml-6 border-l-2 border-l-primary/30" : ""}`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -269,7 +269,7 @@ export function CommentsPanel({
             onClick={() => toggleLike(c)}
             aria-label={`${c.likedByMe ? "Unlike" : "Like"} review by ${authorName}`}
             aria-pressed={c.likedByMe}
-            className={`inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`touch-target inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold transition-colors ${
               c.likedByMe ? "border-rose-400/40 text-rose-400" : "text-muted-foreground hover:text-foreground"
             }`}
           >

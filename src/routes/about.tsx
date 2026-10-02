@@ -15,7 +15,7 @@ export const Route = createFileRoute("/about")({
 function About() {
   return (
     <PageShell>
-      <section className="relative overflow-hidden edge-light rounded-2xl glass p-8 sm:p-14">
+      <section className="route-hero relative overflow-hidden edge-light rounded-2xl glass p-8 sm:p-14">
         <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
           <span className="inline-block h-px w-8 bg-primary" aria-hidden />
           Our story

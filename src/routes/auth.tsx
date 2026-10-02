@@ -97,7 +97,7 @@ function AuthPage() {
         <motion.div
           key={step}
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden edge-light rounded-2xl glass p-7 shadow-elev sm:p-8"
+          className="route-hero relative overflow-hidden edge-light rounded-2xl glass p-7 shadow-elev sm:p-8"
         >
 
           <AnimatePresence mode="wait">
@@ -131,7 +131,7 @@ function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => vo
 
       <button
         onClick={onGoogle} disabled={busy}
-        className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card/60 px-4 py-3 text-sm font-semibold transition-colors hover:bg-card disabled:opacity-60"
+        className="touch-target mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card/60 px-4 py-3 text-sm font-semibold transition-colors hover:bg-card disabled:opacity-60"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
         Continue with Google

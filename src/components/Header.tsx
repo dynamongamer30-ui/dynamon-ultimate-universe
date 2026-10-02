@@ -88,7 +88,7 @@ export function Header() {
             aria-label="Search"
             aria-expanded={searchOpen}
             aria-controls="site-search-panel"
-            className="press grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-[color,border-color,box-shadow] hover:border-primary/55 hover:text-foreground hover:shadow-[0_0_22px_-10px_oklch(0.62_0.23_300_/_0.9)]"
+            className="press touch-target grid place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-[color,border-color,box-shadow] hover:border-primary/55 hover:text-foreground"
           >
             <Search className="h-4 w-4" />
           </button>
@@ -181,7 +181,7 @@ export function Header() {
 
           <button
             onClick={() => { setOpen((v) => !v); playClick(); }}
-            className="grid h-10 w-10 place-items-center rounded-xl border border-border lg:hidden"
+            className="touch-target grid place-items-center rounded-xl border border-border lg:hidden"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             aria-controls="mobile-navigation"
@@ -253,7 +253,7 @@ export function Header() {
             {nav.map((n) => (
               <Link
                 key={n.to} to={n.to} onClick={() => setOpen(false)}
-                className="rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-card hover:text-foreground"
+                className="touch-target rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-card hover:text-foreground"
               >
                 {n.label}
               </Link>

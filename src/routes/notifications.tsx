@@ -39,7 +39,7 @@ function NotificationsPage() {
 
   return (
     <PageShell>
-      <header className="edge-light rounded-2xl glass p-8 sm:p-12">
+      <header className="route-hero edge-light rounded-2xl glass p-8 sm:p-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
@@ -83,7 +83,7 @@ function NotificationsPage() {
             return (
               <li
                 key={n.id}
-                className={`notification-card rounded-2xl border p-5 transition-colors ${unread ? "border-primary/40 bg-primary/5" : "border-border bg-card/40"}`}
+                className={`notification-card surface-l1 rounded-2xl border p-5 transition-colors ${unread ? "border-primary/40 bg-primary/5" : ""}`}
               >
                 <div className="flex items-start gap-3">
                   {sender ? (
