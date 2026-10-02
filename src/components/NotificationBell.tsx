@@ -41,7 +41,8 @@ export function NotificationBell() {
         onClick={() => { setOpen((v) => !v); playClick(); }}
         aria-label="Notifications"
         aria-expanded={open}
-        className="press relative grid h-10 w-10 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+        aria-controls="notification-popover"
+        className="press touch-target relative grid h-10 w-10 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
       >
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
@@ -54,6 +55,9 @@ export function NotificationBell() {
       <AnimatePresence>
         {open && (
           <motion.div
+            id="notification-popover"
+            role="region"
+            aria-label="Recent notifications"
             initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
             className="notification-popover absolute right-0 top-full overlay-popover mt-2 max-h-[min(32rem,calc(100dvh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl glass-l3 shadow-elev sm:w-80"
           >
@@ -62,7 +66,7 @@ export function NotificationBell() {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="touch-target inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  className="touch-target inline-flex items-center gap-1 rounded-lg px-2 text-xs font-medium text-primary hover:bg-primary/10 hover:underline"
                 >
                   <Check className="h-3.5 w-3.5" /> Mark all read
                 </button>
