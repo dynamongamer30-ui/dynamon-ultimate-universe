@@ -5,7 +5,7 @@ import { Sparkles } from "lucide-react";
 export function Footer() {
   const SOCIALS = useSocials();
   return (
-    <footer className="site-footer mt-24 border-t border-border/60 bg-background/60">
+    <footer className="site-footer material-l2 mt-24 border-t border-border/60 bg-background/60">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <SocialStrip />
 
@@ -15,7 +15,7 @@ export function Footer() {
               <span className="grid h-9 w-9 place-items-center rounded-lg" style={{ background: "var(--gradient-primary)" }}>
                 <Sparkles className="h-4 w-4 text-primary-foreground" />
               </span>
-              <span className="font-display text-lg font-bold">Dynamon Universe</span>
+              <span className="font-display text-lg font-bold">Dynamon <span className="text-gradient">Universe</span></span>
             </div>
             <p className="mt-3 max-w-sm text-sm text-muted-foreground">
               A fan-made hub dedicated only to Dynamons World modded builds. Crafted with care by Dynamon Gamer for the
@@ -24,28 +24,28 @@ export function Footer() {
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-foreground">Explore</p>
+            <h2 className="text-sm font-semibold text-foreground">Explore</h2>
             <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
-              <li><Link to="/" className="transition-colors hover:text-primary">Home</Link></li>
-              <li><Link to="/mods" className="transition-colors hover:text-primary">All Mods</Link></li>
-              <li><Link to="/about" className="transition-colors hover:text-primary">About us</Link></li>
-              <li><Link to="/contact" className="transition-colors hover:text-primary">Contact</Link></li>
-              <li><Link to="/auth" className="transition-colors hover:text-primary">Sign in</Link></li>
+              <li><Link to="/" className="touch-target inline-flex items-center transition-colors hover:text-primary">Home</Link></li>
+              <li><Link to="/mods" className="touch-target inline-flex items-center transition-colors hover:text-primary">All Mods</Link></li>
+              <li><Link to="/about" className="touch-target inline-flex items-center transition-colors hover:text-primary">About us</Link></li>
+              <li><Link to="/contact" className="touch-target inline-flex items-center transition-colors hover:text-primary">Contact</Link></li>
+              <li><Link to="/auth" className="touch-target inline-flex items-center transition-colors hover:text-primary">Sign in</Link></li>
             </ul>
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-foreground">Legal</p>
+            <h2 className="text-sm font-semibold text-foreground">Legal</h2>
             <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
-              <li><Link to="/disclaimer" className="transition-colors hover:text-primary">Disclaimer</Link></li>
-              <li><Link to="/disclaimer" hash="legal" className="transition-colors hover:text-primary">Terms of use</Link></li>
-              <li><Link to="/privacy" className="transition-colors hover:text-primary">Privacy policy</Link></li>
-              <li><Link to="/disclaimer" hash="dmca" className="transition-colors hover:text-primary">DMCA</Link></li>
+              <li><Link to="/disclaimer" className="touch-target inline-flex items-center transition-colors hover:text-primary">Disclaimer</Link></li>
+              <li><Link to="/disclaimer" hash="legal" className="touch-target inline-flex items-center transition-colors hover:text-primary">Terms of use</Link></li>
+              <li><Link to="/privacy" className="touch-target inline-flex items-center transition-colors hover:text-primary">Privacy policy</Link></li>
+              <li><Link to="/disclaimer" hash="dmca" className="touch-target inline-flex items-center transition-colors hover:text-primary">DMCA</Link></li>
             </ul>
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-foreground">Community</p>
+            <h2 className="text-sm font-semibold text-foreground">Community</h2>
             <ul className="mt-4 space-y-2.5 text-sm">
               {SOCIALS.map(({ label, href, Icon }) => (
                 <li key={label}>

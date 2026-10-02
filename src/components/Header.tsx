@@ -48,7 +48,7 @@ export function Header() {
   return (
     <header className="sticky top-0 site-chrome glass-l2 border-b border-border/60">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
-        <Link to="/" onMouseDown={playClick} className="flex items-center gap-2 min-w-0">
+        <Link to="/" onMouseDown={playClick} aria-label="Dynamon Universe home" className="flex min-w-0 items-center gap-2 rounded-xl focus-visible:outline-none">
           <motion.span
             initial={{ rotate: -20, scale: 0.6, opacity: 0 }}
             animate={{ rotate: 0, scale: 1, opacity: 1 }}
@@ -67,7 +67,7 @@ export function Header() {
           {nav.map((n) => (
             <Link
               key={n.to} to={n.to} onMouseDown={playClick}
-              className="relative rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-[color,background-color,box-shadow] hover:text-foreground [&.active]:bg-primary/12 [&.active]:text-foreground [&.active]:shadow-[inset_0_0_0_1px_oklch(0.6_0.2_300_/_0.32),0_0_18px_-10px_oklch(0.62_0.23_300_/_0.9)]"
+              className="touch-target relative rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-[color,background-color,box-shadow] hover:text-foreground [&.active]:bg-primary/12 [&.active]:text-foreground [&.active]:shadow-[inset_0_0_0_1px_oklch(0.6_0.2_300_/_0.32),0_0_18px_-10px_oklch(0.62_0.23_300_/_0.9)]"
               activeProps={{ className: "active" }}
               activeOptions={{ exact: n.to === "/" }}
             >
@@ -120,6 +120,7 @@ export function Header() {
                 {menuOpen && (
                   <motion.div
                     initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                    id="account-menu"
                     role="dialog"
                     aria-label="Account menu"
                     className="account-menu absolute right-0 overlay-popover mt-2 max-h-[calc(100dvh-5rem)] w-[min(18rem,calc(100vw-1.5rem))] overflow-x-hidden overflow-y-auto rounded-2xl glass-l3 shadow-elev"
@@ -199,6 +200,8 @@ export function Header() {
           <motion.div
             id="site-search-panel"
             initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+            role="region"
+            aria-label="Site search"
             className="glass-l2 overflow-hidden border-t border-border/60"
           >
             <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
@@ -257,7 +260,9 @@ export function Header() {
         <motion.div
           id="mobile-navigation"
           initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-          className="glass-l2 border-t border-border/60 lg:hidden"
+              role="navigation"
+              aria-label="Mobile navigation"
+              className="glass-l2 border-t border-border/60 lg:hidden"
         >
           <div className="flex flex-col gap-1 px-4 py-3">
             {nav.map((n) => (
