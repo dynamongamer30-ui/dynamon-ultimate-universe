@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, TrendingUp, Clock, Heart, Download, Star, Sparkles } from "lucide-react";
+import { Search, TrendingUp, Clock, Heart, Download, Star, Sparkles, X } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ThemedSelect } from "@/components/ThemedSelect";
@@ -76,12 +76,12 @@ function ModsPage() {
 
   return (
     <PageShell>
-      <header className="route-hero pt-4 sm:pt-8">
+      <header aria-labelledby="mods-title" className="route-hero pt-4 sm:pt-8">
         <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
           <span className="inline-block h-px w-8 bg-primary" aria-hidden />
           The vault
         </p>
-        <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-6xl">
+        <h1 id="mods-title" className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-6xl">
           All Dynamon mods
         </h1>
         <p className="page-copy mt-4 max-w-2xl leading-relaxed text-muted-foreground text-pretty">
@@ -97,8 +97,19 @@ function ModsPage() {
               id="mods-search" name="q" type="search" autoComplete="off"
               value={q} onChange={(e) => setQ(e.target.value)}
               placeholder="Search mods, features…"
-              className="control-input w-full rounded-lg border py-3 pl-11 pr-4 text-sm outline-none transition-colors focus:border-primary"
+              aria-describedby="mods-result-status"
+              className="control-input w-full rounded-lg border py-3 pl-11 pr-11 text-sm outline-none transition-colors focus:border-primary"
             />
+            {q && (
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                aria-label="Clear mod search"
+                className="touch-target absolute right-1 top-1/2 grid -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Sort builds">
             {sorts.map((s) => (
@@ -106,7 +117,7 @@ function ModsPage() {
                 key={s.id}
                 onClick={() => setSort(s.id)}
                 aria-pressed={sort === s.id}
-                className={`press inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
+                className={`press touch-target inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
                   sort === s.id
                     ? "border-primary/60 bg-primary/10 text-primary"
                     : "border-border bg-card text-muted-foreground hover:text-foreground"
@@ -119,7 +130,7 @@ function ModsPage() {
         </div>
 
         {/* Advanced filters */}
-        <div className="filter-tray edge-light mt-5 space-y-3 rounded-xl border p-4">
+        <div role="region" aria-label="Build filters" className="filter-tray edge-light mt-5 space-y-3 rounded-xl border p-4">
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by element">
             <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <Sparkles className="h-3 w-3" /> Element
@@ -131,7 +142,7 @@ function ModsPage() {
                 <button
                   key={el} onClick={() => toggleElement(el)}
                   aria-pressed={active}
-                  className={`rounded-md border px-3 py-1 text-xs font-bold uppercase tracking-widest transition-colors ${active ? t.chip : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
+                  className={`touch-target rounded-md border px-3 py-1 text-xs font-bold uppercase tracking-widest transition-colors ${active ? t.chip : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
                 >
                   {t.label}
                 </button>
@@ -146,7 +157,7 @@ function ModsPage() {
               <button
                 key={r} onClick={() => setMinRating(r)}
                 aria-pressed={minRating === r}
-                className={`rounded-md border px-3 py-1 text-xs font-semibold transition-colors ${minRating === r ? "border-amber-400/50 bg-amber-500/10 text-amber-300" : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
+                className={`touch-target rounded-md border px-3 py-1 text-xs font-semibold transition-colors ${minRating === r ? "border-amber-400/50 bg-amber-500/10 text-amber-300" : "border-border bg-secondary text-muted-foreground hover:text-foreground"}`}
               >
                 {r === 0 ? "Any" : `${r}+`}
               </button>
@@ -161,7 +172,7 @@ function ModsPage() {
             />
             {activeFilters > 0 && (
               <button onClick={() => { setElements(new Set()); setMinRating(0); setVersion("all"); }}
-                className="ml-auto rounded-md px-3 py-1 text-xs font-semibold text-rose-300 hover:text-rose-200">
+                className="touch-target ml-auto rounded-md px-3 py-1 text-xs font-semibold text-rose-300 hover:bg-rose-400/10 hover:text-rose-200">
                 Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}
               </button>
             )}
@@ -169,12 +180,28 @@ function ModsPage() {
         </div>
       </header>
 
+      <p id="mods-result-status" aria-live="polite" className="mt-5 text-sm text-muted-foreground">
+        {filtered.length} {filtered.length === 1 ? "build" : "builds"} found
+        {activeFilters > 0 || q ? " with the current discovery settings" : ""}.
+      </p>
+
       {filtered.length === 0 ? (
-        <div className="mt-12 rounded-3xl border border-dashed border-border bg-card/30 p-12 text-center text-muted-foreground">
-          No mods match your filters.
+        <div className="mt-8 rounded-3xl border border-dashed border-border bg-card/30 p-8 text-center sm:p-12">
+          <p className="font-display text-lg font-bold uppercase tracking-tight">No builds found</p>
+          <p className="mt-2 text-sm text-muted-foreground">Try a different search or clear the active filters.</p>
+          {(activeFilters > 0 || q) && (
+            <button
+              type="button"
+              onClick={() => { setQ(""); setElements(new Set()); setMinRating(0); setVersion("all"); }}
+              className="touch-target mt-5 inline-flex items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold hover:border-primary/50 hover:text-foreground"
+            >
+              Reset discovery
+            </button>
+          )}
         </div>
       ) : (
-        <section className="mods-grid mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <section aria-labelledby="mods-grid-title" className="mods-grid mt-6 grid gap-6 sm:mt-8 sm:grid-cols-2 xl:grid-cols-3">
+          <h2 id="mods-grid-title" className="sr-only">Available Dynamon builds</h2>
           {filtered.map((m, i) => <ModCard key={m.slug} mod={m} index={i} featured={i === 0 && sort !== "newest"} headingLevel="h2" />)}
         </section>
       )}
