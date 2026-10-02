@@ -124,7 +124,7 @@ function ModDetail() {
         {/* Hero image with element halo */}
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="edge-light relative overflow-hidden rounded-2xl border border-border bg-card"
+          className="surface-l1 edge-light relative overflow-hidden rounded-2xl border"
           style={{ boxShadow: theme.glow }}
         >
           <div className="absolute inset-0 z-10 opacity-40 mix-blend-overlay" style={{ background: theme.gradient }} />
@@ -157,7 +157,7 @@ function ModDetail() {
               </div>
               <ul className="mt-5 grid gap-2 sm:grid-cols-2">
                 {blendedMod.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
+                  <li key={f} className="surface-l1 flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm">
                     <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-primary/15 text-primary" aria-hidden="true">
                       <Check className="h-3.5 w-3.5" />
                     </span>

@@ -378,7 +378,7 @@ function GeneratorPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="rounded-2xl border p-8 shadow-elev backdrop-blur-xl"
+          className="route-hero rounded-2xl border p-8 shadow-elev backdrop-blur-xl"
           style={{ borderColor: "var(--border)", background: "color-mix(in oklch, var(--card) 88%, transparent)" }}
         >
           <div className="mb-6 flex flex-col items-center gap-3 text-center">

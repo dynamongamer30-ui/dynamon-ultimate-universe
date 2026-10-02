@@ -111,7 +111,7 @@ function ClaimPage() {
 
   return (
     <PageShell>
-      <header className="edge-light rounded-2xl glass p-8 sm:p-12 text-center">
+      <header className="route-hero edge-light rounded-2xl glass p-8 text-center sm:p-12">
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
           <Gift className="h-3.5 w-3.5" /> Claim
         </p>

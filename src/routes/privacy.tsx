@@ -15,7 +15,7 @@ function Privacy() {
   return (
     <PageShell>
       <article className="prose prose-invert mx-auto max-w-3xl space-y-8">
-        <header className="edge-light rounded-2xl glass p-8">
+        <header className="route-hero edge-light rounded-2xl glass p-8">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">Dynamon Universe</p>
           <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight">Privacy Policy</h1>
           <p className="mt-3 text-sm text-muted-foreground">Last updated: October 1, 2026</p>
