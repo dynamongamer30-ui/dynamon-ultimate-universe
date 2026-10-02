@@ -63,13 +63,13 @@ function Rewards() {
   return (
     <PageShell>
       {/* Hero */}
-      <section className="route-hero relative overflow-hidden edge-light rounded-2xl glass p-8 sm:p-14">
+      <section aria-labelledby="rewards-title" className="route-hero relative overflow-hidden edge-light rounded-2xl glass p-8 sm:p-14">
         <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl" aria-hidden />
         <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
           <span className="inline-block h-px w-8 bg-primary" aria-hidden />
           Daily rewards
         </p>
-        <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl">
+        <h1 id="rewards-title" className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl">
           Two prizes. <span className="text-gradient">Every single day.</span>
         </h1>
         <p className="mt-5 max-w-2xl leading-relaxed text-muted-foreground text-pretty">
@@ -82,7 +82,7 @@ function Rewards() {
 
       {/* Your active rewards */}
       {user && loading && (
-        <div className="mt-6 flex items-center gap-2 rounded-2xl border border-border bg-card/50 p-5 text-sm text-muted-foreground">
+        <div role="status" className="mt-6 flex items-center gap-2 rounded-2xl border border-border bg-card/50 p-5 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Checking your rewards…
         </div>
       )}
@@ -110,7 +110,7 @@ function Rewards() {
           </div>
           <Link
             to="/mods" onMouseDown={playClick}
-            className="press inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-amber-950 transition hover:brightness-110"
+            className="touch-target press inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-amber-950 transition hover:brightness-110"
           >
             Pick a mod <ArrowRight className="h-4 w-4" />
           </Link>
@@ -118,7 +118,8 @@ function Rewards() {
       )}
 
       {/* The two prizes */}
-      <section className="mt-10 grid gap-6 md:grid-cols-2">
+      <section aria-labelledby="prizes-title" className="mt-10 grid gap-6 md:grid-cols-2">
+        <h2 id="prizes-title" className="sr-only">Available daily rewards</h2>
         <PrizeCard
           icon={<KeyRound className="h-6 w-6" />}
           accent="text-primary"
@@ -272,12 +273,13 @@ function DailyKeyCard({ initial }: { initial: DailyKey }) {
 
         {claimed && key ? (
           <div className="flex w-full items-center gap-2 sm:w-auto">
-            <code className="flex-1 select-all rounded-lg border border-border bg-background/60 px-3 py-2.5 text-center font-mono text-sm font-bold tracking-wider sm:flex-none">
+              <code aria-label="Daily Key" className="flex-1 select-all rounded-lg border border-border bg-background/60 px-3 py-2.5 text-center font-mono text-sm font-bold tracking-wider sm:flex-none">
               {key}
             </code>
             <button
+              type="button"
               onClick={copy}
-              className="press grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+              className="touch-target press grid shrink-0 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
               aria-label="Copy key"
             >
               {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
@@ -285,8 +287,10 @@ function DailyKeyCard({ initial }: { initial: DailyKey }) {
           </div>
         ) : (
           <button
+            type="button"
             onClick={claim} disabled={busy}
-            className="press inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground glow-primary transition hover:brightness-110 disabled:opacity-60 sm:w-auto"
+            aria-busy={busy}
+            className="touch-target press inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground glow-primary transition hover:brightness-110 disabled:opacity-60 sm:w-auto"
           >
             {busy ? (<><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</>) : (<><Gift className="h-4 w-4" /> Claim your key</>)}
           </button>

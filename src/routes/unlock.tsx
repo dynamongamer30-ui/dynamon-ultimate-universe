@@ -417,6 +417,7 @@ function UnlockPage() {
           <AnimatePresence>
             {done && downloadUrl && (
               <motion.div
+                role="status"
                 initial={{ opacity: 0, scale: 0.96, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ type: "spring", stiffness: 300, damping: 22 }}
@@ -441,6 +442,7 @@ function UnlockPage() {
           <AnimatePresence>
             {fatalError && (
               <motion.div
+                role="alert"
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="mt-6 rounded-xl border p-4 text-center"
@@ -455,6 +457,9 @@ function UnlockPage() {
                 >
                   <ArrowLeft className="h-3.5 w-3.5" /> Return home
                 </Link>
+                <button type="button" onClick={() => window.location.reload()} className="touch-target mt-3 ml-2 inline-flex items-center justify-center rounded-lg border px-4 py-2 text-xs font-medium transition-colors hover:bg-card/60" style={{ borderColor: "var(--border)", color: "var(--foreground)" }}>
+                  Try again
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

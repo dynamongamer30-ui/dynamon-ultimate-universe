@@ -159,12 +159,13 @@ function ProfilePage() {
 
         {/* Edit form */}
         <motion.form
+          aria-labelledby="edit-profile-title"
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           onSubmit={submit}
           className="route-hero space-y-6 edge-light rounded-2xl glass p-7 sm:p-8"
         >
           <div>
-            <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">Edit profile</h2>
+            <h2 id="edit-profile-title" className="font-display text-2xl font-extrabold uppercase tracking-tight">Edit profile</h2>
             <p className="mt-1 text-sm text-muted-foreground">Update your name, avatar or username anytime.</p>
           </div>
 
@@ -174,6 +175,7 @@ function ProfilePage() {
                 <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   value={username} onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
                   maxLength={24} required
                   className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-20 text-sm outline-none focus:border-primary"
                 />
@@ -186,6 +188,7 @@ function ProfilePage() {
                 <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                  autoComplete="name"
                   maxLength={40} required
                   className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
                 />
@@ -200,7 +203,8 @@ function ProfilePage() {
                 <button
                   key={g} type="button"
                   onClick={() => { setGender(g); playSoft(); }}
-                  className={`rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
+                  aria-pressed={gender === g}
+                  className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
                     gender === g ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -219,7 +223,8 @@ function ProfilePage() {
 
           <button
             type="submit" disabled={busy} onMouseDown={playClick}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
+            aria-busy={busy}
+            className="touch-target inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
             style={{ background: "var(--gradient-primary)" }}
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

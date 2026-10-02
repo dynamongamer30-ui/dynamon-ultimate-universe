@@ -392,14 +392,14 @@ function GeneratorPage() {
           </div>
 
             {phase.kind === "loading" && (
-              <div className="flex flex-col items-center gap-3 py-10" style={{ color: "var(--muted-foreground)" }}>
+              <div role="status" className="flex flex-col items-center gap-3 py-10" style={{ color: "var(--muted-foreground)" }}>
                 <Loader2 className="h-6 w-6 animate-spin" />
                 <span>Checking your link…</span>
               </div>
             )}
 
             {phase.kind === "invalid" && (
-              <div className="flex flex-col items-center gap-4 py-6 text-center">
+              <div role="alert" className="flex flex-col items-center gap-4 py-6 text-center">
                 <p className="text-lg" style={{ color: "var(--foreground)" }}>{reasonMessage(phase.reason)}</p>
                 <Button
                   onClick={() => window.location.assign(startGate())}
@@ -414,7 +414,7 @@ function GeneratorPage() {
 
             {phase.kind === "ready" && (
               <div className="flex flex-col items-center gap-5">
-                <div className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "color-mix(in oklch, var(--gold) 35%, transparent)", background: "color-mix(in oklch, var(--gold) 8%, transparent)", color: "var(--gold)" }}>
+                <div role="status" className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "color-mix(in oklch, var(--gold) 35%, transparent)", background: "color-mix(in oklch, var(--gold) 8%, transparent)", color: "var(--gold)" }}>
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Link looks good — just tick the box below
                 </div>
@@ -461,6 +461,7 @@ function GeneratorPage() {
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => copyKey(phase.key)}
                     className="group relative w-full overflow-hidden rounded-2xl p-[1.5px] transition-transform active:scale-[0.99]"
                     style={{ background: "linear-gradient(135deg, var(--gold), var(--primary), var(--gold))" }}

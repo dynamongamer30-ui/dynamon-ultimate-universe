@@ -23,6 +23,7 @@ function fmt(iso: string): string {
 function NotificationsPage() {
   const { user } = useAuth();
   const { items, readIds, loading, markAllRead, sender } = useNotifications();
+  const unreadCount = items.filter((n) => !readIds.has(n.id)).length;
 
   // Snapshot which notifications were unread when the page opened, so they keep
   // their "new" highlight during this visit even after we mark them read.
@@ -39,15 +40,15 @@ function NotificationsPage() {
 
   return (
     <PageShell>
-      <header className="route-hero edge-light rounded-2xl glass p-8 sm:p-12">
+      <header aria-labelledby="notifications-title" className="route-hero edge-light rounded-2xl glass p-8 sm:p-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
               <Bell className="h-3.5 w-3.5" /> Inbox
             </p>
-            <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">Notifications</h1>
+            <h1 id="notifications-title" className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">Notifications</h1>
             <p className="mt-3 max-w-2xl text-muted-foreground">
-              Announcements and updates from the Dynamon Universe team.
+              Announcements and updates from the Dynamon Universe team.{unreadCount > 0 && <span className="ml-2 font-semibold text-primary">{unreadCount} new</span>}
             </p>
           </div>
         </div>
@@ -77,7 +78,7 @@ function NotificationsPage() {
           <p className="text-muted-foreground">No notifications yet. Check back soon.</p>
         </div>
       ) : (
-        <ul className="notification-list mt-8 space-y-3">
+        <ul aria-label="Notifications" className="notification-list mt-8 space-y-3">
           {items.map((n) => {
             const unread = unreadOnArrival.has(n.id);
             return (
@@ -109,7 +110,7 @@ function NotificationsPage() {
                     )}
                     <div className="notification-heading flex items-start justify-between gap-3">
                       <h2 className="notification-copy min-w-0 font-display text-lg font-bold">{n.title}</h2>
-                      <span className="notification-date shrink-0 text-xs text-muted-foreground">{fmt(n.created_at)}</span>
+                      <time dateTime={n.created_at} className="notification-date shrink-0 text-right text-xs text-muted-foreground">{fmt(n.created_at)}</time>
                     </div>
                     <p className="notification-copy mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                       <NotificationBody text={n.body} />

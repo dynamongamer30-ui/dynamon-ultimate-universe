@@ -111,11 +111,11 @@ function ClaimPage() {
 
   return (
     <PageShell>
-      <header className="route-hero edge-light rounded-2xl glass p-8 text-center sm:p-12">
+      <header aria-labelledby="claim-title" className="route-hero edge-light rounded-2xl glass p-8 text-center sm:p-12">
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
           <Gift className="h-3.5 w-3.5" /> Claim
         </p>
-        <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">
+        <h1 id="claim-title" className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">
           {result ? "Reward claimed" : "Claim your reward"}
         </h1>
       </header>
@@ -138,8 +138,8 @@ function ClaimPage() {
               <code className="flex-1 select-all rounded-lg border border-border bg-background/60 px-3 py-3 text-center font-mono text-sm font-bold tracking-wider">
                 {result.key}
               </code>
-              <button onClick={() => copy(result.key)}
-                className="press grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition hover:border-primary/40 hover:text-foreground">
+              <button type="button" onClick={() => copy(result.key)} aria-label="Copy reward key"
+                className="touch-target press grid shrink-0 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition hover:border-primary/40 hover:text-foreground">
                 {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
               </button>
             </div>
@@ -157,8 +157,9 @@ function ClaimPage() {
             </Link>
           </motion.div>
         ) : result?.kind === "error" ? (
-          <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6 text-center">
+          <div role="alert" className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6 text-center">
             <p className="text-sm text-destructive">{result.message}</p>
+            <button type="button" onClick={() => { setResult(null); setCopied(false); }} className="touch-target mt-4 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-card/60">Try again</button>
           </div>
         ) : (
           <div className="rounded-2xl border border-border bg-card/40 p-6 text-center">
@@ -168,8 +169,8 @@ function ClaimPage() {
             <p className="mt-3 text-sm text-muted-foreground">
               {kind === "trainer_level" ? "Claim your next Trainer Rank reward." : "Tap below to collect your reward."}
             </p>
-            <button onClick={claim} disabled={busy}
-              className="press animate-pulse-glow mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110 disabled:opacity-60">
+            <button type="button" onClick={claim} disabled={busy} aria-busy={busy}
+              className="touch-target press animate-pulse-glow mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110 disabled:opacity-60">
               {busy ? (<><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</>) : "Claim now"}
             </button>
           </div>

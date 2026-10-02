@@ -94,7 +94,8 @@ function AuthPage() {
           </div>
         </motion.div>
 
-        <motion.div
+          <motion.div
+            aria-labelledby="auth-step-title"
           key={step}
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="route-hero relative overflow-hidden edge-light rounded-2xl glass p-7 shadow-elev sm:p-8"
@@ -124,7 +125,7 @@ function Chip({ active, children }: { active: boolean; children: React.ReactNode
 function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => void }) {
   return (
     <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="relative">
-      <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">
+              <h2 id="auth-step-title" className="font-display text-2xl font-extrabold uppercase tracking-tight">
         Welcome, Trainer
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">Sign in with your Google account to continue.</p>
@@ -199,13 +200,14 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <motion.form
+        <motion.form
+          aria-labelledby="profile-step-title"
       onSubmit={submit}
       initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
       className="relative space-y-5"
     >
       <div>
-        <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">Build your trainer</h2>
+        <h2 id="profile-step-title" className="font-display text-2xl font-extrabold uppercase tracking-tight">Build your trainer</h2>
         <p className="mt-1 text-sm text-muted-foreground">Only takes a moment. You can update it anytime.</p>
       </div>
 
@@ -245,7 +247,8 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
             <button
               key={g} type="button"
               onClick={() => { setGender(g); setAvatarId(null); playSoft(); }}
-              className={`rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
+              aria-pressed={gender === g}
+              className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
                 gender === g ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -277,7 +280,8 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
 
       <button
         type="submit" disabled={busy}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
+        aria-busy={busy}
+        className="touch-target inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
         style={{ background: "var(--gradient-primary)" }}
       >
         {busy && <Loader2 className="h-4 w-4 animate-spin" />}
