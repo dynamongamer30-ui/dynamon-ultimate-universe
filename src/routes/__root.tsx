@@ -9,7 +9,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { motion } from "motion/react";
+import { MotionConfig, motion } from "motion/react";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
@@ -160,6 +160,7 @@ function PageTransition({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <motion.div
+      className="page-transition"
       key={pathname}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -179,22 +180,26 @@ function RootComponent() {
         <SiteSettingsProvider>
           <GamificationProvider>
             <ConfirmProvider>
-            <AuroraCursor />
-            <AnnouncementBanner />
-            <OwnerReturnRedirect />
-            <PageTransition><Outlet /></PageTransition>
-            <Toaster
-              theme="dark"
-              position="bottom-right"
-              visibleToasts={1}
-              toastOptions={{
-                className: "site-toast",
-                duration: 4200,
-              }}
-            />
-            <NotificationOptIn />
-            <PWAInstall />
-            <DailyCheckIn />
+              <MotionConfig reducedMotion="user">
+                <AuroraCursor />
+                <AnnouncementBanner />
+                <OwnerReturnRedirect />
+                <PageTransition>
+                  <Outlet />
+                </PageTransition>
+                <Toaster
+                  theme="dark"
+                  position="bottom-right"
+                  visibleToasts={1}
+                  toastOptions={{
+                    className: "site-toast",
+                    duration: 4200,
+                  }}
+                />
+                <NotificationOptIn />
+                <PWAInstall />
+                <DailyCheckIn />
+              </MotionConfig>
             </ConfirmProvider>
           </GamificationProvider>
         </SiteSettingsProvider>

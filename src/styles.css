@@ -105,6 +105,17 @@
 :root {
   --radius: 0.75rem;
 
+  /* Shared foundation tokens: keep materials, motion, and mobile geometry
+     consistent without forcing route-level redesigns. */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --motion-duration-fast: 140ms;
+  --motion-duration-standard: 220ms;
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+
   /* Fluid modular scale: 12 / 15 / 18 / 22 / 27 / 34 / 42px. */
   --type-0: clamp(0.75rem, 0.72rem + 0.1vw, 0.8125rem);
   --type-1: clamp(0.9375rem, 0.88rem + 0.12vw, 1rem);
@@ -207,6 +218,7 @@ body {
 }
 body {
   min-width: 320px;
+  min-height: 100svh;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -233,7 +245,7 @@ body:has(.modal-frame), body:has(.overlay-scrim) { overscroll-behavior: none; }
   [data-sonner-toaster] {
     left: 0.75rem !important;
     right: 0.75rem !important;
-    bottom: max(0.75rem, env(safe-area-inset-bottom)) !important;
+    bottom: max(0.75rem, var(--safe-area-bottom)) !important;
     width: auto !important;
   }
   .site-toast { width: 100% !important; }
@@ -290,6 +302,7 @@ h1, h2, h3, h4, .font-display {
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+  box-shadow: var(--focus-ring);
 }
 
 @utility text-gradient {
@@ -321,7 +334,7 @@ h1, h2, h3, h4, .font-display {
   box-shadow: var(--material-l1-shadow);
   -webkit-backdrop-filter: blur(var(--material-l1-blur)) saturate(120%);
   backdrop-filter: blur(var(--material-l1-blur)) saturate(120%);
-  transition: box-shadow 180ms ease-out, border-color 180ms ease-out, background-color 180ms ease-out;
+  transition: box-shadow var(--motion-duration-standard) var(--motion-ease-out), border-color var(--motion-duration-standard) var(--motion-ease-out), background-color var(--motion-duration-standard) var(--motion-ease-out);
 }
 .glass-l2 {
   background-color: var(--material-l2-bg);
@@ -391,7 +404,12 @@ h1, h2, h3, h4, .font-display {
   background: color-mix(in srgb, var(--background) 72%, var(--card));
   border-color: var(--material-l1-border);
 }
-.touch-target { min-width: 2.75rem; min-height: 2.75rem; }
+.touch-target {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
 .route-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
 
 /* Shared stacking contract: do not introduce ad hoc z-index values for these layers. */
@@ -406,14 +424,15 @@ h1, h2, h3, h4, .font-display {
 }
 .overlay-surface { z-index: var(--z-modal); }
 .modal-frame {
-  padding-top: max(1rem, env(safe-area-inset-top));
-  padding-right: max(1rem, env(safe-area-inset-right));
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  padding-left: max(1rem, env(safe-area-inset-left));
+  min-height: 100svh;
+  padding-top: max(1rem, var(--safe-area-top));
+  padding-right: max(1rem, var(--safe-area-right));
+  padding-bottom: max(1rem, var(--safe-area-bottom));
+  padding-left: max(1rem, var(--safe-area-left));
   overscroll-behavior: contain;
 }
 .modal-panel {
-  max-height: min(42rem, calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+  max-height: min(42rem, calc(100dvh - 2rem - var(--safe-area-top) - var(--safe-area-bottom)));
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -448,7 +467,7 @@ h1, h2, h3, h4, .font-display {
 @media (max-width: 640px) {
   .notification-popover {
     position: fixed;
-    top: calc(4.5rem + env(safe-area-inset-top));
+    top: calc(4.5rem + var(--safe-area-top));
     right: 0.75rem;
     left: 0.75rem;
     width: auto;
@@ -467,7 +486,7 @@ h1, h2, h3, h4, .font-display {
   }
   .account-menu {
     position: fixed;
-    top: calc(4.5rem + env(safe-area-inset-top));
+    top: calc(4.5rem + var(--safe-area-top));
     right: 0.75rem;
     left: 0.75rem;
     width: auto;
@@ -507,7 +526,7 @@ h1, h2, h3, h4, .font-display {
 }
 
 @media (max-width: 640px) {
-  .page-content { padding-bottom: calc(3rem + env(safe-area-inset-bottom)); }
+  .page-content { padding-bottom: calc(3rem + var(--safe-area-bottom)); }
   .route-hero { max-width: none; }
   .route-actions > * { min-height: 2.75rem; }
   .modal-panel { width: 100%; border-radius: 1.25rem; }
@@ -519,7 +538,7 @@ h1, h2, h3, h4, .font-display {
 /* Interactive press physics — used on all buttons/cards */
 @utility press {
   transform: translateZ(0);
-  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), filter 0.16s ease, box-shadow 0.16s ease;
+  transition: transform var(--motion-duration-fast) var(--motion-ease-out), filter var(--motion-duration-fast) ease, box-shadow var(--motion-duration-fast) ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .press:hover { transform: translateY(-1px); will-change: transform; }
@@ -530,7 +549,7 @@ h1, h2, h3, h4, .font-display {
    now also blooms with a soft purple glow on hover */
 @utility edge-light {
   position: relative;
-  transition: box-shadow 0.35s ease;
+  transition: box-shadow var(--motion-duration-standard) var(--motion-ease-standard);
 }
 .edge-light:hover {
   box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.1);
@@ -548,8 +567,8 @@ h1, h2, h3, h4, .font-display {
 /* Soft glow ring on focus for every text input/textarea/select site-wide —
    replaces the plain hard border-only focus state. */
 input:focus-visible, textarea:focus-visible, select:focus-visible {
-  box-shadow: 0 0 0 3px oklch(0.54 0.22 296 / 0.28);
-  border-color: oklch(0.54 0.22 296 / 0.7);
+  box-shadow: var(--focus-ring);
+  border-color: color-mix(in srgb, var(--ring) 70%, transparent);
 }
 
 @keyframes shimmer {
