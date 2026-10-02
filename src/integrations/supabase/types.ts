@@ -335,6 +335,33 @@ export type Database = {
         }
         Relationships: []
       }
+      mod_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          mod_slug: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mod_slug: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mod_slug?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mod_overrides: {
         Row: {
           changelog: Json | null

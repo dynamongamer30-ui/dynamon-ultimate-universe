@@ -18,10 +18,11 @@ type CommentRow = {
   mod_slug: string;
   user_id: string;
   body: string;
-  rating: number | null;
   created_at: string;
   parent_id: string | null;
 };
+
+type RatingRow = { id: string; mod_slug: string; user_id: string; rating: number; created_at: string };
 
 type AuthorRow = {
   id: string;
@@ -62,6 +63,7 @@ export function CommentsPanel({
   const { award, grant } = useGamification();
   const confirm = useConfirm();
   const [comments, setComments] = useState<EnrichedComment[]>([]);
+  const [ratings, setRatings] = useState<RatingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState("");
   const [rating, setRating] = useState<number | null>(null);
@@ -73,13 +75,21 @@ export function CommentsPanel({
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data: rawComments } = await supabase
-      .from("comments")
-      .select("id, mod_slug, user_id, body, rating, created_at, parent_id")
-      .eq("mod_slug", slug)
-      .order("created_at", { ascending: false });
+    const [{ data: rawComments }, { data: rawRatings }] = await Promise.all([
+      supabase
+        .from("comments")
+        .select("id, mod_slug, user_id, body, created_at, parent_id")
+        .eq("mod_slug", slug)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("mod_ratings")
+        .select("id, mod_slug, user_id, rating, created_at")
+        .eq("mod_slug", slug)
+        .order("created_at", { ascending: false }),
+    ]);
 
     const list = (rawComments ?? []) as CommentRow[];
+    setRatings((rawRatings ?? []) as RatingRow[]);
     if (list.length === 0) { setComments([]); setLoading(false); return; }
 
     const authorIds = [...new Set(list.map((c) => c.user_id))];
@@ -123,8 +133,7 @@ export function CommentsPanel({
     return map;
   }, [comments]);
 
-  const ratings = topLevel.map((c) => c.rating).filter((r): r is number => typeof r === "number");
-  const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
+  const avg = ratings.length ? ratings.reduce((sum, row) => sum + row.rating, 0) / ratings.length : 0;
 
   const submitRating = async () => {
     if (!user || !profile) { toast.error("Sign in and complete your profile first"); return; }
@@ -132,17 +141,15 @@ export function CommentsPanel({
     setRatingBusy(true);
     try {
       const { data: existing, error: lookupError } = await supabase
-        .from("comments")
+        .from("mod_ratings")
         .select("id")
         .eq("mod_slug", slug)
         .eq("user_id", user.id)
-        .is("parent_id", null)
-        .not("rating", "is", null)
         .maybeSingle();
       if (lookupError) throw lookupError;
       const { error } = existing
-        ? await supabase.from("comments").update({ rating }).eq("id", existing.id)
-        : await supabase.from("comments").insert({ mod_slug: slug, user_id: user.id, body: "", rating, parent_id: null });
+        ? await supabase.from("mod_ratings").update({ rating, updated_at: new Date().toISOString() }).eq("id", existing.id)
+        : await supabase.from("mod_ratings").insert({ mod_slug: slug, user_id: user.id, rating });
       if (error) throw error;
       setRating(null);
       playSuccess();
@@ -151,7 +158,8 @@ export function CommentsPanel({
       grant("first_review");
       await load();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Could not submit rating");
+      const message = err instanceof Error ? err.message : (typeof err === "object" && err && "message" in err ? String(err.message) : "Could not submit rating");
+      toast.error(message);
     } finally {
       setRatingBusy(false);
     }
@@ -254,9 +262,7 @@ export function CommentsPanel({
         </div>
         {c.body ? (
           <p className="mt-3 whitespace-pre-line break-words [overflow-wrap:anywhere] text-sm leading-relaxed text-muted-foreground">{c.body}</p>
-        ) : (
-          <p className="mt-3 text-sm italic text-muted-foreground/60">Left a rating without writing a review.</p>
-        )}
+        ) : null}
 
         {!isReply && <div className="mt-3"><ElementalReactions commentId={c.id} /></div>}
 

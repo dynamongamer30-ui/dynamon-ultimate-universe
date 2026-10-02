@@ -184,7 +184,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       supabase.from("site_settings").select("key, value"),
       supabase.from("mod_overrides").select("*"),
       supabase.from("mod_likes").select("mod_slug"),
-      supabase.from("comments").select("mod_slug, rating").not("rating", "is", null),
+      supabase.from("mod_ratings").select("mod_slug, rating"),
     ]);
     const map = new Map<string, unknown>();
     (settings ?? []).forEach((r: { key: string; value: unknown }) => map.set(r.key, r.value));
@@ -204,8 +204,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     });
     setRealLikes(likeCounts);
 
-    // Real per-mod rating aggregates — top-level reviews only (replies
-    // have rating: null, already filtered by the .not("rating","is",null)).
+    // Real per-mod rating aggregates — ratings are stored separately from comments.
     const ratingAgg: Record<string, { sum: number; count: number }> = {};
     (ratingRows ?? []).forEach((r: { mod_slug: string; rating: number | null }) => {
       if (r.rating == null) return; // guard: never count a null as a 0-star
