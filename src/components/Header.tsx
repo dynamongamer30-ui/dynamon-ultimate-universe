@@ -11,6 +11,7 @@ import { OwnerBadge } from "@/components/OwnerBadge";
 import { LevelBadge } from "@/components/LevelBadge";
 import { StreakBadge } from "@/components/StreakBadge";
 import { NotificationBell } from "@/components/NotificationBell";
+import { FeedbackPreferences } from "@/components/FeedbackPreferences";
 
 const nav = [
   { to: "/", label: "Home" },
@@ -92,6 +93,8 @@ export function Header() {
           >
             <Search className="h-4 w-4" />
           </button>
+
+          <FeedbackPreferences />
 
           {user && <NotificationBell />}
 

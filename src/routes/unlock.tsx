@@ -19,6 +19,7 @@ import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
 import { Cipher } from "@/lib/cipher";
 import { getFingerprint } from "@/lib/fingerprint";
+import { playError, playSoft, playUnlock } from "@/lib/sound";
 
 type UnlockSearch = { v?: string };
 
@@ -57,16 +58,6 @@ const INITIAL_STAGES: Stage[] = [
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/** Short, silent-if-unsupported haptic pulse — iOS Safari has no Vibration
- * API at all, and that's fine; this just becomes a no-op there. */
-function buzz(pattern: number | number[]) {
-  try {
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(pattern);
-    }
-  } catch { /* unsupported or blocked — ignore */ }
-}
 
 function mapRedeemError(code?: string): string {
   switch (code) {
@@ -229,12 +220,12 @@ function UnlockPage() {
     try {
       const r = await fn();
       setStage(id, { status: "done" });
-      buzz(12);
+      playSoft();
       return r;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setStage(id, { status: "error", message: msg });
-      buzz([30, 40, 30]);
+      playError();
       throw e;
     }
   }
@@ -312,7 +303,7 @@ function UnlockPage() {
 
       setDownloadUrl(url);
       setDone(true);
-      buzz([15, 60, 15, 60, 40]);
+      playUnlock();
 
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (!reduced) {

@@ -1,16 +1,49 @@
 /**
- * Unified premium feedback engine: Web Audio sound + haptic vibration.
- * Zero external assets. Every interaction gets a precise, layered response.
+ * Unified optional feedback engine: Web Audio sound + haptic vibration.
+ *
+ * The engine is enhancement-only: every important state still has visible UI
+ * feedback, audio is never initialized on page mount, and unsupported APIs
+ * silently no-op.
  */
+export type FeedbackPreference = "full" | "reduced" | "off";
+
+export const FEEDBACK_PREFERENCE_KEY = "dynamon-feedback-preference";
+const FEEDBACK_EVENT = "dynamon-feedback-preference-change";
+
 let ctx: AudioContext | null = null;
 let lastHoverAt = 0;
 
+function readPreference(): FeedbackPreference {
+  if (typeof window === "undefined") return "full";
+  const value = window.localStorage.getItem(FEEDBACK_PREFERENCE_KEY);
+  return value === "reduced" || value === "off" ? value : "full";
+}
+
+export function getFeedbackPreference(): FeedbackPreference {
+  return readPreference();
+}
+
+function prefersReducedMotion() {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function canPlaySound() {
+  return readPreference() === "full";
+}
+
+function canUseHaptics(importance: "standard" | "essential" = "standard") {
+  const preference = readPreference();
+  return preference === "full" || (preference === "reduced" && importance === "essential");
+}
+
 function getCtx() {
-  if (typeof window === "undefined") return null;
+  if (!canPlaySound() || typeof window === "undefined") return null;
   if (!ctx) {
     try {
-      ctx = new (window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const AudioContextCtor = window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextCtor) return null;
+      ctx = new AudioContextCtor();
     } catch {
       return null;
     }
@@ -19,13 +52,13 @@ function getCtx() {
   return ctx;
 }
 
-/** Haptic pulse — silently no-ops on unsupported devices (desktop, iOS Safari). */
-export function haptic(pattern: number | number[] = 8) {
-  if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+/** Haptic pulse — silently no-ops on unsupported devices and preference Off. */
+export function haptic(pattern: number | number[] = 8, importance: "standard" | "essential" = "standard") {
+  if (!canUseHaptics(importance) || typeof navigator === "undefined" || !("vibrate" in navigator)) return;
   try {
     navigator.vibrate(pattern);
   } catch {
-    /* ignore */
+    /* unsupported or blocked */
   }
 }
 
@@ -59,66 +92,65 @@ function tone({ freq, duration = 0.08, type = "sine", gain = 0.05, glideTo, dela
   }
 }
 
-/** Legacy-compatible raw tap */
+/** Legacy-compatible raw tap. */
 export function playTap(freq = 880, duration = 0.08, type: OscillatorType = "sine", gain = 0.05) {
   tone({ freq, duration, type, gain });
 }
 
-/* ── Semantic feedback vocabulary ─────────────────────────── */
-
-/** Primary press: crisp mechanical tick + short haptic */
+/** Primary press: crisp mechanical tick + standard haptic. */
 export const playClick = () => {
   tone({ freq: 1800, duration: 0.03, type: "square", gain: 0.012 });
   tone({ freq: 640, duration: 0.06, type: "triangle", gain: 0.04 });
   haptic(8);
 };
 
-/** Success: rising two-note chime + double haptic */
+/** Success: rising chime + essential haptic in Reduced mode. */
 export const playSuccess = () => {
   tone({ freq: 660, duration: 0.09, gain: 0.05 });
   tone({ freq: 990, duration: 0.12, gain: 0.05, delay: 0.07 });
   tone({ freq: 1320, duration: 0.14, gain: 0.03, delay: 0.14 });
-  haptic([10, 40, 14]);
+  haptic([10, 40, 14], "essential");
 };
 
-/** Soft: gentle low blip for secondary actions (like, hover-confirm) */
+/** Soft blip for secondary actions. */
 export const playSoft = () => {
   tone({ freq: 520, duration: 0.05, gain: 0.025 });
   haptic(5);
 };
 
-/** Hover: near-subliminal high tick, no haptic (fires often) */
+/** Hover feedback is disabled for reduced motion and coarse-pointer devices. */
 export const playHover = () => {
+  if (prefersReducedMotion() || typeof window === "undefined" || window.matchMedia("(pointer: coarse)").matches) return;
   const now = typeof performance === "undefined" ? Date.now() : performance.now();
-  // Hover feedback is atmospheric; cap it so dense card grids never sound noisy.
   if (now - lastHoverAt < 110) return;
   lastHoverAt = now;
   tone({ freq: 2400, duration: 0.018, type: "sine", gain: 0.006 });
 };
 
-/** Toggle/switch: quick pitch glide up */
+/** Toggle/switch: quick pitch glide up. */
 export const playToggle = (on = true) => {
   tone({ freq: on ? 500 : 800, glideTo: on ? 800 : 500, duration: 0.07, type: "triangle", gain: 0.035 });
   haptic(7);
 };
 
-/** Error: descending buzz + strong haptic */
+/** Error: descending buzz + essential haptic in Reduced mode. */
 export const playError = () => {
   tone({ freq: 300, glideTo: 180, duration: 0.16, type: "sawtooth", gain: 0.03 });
-  haptic([24, 30, 24]);
+  haptic([24, 30, 24], "essential");
 };
 
-/** Unlock/reward: sparkling ascending arpeggio */
+/** Unlock/reward: ascending arpeggio + essential haptic in Reduced mode. */
 export const playUnlock = () => {
   tone({ freq: 523, duration: 0.1, gain: 0.045 });
   tone({ freq: 659, duration: 0.1, gain: 0.045, delay: 0.08 });
   tone({ freq: 784, duration: 0.1, gain: 0.045, delay: 0.16 });
   tone({ freq: 1047, duration: 0.2, gain: 0.05, delay: 0.24 });
-  haptic([12, 50, 12, 50, 20]);
+  haptic([12, 50, 12, 50, 20], "essential");
 };
 
-/** Whoosh: filtered noise sweep for page/panel transitions */
+/** Whoosh is decorative and therefore follows Full + reduced-motion rules. */
 export const playWhoosh = () => {
+  if (prefersReducedMotion()) return;
   const c = getCtx();
   if (!c) return;
   try {
@@ -142,3 +174,19 @@ export const playWhoosh = () => {
     /* ignore */
   }
 };
+
+export function subscribeToFeedbackPreference(listener: (preference: FeedbackPreference) => void) {
+  if (typeof window === "undefined") return () => {};
+  const onChange = (event: Event) => {
+    const preference = (event as CustomEvent<FeedbackPreference>).detail;
+    if (preference === "full" || preference === "reduced" || preference === "off") listener(preference);
+  };
+  window.addEventListener(FEEDBACK_EVENT, onChange);
+  return () => window.removeEventListener(FEEDBACK_EVENT, onChange);
+}
+
+export function setFeedbackPreference(preference: FeedbackPreference) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(FEEDBACK_PREFERENCE_KEY, preference);
+  window.dispatchEvent(new CustomEvent(FEEDBACK_EVENT, { detail: preference }));
+}

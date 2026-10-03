@@ -22,3 +22,7 @@ This file records visual assets used by Dynamon Universe. New assets or fonts mu
 - Measured file size and format
 
 **Owner action required:** confirm the licensing/provenance of the existing `General Sans` and `Aeonik Pro` files before public redistribution or adding more font weights.
+
+## Phase 7 feedback layer
+
+Phase 7 uses browser Web Audio oscillator/buffer synthesis and the Web Vibration API only. No third-party audio files, downloaded music, CDN assets, or audio packages were added; therefore no new audio license or attribution is required.

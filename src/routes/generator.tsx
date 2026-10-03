@@ -15,13 +15,7 @@ import {
 import { getFingerprint } from "@/lib/fingerprint";
 import { supabase } from "@/integrations/supabase/client";
 import { mods } from "@/lib/mods";
-
-/** Short, silent-if-unsupported haptic pulse. */
-function buzz(pattern: number | number[]) {
-  try {
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(pattern);
-  } catch { /* unsupported or blocked */ }
-}
+import { playUnlock } from "@/lib/sound";
 
 // ---------- Route registration (both /generator and /generator.html) ----------
 
@@ -242,7 +236,7 @@ function GeneratorPage() {
       setPhase({ kind: "success", key: res.key, remaining: res.remaining, hours: 24, generatedAt: Date.now() });
       toast.success("Your key is ready and copied!");
       resetTurnstile();
-      buzz([15, 60, 15, 60, 40]);
+      playUnlock();
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (!reduced) {
         confetti({
