@@ -31,6 +31,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ModsIndexRouteImport } from './routes/mods.index'
 import { Route as ModsSlugRouteImport } from './routes/mods.$slug'
+import { Route as ClaimTeslaRouteImport } from './routes/claim.tesla'
 
 const UnlockRoute = UnlockRouteImport.update({
   id: '/unlock',
@@ -142,6 +143,11 @@ const ModsSlugRoute = ModsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => ModsRoute,
 } as any)
+const ClaimTeslaRoute = ClaimTeslaRouteImport.update({
+  id: '/tesla',
+  path: '/tesla',
+  getParentRoute: () => ClaimRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -153,7 +159,7 @@ export interface FileRoutesByFullPath {
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
   '/auth': typeof AuthRoute
-  '/claim': typeof ClaimRoute
+  '/claim': typeof ClaimRouteWithChildren
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
@@ -164,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/unlock': typeof UnlockRoute
+  '/claim/tesla': typeof ClaimTeslaRoute
   '/mods/$slug': typeof ModsSlugRoute
   '/mods/': typeof ModsIndexRoute
 }
@@ -177,7 +184,7 @@ export interface FileRoutesByTo {
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
   '/auth': typeof AuthRoute
-  '/claim': typeof ClaimRoute
+  '/claim': typeof ClaimRouteWithChildren
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/unlock': typeof UnlockRoute
+  '/claim/tesla': typeof ClaimTeslaRoute
   '/mods/$slug': typeof ModsSlugRoute
   '/mods': typeof ModsIndexRoute
 }
@@ -201,7 +209,7 @@ export interface FileRoutesById {
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
   '/auth': typeof AuthRoute
-  '/claim': typeof ClaimRoute
+  '/claim': typeof ClaimRouteWithChildren
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/unlock': typeof UnlockRoute
+  '/claim/tesla': typeof ClaimTeslaRoute
   '/mods/$slug': typeof ModsSlugRoute
   '/mods/': typeof ModsIndexRoute
 }
@@ -238,6 +247,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/rewards'
     | '/unlock'
+    | '/claim/tesla'
     | '/mods/$slug'
     | '/mods/'
   fileRoutesByTo: FileRoutesByTo
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/rewards'
     | '/unlock'
+    | '/claim/tesla'
     | '/mods/$slug'
     | '/mods'
   id:
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/rewards'
     | '/unlock'
+    | '/claim/tesla'
     | '/mods/$slug'
     | '/mods/'
   fileRoutesById: FileRoutesById
@@ -299,7 +311,7 @@ export interface RootRouteChildren {
   AdminLoaderRoute: typeof AdminLoaderRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AuthRoute: typeof AuthRoute
-  ClaimRoute: typeof ClaimRoute
+  ClaimRoute: typeof ClaimRouteWithChildren
   ContactRoute: typeof ContactRoute
   DisclaimerRoute: typeof DisclaimerRoute
   FavoritesRoute: typeof FavoritesRoute
@@ -468,8 +480,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModsSlugRouteImport
       parentRoute: typeof ModsRoute
     }
+    '/claim/tesla': {
+      id: '/claim/tesla'
+      path: '/tesla'
+      fullPath: '/claim/tesla'
+      preLoaderRoute: typeof ClaimTeslaRouteImport
+      parentRoute: typeof ClaimRoute
+    }
   }
 }
+
+interface ClaimRouteChildren {
+  ClaimTeslaRoute: typeof ClaimTeslaRoute
+}
+
+const ClaimRouteChildren: ClaimRouteChildren = {
+  ClaimTeslaRoute: ClaimTeslaRoute,
+}
+
+const ClaimRouteWithChildren = ClaimRoute._addFileChildren(ClaimRouteChildren)
 
 interface ModsRouteChildren {
   ModsSlugRoute: typeof ModsSlugRoute
@@ -493,7 +522,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLoaderRoute: AdminLoaderRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AuthRoute: AuthRoute,
-  ClaimRoute: ClaimRoute,
+  ClaimRoute: ClaimRouteWithChildren,
   ContactRoute: ContactRoute,
   DisclaimerRoute: DisclaimerRoute,
   FavoritesRoute: FavoritesRoute,

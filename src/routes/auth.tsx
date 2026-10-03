@@ -16,7 +16,11 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Sign in — Dynamon Universe" },
-      { name: "description", content: "Create your trainer profile to download Dynamons World mods, leave reviews and join the community." },
+      {
+        name: "description",
+        content:
+          "Create your trainer profile to download Dynamons World mods, leave reviews and join the community.",
+      },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -32,15 +36,34 @@ function AuthPage() {
   const [step, setStep] = useState<Step>("credentials");
   const [busy, setBusy] = useState(false);
 
+  const afterAuthPath = () => {
+    try {
+      const value = sessionStorage.getItem("dg_after_auth");
+      if (value?.startsWith("/") && !value.startsWith("//")) return value;
+    } catch {
+      /* Storage may be unavailable in private browsing. */
+    }
+    return "/mods";
+  };
+
   // If user already has a complete profile, send them to /mods
   useEffect(() => {
     if (loading || profileLoading) return;
-    if (user && profile) navigate({ to: "/mods" });
+    if (user && profile) {
+      const destination = afterAuthPath();
+      try {
+        sessionStorage.removeItem("dg_after_auth");
+      } catch {
+        /* ignore */
+      }
+      navigate({ to: destination });
+    }
     if (user && !profile) setStep("profile");
   }, [user, profile, loading, profileLoading, navigate]);
 
   const handleGoogle = async () => {
-    playClick(); setBusy(true);
+    playClick();
+    setBusy(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin + "/auth",
@@ -60,7 +83,11 @@ function AuthPage() {
   return (
     <PageShell>
       <div className="mx-auto grid max-w-6xl gap-10 py-6 lg:grid-cols-[1.1fr_1.2fr] lg:items-start lg:py-12">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:sticky lg:top-24">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="lg:sticky lg:top-24"
+        >
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
             <Sparkles className="h-3.5 w-3.5" /> Trainers only
           </div>
@@ -68,7 +95,8 @@ function AuthPage() {
             Forge your <span className="text-gradient">trainer identity.</span>
           </h1>
           <p className="mt-4 max-w-md text-muted-foreground">
-            One trainer, one username. Pick a profile avatar from 20 hand-crafted heroes and join the Dynamon vault.
+            One trainer, one username. Pick a profile avatar from 20 hand-crafted heroes and join
+            the Dynamon vault.
           </p>
           <ul className="mt-6 space-y-3 text-sm">
             {[
@@ -78,7 +106,10 @@ function AuthPage() {
               "Early access to every weekly drop",
             ].map((t) => (
               <li key={t} className="flex items-center gap-3">
-                <span className="grid h-6 w-6 place-items-center rounded-full text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+                <span
+                  className="grid h-6 w-6 place-items-center rounded-full text-primary-foreground"
+                  style={{ background: "var(--gradient-primary)" }}
+                >
                   <Check className="h-3 w-3" />
                 </span>
                 {t}
@@ -94,18 +125,30 @@ function AuthPage() {
           </div>
         </motion.div>
 
-          <motion.div
-            aria-labelledby="auth-step-title"
+        <motion.div
+          aria-labelledby="auth-step-title"
           key={step}
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           className="route-hero relative overflow-hidden edge-light rounded-2xl glass p-7 shadow-elev sm:p-8"
         >
-
           <AnimatePresence mode="wait">
             {step === "credentials" && !user ? (
               <CredentialsStep key="creds" busy={busy} onGoogle={handleGoogle} />
             ) : (
-              <ProfileStep key="profile" onDone={async () => { await refresh(); navigate({ to: "/mods" }); }} />
+              <ProfileStep
+                key="profile"
+                onDone={async () => {
+                  await refresh();
+                  const destination = afterAuthPath();
+                  try {
+                    sessionStorage.removeItem("dg_after_auth");
+                  } catch {
+                    /* ignore */
+                  }
+                  navigate({ to: destination });
+                }}
+              />
             )}
           </AnimatePresence>
         </motion.div>
@@ -116,7 +159,9 @@ function AuthPage() {
 
 function Chip({ active, children }: { active: boolean; children: React.ReactNode }) {
   return (
-    <span className={`inline-flex items-center rounded-full border px-3 py-1 font-semibold uppercase tracking-wider ${active ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
+    <span
+      className={`inline-flex items-center rounded-full border px-3 py-1 font-semibold uppercase tracking-wider ${active ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
+    >
       {children}
     </span>
   );
@@ -124,14 +169,25 @@ function Chip({ active, children }: { active: boolean; children: React.ReactNode
 
 function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => void }) {
   return (
-    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="relative">
-              <h2 id="auth-step-title" className="font-display text-2xl font-extrabold uppercase tracking-tight">
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 10 }}
+      className="relative"
+    >
+      <h2
+        id="auth-step-title"
+        className="font-display text-2xl font-extrabold uppercase tracking-tight"
+      >
         Welcome, Trainer
       </h2>
-      <p className="mt-1 text-sm text-muted-foreground">Sign in with your Google account to continue.</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Sign in with your Google account to continue.
+      </p>
 
       <button
-        onClick={onGoogle} disabled={busy}
+        onClick={onGoogle}
+        disabled={busy}
         className="touch-target mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card/60 px-4 py-3 text-sm font-semibold transition-colors hover:bg-card disabled:opacity-60"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
@@ -139,10 +195,19 @@ function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => vo
       </button>
 
       <p className="mt-5 text-center text-xs text-muted-foreground">
-        By continuing you agree to our <Link to="/disclaimer" className="text-primary hover:underline">Disclaimer &amp; Safety</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+        By continuing you agree to our{" "}
+        <Link to="/disclaimer" className="text-primary hover:underline">
+          Disclaimer &amp; Safety
+        </Link>{" "}
+        and{" "}
+        <Link to="/privacy" className="text-primary hover:underline">
+          Privacy Policy
+        </Link>
+        .
       </p>
       <p className="mt-2 text-center text-xs text-muted-foreground/80">
-        Accounts that don&apos;t sign in for 30 days are automatically deleted, along with their data.
+        Accounts that don&apos;t sign in for 30 days are automatically deleted, along with their
+        data.
       </p>
     </motion.div>
   );
@@ -155,17 +220,28 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
   const [gender, setGender] = useState<"male" | "female" | "other" | null>(null);
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "ok" | "taken" | "invalid">("idle");
+  const [usernameStatus, setUsernameStatus] = useState<
+    "idle" | "checking" | "ok" | "taken" | "invalid"
+  >("idle");
 
   // Live username availability check
   useEffect(() => {
     const u = username.trim();
-    if (!u) { setUsernameStatus("idle"); return; }
-    if (!/^[a-zA-Z0-9_]{3,24}$/.test(u)) { setUsernameStatus("invalid"); return; }
+    if (!u) {
+      setUsernameStatus("idle");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]{3,24}$/.test(u)) {
+      setUsernameStatus("invalid");
+      return;
+    }
     setUsernameStatus("checking");
     const t = setTimeout(async () => {
       const { data, error } = await supabase.rpc("username_available", { _username: u });
-      if (error) { setUsernameStatus("idle"); return; }
+      if (error) {
+        setUsernameStatus("idle");
+        return;
+      }
       setUsernameStatus(data ? "ok" : "taken");
     }, 350);
     return () => clearTimeout(t);
@@ -173,11 +249,26 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) { toast.error("Not signed in"); return; }
-    if (usernameStatus !== "ok") { toast.error("Pick a valid, available username"); return; }
-    if (!displayName.trim()) { toast.error("Display name is required"); return; }
-    if (!gender) { toast.error("Select a gender"); return; }
-    if (!avatarId) { toast.error("Pick an avatar"); return; }
+    if (!user) {
+      toast.error("Not signed in");
+      return;
+    }
+    if (usernameStatus !== "ok") {
+      toast.error("Pick a valid, available username");
+      return;
+    }
+    if (!displayName.trim()) {
+      toast.error("Display name is required");
+      return;
+    }
+    if (!gender) {
+      toast.error("Select a gender");
+      return;
+    }
+    if (!avatarId) {
+      toast.error("Pick an avatar");
+      return;
+    }
 
     setBusy(true);
     try {
@@ -200,15 +291,24 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
   };
 
   return (
-        <motion.form
-          aria-labelledby="profile-step-title"
+    <motion.form
+      aria-labelledby="profile-step-title"
       onSubmit={submit}
-      initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
+      initial={{ opacity: 0, x: 10 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -10 }}
       className="relative space-y-5"
     >
       <div>
-        <h2 id="profile-step-title" className="font-display text-2xl font-extrabold uppercase tracking-tight">Build your trainer</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Only takes a moment. You can update it anytime.</p>
+        <h2
+          id="profile-step-title"
+          className="font-display text-2xl font-extrabold uppercase tracking-tight"
+        >
+          Build your trainer
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Only takes a moment. You can update it anytime.
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -219,7 +319,8 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="ember_master"
-              maxLength={24} required
+              maxLength={24}
+              required
               className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-20 text-sm outline-none focus:border-primary"
             />
             <UsernameBadge status={usernameStatus} />
@@ -233,7 +334,8 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Ember Master"
-              maxLength={40} required
+              maxLength={40}
+              required
               className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
             />
           </div>
@@ -241,15 +343,24 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
       </div>
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gender</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Gender
+        </p>
         <div className="mt-2 grid grid-cols-3 gap-2">
           {(["male", "female", "other"] as const).map((g) => (
             <button
-              key={g} type="button"
-              onClick={() => { setGender(g); setAvatarId(null); playSoft(); }}
+              key={g}
+              type="button"
+              onClick={() => {
+                setGender(g);
+                setAvatarId(null);
+                playSoft();
+              }}
               aria-pressed={gender === g}
               className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
-                gender === g ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
+                gender === g
+                  ? "border-primary/50 bg-primary/10 text-primary"
+                  : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
               }`}
             >
               {g}
@@ -260,10 +371,16 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
 
       <div>
         <div className="flex items-end justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pick your avatar</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Pick your avatar
+          </p>
           {gender && (
             <p className="text-xs text-muted-foreground">
-              {gender === "female" ? "10 female heroes" : gender === "male" ? "10 male heroes" : "All 20 heroes"}
+              {gender === "female"
+                ? "10 female heroes"
+                : gender === "male"
+                  ? "10 male heroes"
+                  : "All 20 heroes"}
             </p>
           )}
         </div>
@@ -279,7 +396,8 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
       </div>
 
       <button
-        type="submit" disabled={busy}
+        type="submit"
+        disabled={busy}
         aria-busy={busy}
         className="touch-target inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
         style={{ background: "var(--gradient-primary)" }}
@@ -289,17 +407,31 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
       </button>
 
       <p className="text-center text-xs text-muted-foreground">
-        By continuing you agree to our <Link to="/disclaimer" className="text-primary hover:underline">Disclaimer & Safety</Link>.
+        By continuing you agree to our{" "}
+        <Link to="/disclaimer" className="text-primary hover:underline">
+          Disclaimer & Safety
+        </Link>
+        .
       </p>
     </motion.form>
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block">
       <div className="flex items-baseline justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </span>
         {hint && <span className="text-xs text-muted-foreground/80">{hint}</span>}
       </div>
       <div className="mt-1.5">{children}</div>
@@ -311,13 +443,15 @@ function UsernameBadge({ status }: { status: "idle" | "checking" | "ok" | "taken
   if (status === "idle") return null;
   const map = {
     checking: { text: "checking…", c: "text-muted-foreground" },
-    ok:       { text: "available", c: "text-emerald-400" },
-    taken:    { text: "taken",     c: "text-rose-400" },
-    invalid:  { text: "invalid",   c: "text-amber-400" },
+    ok: { text: "available", c: "text-emerald-400" },
+    taken: { text: "taken", c: "text-rose-400" },
+    invalid: { text: "invalid", c: "text-amber-400" },
   } as const;
   const s = map[status];
   return (
-    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wider ${s.c}`}>
+    <span
+      className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wider ${s.c}`}
+    >
       {s.text}
     </span>
   );
@@ -326,10 +460,22 @@ function UsernameBadge({ status }: { status: "idle" | "checking" | "ok" | "taken
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden>
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-      <path fill="#FBBC05" d="M5.84 14.09A6.99 6.99 0 0 1 5.47 12c0-.73.13-1.44.36-2.09V7.07H2.18a11 11 0 0 0 0 9.86l3.66-2.84z"/>
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09A6.99 6.99 0 0 1 5.47 12c0-.73.13-1.44.36-2.09V7.07H2.18a11 11 0 0 0 0 9.86l3.66-2.84z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
+      />
     </svg>
   );
 }
