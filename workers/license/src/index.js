@@ -104,6 +104,13 @@ function publicAppConfig(config) {
   const update = cfg.Update && typeof cfg.Update === "object" ? cfg.Update : {};
   const links = cfg.Links && typeof cfg.Links === "object" ? cfg.Links : {};
   const tutorial = cfg.Tutorial && typeof cfg.Tutorial === "object" ? cfg.Tutorial : {};
+  const rawFeatureLocks = cfg.FeatureLocks && typeof cfg.FeatureLocks === "object" ? cfg.FeatureLocks : {};
+  const featureLocks = {};
+  for (const [key, value] of Object.entries(rawFeatureLocks)) {
+    if (/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(key) && typeof value === "boolean") {
+      featureLocks[key] = value;
+    }
+  }
   const tutorialId = text(tutorial.videoId, "", 64);
   const tutorialUrl = safePublicUrl(cfg.TutorialUrl)
     || (tutorialId ? safePublicUrl("https://youtu.be/" + encodeURIComponent(tutorialId)) : "");
@@ -113,6 +120,7 @@ function publicAppConfig(config) {
     AppVersion: Number.isFinite(Number(cfg.AppVersion)) ? Number(cfg.AppVersion) : 0,
     Maintenance: Boolean(cfg.Maintenance),
     TutorialUrl: tutorialUrl,
+    FeatureLocks: featureLocks,
     Update: {
       Enabled: Boolean(update.Enabled) && Boolean(updateUrl),
       VersionCode: Number.isFinite(Number(update.VersionCode)) ? Number(update.VersionCode) : 0,
