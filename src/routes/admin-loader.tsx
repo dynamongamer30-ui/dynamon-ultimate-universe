@@ -194,6 +194,31 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
 
   const readFileTo = async (k: keyof UploadPayloadArgs, file: File) => {
     const text = (await file.text()).trim();
+    if (file.name.toLowerCase().endsWith(".json")) {
+      try {
+        const payload = JSON.parse(text) as Partial<Record<keyof UploadPayloadArgs, unknown>>;
+        const fields: (keyof UploadPayloadArgs)[] = ["build", "ct_b64", "iv_b64", "sig_b64", "key_b64", "ct_sha"];
+        const missing = fields.filter((field) => payload[field] == null || String(payload[field]).trim() === "");
+        if (missing.length > 0) {
+          toast.error(`Invalid payload bundle — missing ${missing.join(", ")}`);
+          return;
+        }
+        setForm((current) => ({
+          ...current,
+          build: String(payload.build),
+          ct_b64: String(payload.ct_b64),
+          iv_b64: String(payload.iv_b64),
+          sig_b64: String(payload.sig_b64),
+          key_b64: String(payload.key_b64),
+          ct_sha: String(payload.ct_sha),
+        }));
+        toast.success(`Loaded payload bundle ${file.name}`);
+        return;
+      } catch {
+        toast.error(`${file.name} is not valid JSON`);
+        return;
+      }
+    }
     upd(k, text);
     toast.success(`Loaded ${file.name} into ${k}`);
   };

@@ -26,6 +26,10 @@
 
 const LOGIN_GRACE = 1800; // secs: how fresh ActivatedUsers/<fp>.lastLogin must be
 const HEARTBEAT_GRACE = 120; // secs
+// Generated OTA bundles can contain several megabytes of Base64 ciphertext.
+// Keep this comfortably above the current build size while still rejecting
+// unreasonable requests before writing to KV.
+const MAX_PAYLOAD_B64_CHARS = 10_000_000;
 
 // VIP keys are prefixed "VIP-" or "DGVIP-" (case-insensitive).
 function isVipKey(key) {
@@ -424,7 +428,7 @@ export default {
       if (path === "/admin/upload-payload" && req.method === "POST") {
         if (!isAdmin()) return json({ error: "forbidden" }, 403);
         const d = await body();
-        if (!isBuildId(d.build) || !isBoundedString(d.ct_b64, 4_000_000) || !isBoundedString(d.key_b64, 4_000_000))
+        if (!isBuildId(d.build) || !isBoundedString(d.ct_b64, MAX_PAYLOAD_B64_CHARS) || !isBoundedString(d.key_b64, 4_000_000))
           return json({ error: "need build, ct_b64, key_b64" }, 400);
         await KV.put(
           "ct:" + d.build,
