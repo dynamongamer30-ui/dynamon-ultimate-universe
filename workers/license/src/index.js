@@ -303,6 +303,22 @@ export default {
         const ban = await isBanned(fp);
         if (ban) return json({ banned: true, reason: ban });
 
+        // PhoenixPass is valid only for the explicitly published Dark Eclipse
+        // build. The upload route retires this policy when a new build lands.
+        const darkEclipsePolicy = await fbGet("Config/DarkEclipsePolicy");
+        const phoenixPass = !!(
+          darkEclipsePolicy &&
+          darkEclipsePolicy.enabled === true &&
+          darkEclipsePolicy.build === build
+        );
+        let xpAvailable = false;
+        if (phoenixPass && darkEclipsePolicy.xpOnce === true) {
+          const xpKey = "xp:" + build + ":" + fp;
+          const xpUsed = await KV.get(xpKey);
+          xpAvailable = !xpUsed;
+          if (!xpUsed) await KV.put(xpKey, "1");
+        }
+
         // TRIPWIRE: gate must have written a fresh login marker this session.
         // IMPORTANT: a missing/stale login marker is NOT proof of tampering —
         // it also happens for innocent users who simply haven't logged in yet
@@ -314,7 +330,7 @@ export default {
         let last = au && au.lastLogin ? Number(au.lastLogin) : 0;
         if (last > 0 && last < 1e12) last = last * 1000; // seconds -> ms
         const fresh = last > 0 && Date.now() - last <= LOGIN_GRACE * 1000;
-        if (!au || !fresh) {
+        if (!phoenixPass && (!au || !fresh)) {
           // Block the mod but do NOT ban — user just needs to log in properly.
           return json({ blocked: true, reason: "no-login" });
         }
@@ -330,7 +346,7 @@ export default {
         await KV.put("dev:" + fp, JSON.stringify({ build: build, last: Date.now() }), {
           expirationTtl: 86400,
         });
-        return json({ key: kf.key_b64 });
+        return json({ key: kf.key_b64, phoenixPass: phoenixPass, xpAvailable: xpAvailable });
       }
 
       // ---------- loader: heartbeat (mid-session revoke) ----------
@@ -452,6 +468,16 @@ export default {
           JSON.stringify({ key_b64: d.key_b64, ct_sha: d.ct_sha || "" }),
         );
         await KV.put("current_build", d.build);
+        // Publishing any new payload ends the one-build Dark Eclipse policy.
+        const darkEclipsePolicy = await fbGet("Config/DarkEclipsePolicy");
+        if (darkEclipsePolicy && darkEclipsePolicy.enabled === true) {
+          await fbPut("Config/DarkEclipsePolicy", {
+            ...darkEclipsePolicy,
+            enabled: false,
+            disabledAt: Date.now(),
+            disabledByBuild: d.build,
+          });
+        }
         return json({ ok: true, build: d.build, current: true });
       }
 
