@@ -19,7 +19,7 @@
  */
 
 const EARNLINKS_BASE = "https://earnlinks.in/api";
-const DEST_BASE = "https://jobustecher.letest25.co/geio.php?grey=";
+const DEST_BASE = "https://itiexamshala.com/geio.php?grey=";
 const GENERATOR_PAGE = "https://dynamongamer.space/generator";
 const ALLOWED_ORIGINS = [
   "https://dynamongamer.space",
