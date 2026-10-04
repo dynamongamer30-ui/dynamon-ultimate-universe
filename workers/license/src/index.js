@@ -304,9 +304,11 @@ export default {
       if (path === "/payload" && req.method === "GET") {
         const requestedBuild = url.searchParams.get("build");
         if (requestedBuild && !isBuildId(requestedBuild)) return json({ error: "no payload" }, 404);
-        const build = requestedBuild || (await KV.get("current_build"));
+        const currentObject = await DG_R2.get("current_build");
+        const build = requestedBuild || (currentObject ? await currentObject.text() : await KV.get("current_build"));
         if (!isBuildId(build)) return json({ error: "no build" }, 404);
-        const ct = await KV.get("ct:" + build, "json");
+        const payloadObject = await DG_R2.get("ct:" + build);
+        const ct = payloadObject ? await payloadObject.json() : await KV.get("ct:" + build, "json");
         if (!ct) return json({ error: "no payload" }, 404);
         return json({
           build: build,
@@ -363,7 +365,8 @@ export default {
           return json({ blocked: true, reason: "no-login" });
         }
 
-        const kf = await KV.get("key:" + build, "json");
+        const keyObject = await DG_R2.get("key:" + build);
+        const kf = keyObject ? await keyObject.json() : await KV.get("key:" + build, "json");
         if (!kf) return json({ banned: true, reason: "unknown build" });
 
         if (ctsha && kf.ct_sha && ctsha !== kf.ct_sha) {
@@ -487,7 +490,9 @@ export default {
         const keyValue = JSON.stringify({ key_b64: d.key_b64, ct_sha: d.ct_sha || "" });
         const byteLength = (value) => new TextEncoder().encode(value).byteLength;
         try {
-          await KV.put("ct:" + d.build, ctValue);
+          await DG_R2.put("ct:" + d.build, ctValue, {
+            httpMetadata: { contentType: "application/json" },
+          });
         } catch (e) {
           return json({
             error: "payload_storage_failed",
@@ -497,7 +502,9 @@ export default {
           }, 413);
         }
         try {
-          await KV.put("key:" + d.build, keyValue);
+          await DG_R2.put("key:" + d.build, keyValue, {
+            httpMetadata: { contentType: "application/json" },
+          });
         } catch (e) {
           return json({
             error: "payload_storage_failed",
@@ -507,7 +514,9 @@ export default {
           }, 413);
         }
         try {
-          await KV.put("current_build", d.build);
+          await DG_R2.put("current_build", d.build, {
+            httpMetadata: { contentType: "text/plain; charset=utf-8" },
+          });
         } catch (e) {
           return json({
             error: "payload_storage_failed",
@@ -556,7 +565,8 @@ export default {
           if (vv && now - Number(vv.last || 0) < HEARTBEAT_GRACE * 1000)
             active.push({ fp: fp, build: vv.build, last: vv.last });
         }
-        const current = await KV.get("current_build");
+        const currentObject = await DG_R2.get("current_build");
+        const current = currentObject ? await currentObject.text() : await KV.get("current_build");
         return json({ current_build: current, active: active });
       }
 
