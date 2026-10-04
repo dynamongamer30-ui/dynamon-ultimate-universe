@@ -172,7 +172,12 @@ export default {
     const json = (o, s) =>
       new Response(JSON.stringify(o), {
         status: s || 200,
-        headers: { "Content-Type": "application/json", ...cors },
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+          Pragma: "no-cache",
+          ...cors,
+        },
       });
     const body = async () => {
       try {
