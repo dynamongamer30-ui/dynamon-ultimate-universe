@@ -84,6 +84,8 @@ const APPROVED_PUBLIC_HOSTS = new Set([
   "www.whatsapp.com",
   "instagram.com",
   "www.instagram.com",
+  "mega.nz",
+  "www.mega.nz",
 ]);
 
 function safePublicUrl(value) {
