@@ -8,6 +8,10 @@ compatibility_date = "2026-06-26"
 binding = "DG"
 id = "e44241097de7487286f3d270aa645146"
 
+[[r2_buckets]]
+binding = "DG_R2"
+bucket_name = "dynamon-mods"
+
 # ---------------------------------------------------------------------------
 # Secrets (set with `wrangler secret put <NAME>` — do NOT commit real values):
 #   ADMIN_KEY              long random string; typed once on the web Loader page
