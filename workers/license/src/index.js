@@ -25,7 +25,8 @@
  * ============================================================ */
 
 const LOGIN_GRACE = 1800; // secs: how fresh ActivatedUsers/<fp>.lastLogin must be
-const HEARTBEAT_GRACE = 120; // secs
+const HEARTBEAT_GRACE = 6 * 60 * 60; // secs: heartbeat status remains fresh for 6 hours
+const HEARTBEAT_WRITE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 // Generated OTA bundles can contain several megabytes of Base64 ciphertext.
 // Keep this comfortably above the current build size while still rejecting
 // unreasonable requests before writing to KV.
@@ -357,9 +358,14 @@ export default {
           return json({ ok: false, error: "bad_request" }, 400);
         const ban = await isBanned(d.fp);
         if (ban) return json({ banned: true, reason: ban });
-        await KV.put("dev:" + d.fp, JSON.stringify({ build: d.build, last: Date.now() }), {
-          expirationTtl: 86400,
-        });
+        const now = Date.now();
+        const devKey = "dev:" + d.fp;
+        const previous = await KV.get(devKey, "json");
+        if (!previous || now - Number(previous.last || 0) >= HEARTBEAT_WRITE_INTERVAL_MS) {
+          await KV.put(devKey, JSON.stringify({ build: d.build, last: now }), {
+            expirationTtl: 86400,
+          });
+        }
         return json({ ok: true });
       }
 
