@@ -39,6 +39,13 @@ const MAX_PAYLOAD_B64_CHARS = 10_000_000;
 // Ban lookups are cached per Worker instance for 60 seconds to save Supabase calls.
 const BAN_CACHE_MS = 60 * 1000;
 const BAN_CACHE = new Map();
+async function safeR2Get(key) {
+  try {
+    return await DG_R2.get(key);
+  } catch (_) {
+    return null;
+  }
+}
 
 // VIP keys are prefixed "VIP-" or "DGVIP-" (case-insensitive).
 function isVipKey(key) {
@@ -304,10 +311,10 @@ export default {
       if (path === "/payload" && req.method === "GET") {
         const requestedBuild = url.searchParams.get("build");
         if (requestedBuild && !isBuildId(requestedBuild)) return json({ error: "no payload" }, 404);
-        const currentObject = await DG_R2.get("current_build");
+        const currentObject = await safeR2Get("current_build");
         const build = requestedBuild || (currentObject ? await currentObject.text() : await KV.get("current_build"));
         if (!isBuildId(build)) return json({ error: "no build" }, 404);
-        const payloadObject = await DG_R2.get("ct:" + build);
+        const payloadObject = await safeR2Get("ct:" + build);
         const ct = payloadObject ? await payloadObject.json() : await KV.get("ct:" + build, "json");
         if (!ct) return json({ error: "no payload" }, 404);
         return json({
@@ -365,7 +372,7 @@ export default {
           return json({ blocked: true, reason: "no-login" });
         }
 
-        const keyObject = await DG_R2.get("key:" + build);
+        const keyObject = await safeR2Get("key:" + build);
         const kf = keyObject ? await keyObject.json() : await KV.get("key:" + build, "json");
         if (!kf) return json({ banned: true, reason: "unknown build" });
 
@@ -565,7 +572,7 @@ export default {
           if (vv && now - Number(vv.last || 0) < HEARTBEAT_GRACE * 1000)
             active.push({ fp: fp, build: vv.build, last: vv.last });
         }
-        const currentObject = await DG_R2.get("current_build");
+        const currentObject = await safeR2Get("current_build");
         const current = currentObject ? await currentObject.text() : await KV.get("current_build");
         return json({ current_build: current, active: active });
       }
