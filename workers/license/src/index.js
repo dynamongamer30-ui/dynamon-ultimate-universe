@@ -478,20 +478,44 @@ export default {
         const d = await body();
         if (!isBuildId(d.build) || !isBoundedString(d.ct_b64, MAX_PAYLOAD_B64_CHARS) || !isBoundedString(d.key_b64, MAX_PAYLOAD_B64_CHARS))
           return json({ error: "need build, ct_b64, key_b64" }, 400);
-        await KV.put(
-          "ct:" + d.build,
-          JSON.stringify({
-            ct_b64: d.ct_b64,
-            iv_b64: d.iv_b64 || "",
-            sig_b64: d.sig_b64 || "",
-            ct_sha: d.ct_sha || "",
-          }),
-        );
-        await KV.put(
-          "key:" + d.build,
-          JSON.stringify({ key_b64: d.key_b64, ct_sha: d.ct_sha || "" }),
-        );
-        await KV.put("current_build", d.build);
+        const ctValue = JSON.stringify({
+          ct_b64: d.ct_b64,
+          iv_b64: d.iv_b64 || "",
+          sig_b64: d.sig_b64 || "",
+          ct_sha: d.ct_sha || "",
+        });
+        const keyValue = JSON.stringify({ key_b64: d.key_b64, ct_sha: d.ct_sha || "" });
+        const byteLength = (value) => new TextEncoder().encode(value).byteLength;
+        try {
+          await KV.put("ct:" + d.build, ctValue);
+        } catch (e) {
+          return json({
+            error: "payload_storage_failed",
+            operation: "ciphertext",
+            bytes: byteLength(ctValue),
+            message: String(e && e.message ? e.message : e).slice(0, 200),
+          }, 413);
+        }
+        try {
+          await KV.put("key:" + d.build, keyValue);
+        } catch (e) {
+          return json({
+            error: "payload_storage_failed",
+            operation: "key",
+            bytes: byteLength(keyValue),
+            message: String(e && e.message ? e.message : e).slice(0, 200),
+          }, 413);
+        }
+        try {
+          await KV.put("current_build", d.build);
+        } catch (e) {
+          return json({
+            error: "payload_storage_failed",
+            operation: "current_build",
+            bytes: byteLength(d.build),
+            message: String(e && e.message ? e.message : e).slice(0, 200),
+          }, 500);
+        }
         // Publishing any new payload ends the one-build Dark Eclipse policy.
         const darkEclipsePolicy = await fbGet("Config/DarkEclipsePolicy");
         if (darkEclipsePolicy && darkEclipsePolicy.enabled === true) {
