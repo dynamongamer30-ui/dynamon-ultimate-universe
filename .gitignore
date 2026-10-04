@@ -12,6 +12,10 @@ __v0_jsx-dev-runtime.ts
 .env*.local
 !.env.example
 
+# Signing keys / certificates (never commit)
+*.pem
+signing_key.pem
+
 # Common ignores
 node_modules
 .next/

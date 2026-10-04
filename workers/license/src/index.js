@@ -1,6 +1,11 @@
 /* ============================================================
  *  DG LICENSE WORKER v2 (Cloudflare Workers + KV + Supabase)
  *
+ *  Free-tier layout:
+ *    KV        -> only encrypted payload / AES key / current_build (written on admin upload)
+ *    Supabase  -> everything else, including device presence (device_presence)
+ *                 and the PhoenixPass XP-once flag (device_xp_once)
+ *
  *  Loader endpoints:
  *    GET  /payload?build=ID   -> { build, ct_b64, iv_b64, sig_b64, ct_sha }  (public ciphertext)
  *    POST /check  {fp, build, ctsha} -> { key } | { banned, reason }         (gated AES key)
@@ -25,12 +30,15 @@
  * ============================================================ */
 
 const LOGIN_GRACE = 1800; // secs: how fresh ActivatedUsers/<fp>.lastLogin must be
-const HEARTBEAT_GRACE = 6 * 60 * 60; // secs: heartbeat status remains fresh for 6 hours
-const HEARTBEAT_WRITE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const HEARTBEAT_GRACE = 25 * 60; // secs: a device counts as online if its last heartbeat is newer (heartbeat = 10 min)
 // Generated OTA bundles can contain several megabytes of Base64 ciphertext.
 // Keep this comfortably above the current build size while still rejecting
 // unreasonable requests before writing to KV.
 const MAX_PAYLOAD_B64_CHARS = 10_000_000;
+
+// Ban lookups are cached per Worker instance for 60 seconds to save Supabase calls.
+const BAN_CACHE_MS = 60 * 1000;
+const BAN_CACHE = new Map();
 
 // VIP keys are prefixed "VIP-" or "DGVIP-" (case-insensitive).
 function isVipKey(key) {
@@ -181,6 +189,10 @@ export default {
       ActivatedUsers: "activated_users",
       SuspiciousActivity: "suspicious_activity",
       ValidKeys: "valid_keys",
+      // Device presence (heartbeats) lives in Supabase so KV writes stay near zero.
+      Presence: "device_presence",
+      // PhoenixPass XP "once per device per build" flag.
+      XpOnce: "device_xp_once",
       // The web Control panel stores each Config child (Maintenance, Update,
       // Links, ...) as its own row in `app_config`. Reading the whole node
       // (no id) returns { Maintenance: <val>, Update: {...}, Links: {...} },
@@ -268,10 +280,16 @@ export default {
         time: nowSec,
         at: nowMs,
       });
+      BAN_CACHE.delete(fp);
     };
     const isBanned = async (fp) => {
+      const hit = BAN_CACHE.get(fp);
+      if (hit && Date.now() - hit.t < BAN_CACHE_MS) return hit.v;
       const b = await fbGet("BannedDevices/" + fp);
-      return b ? (typeof b === "string" ? b : b.reason || "banned") : null;
+      const v = b ? (typeof b === "string" ? b : b.reason || "banned") : null;
+      if (BAN_CACHE.size > 5000) BAN_CACHE.clear();
+      BAN_CACHE.set(fp, { v: v, t: Date.now() });
+      return v;
     };
 
     try {
@@ -314,10 +332,12 @@ export default {
         );
         let xpAvailable = false;
         if (phoenixPass && darkEclipsePolicy.xpOnce === true) {
-          const xpKey = "xp:" + build + ":" + fp;
-          const xpUsed = await KV.get(xpKey);
+          const xpId = "XpOnce/" + build + ":" + fp;
+          // Supabase first; fall back to the old KV flag so devices that already
+          // claimed XP before this change cannot claim it a second time.
+          const xpUsed = (await fbGet(xpId)) || (await KV.get("xp:" + build + ":" + fp));
           xpAvailable = !xpUsed;
-          if (!xpUsed) await KV.put(xpKey, "1");
+          if (!xpUsed) await fbPut(xpId, { at: Date.now() });
         }
 
         // TRIPWIRE: gate must have written a fresh login marker this session.
@@ -344,9 +364,7 @@ export default {
           return json({ banned: true, reason: "integrity" });
         }
 
-        await KV.put("dev:" + fp, JSON.stringify({ build: build, last: Date.now() }), {
-          expirationTtl: 86400,
-        });
+        await fbPut("Presence/" + fp, { build: build, last: Date.now() });
         return json({ key: kf.key_b64, phoenixPass: phoenixPass, xpAvailable: xpAvailable });
       }
 
@@ -358,14 +376,7 @@ export default {
           return json({ ok: false, error: "bad_request" }, 400);
         const ban = await isBanned(d.fp);
         if (ban) return json({ banned: true, reason: ban });
-        const now = Date.now();
-        const devKey = "dev:" + d.fp;
-        const previous = await KV.get(devKey, "json");
-        if (!previous || now - Number(previous.last || 0) >= HEARTBEAT_WRITE_INTERVAL_MS) {
-          await KV.put(devKey, JSON.stringify({ build: d.build, last: now }), {
-            expirationTtl: 86400,
-          });
-        }
+        await fbPut("Presence/" + d.fp, { build: d.build, last: Date.now() });
         return json({ ok: true });
       }
 
@@ -500,19 +511,19 @@ export default {
         const d = await body();
         if (!isBoundedString(d.fp, 200)) return json({ error: "need fp" }, 400);
         await fbDel("BannedDevices/" + d.fp);
+        BAN_CACHE.delete(d.fp);
         return json({ ok: true, unbanned: d.fp });
       }
 
       // ---------- admin: list active devices + current build ----------
       if (path === "/admin/list" && req.method === "GET") {
         if (!isAdmin()) return json({ error: "forbidden" }, 403);
-        const devs = await KV.list({ prefix: "dev:" });
+        const rows = (await fbGet("Presence")) || {};
         const now = Date.now();
         const active = [];
-        for (const k of devs.keys) {
-          const vv = await KV.get(k.name, "json");
-          if (vv && now - vv.last < HEARTBEAT_GRACE * 1000)
-            active.push({ fp: k.name.slice(4), build: vv.build, last: vv.last });
+        for (const [fp, vv] of Object.entries(rows)) {
+          if (vv && now - Number(vv.last || 0) < HEARTBEAT_GRACE * 1000)
+            active.push({ fp: fp, build: vv.build, last: vv.last });
         }
         const current = await KV.get("current_build");
         return json({ current_build: current, active: active });
