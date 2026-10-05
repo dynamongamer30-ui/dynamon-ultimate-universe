@@ -7,6 +7,7 @@ import { ModCard } from "@/components/ModCard";
 import { ForYouRail } from "@/components/ForYouRail";
 import { usePerspectiveTilt } from "@/components/HeroWebGL";
 import { formatCount, elementTheme, mods as catalogMods } from "@/lib/mods";
+import { compareVersions, sortByLatest } from "@/lib/versionSort";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import heroImg from "@/assets/hero.webp";
 import { playClick, playHover } from "@/lib/sound";
@@ -50,11 +51,11 @@ const FAQ_ITEMS = [
 
 function Index() {
   const { mods } = useSiteSettings();
-  const sorted = [...mods].sort(
-    (a, b) => (b.downloads * 0.6 + b.baseLikes * 4) - (a.downloads * 0.6 + a.baseLikes * 4),
-  );
+  // Newest version first (1.13.33, then 1.13.32, then 1.13.31 ...).
+  // The first build is automatically the featured one.
+  const sorted = sortByLatest(mods);
   const top = sorted[0];
-  const latestVersion = mods.reduce((v, m) => (m.version > v ? m.version : v), "0");
+  const latestVersion = mods.reduce((v, m) => (compareVersions(m.version, v) > 0 ? m.version : v), "0");
   const totalDownloads = mods.reduce((s, m) => s + m.downloads, 0);
 
   if (!top) return <PageShell><div className="py-20 text-center text-muted-foreground">No mods available yet.</div></PageShell>;
@@ -200,7 +201,7 @@ function Index() {
             </p>
             <h2 id="showcase-title" className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-5xl">
               Start with the
-              <br className="sm:hidden" /> most played builds
+              <br className="sm:hidden" /> latest builds
             </h2>
           </div>
           <Link
@@ -214,7 +215,7 @@ function Index() {
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
           {sorted.map((m, i) => (
-            <ModCard key={m.slug} mod={m} index={i} featured={i === 0} />
+            <ModCard key={m.slug} mod={m} index={i} featured={i === 0} badge="Latest update" />
           ))}
         </div>
 
