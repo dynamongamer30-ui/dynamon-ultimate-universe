@@ -262,18 +262,18 @@ export function CommentsPanel({
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             {avatar ? (
-              <img src={avatar} alt="" className={`h-10 w-10 rounded-full object-cover ${c.author?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/30"}`} />
+              <img src={avatar} alt="" className={`h-10 w-10 shrink-0 rounded-full object-cover ${c.author?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/30"}`} />
             ) : (
-              <div className="grid h-10 w-10 place-items-center rounded-full font-bold text-primary-foreground" style={{ background: "var(--gradient-violet)" }}>
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full font-bold text-primary-foreground" style={{ background: "var(--gradient-violet)" }}>
                 {(c.author?.display_name ?? "T")[0].toUpperCase()}
               </div>
             )}
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="truncate text-sm font-semibold">{authorName}</p>
-                {c.author?.is_owner && <OwnerBadge size="xs" />}
+              <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
+                <span className="min-w-0 truncate text-sm font-semibold" style={{ whiteSpace: "nowrap" }}>{authorName}</span>
+                {c.author?.is_owner && <span className="shrink-0"><OwnerBadge size="xs" /></span>}
               </div>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="truncate text-xs text-muted-foreground" style={{ whiteSpace: "nowrap" }}>
                 @{c.author?.username ?? "trainer"} · {new Date(c.created_at).toLocaleDateString()}
               </p>
             </div>
