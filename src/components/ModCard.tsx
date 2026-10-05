@@ -12,7 +12,7 @@ import { playClick, playSoft, playHover } from "@/lib/sound";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 
-export function ModCard({ mod, index = 0, featured = false, headingLevel = "h3" }: { mod: Mod; index?: number; featured?: boolean; headingLevel?: "h2" | "h3" }) {
+export function ModCard({ mod, index = 0, featured = false, badge = "Most popular", headingLevel = "h3" }: { mod: Mod; index?: number; featured?: boolean; badge?: string; headingLevel?: "h2" | "h3" }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { award } = useGamification();
@@ -91,7 +91,7 @@ export function ModCard({ mod, index = 0, featured = false, headingLevel = "h3" 
         </div>
         {featured && (
           <div className="absolute bottom-4 left-4 z-20 inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-black uppercase tracking-[0.2em] text-primary-foreground">
-            <TrendingUp className="h-3 w-3" /> Most popular
+            <TrendingUp className="h-3 w-3" /> {badge}
           </div>
         )}
       </Link>
