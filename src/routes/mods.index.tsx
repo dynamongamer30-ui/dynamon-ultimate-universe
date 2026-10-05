@@ -5,6 +5,7 @@ import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ThemedSelect } from "@/components/ThemedSelect";
 import { formatCount, elementTheme, mods as catalogMods, type Element } from "@/lib/mods";
+import { compareVersions, sortByLatest } from "@/lib/versionSort";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { itemListJsonLd, pageSeoHead } from "@/lib/seo";
 
@@ -24,44 +25,48 @@ export const Route = createFileRoute("/mods/")({
   component: ModsPage,
 });
 
-type Sort = "popular" | "downloads" | "likes" | "newest";
+type Sort = "latest" | "popular" | "downloads" | "likes" | "newest";
 
 const ALL_ELEMENTS: Element[] = ["dark", "fire", "thunder", "water", "earth", "diamond", "gold", "spirit"];
 
 function ModsPage() {
   const { mods } = useSiteSettings();
   const [q, setQ] = useState("");
-  const [sort, setSort] = useState<Sort>("popular");
+  const [sort, setSort] = useState<Sort>("latest");
   const [elements, setElements] = useState<Set<Element>>(new Set());
   const [minRating, setMinRating] = useState(0);
   const [version, setVersion] = useState<string>("all");
 
   const totalDownloads = useMemo(() => mods.reduce((s, m) => s + m.downloads, 0), [mods]);
-  const versions = useMemo(() => Array.from(new Set(mods.map((m) => m.version))).sort().reverse(), [mods]);
+  const versions = useMemo(
+    () => Array.from(new Set(mods.map((m) => m.version))).sort((a, b) => compareVersions(b, a)),
+    [mods],
+  );
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    let list = mods.filter((m) => {
+    const list = mods.filter((m) => {
       if (term && !(m.name + " " + m.tagline + " " + m.features.join(" ")).toLowerCase().includes(term)) return false;
       if (elements.size > 0 && !elements.has(m.element)) return false;
       if (minRating > 0 && m.baseRating < minRating) return false;
       if (version !== "all" && m.version !== version) return false;
       return true;
     });
-    list = [...list].sort((a, b) => {
+    if (sort === "latest") return sortByLatest(list);
+    return [...list].sort((a, b) => {
       if (sort === "downloads") return b.downloads - a.downloads;
       if (sort === "likes") return b.baseLikes - a.baseLikes;
       if (sort === "newest") return +new Date(b.updated) - +new Date(a.updated);
       return (b.downloads * 0.6 + b.baseLikes * 4) - (a.downloads * 0.6 + a.baseLikes * 4);
     });
-    return list;
   }, [mods, q, sort, elements, minRating, version]);
 
   const sorts: { id: Sort; label: string; icon: React.ReactNode }[] = [
+    { id: "latest", label: "Latest Version", icon: <Sparkles className="h-3.5 w-3.5" /> },
     { id: "popular", label: "Most Popular", icon: <TrendingUp className="h-3.5 w-3.5" /> },
     { id: "downloads", label: "Most Downloaded", icon: <Download className="h-3.5 w-3.5" /> },
     { id: "likes", label: "Most Liked", icon: <Heart className="h-3.5 w-3.5" /> },
-    { id: "newest", label: "Newest", icon: <Clock className="h-3.5 w-3.5" /> },
+    { id: "newest", label: "Recently Updated", icon: <Clock className="h-3.5 w-3.5" /> },
   ];
 
   const toggleElement = (el: Element) => {
@@ -226,7 +231,14 @@ function ModsPage() {
       ) : (
         <section aria-labelledby="mods-grid-title" className="mods-grid mt-6 grid gap-6 sm:mt-8 sm:grid-cols-2 xl:grid-cols-3">
           <h2 id="mods-grid-title" className="sr-only">Available Dynamon builds</h2>
-          {filtered.map((m, i) => <ModCard key={m.slug} mod={m} index={i} featured={i === 0 && sort !== "newest"} headingLevel="h2" />)}
+          {filtered.map((m, i) => (
+            <ModCard
+              key={m.slug} mod={m} index={i}
+              featured={i === 0 && sort !== "newest"}
+              badge={sort === "latest" ? "Latest update" : "Most popular"}
+              headingLevel="h2"
+            />
+          ))}
         </section>
       )}
     </PageShell>
