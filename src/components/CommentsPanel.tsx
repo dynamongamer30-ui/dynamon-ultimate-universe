@@ -128,7 +128,7 @@ export function CommentsPanel({
   useEffect(() => { load(); }, [load]);
 
   const topLevel = useMemo(() => comments.filter((c) => !c.parent_id), [comments]);
-  // Order: owner comments are pinned first (newest owner comment on top),
+  // Order: owner comments always come first (newest owner comment on top),
   // then everyone else by most likes, with ties broken by newest first.
   const visibleComments = useMemo(() => {
     const time = (c: EnrichedComment) => +new Date(c.created_at);
@@ -253,12 +253,11 @@ export function CommentsPanel({
     const isMine = user?.id === c.user_id;
     const canRemove = isMine || profile?.is_owner;
     const replies = repliesByParent.get(c.id) ?? [];
-    const pinned = !isReply && !!c.author?.is_owner;
     return (
       <motion.div
         key={c.id}
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-        className={`surface-l1 rounded-2xl border p-4 ${isReply ? "ml-6 border-l-2 border-l-primary/30" : ""} ${pinned ? "border-amber-400/40" : ""}`}
+        className={`surface-l1 rounded-2xl border p-4 ${isReply ? "ml-6 border-l-2 border-l-primary/30" : ""}`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -279,11 +278,6 @@ export function CommentsPanel({
               </p>
             </div>
           </div>
-          {pinned && (
-            <span className="shrink-0 rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-xs font-bold text-amber-300">
-              📌 Pinned
-            </span>
-          )}
         </div>
         {c.body ? (
           <p className="mt-3 whitespace-pre-line break-words [overflow-wrap:anywhere] text-sm leading-relaxed text-muted-foreground">{c.body}</p>
