@@ -70,3 +70,11 @@ At 200 users and one launch each, that is approximately 400 loader Worker reques
 Revocations and lock changes take effect on the next launch. The payload uses AES-256-GCM and ECDSA-P256; the additional signed envelope covers build, ciphertext hash, IV, timestamp and required client version. The DEX has the public verification key, never the private key. Source code, displayed values and decrypted runtime code cannot be made unextractable on a user's phone. A device UUID still is not a cryptographic identity; the existing login protocol must be upgraded separately for proof of possession.
 
 The repository is public. Prior source ZIPs remain in history. Do not publish private signing keys, AES upload bundles, Supabase service keys or new owner-only payloads.
+
+## AIDE project download
+
+[Download the complete AIDE build project](./Royal-Void-0.3.0-AIDE-Build-Project.zip). Extract into `AideProjects/RoyalVoid/` and open the extracted `build.gradle` in AIDE.
+
+This project ZIP adds `build.gradle`, `settings.gradle`, `gradle.properties`, `project.properties`, `proguard-rules.pro`, the preview `AndroidManifest.xml`, and `preview/.../MainActivity.java` to the Java/assets. It contains no server tools, tests, Markdown or JSON. These build files belong in AIDE and do not go into the game APK. The supplied manifest and activity are for the standalone preview only; preserve the game's manifest and MainActivity.
+
+The configuration uses Android Gradle Plugin 3.2.1 and SDK 28. AIDE installations differ: if yours cannot run that plugin, retain its generated build configuration and point its Java/assets source paths at this project's folders. The client was compiled and obfuscated successfully by GitHub Actions; this legacy preview Gradle configuration has not been run inside your phone's AIDE.
