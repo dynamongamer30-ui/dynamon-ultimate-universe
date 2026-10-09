@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "version": "0.3.0",
+  "features": [
+    {
+      "key": "god",
+      "title": "God mode",
+      "description": "Protect your active team from damage",
+      "category": "Battle",
+      "icon": "shield"
+    },
+    {
+      "key": "oneHit",
+      "title": "One-hit damage",
+      "description": "Defeat the active enemy quickly",
+      "category": "Battle",
+      "icon": "bolt"
+    },
+    {
+      "key": "crit",
+      "title": "Critical hits",
+      "description": "Force impressive ability hits",
+      "category": "Battle",
+      "icon": "star"
+    },
+    {
+      "key": "statusImmune",
+      "title": "Status immunity",
+      "description": "Protect against sickness and hypnosis",
+      "category": "Battle",
+      "icon": "shield"
+    },
+    {
+      "key": "noCD",
+      "title": "No cooldowns",
+      "description": "Keep ability cards ready",
+      "category": "Battle",
+      "icon": "bolt"
+    },
+    {
+      "key": "alwaysCatch",
+      "title": "Always catch",
+      "description": "Force the catch-success argument",
+      "category": "Battle",
+      "icon": "star"
+    },
+    {
+      "key": "botMatch",
+      "title": "Bot matchmaking",
+      "description": "Route new arena matches to bots",
+      "category": "Arena",
+      "icon": "team"
+    },
+    {
+      "key": "winTrophy",
+      "title": "Win state",
+      "description": "Apply the existing winning-state hook",
+      "category": "Arena",
+      "icon": "star"
+    },
+    {
+      "key": "noTrophyLoss",
+      "title": "No trophy loss",
+      "description": "Apply the existing arena win-state hook",
+      "category": "Arena",
+      "icon": "shield"
+    },
+    {
+      "key": "fullheal",
+      "title": "Full-heal potions",
+      "description": "Restore full health with a potion",
+      "category": "Advanced",
+      "icon": "shield"
+    },
+    {
+      "key": "pvpcd",
+      "title": "Faster arena items",
+      "description": "Use the patched PvP item cooldown",
+      "category": "Advanced",
+      "icon": "bolt"
+    },
+    {
+      "key": "itemtimer",
+      "title": "No item wait",
+      "description": "Skip patched item-use timers",
+      "category": "Advanced",
+      "icon": "bolt"
+    },
+    {
+      "key": "turnreset",
+      "title": "Refill items each turn",
+      "description": "Reset the per-turn item counter",
+      "category": "Advanced",
+      "icon": "items"
+    },
+    {
+      "key": "items5",
+      "title": "Five items per turn",
+      "description": "Raise the patched item-use limit",
+      "category": "Advanced",
+      "icon": "items"
+    },
+    {
+      "key": "nicklen",
+      "title": "Longer nicknames",
+      "description": "Use the patched nickname length",
+      "category": "Advanced",
+      "icon": "settings"
+    },
+    {
+      "key": "nickval",
+      "title": "Name validation",
+      "description": "Use the patched name-length validation",
+      "category": "Advanced",
+      "icon": "settings"
+    },
+    {
+      "key": "statcap",
+      "title": "Stat cap override",
+      "description": "Use the original patched stat ceiling",
+      "category": "Advanced",
+      "icon": "shield"
+    },
+    {
+      "key": "shopfix",
+      "title": "Shop compatibility",
+      "description": "Enable the original shop patch",
+      "category": "Advanced",
+      "icon": "items"
+    },
+    {
+      "key": "maxdef",
+      "title": "Defense cap override",
+      "description": "Use the patched defense ceiling",
+      "category": "Advanced",
+      "icon": "shield"
+    }
+  ],
+  "limits": {
+    "speed": {
+      "min": 0.1,
+      "max": 8,
+      "step": 0.1
+    },
+    "currency": {
+      "min": 0,
+      "max": 999999999
+    },
+    "items": {
+      "min": 0,
+      "max": 999999
+    },
+    "party": {
+      "min": 3,
+      "max": 5
+    },
+    "stats": {
+      "min": 0,
+      "max": 1000000
+    }
+  }
+}

@@ -1,0 +1,4 @@
+Royal Void dragon/crown DG logo: generated specifically for Dynamon Gamer on 2026-10-09. The old anime JPEG is removed.
+Select, success and warning WAV files: original synthesized soft bell sounds created for this project; no third-party recordings.
+Open Sans: distributed with the included OpenSans.txt license. Repository Aeonik Pro and General Sans files were not added to this release because their license record is unresolved.
+Inventory artwork is loaded from the host APK assets and is not redistributed in this source ZIP.

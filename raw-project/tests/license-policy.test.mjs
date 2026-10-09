@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {licenseReason,maintenance} from '../backend/license/src/license-policy.mjs';
+const now=1800000000000,fp='device-one';
+const activation={key:'example-key',lastLogin:now-1000};
+const license={device:fp,status:'active',expiry:now/1000+600};
+assert.equal(licenseReason(activation,license,fp,now),'');
+assert.equal(licenseReason(activation,{...license,expiry:now/1000-1},fp,now),'expired');
+assert.equal(licenseReason(activation,{...license,status:'suspended'},fp,now),'suspended');
+assert.equal(licenseReason(activation,license,'other-device',now),'device_mismatch');
+assert.equal(licenseReason({...activation,lastLogin:now+120000},license,fp,now),'no-login');
+assert.equal(licenseReason({...activation,lastLogin:now-1800001},license,fp,now),'no-login');
+assert.equal(licenseReason(activation,{...license,expiry:0},fp,now),'');
+assert.equal(maintenance(false,{app:true}),true);
+assert.equal(maintenance(true,{}),true);
+assert.equal(maintenance(false,{mods:false}),false);
+console.log('PASS 10 license policy cases');

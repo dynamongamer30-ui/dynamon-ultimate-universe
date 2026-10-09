@@ -1,0 +1,31 @@
+{
+  "name": "Dynamon Gamer",
+  "edition": "Royal Void",
+  "links": [
+    {
+      "title": "YouTube",
+      "url": "https://youtube.com/@dynamongamer07",
+      "icon": "play"
+    },
+    {
+      "title": "WhatsApp",
+      "url": "https://whatsapp.com/channel/0029VbBdAcZ05MUmgk8cQP05",
+      "icon": "chat"
+    },
+    {
+      "title": "Instagram",
+      "url": "https://www.instagram.com/stoicist_zayen",
+      "icon": "camera"
+    },
+    {
+      "title": "Telegram",
+      "url": "https://t.me/dynamonsworld07",
+      "icon": "send"
+    },
+    {
+      "title": "Website",
+      "url": "https://dynamongamer.space/",
+      "icon": "globe"
+    }
+  ]
+}
