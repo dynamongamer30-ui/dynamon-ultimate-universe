@@ -120,6 +120,25 @@ function dexBrandConfig(value) {
   return {name: name || "Dynamon Gamer", edition: text(value.edition, "Royal Void", 60), links};
 }
 
+const DEX_THEME_IDS = ["dark","fire","thunder","water","earth","diamond","gold","spirit"];
+const DEX_THEME_COLORS = ["background","panel","card","primary","deep","highlight","text","muted","border","input","success","error"];
+function dexThemeConfig(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.schema !== 1) return null;
+  const enabledThemes = Array.isArray(value.enabledThemes)
+    ? [...new Set(value.enabledThemes.filter(id => DEX_THEME_IDS.includes(id)))] : [...DEX_THEME_IDS];
+  if (!enabledThemes.length) enabledThemes.push("dark");
+  const defaultTheme = enabledThemes.includes(value.defaultTheme) ? value.defaultTheme : enabledThemes[0];
+  const palettes = {};
+  for (const id of DEX_THEME_IDS) {
+    const source=value.palettes && value.palettes[id];
+    if (!source || typeof source !== "object" || Array.isArray(source)) continue;
+    const colors={};
+    for (const key of DEX_THEME_COLORS) if (typeof source[key] === "string" && /^#[0-9a-f]{6}$/i.test(source[key])) colors[key]=source[key].toUpperCase();
+    if (Object.keys(colors).length) palettes[id]=colors;
+  }
+  return {schema:1,defaultTheme,enabledThemes,palettes};
+}
+
 function publicAppConfig(config) {
   const cfg = config && typeof config === "object" ? config : {};
   const update = cfg.Update && typeof cfg.Update === "object" ? cfg.Update : {};
@@ -258,6 +277,17 @@ export default {
         return null;
       }
     };
+    const dexAppearance = async () => {
+      try {
+        const response=await fetch(SB_URL+"/rest/v1/app_config?id=in.(DexBranding,DexThemes)&select=id,data",{headers:sbHead()});
+        if (!response.ok) return {brand:null,themes:null};
+        const rows=await response.json();
+        if (!Array.isArray(rows)) return {brand:null,themes:null};
+        const brandRow=rows.find(row=>row.id==="DexBranding");
+        const themeRow=rows.find(row=>row.id==="DexThemes");
+        return {brand:dexBrandConfig(brandRow&&brandRow.data),themes:dexThemeConfig(themeRow&&themeRow.data)};
+      } catch (_) {return {brand:null,themes:null};}
+    };
     const fbPut = async (p, val) => {
       try {
         const q = sbParse(p);
@@ -389,8 +419,8 @@ export default {
         }
 
         
-        const brand = dexBrandConfig(await fbGet("Config/DexBranding"));
-        return json({ key: kf.key_b64, phoenixPass: phoenixPass, xpAvailable: xpAvailable, featureLocks: featureLocks || {}, brand });
+        const appearance = await dexAppearance();
+        return json({ key: kf.key_b64, phoenixPass: phoenixPass, xpAvailable: xpAvailable, featureLocks: featureLocks || {}, ...appearance });
       }
 
       // ---------- legacy heartbeat: no storage work ----------

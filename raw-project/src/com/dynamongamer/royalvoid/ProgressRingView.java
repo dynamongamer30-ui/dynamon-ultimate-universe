@@ -45,13 +45,13 @@ public final class ProgressRingView extends View {
         p.setStyle(Paint.Style.STROKE);
         p.setStrokeWidth(s * 0.07F);
         p.setStrokeCap(Paint.Cap.ROUND);
-        p.setColor(RoyalVoidTheme.LINE);
+        p.setColor(RoyalVoidTheme.colors(getContext()).LINE);
         c.drawOval(r, p);
-        p.setShader(new LinearGradient(0, 0, w, h, RoyalVoidTheme.LAVENDER, RoyalVoidTheme.PURPLE, Shader.TileMode.CLAMP));
+        p.setShader(new LinearGradient(0, 0, w, h, RoyalVoidTheme.colors(getContext()).LAVENDER, RoyalVoidTheme.colors(getContext()).PURPLE, Shader.TileMode.CLAMP));
         c.drawArc(r, -90, 3.6F * value, false, p);
         p.setShader(null);
         p.setStyle(Paint.Style.FILL);
-        p.setColor(RoyalVoidTheme.TEXT);
+        p.setColor(RoyalVoidTheme.colors(getContext()).TEXT);
         p.setTypeface(FontManager.get(getContext(), "bold"));
         p.setTextSize(s * 0.23F);
         p.setTextAlign(Paint.Align.CENTER);

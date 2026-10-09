@@ -14,10 +14,10 @@ public final class SelectionView extends View {
         float d = getResources().getDisplayMetrics().density;
         float x = getWidth()/2f, y = getHeight()/2f, r = 10*d;
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(selected ? 0x664F2598 : 0x22171325);
+        paint.setColor(selected ? ThemeManager.alpha(ThemeManager.colors(getContext()).DEEP,102) : ThemeManager.alpha(ThemeManager.colors(getContext()).PANEL,34));
         c.drawRoundRect(new RectF(x-r,y-r,x+r,y+r),5*d,5*d,paint);
         paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(1.4f*d);
-        paint.setColor(selected ? RoyalVoidTheme.LAVENDER : RoyalVoidTheme.MUTED);
+        paint.setColor(selected ? RoyalVoidTheme.colors(getContext()).LAVENDER : RoyalVoidTheme.colors(getContext()).MUTED);
         c.drawRoundRect(new RectF(x-r,y-r,x+r,y+r),5*d,5*d,paint);
         if (selected) {
             paint.setStrokeCap(Paint.Cap.ROUND);

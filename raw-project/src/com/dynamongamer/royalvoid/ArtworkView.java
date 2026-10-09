@@ -9,6 +9,8 @@ import android.widget.ImageView;
  */
 public final class ArtworkView extends ImageView {
     private final Path clip = new Path();
+    private Integer surfaceColor;
+    public void setSurfaceColor(int color){surfaceColor=Integer.valueOf(color);invalidate();}
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     
     public ArtworkView(Context c) {
@@ -19,18 +21,17 @@ public final class ArtworkView extends ImageView {
     }
     
     public void asset(String path) {
-        try {
-            java.io.InputStream in = getContext().getAssets().open(path);
-            try {
-                setImageBitmap(BitmapFactory.decodeStream(in));
-            } finally {
-                in.close();
-            }
-        } catch (Exception ignored) {
-            setImageDrawable(null);
-        }
+        Bitmap bitmap=decodeAsset(path);
+        if(bitmap==null&&path.startsWith("royal_void/images/themes/"))bitmap=decodeAsset("royal_void/images/brand_logo.png");
+        setImageBitmap(bitmap);
     }
-    
+    private Bitmap decodeAsset(String path) {
+        try {
+            java.io.InputStream in=getContext().getAssets().open(path);
+            try {return BitmapFactory.decodeStream(in);} finally {in.close();}
+        } catch(Exception ignored){return null;}
+    }
+
     protected void onDraw(Canvas canvas) {
         float radius = RoyalVoidTheme.dp(getContext(), 12);
         RectF bounds = new RectF(0, 0, getWidth(), getHeight());
@@ -38,7 +39,7 @@ public final class ArtworkView extends ImageView {
         clip.addRoundRect(bounds, radius, radius, Path.Direction.CW);
         canvas.save();
         canvas.clipPath(clip);
-        paint.setColor(RoyalVoidTheme.CARD);
+        paint.setColor(surfaceColor==null?ThemeManager.colors(getContext()).CARD:surfaceColor.intValue());
         canvas.drawRect(bounds, paint);
         super.onDraw(canvas);
         canvas.restore();

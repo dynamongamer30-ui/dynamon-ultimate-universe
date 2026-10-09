@@ -63,7 +63,7 @@ public final class PreferencesStore {
     }
 
     private boolean portable(String key) {
-        return key.startsWith("fav.") || key.equals("haptics") || key.equals("sounds") || key.equals("depth") || key.equals("ambientGlow") || key.equals("reducedMotion") || key.equals("compactLauncher") || key.equals("opacity") || key.equals("soundVolume") || key.equals("panelHeight") || key.equals("launcherX") || key.equals("launcherY") || key.equals("skinPack");
+        return key.equals("theme") || key.startsWith("fav.") || key.equals("haptics") || key.equals("sounds") || key.equals("depth") || key.equals("ambientGlow") || key.equals("reducedMotion") || key.equals("compactLauncher") || key.equals("opacity") || key.equals("soundVolume") || key.equals("panelHeight") || key.equals("launcherX") || key.equals("launcherY") || key.equals("skinPack");
     }
 
     public void importValues(JSONObject values) {
@@ -80,6 +80,8 @@ public final class PreferencesStore {
                 float min=key.equals("panelHeight")?0.60f:key.equals("opacity")?0.65f:0;
                 float max=key.equals("panelHeight")?0.95f:key.equals("soundVolume")?0.60f:1;
                 edit.putFloat(key,Math.max(min,Math.min(max,n)));
+            } else if (key.equals("theme")) {
+                if (value instanceof String && ThemeManager.valid((String)value)) edit.putString(key,(String)value);
             } else if (key.equals("skinPack")) {
                 if (value instanceof String && ((String)value).matches("[A-Za-z0-9_-]{1,64}")) edit.putString(key,(String)value);
             } else if (value instanceof Boolean) edit.putBoolean(key,(Boolean)value);

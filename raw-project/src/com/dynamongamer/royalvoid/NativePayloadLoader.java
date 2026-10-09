@@ -15,7 +15,7 @@ import java.util.concurrent.*;
  * support a large daily audience without turning gameplay into a write stream.
  */
 public final class NativePayloadLoader {
-    public interface Listener { void status(String message,boolean error); }
+    public interface Listener { void status(String message,boolean error); void appearance(JSONObject config); }
     private static final String SERVER="https://dg.dynamongamer30.workers.dev";
     private static final String PUBLIC_KEY="MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEBvmVi6bDPa9eUOBNsYKr+IQ3JW3rQPQpeWxhi/fTTuLIn8jtG3vDb1G2y9286BKW1GKs2zksU9Grw6eFMHF7Aw==";
     private final Handler ui=new Handler(Looper.getMainLooper());
@@ -27,6 +27,7 @@ public final class NativePayloadLoader {
     private String fingerprint,build;
     private JSONObject launchLocks=new JSONObject();
     private JSONObject launchBrand;
+    private JSONObject launchThemes;
     private long started;
     private int generation;
     public NativePayloadLoader(WebView w,Listener l){web=w;listener=l;}
@@ -94,7 +95,7 @@ public final class NativePayloadLoader {
             JSONObject locks=access.optJSONObject("featureLocks");
             if(locks==null)throw new IOException("Server loader update required");
             launchLocks=locks;
-            launchBrand=access.optJSONObject("brand");
+            launchBrand=access.optJSONObject("brand");launchThemes=access.optJSONObject("themes");
             if(launchLocks.optBoolean("app")||launchLocks.optBoolean("mods"))throw new IOException("Game access is currently unavailable");
             key=Base64.decode(access.getString("key"),Base64.DEFAULT);
             plaintext=PayloadCrypto.decrypt(key,Base64.decode(payload.getString("iv_b64"),Base64.DEFAULT),ciphertext);
@@ -120,7 +121,8 @@ public final class NativePayloadLoader {
     private void boot(final int token){
         if(closed||token!=generation)return;
         if(!localGamePage()){fail("Game page changed during loading");return;}
-        web.evaluateJavascript("(function(){try{window.__DG_SERVER="+JSONObject.quote(SERVER)+";window.__DG_LOCKS="+launchLocks.toString()+";window.__DG_BOOT_LOCKS_READY=true;var code=window.__DG_NATIVE_SOURCE.join('');delete window.__DG_NATIVE_SOURCE;(0,eval)(code);"+(launchBrand==null?"":"window.__DG_BRAND="+launchBrand.toString()+";")+"if(!window.lime)throw Error('Missing game engine');if(!window.__DG_MENU_CONFIG||!window.__DG_NATIVE)throw Error('Server payload must be upgraded for Royal Void 0.3');var s=window.getSize();window.lime.embed('dynamons_world','content',s.width*2,s.height*2,{background:'000000'});return {ok:true};}catch(e){return {ok:false,error:String(e.message||e)};}})()",new ValueCallback<String>(){public void onReceiveValue(String value){
+        listener.appearance(launchThemes);
+        web.evaluateJavascript("(function(){try{window.__DG_SERVER="+JSONObject.quote(SERVER)+";window.__DG_LOCKS="+launchLocks.toString()+";window.__DG_BOOT_LOCKS_READY=true;var code=window.__DG_NATIVE_SOURCE.join('');delete window.__DG_NATIVE_SOURCE;(0,eval)(code);"+(launchBrand==null?"":"window.__DG_BRAND="+launchBrand.toString()+";")+"if(!window.lime)throw Error('Missing game engine');if(!window.__DG_MENU_CONFIG||typeof window.__DG_INSTALL_NATIVE!=='function')throw Error('Server payload must be upgraded for Royal Void 0.3');var s=window.getSize();window.lime.embed('dynamons_world','content',s.width*2,s.height*2,{background:'000000'});window.__DG_INSTALL_NATIVE();if(!window.__DG_NATIVE)throw Error('Native bridge installation failed after game initialization');return {ok:true};}catch(e){return {ok:false,error:String(e.message||e)};}})()",new ValueCallback<String>(){public void onReceiveValue(String value){
             if(closed||token!=generation)return;
             try{JSONObject r=new JSONObject(value);if(!r.optBoolean("ok"))throw new IOException(r.optString("error","Game boot failed"));
                 busy=false;loaded=true;tell("Game loaded · open the floating menu",false);

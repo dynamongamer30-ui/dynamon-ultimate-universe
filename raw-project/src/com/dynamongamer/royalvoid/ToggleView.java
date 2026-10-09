@@ -56,9 +56,9 @@ public final class ToggleView extends View {
         float h = 26 * d;
         float x = (getWidth() - w) / 2;
         float y = (getHeight() - h) / 2;
-        p.setColor(locked ? RoyalVoidTheme.LINE : blend(-12898232, RoyalVoidTheme.PURPLE, position));
+        p.setColor(locked ? RoyalVoidTheme.colors(getContext()).LINE : blend(ThemeManager.colors(getContext()).TRACK, RoyalVoidTheme.colors(getContext()).PURPLE, position));
         c.drawRoundRect(new RectF(x, y, x + w, y + h), h / 2, h / 2, p);
-        p.setColor(locked ? RoyalVoidTheme.MUTED : RoyalVoidTheme.TEXT);
+        p.setColor(locked ? RoyalVoidTheme.colors(getContext()).MUTED : RoyalVoidTheme.colors(getContext()).TEXT);
         c.drawCircle(x + h / 2 + position * (w - h), y + h / 2, 9 * d, p);
     }
     

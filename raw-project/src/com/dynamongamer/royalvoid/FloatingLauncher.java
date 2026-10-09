@@ -21,15 +21,17 @@ public final class FloatingLauncher extends FrameLayout {
     private float oldY;
     private boolean moved;
     private boolean compact;
+    private final ArtworkView emblem;
     
     public FloatingLauncher(Context c, PreferencesStore p, HapticEngine h, Listener l) {
         super(c);
         prefs = p;
         haptics = h;
         listener = l;
-        setBackground(new GlassPanelDrawable(RoyalVoidTheme.dp(c, 22), true));
-        ArtworkView emblem = new ArtworkView(c);
-        emblem.asset("royal_void/images/brand_logo.png");
+        emblem = new ArtworkView(c);
+        applyTheme();
+        // Keep keyboard/accessibility focus without Android's visual focus outline.
+        if (android.os.Build.VERSION.SDK_INT >= 26) setDefaultFocusHighlightEnabled(false);
         FrameLayout.LayoutParams ep = new FrameLayout.LayoutParams(RoyalVoidTheme.dp(c, 44), RoyalVoidTheme.dp(c, 44), Gravity.CENTER);
         addView(emblem, ep);
         setContentDescription("Open Dynamon Gamer. Long press for quick actions.");
@@ -87,6 +89,16 @@ public final class FloatingLauncher extends FrameLayout {
         });
     }
     
+    public void applyTheme() {
+        ThemeManager.Palette palette=ThemeManager.colors(getContext());
+        android.graphics.drawable.GradientDrawable background=new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            new int[]{ThemeManager.alpha(palette.PANEL,207),ThemeManager.alpha(palette.VOID,189)});
+        background.setCornerRadius(RoyalVoidTheme.dp(getContext(),22));
+        setBackground(background); // No stroke or outer frame.
+        emblem.asset(ThemeManager.logoPath(getContext()));emblem.invalidate();invalidate();
+    }
+
     private float clamp(float n, float a, float b) {
         return Math.max(a, Math.min(n, Math.max(a, b)));
     }
