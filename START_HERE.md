@@ -4,7 +4,7 @@ The client ZIP contains Java source and runtime assets only. No Markdown, JSON, 
 
 ## Release status
 
-The updated Java and server code passed local syntax, control behavior, encryption/tamper and free-tier tests. No Android SDK/R8 toolchain is available in this workspace, so there is no compiled DEX from this session. Android type checking, R8 build and phone testing are still required.
+The updated Java and server code passed local syntax, control behavior, encryption/tamper and free-tier tests. GitHub Actions successfully compiled all client Java against Android SDK 35, ran R8 obfuscation and published the compiled injection ZIP. Phone testing is still required.
 
 The Cloudflare connection can read `dg` but rejected updating it with `No access to the specified resource`. Production code and Supabase were not changed. Keep the current working APK until the owner completes the server/payload rollout.
 
@@ -24,7 +24,9 @@ The server source/payload preparation files remain owner-side and are not in the
 
 Use AIDE to compile all `src/com/dynamongamer/royalvoid/*.java` against SDK 28 or newer. Java syntax remains compatible with Java 7. For a release with obfuscation, use the repository build scripts or GitHub Actions. A direct AIDE debug build does not guarantee obfuscation.
 
-GitHub Actions: open **Actions → Build Royal Void DEX**. A successful build uploads `Royal-Void-DEX-And-Assets`, containing `royal-void-dex-package.zip`. That inner ZIP contains only DEX and required images/fonts/sounds. The obfuscation map remains a private build intermediate and is excluded.
+The ready build is [Royal-Void-0.3.0-DEX-And-Assets.zip](./Royal-Void-0.3.0-DEX-And-Assets.zip). It contains only DEX and required images/fonts/sounds; WAV files are stored uncompressed. Keep it aside until the server rollout above is completed.
+
+For future builds, open **Actions → Build Royal Void DEX**. A successful build uploads `Royal-Void-DEX-And-Assets`, containing `royal-void-dex-package.zip`, and publishes the ready ZIP on the download branch. The obfuscation map remains a build intermediate and is excluded from both downloads.
 
 Local/Termux build with JDK and Android tools:
 
