@@ -4,7 +4,7 @@ on:
   push:
     paths: ['Royal-Void-0.3.0-Java-And-Assets.zip', 'src/**', 'assets/royal_void/**', 'tools/build_dex*', 'tools/package_dex_release.sh', 'proguard-rules.pro', '.github/workflows/build-royal-void.yml']
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,3 +29,25 @@ jobs:
           path: dist/royal-void-dex-package.zip
           retention-days: 7
           if-no-files-found: error
+      - name: Publish compiled package on download branch
+        if: github.ref_name == 'royal-void-downloads-20261009'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          GH_BRANCH: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import base64,json,os,urllib.request,urllib.error
+          from pathlib import Path
+          repo=os.environ['GH_REPOSITORY'];branch=os.environ['GH_BRANCH']
+          name='Royal-Void-0.3.0-DEX-And-Assets.zip'
+          url='https://api.github.com/repos/'+repo+'/contents/'+name
+          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}
+          body={'message':'Publish compiled Royal Void 0.3 DEX and runtime assets','branch':branch,'content':base64.b64encode(Path('dist/royal-void-dex-package.zip').read_bytes()).decode()}
+          try:
+              with urllib.request.urlopen(urllib.request.Request(url+'?ref='+branch,headers=headers)) as r: body['sha']=json.load(r)['sha']
+          except urllib.error.HTTPError as e:
+              if e.code!=404:raise
+          with urllib.request.urlopen(urllib.request.Request(url,data=json.dumps(body).encode(),headers={**headers,'Content-Type':'application/json'},method='PUT')) as r:result=json.load(r)
+          print('Published compiled ZIP at commit '+result['commit']['sha'])
+          PY
