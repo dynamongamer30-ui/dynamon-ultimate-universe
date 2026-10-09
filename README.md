@@ -1,9 +1,9 @@
-# Dynamon Gamer — Royal Void 0.2.0
+# Royal Void 0.3 client
 
-[Download all updated files](./Dynamon-Gamer-Royal-Void-0.2.0-All-Files.zip)
+[Download Java and runtime assets only](./Royal-Void-0.3.0-Java-And-Assets.zip)
 
-Start with [the simple installation guide](./START_HERE.md).
+[Read the installation and release status guide](./START_HERE.md).
 
-The ZIP contains Java source, assets, integration files, validation results, and an undeployed server draft. It does not contain a compiled DEX or APK. Android compilation and phone testing are still required. Keep your working APK backed up and test the UI before switching to the native loader.
+Source ZIP contains 32 Java files and 7 runtime assets. Documentation, build tools and tests are outside it. No compiled DEX has been produced in this session. The new client requires the updated signed server payload; keep the working APK until the owner rollout is completed. Cloudflare deployment was rejected for missing resource access. Existing signing key and matching game engine are required.
 
-Read [security limits](./SECURITY.md) before using the backend draft. Public source cannot be made theft-proof.
+Release build scripts require R8 obfuscation and produce only DEX/assets. GitHub Actions builds the injection ZIP when enabled. No recurring heartbeat or config polling in the new client.

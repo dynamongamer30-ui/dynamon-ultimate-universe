@@ -1,0 +1,31 @@
+name: Build Royal Void DEX
+on:
+  workflow_dispatch:
+  push:
+    paths: ['Royal-Void-0.3.0-Java-And-Assets.zip', 'src/**', 'assets/royal_void/**', 'tools/build_dex*', 'tools/package_dex_release.sh', 'proguard-rules.pro', '.github/workflows/build-royal-void.yml']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Extract client source
+        run: unzip -q -o Royal-Void-0.3.0-Java-And-Assets.zip
+      - name: Install selected Android tools
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Build obfuscated injection package
+        env:
+          DG_SOURCE_LEVEL: '8'
+        run: |
+          export ANDROID_JAR="$ANDROID_HOME/platforms/android-35/android.jar"
+          export R8_JAR="$ANDROID_HOME/build-tools/35.0.0/lib/d8.jar"
+          bash tools/build_dex_release.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Royal-Void-DEX-And-Assets
+          path: dist/royal-void-dex-package.zip
+          retention-days: 7
+          if-no-files-found: error

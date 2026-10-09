@@ -1,2 +1,1 @@
-24ddf4e175cd11d4b52c094eb462ba8cc86aee39bfa7f20456fc23f3913bbb64  Dynamon-Gamer-Royal-Void-0.2.0-All-Files.zip
-24ddf4e175cd11d4b52c094eb462ba8cc86aee39bfa7f20456fc23f3913bbb64  Dynamon-Gamer-All-Files.zip
+d31d2e3c8d473114b216ce31562082794a3a8ebfb9d9a609210372426ce65aa3  Royal-Void-0.3.0-Java-And-Assets.zip
