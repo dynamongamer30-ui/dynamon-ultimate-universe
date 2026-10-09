@@ -140,12 +140,22 @@ export interface UploadPayloadArgs {
   sig_b64: string;
   key_b64: string;
   ct_sha: string;
+  protocol: number | string;
+  issued: number | string;
+  min_client: number | string;
+  meta_sig_b64: string;
 }
 
 export async function uploadPayload(args: UploadPayloadArgs): Promise<{ ok: boolean }> {
+  const protocol = Number(args.protocol);
+  const issued = Number(args.issued);
+  const minClient = Number(args.min_client);
+  if (protocol !== 2 || minClient !== 3 || !Number.isSafeInteger(issued) || issued <= 0 || issued > Math.floor(Date.now() / 1000) + 300 || !args.meta_sig_b64.trim()) {
+    throw new Error("Royal Void 0.3 requires a freshly signed protocol-2 bundle with min_client 3, issued and meta_sig_b64. Use the owner payload tool.");
+  }
   return adminJson("/admin/upload-payload", {
     method: "POST",
-    body: JSON.stringify(args),
+    body: JSON.stringify({ ...args, protocol, issued, min_client: minClient }),
   });
 }
 
@@ -170,8 +180,10 @@ export interface ActiveDevice {
 export interface ListDevicesResult {
   current_build: string | number;
   active: ActiveDevice[];
+  presence_disabled?: boolean;
 }
 
 export async function listDevices(): Promise<ListDevicesResult> {
   return adminJson<ListDevicesResult>("/admin/list", { method: "GET" });
 }
+

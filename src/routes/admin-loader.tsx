@@ -125,7 +125,7 @@ function DevicesPanel({ onAuthFail }: { onAuthFail: () => void }) {
           {data && (
             <p className="text-xs text-muted-foreground">
               Current build: <span className="font-mono text-primary">{String(data.current_build ?? "—")}</span>
-              {" · "}{data.active?.length ?? 0} active
+              {" · "}{data.presence_disabled ? "Live tracking disabled" : `${data.active?.length ?? 0} active`}
             </p>
           )}
         </div>
@@ -138,7 +138,7 @@ function DevicesPanel({ onAuthFail }: { onAuthFail: () => void }) {
       {!data ? (
         <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
       ) : data.active.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">No active devices.</p>
+        <p className="py-8 text-center text-sm text-muted-foreground">{data.presence_disabled ? "Live device tracking is disabled to avoid heartbeat traffic. This does not mean nobody is playing." : "No active devices."}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -187,6 +187,7 @@ function formatMaybeTime(v: unknown): string {
 function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
   const [form, setForm] = useState<UploadPayloadArgs>({
     build: "", ct_b64: "", iv_b64: "", sig_b64: "", key_b64: "", ct_sha: "",
+    protocol: 2, issued: "", min_client: 3, meta_sig_b64: "",
   });
   const [busy, setBusy] = useState(false);
 
@@ -197,7 +198,7 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
     if (file.name.toLowerCase().endsWith(".json")) {
       try {
         const payload = JSON.parse(text) as Partial<Record<keyof UploadPayloadArgs, unknown>>;
-        const fields: (keyof UploadPayloadArgs)[] = ["build", "ct_b64", "iv_b64", "sig_b64", "key_b64", "ct_sha"];
+        const fields: (keyof UploadPayloadArgs)[] = ["build", "ct_b64", "iv_b64", "sig_b64", "key_b64", "ct_sha", "protocol", "issued", "min_client", "meta_sig_b64"];
         const missing = fields.filter((field) => payload[field] == null || String(payload[field]).trim() === "");
         if (missing.length > 0) {
           toast.error(`Invalid payload bundle — missing ${missing.join(", ")}`);
@@ -211,6 +212,10 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
           sig_b64: String(payload.sig_b64),
           key_b64: String(payload.key_b64),
           ct_sha: String(payload.ct_sha),
+          protocol: Number(payload.protocol),
+          issued: Number(payload.issued),
+          min_client: Number(payload.min_client),
+          meta_sig_b64: String(payload.meta_sig_b64),
         }));
         toast.success(`Loaded payload bundle ${file.name}`);
         return;
@@ -270,6 +275,12 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
           <Field k="key_b64" label="key_b64" rows={4} />
         </div>
         <Field k="ct_sha" label="ct_sha (hex)" rows={2} />
+        <Field k="meta_sig_b64" label="Metadata signature (meta_sig_b64)" rows={2} />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field k="protocol" label="Protocol (2)" rows={1} />
+          <Field k="min_client" label="Minimum client (3)" rows={1} />
+          <Field k="issued" label="Issued (Unix seconds)" rows={1} />
+        </div>
 
         <div className="flex justify-end">
           <Button type="submit" disabled={busy} style={{ background: "var(--gradient-primary)" }}>
@@ -408,3 +419,4 @@ function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
     </div>
   );
 }
+

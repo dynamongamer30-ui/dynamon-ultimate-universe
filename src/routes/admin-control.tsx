@@ -1,3 +1,4 @@
+import { DexControls } from "@/components/DexControls";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { Shield, Save, Loader2, Eye, EyeOff, Star, ArrowLeft, Settings2, Megaphone, Link2, Image as ImageIcon, Box, KeyRound, Trash2, Upload, Plus, User, Feather, Send } from "lucide-react";
@@ -25,7 +26,7 @@ function ControlRoute() {
   return <OwnerGate><ControlPanel /></OwnerGate>;
 }
 
-type Tab = "branding" | "announcement" | "socials" | "featured" | "mods" | "security" | "avatars" | "rewards";
+type Tab = "dex" | "branding" | "announcement" | "socials" | "featured" | "mods" | "security" | "avatars" | "rewards";
 
 function ControlPanel() {
   const { branding, announcement, socials, overrides, refresh } = useSiteSettings();
@@ -33,6 +34,7 @@ function ControlPanel() {
 
 
   const tabs: { id: Tab; label: string; icon: typeof Settings2 }[] = [
+    { id: "dex", label: "Royal Void DEX", icon: Shield },
     { id: "branding", label: "Branding & Hero", icon: Settings2 },
     { id: "announcement", label: "Announcement", icon: Megaphone },
     { id: "socials", label: "Socials", icon: Link2 },
@@ -74,6 +76,7 @@ function ControlPanel() {
       </div>
 
       <div className="mt-6">
+        {tab === "dex" && <DexControls />}
         {tab === "branding" && <BrandingEditor initial={branding} onSaved={refresh} />}
         {tab === "announcement" && <AnnouncementEditor initial={announcement} onSaved={refresh} />}
         {tab === "socials" && <SocialsEditor initial={socials} onSaved={refresh} />}
@@ -738,3 +741,4 @@ function SaveRow({ saving, onSave, onReset }: { saving: boolean; onSave: () => v
     </div>
   );
 }
+
