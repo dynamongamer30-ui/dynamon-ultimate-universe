@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { getConfigNode, setConfigNode } from "@/lib/dgData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DexThemes } from "@/components/DexThemes";
 
 type Brand = { name: string; edition: string; links: { title: string; url: string; icon: string }[] };
 const DEFAULT_BRAND: Brand = {
@@ -63,6 +64,7 @@ export function DexControls() {
   if(loading)return <p>Loading DEX settings…</p>;
   if(failed)return <p>Could not read DEX settings. Reload this page before editing.</p>;
   return <div className="space-y-6">
+    <DexThemes />
     <section className="rounded-2xl border border-border bg-card/60 p-5">
       <h2 className="text-xl font-bold">Royal Void feature access</h2>
       <p className="my-3 text-sm text-muted-foreground">Checked means locked. Changes apply on the next game launch; there are no heartbeats or background configuration requests.</p>

@@ -1,36 +1,31 @@
-/* ============================================================
- *  DG LICENSE WORKER v2 (Cloudflare Workers + KV + Supabase)
- *
- *  Free-tier layout:
- *    KV        -> only encrypted payload / AES key / current_build (written on admin upload)
- *    Supabase  -> everything else, including device presence (device_presence)
- *                 and the PhoenixPass XP-once flag (device_xp_once)
- *
- *  Loader endpoints:
- *    GET  /payload?build=ID   -> { build, ct_b64, iv_b64, sig_b64, ct_sha }  (public ciphertext)
- *    POST /check  {fp, build, ctsha} -> { key } | { banned, reason }         (gated AES key)
- *    POST /heartbeat {fp, build}     -> { ok } | { banned }
- *    POST /tamper {fp, kind}         -> auto-ban -> { ok }
- *
- *  Admin (header  X-Admin: ADMIN_KEY) - called from the web Loader page:
- *    POST /admin/upload-payload {build, ct_b64, iv_b64, sig_b64, key_b64, ct_sha}
- *    POST /admin/ban   {fp, reason}
- *    POST /admin/unban {fp}
- *    GET  /admin/list
- *
- *  Cloudflare bindings:
- *    KV namespace : DG
- *    Secret       : ADMIN_KEY             (long random; typed once on the Loader page)
- *    Secret       : SUPABASE_URL          (https://<project>.supabase.co)
- *    Secret       : SUPABASE_SERVICE_KEY  (service-role key - SERVER-SIDE ONLY)
- *
- *  TRIPWIRE: the Android gate writes ActivatedUsers/{fp}.lastLogin = <ts> on
- *  every successful key verify. If the loader runs but that marker is missing
- *  or stale, the gate was removed/bypassed -> block injection + ban.
- * ============================================================ */
+// Pure policy helpers: no credentials, database access, or request state.
+function licenseReason(activation, keyData, fingerprint, now) {
+  if (!activation || !keyData) return 'no-login';
+  const key = String(activation.key || activation.Key || '');
+  if (!key || String(keyData.device || '') !== fingerprint) return 'device_mismatch';
+  if (String(keyData.status || 'active').toLowerCase() !== 'active') return 'suspended';
+  let last = Number(activation.lastLogin || 0);
+  if (last > 0 && last < 1e12) last *= 1000;
+  if (!Number.isFinite(last) || last > now + 60000 || now - last > 1800000 || last <= 0) return 'no-login';
+  const expiry = Number(keyData.expiry || 0);
+  if (!Number.isFinite(expiry) || expiry < 0) return 'invalid_license';
+  if (expiry > 0 && expiry * 1000 <= now) return 'expired';
+  return '';
+}
+function maintenance(config, locks) {
+  return config === true || !!(locks && (locks.app === true || locks.mods === true));
+}
 
-const LOGIN_GRACE = 1800; // secs: how fresh ActivatedUsers/<fp>.lastLogin must be
-const HEARTBEAT_GRACE = 25 * 60; // secs: a device counts as online if its last heartbeat is newer (heartbeat = 10 min)
+/* Royal Void 0.3 compatible DG Worker.
+ * Replace the existing dg Worker module, preserving its bindings and secrets.
+ * DG: KV fallback; DG_R2: encrypted payload and gated key storage.
+ * ADMIN_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY: existing secrets.
+ * /heartbeat is a compatibility no-op: no storage reads or writes.
+ * /tamper does not ban devices based on unauthenticated reports.
+ * Existing verification and public-config routes remain compatible.
+ * Deploying this file does not generate or upload a signed game payload.
+ */
+const LOGIN_GRACE = 1800;
 // Generated OTA bundles can contain several megabytes of Base64 ciphertext.
 // Keep this comfortably above the current build size while still rejecting
 // unreasonable requests before writing to KV.
@@ -40,11 +35,7 @@ const MAX_PAYLOAD_B64_CHARS = 10_000_000;
 const BAN_CACHE_MS = 60 * 1000;
 const BAN_CACHE = new Map();
 async function safeR2Get(bucket, key) {
-  try {
-    return bucket ? await bucket.get(key) : null;
-  } catch (_) {
-    return null;
-  }
+  try { return bucket ? await bucket.get(key) : null; } catch (_) { return null; }
 }
 
 // VIP keys are prefixed "VIP-" or "DGVIP-" (case-insensitive).
@@ -117,6 +108,37 @@ function isBuildId(value) {
   return isBoundedString(value, 128) && /^[A-Za-z0-9._-]+$/.test(value);
 }
 
+// Branding is fetched once on successful launch, not polled during play.
+function dexBrandConfig(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const name = text(value.name, "Dynamon Gamer", 80);
+  const links = Array.isArray(value.links) ? value.links.slice(0, 12).flatMap(link => {
+    if (!link || typeof link !== "object") return [];
+    const url = safePublicUrl(link.url);
+    return url ? [{title: text(link.title, "Open link", 60), url, icon: /^[a-z]{1,20}$/.test(link.icon || "") ? link.icon : "globe"}] : [];
+  }) : [];
+  return {name: name || "Dynamon Gamer", edition: text(value.edition, "Royal Void", 60), links};
+}
+
+const DEX_THEME_IDS = ["dark","fire","thunder","water","earth","diamond","gold","spirit"];
+const DEX_THEME_COLORS = ["background","panel","card","primary","deep","highlight","text","muted","border","input","success","error"];
+function dexThemeConfig(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.schema !== 1) return null;
+  const enabledThemes = Array.isArray(value.enabledThemes)
+    ? [...new Set(value.enabledThemes.filter(id => DEX_THEME_IDS.includes(id)))] : [...DEX_THEME_IDS];
+  if (!enabledThemes.length) enabledThemes.push("dark");
+  const defaultTheme = enabledThemes.includes(value.defaultTheme) ? value.defaultTheme : enabledThemes[0];
+  const palettes = {};
+  for (const id of DEX_THEME_IDS) {
+    const source=value.palettes && value.palettes[id];
+    if (!source || typeof source !== "object" || Array.isArray(source)) continue;
+    const colors={};
+    for (const key of DEX_THEME_COLORS) if (typeof source[key] === "string" && /^#[0-9a-f]{6}$/i.test(source[key])) colors[key]=source[key].toUpperCase();
+    if (Object.keys(colors).length) palettes[id]=colors;
+  }
+  return {schema:1,defaultTheme,enabledThemes,palettes};
+}
+
 function publicAppConfig(config) {
   const cfg = config && typeof config === "object" ? config : {};
   const update = cfg.Update && typeof cfg.Update === "object" ? cfg.Update : {};
@@ -179,12 +201,7 @@ export default {
     const json = (o, s) =>
       new Response(JSON.stringify(o), {
         status: s || 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store, no-cache, must-revalidate",
-          Pragma: "no-cache",
-          ...cors,
-        },
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...cors },
       });
     const body = async () => {
       try {
@@ -204,7 +221,7 @@ export default {
       ActivatedUsers: "activated_users",
       SuspiciousActivity: "suspicious_activity",
       ValidKeys: "valid_keys",
-      // Device presence (heartbeats) lives in Supabase so KV writes stay near zero.
+      // Legacy table mapping retained; no presence polling or writes.
       Presence: "device_presence",
       // PhoenixPass XP "once per device per build" flag.
       XpOnce: "device_xp_once",
@@ -227,7 +244,13 @@ export default {
         },
         extra || {},
       );
-    const isAdmin = () => req.headers.get("X-Admin") === env.ADMIN_KEY;
+    const isAdmin = async () => {
+      const value=req.headers.get("X-Admin");
+      if(typeof env.ADMIN_KEY!=="string" || !env.ADMIN_KEY || !value || value.length>512)return false;
+      const encoder=new TextEncoder();
+      const [a,b]=await Promise.all([crypto.subtle.digest("SHA-256",encoder.encode(value)),crypto.subtle.digest("SHA-256",encoder.encode(env.ADMIN_KEY))]);
+      return crypto.subtle.timingSafeEqual(a,b);
+    };
 
     const fbGet = async (p) => {
       try {
@@ -254,10 +277,21 @@ export default {
         return null;
       }
     };
+    const dexAppearance = async () => {
+      try {
+        const response=await fetch(SB_URL+"/rest/v1/app_config?id=in.(DexBranding,DexThemes)&select=id,data",{headers:sbHead()});
+        if (!response.ok) return {brand:null,themes:null};
+        const rows=await response.json();
+        if (!Array.isArray(rows)) return {brand:null,themes:null};
+        const brandRow=rows.find(row=>row.id==="DexBranding");
+        const themeRow=rows.find(row=>row.id==="DexThemes");
+        return {brand:dexBrandConfig(brandRow&&brandRow.data),themes:dexThemeConfig(themeRow&&themeRow.data)};
+      } catch (_) {return {brand:null,themes:null};}
+    };
     const fbPut = async (p, val) => {
       try {
         const q = sbParse(p);
-        const id = q.id || Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+        const id = q.id || crypto.randomUUID();
         return await fetch(SB_URL + "/rest/v1/" + q.t, {
           method: "POST",
           headers: sbHead({ Prefer: "resolution=merge-duplicates,return=minimal" }),
@@ -324,6 +358,7 @@ export default {
           iv_b64: ct.iv_b64,
           sig_b64: ct.sig_b64,
           ct_sha: ct.ct_sha,
+          protocol: ct.protocol, issued: ct.issued, min_client: ct.min_client, meta_sig_b64: ct.meta_sig_b64,
         });
       }
 
@@ -357,54 +392,46 @@ export default {
           if (!xpUsed) await fbPut(xpId, { at: Date.now() });
         }
 
-        // TRIPWIRE: gate must have written a fresh login marker this session.
-        // IMPORTANT: a missing/stale login marker is NOT proof of tampering —
-        // it also happens for innocent users who simply haven't logged in yet
-        // (e.g. tapped "Get Key" before "Login/Verify"). Banning here caused
-        // false-positive bans, so we now BLOCK without banning. Real tampering
-        // is still caught below by the ciphertext-mismatch check and by the
-        // /tamper endpoint (badsig / debugger), which have no false positives.
+        // Require a recent successful login; missing markers block without banning.
         const au = await fbGet("ActivatedUsers/" + fp);
         let last = au && au.lastLogin ? Number(au.lastLogin) : 0;
         if (last > 0 && last < 1e12) last = last * 1000; // seconds -> ms
-        const fresh = last > 0 && Date.now() - last <= LOGIN_GRACE * 1000;
+        const fresh = last > 0 && last <= Date.now() + 60000 && Date.now() - last <= LOGIN_GRACE * 1000;
         if (!phoenixPass && (!au || !fresh)) {
           // Block the mod but do NOT ban — user just needs to log in properly.
           return json({ blocked: true, reason: "no-login" });
         }
 
+        const maintenanceMode = await fbGet("Config/Maintenance");
+        const featureLocks = await fbGet("Config/FeatureLocks");
+        if (maintenance(maintenanceMode, featureLocks)) return json({ blocked: true, reason: "maintenance" });
+        if (!phoenixPass) {
+          const license = au && await fbGet("ValidKeys/" + String(au.key || au.Key || ""));
+          const reason = licenseReason(au, license, fp, Date.now());
+          if (reason) return json({ blocked: true, reason });
+        }
         const keyObject = await safeR2Get(DG_R2, "key:" + build);
         const kf = keyObject ? await keyObject.json() : await KV.get("key:" + build, "json");
         if (!kf) return json({ banned: true, reason: "unknown build" });
 
         if (ctsha && kf.ct_sha && ctsha !== kf.ct_sha) {
-          await banDevice(fp, "ciphertext-mismatch");
-          return json({ banned: true, reason: "integrity" });
+          return json({ blocked: true, reason: "integrity" });
         }
 
-        await fbPut("Presence/" + fp, { build: build, last: Date.now() });
-        return json({ key: kf.key_b64, phoenixPass: phoenixPass, xpAvailable: xpAvailable });
+        
+        const appearance = await dexAppearance();
+        return json({ key: kf.key_b64, phoenixPass: phoenixPass, xpAvailable: xpAvailable, featureLocks: featureLocks || {}, ...appearance });
       }
 
-      // ---------- loader: heartbeat (mid-session revoke) ----------
-      if (path === "/heartbeat" && req.method === "POST") {
-        const d = await body();
-        if (!d.fp) return json({ ok: true });
-        if (!isBoundedString(d.fp, 200) || (d.build != null && !isBuildId(d.build)))
-          return json({ ok: false, error: "bad_request" }, 400);
-        const ban = await isBanned(d.fp);
-        if (ban) return json({ banned: true, reason: ban });
-        await fbPut("Presence/" + d.fp, { build: d.build, last: Date.now() });
-        return json({ ok: true });
-      }
+      // ---------- legacy heartbeat: no storage work ----------
+      if (path === "/heartbeat" && req.method === "POST") return json({ ok: true, stateless: true });
 
-      // ---------- loader: tamper report (auto-ban) ----------
+      // ---------- tamper compatibility: never auto-ban an untrusted report ----------
       if (path === "/tamper" && req.method === "POST") {
         const d = await body();
         if (!isBoundedString(d.fp, 200) || (d.kind != null && !isBoundedString(d.kind, 64)))
           return json({ ok: false, error: "bad_request" }, 400);
-        await banDevice(d.fp, "tamper:" + (d.kind || "?"));
-        return json({ ok: true });
+        return json({ ok: true, recorded: false });
       }
 
       // ---------- app: read allowlisted public config ----------
@@ -415,7 +442,7 @@ export default {
         return json(publicAppConfig(cfg));
       }
 
-      // ---------- app: verify + activate a key (server-side, atomic bind) ----------
+      // ---------- app: existing verify + activate route ----------
       // The Android gate no longer touches the database directly. It POSTs the
       // key + device fingerprint here; ALL trust decisions happen server-side.
       if (path === "/verify-key" && req.method === "POST") {
@@ -485,7 +512,7 @@ export default {
 
       // ---------- admin: upload encrypted payload ----------
       if (path === "/admin/upload-payload" && req.method === "POST") {
-        if (!isAdmin()) return json({ error: "forbidden" }, 403);
+        if (!(await isAdmin())) return json({ error: "forbidden" }, 403);
         const d = await body();
         if (!isBuildId(d.build) || !isBoundedString(d.ct_b64, MAX_PAYLOAD_B64_CHARS) || !isBoundedString(d.key_b64, MAX_PAYLOAD_B64_CHARS))
           return json({ error: "need build, ct_b64, key_b64" }, 400);
@@ -494,44 +521,24 @@ export default {
           iv_b64: d.iv_b64 || "",
           sig_b64: d.sig_b64 || "",
           ct_sha: d.ct_sha || "",
+          protocol: d.protocol, issued: d.issued, min_client: d.min_client, meta_sig_b64: d.meta_sig_b64,
         });
         const keyValue = JSON.stringify({ key_b64: d.key_b64, ct_sha: d.ct_sha || "" });
         const byteLength = (value) => new TextEncoder().encode(value).byteLength;
         try {
-          await DG_R2.put("ct:" + d.build, ctValue, {
-            httpMetadata: { contentType: "application/json" },
-          });
+          await DG_R2.put("ct:" + d.build, ctValue, { httpMetadata: { contentType: "application/json" } });
         } catch (e) {
-          return json({
-            error: "payload_storage_failed",
-            operation: "ciphertext",
-            bytes: byteLength(ctValue),
-            message: String(e && e.message ? e.message : e).slice(0, 200),
-          }, 413);
+          return json({ error: "payload_storage_failed", operation: "ciphertext", bytes: byteLength(ctValue), message: String(e && e.message ? e.message : e).slice(0, 200) }, 413);
         }
         try {
-          await DG_R2.put("key:" + d.build, keyValue, {
-            httpMetadata: { contentType: "application/json" },
-          });
+          await DG_R2.put("key:" + d.build, keyValue, { httpMetadata: { contentType: "application/json" } });
         } catch (e) {
-          return json({
-            error: "payload_storage_failed",
-            operation: "key",
-            bytes: byteLength(keyValue),
-            message: String(e && e.message ? e.message : e).slice(0, 200),
-          }, 413);
+          return json({ error: "payload_storage_failed", operation: "key", bytes: byteLength(keyValue), message: String(e && e.message ? e.message : e).slice(0, 200) }, 413);
         }
         try {
-          await DG_R2.put("current_build", d.build, {
-            httpMetadata: { contentType: "text/plain; charset=utf-8" },
-          });
+          await DG_R2.put("current_build", d.build, { httpMetadata: { contentType: "text/plain; charset=utf-8" } });
         } catch (e) {
-          return json({
-            error: "payload_storage_failed",
-            operation: "current_build",
-            bytes: byteLength(d.build),
-            message: String(e && e.message ? e.message : e).slice(0, 200),
-          }, 500);
+          return json({ error: "payload_storage_failed", operation: "current_build", bytes: byteLength(d.build), message: String(e && e.message ? e.message : e).slice(0, 200) }, 500);
         }
         // Publishing any new payload ends the one-build Dark Eclipse policy.
         const darkEclipsePolicy = await fbGet("Config/DarkEclipsePolicy");
@@ -548,14 +555,14 @@ export default {
 
       // ---------- admin: ban / unban ----------
       if (path === "/admin/ban" && req.method === "POST") {
-        if (!isAdmin()) return json({ error: "forbidden" }, 403);
+        if (!(await isAdmin())) return json({ error: "forbidden" }, 403);
         const d = await body();
         if (!isBoundedString(d.fp, 200)) return json({ error: "need fp" }, 400);
         await banDevice(d.fp, isBoundedString(d.reason, 200) ? d.reason : "admin ban");
         return json({ ok: true, banned: d.fp });
       }
       if (path === "/admin/unban" && req.method === "POST") {
-        if (!isAdmin()) return json({ error: "forbidden" }, 403);
+        if (!(await isAdmin())) return json({ error: "forbidden" }, 403);
         const d = await body();
         if (!isBoundedString(d.fp, 200)) return json({ error: "need fp" }, 400);
         await fbDel("BannedDevices/" + d.fp);
@@ -565,17 +572,10 @@ export default {
 
       // ---------- admin: list active devices + current build ----------
       if (path === "/admin/list" && req.method === "GET") {
-        if (!isAdmin()) return json({ error: "forbidden" }, 403);
-        const rows = (await fbGet("Presence")) || {};
-        const now = Date.now();
-        const active = [];
-        for (const [fp, vv] of Object.entries(rows)) {
-          if (vv && now - Number(vv.last || 0) < HEARTBEAT_GRACE * 1000)
-            active.push({ fp: fp, build: vv.build, last: vv.last });
-        }
+        if (!(await isAdmin())) return json({ error: "forbidden" }, 403);
         const currentObject = await safeR2Get(DG_R2, "current_build");
         const current = currentObject ? await currentObject.text() : await KV.get("current_build");
-        return json({ current_build: current, active: active });
+        return json({ current_build: current, active: [], presence_disabled: true });
       }
 
       return json({ error: "not found" }, 404);
