@@ -16,6 +16,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { extendedKeyData } from "@/lib/dgKeyPolicy";
 
 // ---------- Types (wire contract, unchanged) ----------
 
@@ -98,10 +99,28 @@ async function upsertRow(table: string, id: string, data: unknown): Promise<void
   if (error) throw new Error(error.message);
 }
 
-/** Merge-patch a jsonb row (read-modify-write, matching the Workers' fbPatch). */
+/** Conditional write prevents an open editor from overwriting newer data. */
+export async function compareConfigNode(id: string, value: unknown, expected: unknown): Promise<void> {
+  await compareRow("app_config", id, value, expected);
+}
+
+async function compareRow(table: string, id: string, value: unknown, expected: unknown): Promise<void> {
+  if (expected === null) {
+    const { error } = await supabase.from(table as never).insert({ id, data: value } as never);
+    if (error) throw new Error(error.code === "23505" ? "Settings changed elsewhere. Reload before saving." : error.message);
+    return;
+  }
+  const { data, error } = await supabase.from(table as never).update({ data: value } as never)
+    .eq("id", id).eq("data", JSON.stringify(expected)).select("id");
+  if (error) throw new Error(error.message);
+  if (!data?.length) throw new Error("Data changed elsewhere or access was denied. Reload before saving.");
+}
+
+/** Merge only into an existing, unchanged row; never recreate a deleted key. */
 async function patchRow(table: string, id: string, patch: Record<string, unknown>): Promise<void> {
-  const cur = (await selectOne(table, id)) ?? {};
-  await upsertRow(table, id, { ...cur, ...patch });
+  const cur = await selectOne(table, id);
+  if (!cur) throw new Error("This entry no longer exists. Reload the page.");
+  await compareRow(table, id, { ...cur, ...patch }, cur);
 }
 
 async function deleteRow(table: string, id: string): Promise<void> {
@@ -130,15 +149,15 @@ function toValidKey(id: string, v: Record<string, unknown>): ValidKey {
  * Subscribe to ValidKeys with an initial fetch + Supabase Realtime updates.
  * Returns an unsubscribe fn (same contract as the old Firebase onValue).
  */
-export function listKeys(cb: (keys: ValidKey[]) => void): () => void {
+export function listKeys(cb: (keys: ValidKey[]) => void, onError?: (error: Error) => void): () => void {
   let cancelled = false;
 
   const load = async () => {
     try {
       const rows = await selectAll("valid_keys");
       if (!cancelled) cb(rows.map((r) => toValidKey(r.id, r.data)));
-    } catch {
-      if (!cancelled) cb([]);
+    } catch (error) {
+      if (!cancelled) onError?.(error instanceof Error ? error : new Error("Could not load keys"));
     }
   };
 
@@ -169,13 +188,9 @@ export async function deleteKey(key: string): Promise<void> {
 
 /** Add `hours` to expiry (unix seconds) and durationHours. */
 export async function extendKey(key: string, hours: number): Promise<void> {
-  const cur = (await selectOne("valid_keys", key)) ?? {};
-  const nowSec = nowSeconds();
-  const baseExpiry = Number(cur.expiry ?? 0) > nowSec ? Number(cur.expiry) : nowSec;
-  await patchRow("valid_keys", key, {
-    expiry: baseExpiry + Math.floor(hours * 3600),
-    durationHours: Number(cur.durationHours ?? 0) + hours,
-  });
+  const cur = await selectOne("valid_keys", key);
+  if (!cur) throw new Error("This key no longer exists.");
+  await compareRow("valid_keys", key, extendedKeyData(cur, hours, nowSeconds()), cur);
 }
 
 export async function keyExists(key: string): Promise<boolean> {
@@ -184,37 +199,30 @@ export async function keyExists(key: string): Promise<boolean> {
 
 /** Create a manual key (owner-added). Returns the allocated key id. */
 export async function createManualKey(prefix: string, hours: number): Promise<string> {
+  if (!Number.isFinite(hours) || hours < 0 || hours > 87600) throw new Error("Enter 0–87600 hours; 0 means lifetime.");
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const rand = () => {
     let s = "";
-    for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    // Rejection sampling avoids modulo bias, including if the alphabet changes.
+    const limit = 256 - (256 % chars.length);
+    while (s.length < 16) {
+      const bytes = crypto.getRandomValues(new Uint8Array(32));
+      for (const byte of bytes) if (byte < limit && s.length < 16) s += chars[byte % chars.length];
+    }
     return s;
   };
   const clean = (prefix || "DG").trim().toUpperCase();
-
-  let key = "";
+  if (!/^[A-Z0-9]{1,12}$/.test(clean)) throw new Error("Invalid key prefix.");
   for (let i = 0; i < 10; i++) {
-    const cand = `${clean}-${rand()}`;
-    if (!(await keyExists(cand))) {
-      key = cand;
-      break;
-    }
+    const key = `${clean}-${rand()}`;
+    const { error } = await supabase.from("valid_keys" as never).insert({ id: key, data: {
+      status: "active", expiry: 0, durationHours: hours, activated: false,
+      device: null, date: nowSeconds(), fingerprint: "", sourceIP: "", source: "admin",
+    }} as never);
+    if (!error) return key;
+    if (error.code !== "23505") throw new Error(error.message);
   }
-  if (!key) throw new Error("Could not allocate a unique key");
-
-  const now = nowSeconds();
-  await upsertRow("valid_keys", key, {
-    status: "active",
-    expiry: now + Math.floor(hours * 3600),
-    durationHours: hours,
-    activated: false,
-    device: null,
-    date: now,
-    fingerprint: "",
-    sourceIP: "",
-    source: "admin",
-  });
-  return key;
+  throw new Error("Could not allocate a unique key");
 }
 
 // ---------- Config (each Config child = its own app_config row) ----------
@@ -345,3 +353,4 @@ export async function unbanDevice(fingerprint: string): Promise<void> {
 // ---------- Misc helpers ----------
 
 export const nowSeconds = () => Math.floor(Date.now() / 1000);
+

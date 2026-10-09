@@ -7,6 +7,7 @@ import {
   useRouterState,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { MotionConfig, motion } from "motion/react";
@@ -50,20 +51,20 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
   const router = useRouter();
   // SPA-mode shell invariant: thrown during initial render for ssr:false routes.
   // Auto-recover by invalidating + resetting so client hydration takes over.
   const isSpaShellInvariant =
-    typeof error?.message === "string" &&
-    error.message.includes("Expected to find a match below the root match");
+    message.includes("Expected to find a match below the root match");
 
   // A route's lazy chunk failing to load (stale tab after a redeploy) is
   // caught right here by the router's own error boundary — it never reaches
   // window-level 'error'/'unhandledrejection' listeners, so deployFreshness's
   // guard alone can't catch it. Handle it the same way: reload once, silently.
   const isStaleChunk =
-    typeof error?.message === "string" && STALE_CHUNK_PATTERN.test(error.message);
+    STALE_CHUNK_PATTERN.test(message);
 
   useEffect(() => {
     if (isSpaShellInvariant) {

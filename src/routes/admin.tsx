@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Shield, Send, Trash2, Loader2, Mail, AlertTriangle, Bell } from "lucide-react";
+import { Shield, Send, Trash2, Loader2, Mail, AlertTriangle, Bell, KeyRound } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { OwnerGate } from "@/components/OwnerGate";
 import { ThemedSelect } from "@/components/ThemedSelect";
@@ -123,6 +123,9 @@ function AdminPage() {
         <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">Dashboard</h1>
         <p className="mt-3 max-w-2xl text-muted-foreground">Moderate the community and notify trainers about new builds.</p>
         <div className="mt-5 flex flex-wrap gap-3">
+          <Link to="/admin-keys" className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-5 py-2.5 text-sm font-semibold text-amber-200 hover:bg-amber-400/20">
+            <KeyRound className="h-4 w-4" /> Key system &amp; DEX
+          </Link>
           <Link to="/admin-control" className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-primary-foreground glow-primary" style={{ background: "var(--gradient-primary)" }}>
             <Shield className="h-4 w-4" /> Open Control Panel
           </Link>
@@ -201,3 +204,4 @@ function Stat({ label, value, accent }: { label: string; value: number; accent?:
     </div>
   );
 }
+

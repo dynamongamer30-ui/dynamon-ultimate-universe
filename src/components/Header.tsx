@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { Menu, Sparkles, X, Search, LogOut, User as UserIcon, Settings, Heart, Trophy, Shield, Bell, Gift } from "lucide-react";
+import { Menu, Sparkles, X, Search, LogOut, User as UserIcon, Settings, Heart, Trophy, Shield, Bell, Gift, KeyRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { playClick } from "@/lib/sound";
 import { useAuth } from "@/hooks/useAuth";
@@ -158,6 +158,9 @@ export function Header() {
                         <Link to="/admin" onClick={() => setMenuOpen(false)} className="touch-target flex w-full items-center gap-2 border-t border-border/60 px-4 py-3 text-left text-sm text-amber-300 hover:bg-card/60">
                           <Shield className="h-4 w-4" /> Owner dashboard
                         </Link>
+                        <Link to="/admin-keys" onClick={() => setMenuOpen(false)} className="touch-target flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-amber-300 hover:bg-card/60">
+                          <KeyRound className="h-4 w-4" /> Key system
+                        </Link>
                         <Link to="/admin-control" onClick={() => setMenuOpen(false)} className="touch-target flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-amber-300 hover:bg-card/60">
                           <Settings className="h-4 w-4" /> Control panel
                         </Link>
@@ -293,3 +296,4 @@ export function Header() {
     </header>
   );
 }
+

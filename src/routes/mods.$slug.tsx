@@ -62,7 +62,7 @@ export const Route = createFileRoute("/mods/$slug")({
     </PageShell>
   ),
   errorComponent: ({ error }) => (
-    <PageShell><div className="py-20 text-center text-sm text-muted-foreground">{error.message}</div></PageShell>
+    <PageShell><div className="py-20 text-center text-sm text-muted-foreground">{error instanceof Error ? error.message : "Could not load this mod."}</div></PageShell>
   ),
   component: ModDetail,
 });

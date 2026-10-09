@@ -1,3 +1,5 @@
+import { DexControls } from "@/components/DexControls";
+import { isKeyBound, isKeyExpired } from "@/lib/dgKeyPolicy";
 import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -42,7 +44,7 @@ function KeysAdminGate() {
 
 // ----- Main panel -----
 
-type Tab = "keys" | "devices" | "config" | "app";
+type Tab = "keys" | "devices" | "config" | "app" | "dex";
 
 function KeysAdmin() {
   const { user } = useAuth();
@@ -53,7 +55,7 @@ function KeysAdmin() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold">Key System</h1>
-          <p className="text-sm text-muted-foreground">Live Supabase data (valid_keys).</p>
+          <p className="text-sm text-muted-foreground">Keys, devices, DEX locks, themes and branding. Game changes apply on the next launch.</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="hidden text-xs text-muted-foreground sm:inline">{user?.email}</span>
@@ -62,11 +64,11 @@ function KeysAdmin() {
 
       <div className="mb-6 -mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="inline-flex min-w-full gap-1 rounded-full border border-border bg-card/60 p-1 text-xs font-semibold sm:min-w-0">
-          {(["keys","devices","config","app"] as Tab[]).map((t) => (
+          {(["keys","devices","dex","config","app"] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`flex-1 whitespace-nowrap rounded-full px-3 py-2 capitalize transition-colors sm:flex-none sm:px-4 sm:py-1.5 ${tab===t ? "text-primary-foreground" : "text-muted-foreground"}`}
               style={tab===t ? { background: "var(--gradient-primary)" } : undefined}>
-              {t}
+              {t === "dex" ? "Royal Void DEX" : t}
             </button>
           ))}
         </div>
@@ -76,6 +78,7 @@ function KeysAdmin() {
       {tab === "devices" && <DevicesPanel />}
       {tab === "config" && <ConfigPanel />}
       {tab === "app" && <AppExtrasPanel />}
+      {tab === "dex" && <DexControls />}
     </PageShell>
   );
 }
@@ -85,6 +88,9 @@ function KeysAdmin() {
 function KeysPanel() {
   const [keys, setKeys] = useState<ValidKey[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [clock, setClock] = useState(nowSeconds());
+  useEffect(() => {const timer = window.setInterval(() => setClock(nowSeconds()), 1000);return () => window.clearInterval(timer);}, []);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all"|"active"|"expired"|"revoked"|"activated">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -93,37 +99,38 @@ function KeysPanel() {
 
   useEffect(() => {
     const unsub = listKeys((list) => {
+      setLoadError("");
       setKeys(list.sort((a, b) => b.date - a.date));
       setLoading(false);
-    });
+    }, error => {setLoadError(error.message);setLoading(false);});
     return unsub;
   }, []);
 
   const stats = useMemo(() => {
-    const now = nowSeconds();
+    const now = clock;
     return {
       total: keys.length,
-      active: keys.filter(k => k.status === "active" && k.expiry > now).length,
-      expired: keys.filter(k => k.expiry <= now).length,
+      active: keys.filter(k => k.status === "active" && !isKeyExpired(k, now)).length,
+      expired: keys.filter(k => isKeyExpired(k, now)).length,
       activated: keys.filter(k => k.activated).length,
       revoked: keys.filter(k => k.status === "revoked").length,
     };
-  }, [keys]);
+  }, [keys, clock]);
 
   const filtered = useMemo(() => {
-    const now = nowSeconds();
+    const now = clock;
     const q = search.trim().toLowerCase();
     return keys.filter(k => {
-      if (q && !(k.key.toLowerCase().includes(q) || k.fingerprint.toLowerCase().includes(q) || k.sourceIP.toLowerCase().includes(q))) return false;
+      if (q && !(k.key.toLowerCase().includes(q) || k.fingerprint.toLowerCase().includes(q) || (k.device || "").toLowerCase().includes(q) || k.sourceIP.toLowerCase().includes(q))) return false;
       switch (filter) {
-        case "active": return k.status === "active" && k.expiry > now;
-        case "expired": return k.expiry <= now;
+        case "active": return k.status === "active" && !isKeyExpired(k, now);
+        case "expired": return isKeyExpired(k, now);
         case "revoked": return k.status === "revoked";
         case "activated": return k.activated;
         default: return true;
       }
     });
-  }, [keys, search, filter]);
+  }, [keys, search, filter, clock]);
 
   const toggle = (key: string) => {
     setSelected((prev) => {
@@ -166,7 +173,8 @@ function KeysPanel() {
     }
     setBulkBusy(false);
     clearSelection();
-    toast.success(`Revoked ${ok} key${ok !== 1 ? "s" : ""}`);
+    if (ok === targets.length) toast.success(`Revoked ${ok} keys`);
+    else toast.error(`Revoked ${ok}/${targets.length} keys. Reload and retry the remaining keys.`);
   };
 
   const bulkExtend = async () => {
@@ -182,7 +190,8 @@ function KeysPanel() {
     }
     setBulkBusy(false);
     clearSelection();
-    toast.success(`Extended ${ok} key${ok !== 1 ? "s" : ""} by +${h}h`);
+    if (ok === targets.length) toast.success(`Extended ${ok} keys by +${h}h`);
+    else toast.error(`Extended ${ok}/${targets.length} keys. Lifetime keys need no extension; reload before retrying other keys.`);
   };
 
   const bulkDelete = async () => {
@@ -201,11 +210,13 @@ function KeysPanel() {
     }
     setBulkBusy(false);
     clearSelection();
-    toast.success(`Deleted ${ok} key${ok !== 1 ? "s" : ""}`);
+    if (ok === targets.length) toast.success(`Deleted ${ok} keys`);
+    else toast.error(`Deleted ${ok}/${targets.length} keys. Reload and retry the remaining keys.`);
   };
 
   return (
     <div>
+      {loadError && <p role="alert" className="mb-4 rounded-xl border border-red-400/40 p-3 text-sm text-red-300">Could not refresh keys: {loadError}. Reload to retry; displayed data may be stale.</p>}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <StatTile label="Total" value={stats.total} icon={<KeyRound className="h-4 w-4" />} />
         <StatTile label="Active" value={stats.active} icon={<ShieldCheck className="h-4 w-4 text-green-400" />} />
@@ -368,7 +379,7 @@ function useKeyActions(k: ValidKey) {
   };
 
   const now = nowSeconds();
-  const isExpired = k.expiry <= now;
+  const isExpired = isKeyExpired(k, now);
   const status: { label: string; cls: string } =
     k.status === "revoked" ? { label: "Revoked", cls: "border-red-400/40 text-red-300" } :
     isExpired ? { label: "Expired", cls: "border-amber-400/40 text-amber-300" } :
@@ -415,7 +426,7 @@ function KeyCard({ k, selected, onToggle }: { k: ValidKey; selected: boolean; on
             <span>Device: {k.device ? k.device.slice(0, 10) + "…" : "—"}</span>
             <span>Source: {k.source || "—"}</span>
             <span>Created: {k.date ? new Date(k.date * 1000).toLocaleDateString() : "—"}</span>
-            <span className="flex gap-1">Expires: <Countdown unixSec={k.expiry} /></span>
+            <span className="flex gap-1">Expires: <Countdown unixSec={k.expiry} pending={!isKeyBound(k)} /></span>
           </div>
           <div className="mt-3">
             <KeyActionButtons k={k} />
@@ -447,7 +458,7 @@ function KeyRow({ k, selected, onToggle }: { k: ValidKey; selected: boolean; onT
       <td className="py-3 pr-3"><span className={`rounded-full border px-2 py-0.5 text-xs ${status.cls}`}>{status.label}</span></td>
       <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">{k.device ? k.device.slice(0, 12) + "…" : "—"}</td>
       <td className="py-3 pr-3 text-xs text-muted-foreground">{k.date ? new Date(k.date * 1000).toLocaleString() : "—"}</td>
-      <td className="py-3 pr-3 text-xs"><Countdown unixSec={k.expiry} /></td>
+      <td className="py-3 pr-3 text-xs"><Countdown unixSec={k.expiry} pending={!isKeyBound(k)} /></td>
       <td className="py-3 pr-3 text-xs text-muted-foreground">{k.source || "—"}</td>
       <td className="py-3 pr-3">
         <KeyActionButtons k={k} />
@@ -467,10 +478,11 @@ function IconBtn({ children, onClick, title, disabled, danger }: { children: Rea
   );
 }
 
-function Countdown({ unixSec }: { unixSec: number }) {
+function Countdown({ unixSec, pending = false }: { unixSec: number; pending?: boolean }) {
   const [now, setNow] = useState(nowSeconds());
   useEffect(() => { const i = setInterval(() => setNow(nowSeconds()), 1000); return () => clearInterval(i); }, []);
-  if (!unixSec) return <span className="text-muted-foreground">—</span>;
+  if (pending) return <span className="text-muted-foreground">Starts at first login</span>;
+  if (unixSec === 0) return <span className="text-primary">Lifetime</span>;
   const diff = unixSec - now;
   if (diff <= 0) return <span className="text-amber-400">Expired</span>;
   const h = Math.floor(diff / 3600);
@@ -498,7 +510,7 @@ function ManualKeyForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const h = Number(hours);
-    if (!Number.isFinite(h) || h <= 0) { toast.error("Invalid hours"); return; }
+    if (!hours.trim() || !Number.isFinite(h) || h < 0 || h > 87600) { toast.error("Enter 0–87600 hours (0 = lifetime)"); return; }
     setBusy(true);
     try {
       const key = await createManualKey(prefix, h);
@@ -529,11 +541,11 @@ function ManualKeyForm() {
         ))}
       </div>
 
-      <label className="text-xs text-muted-foreground">Duration (hours)</label>
-      <Input type="number" min="1" value={hours} onChange={(e) => setHours(e.target.value)} className="mt-1 mb-3" />
+      <label className="text-xs text-muted-foreground">Duration (hours; 0 = lifetime)</label>
+      <Input type="number" min="0" max="87600" value={hours} onChange={(e) => setHours(e.target.value)} className="mt-1 mb-3" />
 
       <div className="mb-3 flex gap-1 text-xs">
-        {[{l:"1d",h:"24"},{l:"7d",h:"168"},{l:"30d",h:"720"}].map(p => (
+        {[{l:"1d",h:"24"},{l:"7d",h:"168"},{l:"30d",h:"720"},{l:"Lifetime",h:"0"}].map(p => (
           <button type="button" key={p.l} onClick={() => setHours(p.h)} className="rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-primary">{p.l}</button>
         ))}
       </div>
@@ -878,7 +890,7 @@ function LocksPanel() {
         <h3 className="mb-3 flex items-center gap-2 font-display text-base font-bold">
           <Lock className="h-4 w-4 text-red-400" /> Lock a device
         </h3>
-        <p className="mb-3 text-xs text-muted-foreground">Manually block a device fingerprint. The license worker rejects locked devices instantly.</p>
+        <p className="mb-3 text-xs text-muted-foreground">Manually block a device fingerprint. The license worker rejects locked devices at its next server access (ban checks may be cached for 60 seconds).</p>
         <label className="text-xs text-muted-foreground">Device fingerprint</label>
         <Input value={newFp} onChange={(e) => setNewFp(e.target.value)} placeholder="paste fingerprint" className="mt-1 mb-3 font-mono text-xs" />
         <label className="text-xs text-muted-foreground">Reason (optional)</label>
@@ -1147,7 +1159,7 @@ function LogsPanel() {
 }
 
 // ============================================================
-// App tab — App Config (dialog + links + API) · Feature Locks (mod menu)
+// App tab — legacy login dialog + links + API. DEX controls use the DEX tab.
 // · Payload upload. Supabase-backed via dgData config nodes. Mobile-friendly.
 // ============================================================
 const AX_INPUT = "w-full rounded-lg bg-background/70 border border-border px-3 py-2 text-sm outline-none focus:border-primary";
@@ -1155,13 +1167,6 @@ const AX_BTN = "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font
 const AX_GHOST = "inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:border-primary";
 const AX_CARD = "rounded-2xl border border-border bg-card/60 backdrop-blur p-4 sm:p-5 space-y-4";
 const AX_HEAD = "flex items-center gap-2 text-base sm:text-lg font-semibold text-primary";
-
-const AX_LOCK_GROUPS = [
-  { group: "Battle",   items: [ ["god","God Mode"],["oneHit","One-Hit Kill"],["crit","Always Critical"],["statusImmune","Status Immunity"],["noCD","No Cooldowns"],["alwaysCatch","Always Catch"] ] },
-  { group: "PvP",      items: [ ["botMatch","Always Bot Match"],["autoGrind","Auto-Grind"],["winTrophy","Always Win Trophy"],["noTrophyLoss","No Trophy Loss"] ] },
-  { group: "Cheats",   items: [ ["fullheal","Full Heal"],["pvpcd","Faster Item Use"],["itemtimer","No Item Wait"],["turnreset","Refill Every Turn"],["items5","5 Items/Turn"],["nicklen","Longer Nicknames"],["nickval","Allow Long Names"] ] },
-  { group: "Currency", items: [ ["setCoins","Set / Add Coins"],["setDust","Set / Add Dust"] ] },
-];
 
 function AxField(props: { label: string; value: string; onChange: (s: string) => void; placeholder?: string }) {
   return (
@@ -1176,7 +1181,6 @@ function AppExtrasPanel() {
   return (
     <div className="space-y-6">
       <AxAppConfig />
-      <AxFeatureLocks />
       <AxPayload />
     </div>
   );
@@ -1192,6 +1196,7 @@ function AxAppConfig() {
   const [api, setApi] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -1204,7 +1209,7 @@ function AxAppConfig() {
         if (!alive) return;
         setTitle(t || ""); setSubtitle(s || ""); setTutorial(tu || "");
         setTexts(tx || {}); setLinks(lk || {}); setApi(ap || {});
-      } catch (err) { toast.error(String(err)); } finally { if (alive) setLoading(false); }
+      } catch (err) { if (alive) {setFailed(true);toast.error(String(err));} } finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
   }, []);
@@ -1226,6 +1231,8 @@ function AxAppConfig() {
   };
 
   if (loading) return <div className={AX_CARD}><div className={AX_HEAD}><Settings2 className="h-5 w-5" /> App Config</div><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>;
+
+  if (failed) return <p role="alert">Could not load app settings. Reload before editing.</p>;
 
   return (
     <div className={AX_CARD}>
@@ -1257,47 +1264,6 @@ function AxAppConfig() {
       <button type="button" className={AX_BTN} style={{ background: "var(--gradient-primary)" }} disabled={busy} onClick={save}>
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save App Config
       </button>
-    </div>
-  );
-}
-
-/* ---- Feature Locks (mod menu) ---- */
-function AxFeatureLocks() {
-  const [locks, setLocks] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try { const v = await getConfigNode<Record<string, boolean>>("FeatureLocks"); if (alive) setLocks(v || {}); }
-      catch (err) { toast.error(String(err)); } finally { if (alive) setLoading(false); }
-    })();
-    return () => { alive = false; };
-  }, []);
-  const toggle = async (k: string) => {
-    const next = { ...locks, [k]: !locks[k] };
-    setLocks(next);
-    try { await setConfigNode("FeatureLocks", next); toast.success(k + (next[k] ? " locked" : " unlocked")); }
-    catch (err) { toast.error(String(err)); }
-  };
-  return (
-    <div className={AX_CARD}>
-      <div className={AX_HEAD}><Lock className="h-5 w-5" /> Feature Locks <span className="text-xs sm:text-sm text-muted-foreground">(mod menu)</span></div>
-      {loading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : AX_LOCK_GROUPS.map((grp) => (
-        <div key={grp.group} className="space-y-2">
-          <div className="text-xs font-semibold text-primary/80">{grp.group}</div>
-          <div className="grid grid-cols-1 gap-2 xs:grid-cols-2 sm:grid-cols-3">
-            {grp.items.map((it) => {
-              const on = !!locks[it[0]];
-              return (
-                <button type="button" key={it[0]} onClick={() => toggle(it[0])}
-                  className={AX_GHOST + (on ? " border-primary text-primary" : "")}>
-                  {on ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />} {it[1]}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
@@ -1353,3 +1319,4 @@ function AxPayload() {
     </div>
   );
 }
+

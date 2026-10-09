@@ -1,4 +1,3 @@
-import { DexControls } from "@/components/DexControls";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { Shield, Save, Loader2, Eye, EyeOff, Star, ArrowLeft, Settings2, Megaphone, Link2, Image as ImageIcon, Box, KeyRound, Trash2, Upload, Plus, User, Feather, Send } from "lucide-react";
@@ -51,9 +50,6 @@ function ControlPanel() {
         <Link to="/admin" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to dashboard
         </Link>
-        <Link to="/admin-keys" className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-400/20">
-          <KeyRound className="h-3.5 w-3.5" /> Key System
-        </Link>
       </div>
       <header className="mt-4 edge-light rounded-2xl glass p-6 sm:p-10">
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-300">
@@ -76,7 +72,11 @@ function ControlPanel() {
       </div>
 
       <div className="mt-6">
-        {tab === "dex" && <DexControls />}
+        {tab === "dex" && <div className="rounded-2xl border border-border bg-card/60 p-5">
+          <h2 className="text-xl font-bold">DEX controls have moved</h2>
+          <p className="my-3 text-sm text-muted-foreground">Manage feature locks, themes, branding and community links in Key system → Royal Void DEX.</p>
+          <Link to="/admin-keys" className="text-primary underline">Open Key system</Link>
+        </div>}
         {tab === "branding" && <BrandingEditor initial={branding} onSaved={refresh} />}
         {tab === "announcement" && <AnnouncementEditor initial={announcement} onSaved={refresh} />}
         {tab === "socials" && <SocialsEditor initial={socials} onSaved={refresh} />}
@@ -741,4 +741,5 @@ function SaveRow({ saving, onSave, onReset }: { saving: boolean; onSave: () => v
     </div>
   );
 }
+
 

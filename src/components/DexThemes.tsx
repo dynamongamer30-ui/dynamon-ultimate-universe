@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { getConfigNode, setConfigNode } from "@/lib/dgData";
+import { getConfigNode, compareConfigNode } from "@/lib/dgData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -44,6 +44,7 @@ function normalize(value: unknown): ThemeConfig {
 }
 
 export function DexThemes() {
+  const snapshot = useRef<unknown>(null);
   const [config,setConfig]=useState<ThemeConfig>(DEFAULT);
   const [selected,setSelected]=useState<ThemeId>("dark");
   const [loading,setLoading]=useState(true);
@@ -51,7 +52,7 @@ export function DexThemes() {
   const [busy,setBusy]=useState(false);
   useEffect(()=>{
     let active=true;
-    getConfigNode<unknown>("DexThemes").then(value=>{if(active)setConfig(normalize(value));})
+    getConfigNode<unknown>("DexThemes").then(value=>{if(active){snapshot.current=value;setConfig(normalize(value));}})
       .catch(error=>{if(active){setFailed(true);toast.error(error instanceof Error?error.message:"Could not load DEX themes");}})
       .finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false;};
@@ -69,7 +70,7 @@ export function DexThemes() {
   async function save() {
     for(const id of IDS)for(const key of COLOR_KEYS){const color=config.palettes[id]?.[key];if(color!==undefined&&!isColor(color)){toast.error(`${id}: ${key} must use #RRGGBB or be empty.`);return;}}
     setBusy(true);
-    try{await setConfigNode("DexThemes",normalize(config));toast.success("Themes saved. Applied at the next game launch with the updated Worker and DEX.");}
+    try{const next=normalize(config);await compareConfigNode("DexThemes",next,snapshot.current);snapshot.current=next;toast.success("Themes saved. Applied at the next game launch with the updated Worker and DEX.");}
     catch(error){toast.error(error instanceof Error?error.message:"Could not save themes");}
     finally{setBusy(false);}
   }
@@ -96,3 +97,4 @@ export function DexThemes() {
     <Button disabled={busy} onClick={save}>Save DEX themes</Button>
   </section>;
 }
+
