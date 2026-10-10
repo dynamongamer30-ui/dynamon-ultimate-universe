@@ -137,7 +137,7 @@ Choose exactly one of --upload and --bundle-out. The private export includes AES
 
 The active unmodified adapter's Mons command first appends IDs to GameState._capturedMons, then invokes GameState.setString. In the inspected game, setString belongs to Persistence/storage adapters; GameState has no such method. The UI can therefore show an inflated/correct-looking Dynadex total and still report `This game version does not support setString`. That counter is a collection-history list, not the live owned-monster list.
 
-The prepared menu_fixes.js wraps the current bridge/installer, preserving the existing runtime, automation, item, skin and other commands. Its Mons path checks locks, obtains existing owned IDs from getPlayerMons(true), constructs missing supported core.Mon instances at level 1, invokes addPlayerMon, and calls saveMonsData. Existing monsters/levels remain unchanged. Merged retired entries and sealed-door entities are excluded. Repeated unlocks do not duplicate already owned types.
+The prepared menu_fixes.js wraps the current bridge/installer, preserving the existing runtime, automation, item, skin and other commands. Its Mons path checks locks, obtains existing owned IDs from getPlayerMons(true), constructs missing supported core.Mon instances at the current game maximum level, invokes addPlayerMon, and calls saveMonsData. Owned monsters below the current cap are upgraded through doLevelUp(false, missingLevels); existing instances, UIDs and duplicates are retained. Merged retired entries and sealed-door entities are excluded. Repeated unlocks do not duplicate already owned types.
 
 The real saveMonsData persists MONS_DATA (owned instances, level/HP/UID/party/skin data) and CAPTURED_MONS together through the game's own Persistence layer. This repair does not rename Persistence to GameState or invent a missing API. Existing capture history is preserved; it is not cleared merely because an entry is not currently owned.
 
@@ -293,7 +293,7 @@ Arena also has Auto Grind: Start sets `autoGrind=true`, Pause/Resume sends `paus
 
 - Unlock all supported categories confirms, then sends `unlockAll`. Prepared Java now confirms adding missing playable Dynamons; the unchanged live runtime still has the collection-only failure described in the repair notes.
 - Separate Mons, Skins, Emotes and Avatars buttons confirm, then send `unlock(kind)`.
-- Before the repair, Mons changed collection entries and did not add playable monsters. Prepared Java labels this All playable Dynamons; its matching prepared payload adds missing owned monsters at level 1. This is not deployed yet and does not validate purchases. Refresh the relevant game screen after changes.
+- Before the repair, Mons changed collection entries and did not add playable monsters. Prepared Java labels this All playable Dynamons; its matching prepared payload adds missing owned monsters at the current game maximum level. This is not deployed yet and does not validate purchases. Refresh the relevant game screen after changes.
 
 ## Team
 
@@ -1336,3 +1336,8 @@ Replace update_payload_once.py with the complete latest GitHub file, then rerun 
 ## Private owner key convenience — 2026-10-10
 
 The owner requested restoring an embedded administrator key for command-only uploads. The complete public updater now includes an empty OWNER_ADMIN_KEY constant. Populate it only in the private phone copy. Resolution order is DG_ADMIN_KEY environment override, private OWNER_ADMIN_KEY, hidden prompt. After setting the private constant once, the normal --upload command needs no additional input. Replacing the updater later resets the public empty constant; reapply the private setting. The supplied secret is deliberately absent from repository files, public ZIPs and this guide. No key was rotated, no signing behavior or original-engine validation changed, and no live upload was performed for this convenience change. Local validation checks embedded-key fallback and environment override without network publication.
+
+
+## Maximum-level unlock correction — 2026-10-10
+
+Owner reports the prior payload granted level-1 Dynamons. The replacement repair resolves Mon.getMaxLevel() at each unlock, validates a positive integer cap before mutation, constructs missing playable entries at that cap, and upgrades all existing owned instances below the cap through the verified game doLevelUp(false, cap-currentLevel) API. In the supplied original, getMaxLevel reads GameplayDB.getMonGenData().maxMonLevel; doLevelUp updates HP, abilities, XP target, dispatches game events and saves owned data. No cap of 85 is hardcoded. Pressing unlock again repairs previously granted level-1 entries without creating duplicate species. Ownership exclusions, locks, persistence, party highlight repair and both supported engine hashes remain intact. This applies to Mons unlock and the Mons stage of unlockAll, not every shop or catch reward. The owner report indicates a previous payload ran on device; the exact current server build was not rechecked here. This replacement is prepared and locally tested, not uploaded or device-tested by the assistant. Replace the updater, restore its private OWNER_ADMIN_KEY locally if desired, run --upload, then fully reopen/login and press Unlock again.

@@ -29,7 +29,7 @@ With Python and the `cryptography` package available, run from the extracted pac
 python update_payload_once.py --original /path/to/current-apk/dynamons_world.min.js --signing-key /path/to/signing_key.pem --bundle-out /path/to/private-fixed-payload.json
 ```
 
-The private JSON contains AES keys: keep it off GitHub and out of the APK. The reviewed website upload form still expects the older flat client-3 format, so do not use it for this dual-client bundle. Publish directly through the corrected updater and existing ADMIN_KEY prompt:
+The private JSON contains AES keys: keep it off GitHub and out of the APK. The reviewed website upload form still expects the older flat client-3 format, so do not use it for this dual-client bundle. Publish directly through the corrected updater and existing ADMIN_KEY (private OWNER_ADMIN_KEY constant, environment override, or hidden prompt):
 
 ```bash
 python update_payload_once.py --original /path/to/current-apk/dynamons_world.min.js --signing-key /path/to/signing_key.pem --upload
@@ -68,3 +68,7 @@ cd /storage/emulated/0/Dynamons/Mod && python update_payload_once.py --original 
 Without --upload or --bundle-out, argument validation stops before generating/uploading anything. No script replacement is needed for that error.
 
 The supplied-original table was validated by generating the full patched game and both signed/encrypted client variants. Replace the old Python file with the latest complete GitHub copy before retrying. No live publication was performed during these checks.
+
+For a command-only upload, set OWNER_ADMIN_KEY once in your private phone copy of update_payload_once.py. The GitHub copy keeps that constant empty. Updating the script requires setting it again. Environment DG_ADMIN_KEY takes precedence. Never publish your customized private copy.
+
+Maximum-level correction: Mons unlock adds missing playable Dynamons at Mon.getMaxLevel() and upgrades existing owned Dynamons below that cap via the game level-up API. Repeating Unlock repairs the prior level-1 grants without duplicates. Upload the new payload and reopen/login before pressing Unlock again. Restore OWNER_ADMIN_KEY in your private updated Python file if using the no-prompt option. Shop/catch rewards retain their own level rules.

@@ -3,7 +3,7 @@
  */
 (function () {
   'use strict';
-  var revision = 'owned-mons-party-1';
+  var revision = 'owned-mons-party-max-2';
   function cls(name) {
     return (window.$DW || window.$hxClasses || {})['co.doubleduck.dynamons3.' + name];
   }
@@ -22,19 +22,35 @@
         typeof game.saveMonsData !== 'function' || typeof db.getAllMons !== 'function') {
       throw Error('This game version does not support adding owned Dynamons');
     }
-    var owned = Object.create(null), unique = Object.create(null), pending = [];
+    var maxLevel = Number(typeof Mon.getMaxLevel === 'function' ? Mon.getMaxLevel() : NaN);
+    if (!Number.isInteger(maxLevel) || maxLevel < 1) throw Error('Cannot determine the game maximum level');
+    var owned = Object.create(null), unique = Object.create(null), pending = [], upgrades = [];
     game.getPlayerMons(true).forEach(function (mon) {
-      if (mon && typeof mon.getId === 'function') owned[mon.getId()] = true;
+      if (mon && typeof mon.getId === 'function') {
+        owned[mon.getId()] = true;
+        if (typeof mon.getLevel !== 'function') throw Error('Cannot read owned Dynamon level');
+        var level = Number(mon.getLevel());
+        if (!Number.isInteger(level) || level < 1) throw Error('Invalid owned Dynamon level');
+        if (level < maxLevel) {
+          if (typeof mon.doLevelUp !== 'function') throw Error('Cannot upgrade owned Dynamons');
+          upgrades.push({mon: mon, levels: maxLevel - level});
+        }
+      }
     });
     // Construct first: an invalid database row must not leave a partial collection.
     db.getAllMons().forEach(function (data) {
       if (!data || typeof data.id !== 'string' || !data.id || data.mergedDynamon != null ||
           /^sealed_door/.test(data.id) || unique[data.id]) return;
       unique[data.id] = true;
-      if (!owned[data.id]) pending.push(new Mon(data.id, 1));
+      if (!owned[data.id]) pending.push(new Mon(data.id, maxLevel));
     });
-    var added = 0;
+    var added = 0, upgraded = 0;
     try {
+      upgrades.forEach(function (entry) {
+        entry.mon.doLevelUp(false, entry.levels);
+        if (Number(entry.mon.getLevel()) !== maxLevel) throw Error('Level upgrade did not reach maximum');
+        upgraded++;
+      });
       pending.forEach(function (mon) {
         game.addPlayerMon(mon);
         added++;
@@ -43,10 +59,10 @@
       // GameState has no setString method in 1.13.37.
       game.saveMonsData();
     } catch (error) {
-      throw Error('Unlock stopped after ' + added + ' additions: ' + String(error.message || error));
+      throw Error('Unlock stopped after ' + added + ' additions and ' + upgraded + ' upgrades: ' + String(error.message || error));
     }
-    return {ok: true, added: added, owned: game.getPlayerMons(true).filter(Boolean).length,
-      message: added + ' playable Dynamons added; existing Dynamons unchanged'};
+    return {ok: true, added: added, upgraded: upgraded, maxLevel: maxLevel, owned: game.getPlayerMons(true).filter(Boolean).length,
+      message: added + ' Dynamons added at level ' + maxLevel + '; ' + upgraded + ' owned Dynamons upgraded'};
   }
   function install() {
     var bridge = window.__DG_NATIVE;
