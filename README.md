@@ -7,3 +7,5 @@
 [All Java source files](raw-project/src) · [Source-only ZIP](Royal-Void-Supplied-SRC.zip) · [Menu control inventory](CURRENT_MENU_CONTROLS.md) · [Start here](START_HERE.md) · [Archive checksums](SHA256SUMS.txt)
 
 Superseded versioned build/archive packages and their old archive-based build workflow were removed. Necessary source, assets and build tools remain. Main remains unchanged. Other branch deletion is not completed because the connector has no branch-delete operation.
+
+Latest update: page entries reset to the top; valid Scan Team cards and position are retained. Real-Arena wait durations are separated from visual animation speed. Use both the updated payload and rebuilt classes7.dex. Local timer tests passed; Android/live-opponent validation remains pending.

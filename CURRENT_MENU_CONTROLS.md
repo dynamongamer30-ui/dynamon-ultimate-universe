@@ -6,7 +6,7 @@ Reviewed 10 October 2026. This describes the supplied Java source, supporting DE
 
 - Floating launcher: tap opens the panel; drag repositions and snaps to an edge, saving normalized coordinates. Compact mode uses an edge handle. Long press opens four actions: Open menu, Stop all automation, Expand launcher/Collapse to edge handle, Retry game loading. Retry invokes the native payload loader when present.
 - Panel header can be dragged within screen bounds. Close and Android Back hide the menu. Opening/hiding controls backdrop capture, ambient glow, focus and keyboard dismissal.
-- Navigation expands/collapses and selects Home, Battle, Arena, Items, Unlock, Team, Skins, Advanced, Settings (Command centre), Community. Page scroll positions are saved.
+- Navigation expands/collapses and selects Home, Battle, Arena, Items, Unlock, Team, Skins, Advanced, Settings (Command centre), Community. Pages open at the top when selected; a valid Scan Team result keeps its cards and position.
 - Search matches feature title, description and category across the catalogue, replacing page content while a query exists. It does not search inventory quantities or every page action. Clear the query to return to page content.
 - Long press a feature card adds/removes it from local Favorites, shown on Home. Tap its switch sends `flag(key,value)`. Runtime readiness and app/mod/individual locks affect availability; the payload must enforce them too.
 - GAME CONNECTED reflects snapshot readiness. Preview mode uses sample data. Loader errors appear as notices. Snapshot polling is approximately 1.2 seconds with the panel visible and 4 seconds hidden; this is local WebView communication.
@@ -17,7 +17,7 @@ Reviewed 10 October 2026. This describes the supplied Java source, supporting DE
 - Dashboard shows coins, dust and current speed.
 - Edit coins & dust opens two inputs. Apply submits `coins(value)` and `dust(value)` separately, so these are not one atomic operation.
 - Open command centre navigates to Settings.
-- Speed slider updates its label during dragging and submits `speed(value)` on release. Min/max/step come from signed menu configuration, with reviewed 0.1–8/0.1 fallback before it arrives. The speed card explains animation gains and Arena timer/desync risks; speed remains the user choice.
+- Speed slider updates its label during dragging and submits `speed(value)` on release. Min/max/step come from signed menu configuration, with reviewed 0.1–8/0.1 fallback before it arrives. The speed card explains faster visual playback, protected real-Arena waits and remaining visual/state risks; speed remains the user choice.
 - Auto World displays map, progress, bosses, quests, elapsed/remaining time and IDLE/RUNNING/PAUSED status. Start sets `autoWorld=true`; Pause/Resume sends `pause(kind=world,value)`; Stop & restore sets it false. Pausing is available when automation is active. Exact route/battle behavior lives in the game payload.
 - Favorites are the same feature cards and switches as their original pages.
 
@@ -105,3 +105,5 @@ The supplied MainActivity is the original baseline and has no mod attach calls. 
 
 
 Current prepared revision: bot matchmaking locks during any active match and releases after cleanup; other controls remain available. Full-heal gates Arena heal spray slots/text/timer and consumes stock normally. Unlock All includes current worlds and active variants without completing story quests. Scan results alone remain scan-dependent; your team is cyan and enemy cards coral with a subtle static outline/glow. Native UI changes require rebuilding classes7.dex, in addition to publishing the new payload. Live real-player action acceptance and freeze resolution remain unverified.
+
+Current revision: Dashboard and other page entries reset to top; valid Scan Team is the exception. Same-page polling/render preserves position. Scan roster/battle changes invalidate cache and stale edits. Real-Arena TweenChain waits keep wall-clock duration while tto movement and sprite playback retain selected animation speed. A 60-second wait stays 60 seconds at 4x, while a 400ms movement tween becomes 100ms. Both new payload and rebuilt classes7.dex are required.

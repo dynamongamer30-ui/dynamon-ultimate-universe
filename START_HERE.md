@@ -17,3 +17,7 @@ After every mod task, update the guide, complete changed files, links/archives/c
 Older versioned ZIPs and the workflow that rebuilt an old ZIP have been removed. Historical raw-project integration/server/tool files are reference only unless explicitly synchronized against the active system. Do not deploy them as though they were the live Worker. The canonical new repair updater is raw-project/tools/update_payload_once.py.
 
 The current package fixes numeric bot result codes, potion gating, worlds, startup control visibility, scan colors and permanent shop compatibility. Bot matchmaking locks during active matches; speed remains selectable with an effects/risk note. Use both the updated payload and rebuilt classes7.dex for the complete change. Real-player acceptance and freezes remain device-test items.
+
+## Latest page navigation and animation-clock update
+
+Dashboard and every normal page open at the top when selected. Valid Scan Team results are retained; a roster/battle change clears them. At 4x, a real-Arena 60-second tween wait remains 60 seconds while a 400ms movement tween is 100ms. Apply both the new payload and rebuilt classes7.dex. See the current guide for exact validation and limitations.

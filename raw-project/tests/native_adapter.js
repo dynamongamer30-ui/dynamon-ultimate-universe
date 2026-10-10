@@ -91,6 +91,13 @@
   function team(){var g=gs(),b=window.__curBattle,mine=invoke(g,'getParty').filter(Boolean),foe=[];
     if(b&&b._selfMon&&mine.indexOf(b._selfMon)<0)mine.unshift(b._selfMon);if(b&&b._enemyMon)foe.push(b._enemyMon);
     return {mine:mine,foe:foe};}
+  function validScanToken(){
+    if(!scanToken || scanBattle!==window.__curBattle)return '';
+    var sides=team(),current=sides.mine.concat(sides.foe);
+    if(current.length!==scanMons.length)return '';
+    for(var i=0;i<current.length;i++)if(current[i]!==scanMons[i])return '';
+    return scanToken;
+  }
   function skinConfig(a){var pack=String(a.pack||'');if(!/^[A-Za-z0-9_-]{1,64}$/.test(pack))throw Error('Use a valid pack folder name');
     var j=a.manifest;if(!j||!window.__DG_parseManifest)throw Error('Load a valid manifest first');var P=window.__DG_parseManifest(j),enabled={};
     (a.enabled||[]).forEach(function(id){if(P.mons[id])enabled[id]=1;});
@@ -98,7 +105,7 @@
   }
   window.__DG_NATIVE={snapshot:function(){try{
     enforceLocks();var g=gs(),A=api(),F={},skin={};try{skin=JSON.parse(localStorage.getItem('__DG_SKIN')||'{}');}catch(e){};Object.keys(A.F).forEach(function(k){F[k]=!!A.F[k];});
-    return {ok:true,ready:!!g,coins:invoke(g,'getPlayerCoins'),dust:invoke(g,'getPlayerDust'),speed:A.getSpeed(),flags:F,locks:locks(),party:invoke(g,'getParty').filter(Boolean).length,
+    return {ok:true,ready:!!g,coins:invoke(g,'getPlayerCoins'),dust:invoke(g,'getPlayerDust'),speed:A.getSpeed(),scanToken:validScanToken(),flags:F,locks:locks(),party:invoke(g,'getParty').filter(Boolean).length,
       world:window.__DG_autoWorldStatus?window.__DG_autoWorldStatus():{},grind:{on:!!window.__DG_GRIND,paused:!!window.__DG_GRIND_PAUSED},skin:skin,notice:window.__DG_LAST_NOTICE||null,brand:window.__DG_BRAND||null,menuConfig:window.__DG_MENU_CONFIG||null};
   }catch(e){return {ok:false,ready:false,error:String(e.message||e)};}},command:function(name,a){try{
     if(!gs())throw Error('Game is not ready');a=a||{};var g=gs(),r={ok:true,message:'Applied'};
@@ -115,7 +122,7 @@
     else if(name==='item'){requireOpen('items');var id=String(a.id),exists=items().some(function(x){return x.id===id;});if(!exists)throw Error('Item is unavailable');invoke(g,'setItemAmount',[id,Math.round(number(a.value,0,999999))]);r.value=invoke(g,'getItemAmount',[id]);}
     else if(name==='allItems'){requireOpen('items');var amount=Math.round(number(a.value,0,999999));items().forEach(function(x){invoke(g,'setItemAmount',[x.id,amount]);});}
     else if(name==='scan'){var t=team();scanMons=t.mine.concat(t.foe);scanBattle=window.__curBattle;scanToken=String(Date.now())+'-'+Math.random();r.token=scanToken;r.mons=scanMons.map(function(m,i){var d=m.getData?m.getData():{};return {index:i,name:d.title||d.id||'Dynamon',side:i<t.mine.length?'Your team':'Enemy',hp:m.getCurrHP(),max:m.getTotalHP(),atk:m.getStat('atk'),def:m.getStat('def'),aim:m.getStat('aim')};});}
-    else if(name==='stat'){requireOpen('teamEditor');if(a.token!==scanToken||scanBattle!==window.__curBattle)throw Error('Battle changed; scan again');var m=scanMons[a.index],current=team();if(!m||current.mine.concat(current.foe).indexOf(m)<0)throw Error('Team changed; scan again');var value=Math.round(number(a.value,0,1000000));if(a.stat==='hp'){if(value>m.getTotalHP())throw Error('HP exceeds this monster maximum');if(m.forceSetHP)m.forceSetHP(value);else invoke(m,'setCurrHP',[value]);}else if(['atk','def','aim'].indexOf(a.stat)>=0)invoke(m,'offsetStat',[a.stat,value-m.getStat(a.stat)]);else throw Error('Unknown stat');}
+    else if(name==='stat'){requireOpen('teamEditor');if(a.token!==validScanToken())throw Error('Battle or team changed; scan again');var m=scanMons[a.index],current=team();if(!m||current.mine.concat(current.foe).indexOf(m)<0)throw Error('Team changed; scan again');var value=Math.round(number(a.value,0,1000000));if(a.stat==='hp'){if(value>m.getTotalHP())throw Error('HP exceeds this monster maximum');if(m.forceSetHP)m.forceSetHP(value);else invoke(m,'setCurrHP',[value]);}else if(['atk','def','aim'].indexOf(a.stat)>=0)invoke(m,'offsetStat',[a.stat,value-m.getStat(a.stat)]);else throw Error('Unknown stat');}
     else if(name==='unlock'){var kind=String(a.kind);requireOpen('unlock'+kind);var D=db(),I=g._playerItems&&g._playerItems.h;
       if(kind==='Mons'){var ids=invoke(D,'getAllMons').map(function(x){return x.id;}),all=g._capturedMons||[];ids.forEach(function(id){if(all.indexOf(id)<0)all.push(id);});g._capturedMons=all;var DK=cls('data.DataKey');invoke(g,'setString',[DK&&DK.CAPTURED_MONS||'CAPTURED_MONS',all.join(';')]);r.message=ids.length+' Dynamon collection entries unlocked';}
       else if(kind==='Skins'||kind==='Emotes'){if(!I)throw Error('Inventory is not ready');var ids=(kind==='Skins'?EMBED_SKINS:EMBED_EMOTES).slice();invoke(D,'getAllItems').forEach(function(x){if(kind==='Emotes'?/^emote#/.test(x.id):/skin/i.test(x.id)){if(ids.indexOf(x.id)<0)ids.push(x.id);}});ids.forEach(function(id){if(kind==='Skins'){var base=String(id).replace(/^skin#/,'');I[base]=1;I['skin#'+base]=1;}else I[/^emote#/.test(id)?id:'emote#'+id]=1;});invoke(g,'saveItems');r.message=ids.length+' inventory entries unlocked';}

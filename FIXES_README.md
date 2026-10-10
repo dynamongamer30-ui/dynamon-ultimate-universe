@@ -81,6 +81,12 @@ Maximum-level correction: Mons unlock adds missing playable Dynamons at Mon.getM
 - Unlock All includes supported worlds and active variants, using map persistence and the existing world-unlock item. Story completion is unchanged. A separate Worlds button is included.
 - All 19 feature cards and the speed slider are discoverable from startup. Scan results still require Scan. Enemy cards use coral with a subtle outline/glow; your team uses cyan.
 - Shop compatibility is permanently ON, including saved-profile/reset paths; the UI labels it Always enabled.
-- Speed remains your choice. The speed card explains that it speeds animation and also local waits: at 4x a 60-second network timer can become 15 seconds. The opponent is not accelerated. Use 1x if swaps/disconnects/freezes occur. Zero side effects and live stability are not promised.
+- Speed remains your choice. The current speed card explains that visual playback accelerates while real-Arena tween wait timers are protected: at 4x a 60-second wait stays 60 seconds. The opponent/network is not accelerated. Use 1x if swaps/disconnects/freezes occur. Zero side effects and live stability are not promised.
 
 Both the new payload and a rebuilt classes7.dex are required for the full delivery. The updater alone does not change the native colors/initial panels/speed note. No live upload, DEX build or phone installation was performed by the assistant. Confirmed conflicts were corrected, but invisible enemies and every real-player freeze cannot be declared resolved without live testing.
+
+## Latest navigation and animation-clock update
+
+Every page opens at the top when selected, including Dashboard after visiting Battle. Valid Scan Team results are the exception: cards and their scroll position survive returning to Team. A fresh scan starts at the results area; roster/battle changes clear stale scans. Same-page polling/render does not reset scrolling.
+
+Real Arena wait timers now retain normal wall duration. Movement/effect interpolation and sprite playback still follow selected speed; at 4x a 400ms movement tween is 100ms while a 60-second wait remains 60 seconds. World/bot waits keep their existing behavior. Network/turn order is not sped up. Both payload publication and rebuilding/installing classes7.dex are necessary. Android UI and live multiplayer still need phone testing.

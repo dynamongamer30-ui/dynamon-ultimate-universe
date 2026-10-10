@@ -44,6 +44,13 @@ public final class ModController {
     boolean requesting;
     String page = "Home";
     String query = "";
+    private EditText searchBox;
+    private JSONArray teamScanMons;
+    private String teamScanToken = "";
+    private int teamScanScrollY;
+    private LinearLayout teamScanResults;
+    private int pendingScrollY = 0;
+    private int renderGeneration;
     private final HashMap<String, ToggleView> switches = new HashMap<String, ToggleView>();
     private final HashMap<Integer, TextView> partyButtons = new HashMap<Integer, TextView>();
     private final HashSet<String> inFlight = new HashSet<String>();
@@ -195,6 +202,7 @@ public final class ModController {
         right.setPadding(dp(10), 0, 0, 0);
         main.addView(right, new LinearLayout.LayoutParams(0, -1, 1));
         final EditText search = input("Search features", false);
+        searchBox = search;
         search.setSingleLine(true);
         search.setTextSize(13);
         search.setText(query);
@@ -290,19 +298,9 @@ public final class ModController {
             n.setOnClickListener(new View.OnClickListener(){
                 
                 public void onClick(View v) {
-                    prefs.set("scroll." + page, scroll.getScrollY());
-                    page = p[0];
-                    prefs.set("page", page);
                     haptics.tick(v);
                     sounds.play(false);
-                    makeNav();
-                    render();
-                    scroll.post(new Runnable(){
-                        
-                        public void run() {
-                            scroll.scrollTo(0, prefs.integer("scroll." + page, 0));
-                        }
-                    });
+                    navigateTo(p[0]);
                 }
             });
         }
@@ -311,6 +309,7 @@ public final class ModController {
     public void show() {
         if (closed || visible) return;
         visible = true;
+        restoreScroll(page.equals("Team") && teamScanMons!=null ? teamScanScrollY : 0,renderGeneration);
         panel.animate().setListener(null);panel.animate().cancel();panel.setVisibility(View.GONE);
         
         ambient.setVisibility(View.GONE);
@@ -331,7 +330,7 @@ public final class ModController {
         visible = false;
         backdrop.cancel(); backdrop.setVisibility(View.GONE);
         ambient.setVisibility(View.GONE);
-        prefs.set("scroll." + page, scroll.getScrollY());
+        if(page.equals("Team") && teamScanMons!=null)teamScanScrollY=scroll.getScrollY();
         hideKeyboard();
         motion.exit(panel, new Runnable(){
             
@@ -383,6 +382,10 @@ public final class ModController {
                 requesting = false;
                 if (closed) return;
                 state = s;
+                if(teamScanMons!=null && s.has("scanToken") && !teamScanToken.equals(s.optString("scanToken"))){
+                    teamScanMons=null;teamScanToken="";teamScanScrollY=0;
+                    if(teamScanResults!=null){teamScanResults.removeAllViews();if(page.equals("Team"))restoreScroll(0,renderGeneration);}
+                }
                 boolean catalogueChanged=FeatureRegistry.load(s.optJSONObject("menuConfig"));
                 if(catalogueChanged)render();
                 updateState();
@@ -720,8 +723,28 @@ public final class ModController {
         });
     }
     
+    private void navigateTo(String next) {
+        if(page.equals("Team") && teamScanMons!=null)teamScanScrollY=scroll.getScrollY();
+        page=next; prefs.set("page",page);
+        query="";
+        if(searchBox!=null)searchBox.setText("");
+        pendingScrollY=page.equals("Team") && teamScanMons!=null ? teamScanScrollY : 0;
+        makeNav();render();
+    }
+
+    private void restoreScroll(final int y, final int generation) {
+        final ScrollView target=scroll;
+        target.post(new Runnable(){public void run(){
+            if(!closed && scroll==target && renderGeneration==generation)target.scrollTo(0,y);
+        }});
+    }
+
     void render() {
         if (body == null) return;
+        final int targetScroll=pendingScrollY>=0 ? pendingScrollY : scroll.getScrollY();
+        pendingScrollY=-1;
+        final int generation=++renderGeneration;
+        teamScanResults=null;
         body.removeAllViews();
         switches.clear();
         partyButtons.clear();
@@ -752,6 +775,7 @@ public final class ModController {
         } else if (page.equals("Settings")) settingsPage(); else if (page.equals("Community")) community();
         updateState();
         if (scrollMotion != null) scrollMotion.reset();
+        restoreScroll(targetScroll,generation);
     }
     
     private void features(String category) {
@@ -793,7 +817,7 @@ public final class ModController {
                 currencyDialog();
             }
         });
-        addButton(c, "Open command centre", false, new Runnable(){ public void run(){ page="Settings"; prefs.set("page",page); makeNav(); render(); }});
+        addButton(c, "Open command centre", false, new Runnable(){ public void run(){ navigateTo("Settings"); }});
         speedCard();
         automation(true);
         section("Favorites", "Long press a feature card to pin it here.");
@@ -811,7 +835,7 @@ public final class ModController {
     private void speedCard() {
         LinearLayout c = card();
         c.addView(text("GAME SPEED", 11, RoyalVoidTheme.colors(activity).LAVENDER, true));
-        TextView speedNote = text("Higher speed makes animations faster and shortens local waits. In real Arena, 4x can shorten a 60-second timeout to 15 seconds, causing early disconnects, delayed enemy swaps or freezes. It does not speed up the opponent. Choose 1x if a match becomes unstable.", 11, RoyalVoidTheme.colors(activity).MUTED, false);
+        TextView speedNote = text("Speed changes movement, effects and sprite playback. Real Arena wait timers stay at normal duration, so 4x animation does not shorten a 60-second response wait. It cannot speed up the opponent or network. Visual or state mismatches may still occur; choose 1x if unstable.", 11, RoyalVoidTheme.colors(activity).MUTED, false);
         speedNote.setPadding(0,dp(6),0,dp(10));
         c.addView(speedNote);
         final TextView value = text(String.format(java.util.Locale.US, "%.1f\u00d7", state.optDouble("speed", 1)), 24, RoyalVoidTheme.colors(activity).TEXT, true);
@@ -1070,6 +1094,8 @@ public final class ModController {
         }
         updatePartyButtons();
         final LinearLayout results = column();
+        teamScanResults=results;
+        renderTeamScan(results);
         addButton(body, "Scan team & enemy", true, new Runnable(){
             
             public void run() {
@@ -1081,6 +1107,28 @@ public final class ModController {
                         JSONArray mons = r.optJSONArray("mons");
                         final String token = r.optString("token");
                         if (mons == null) return;
+                        teamScanMons=mons;teamScanToken=token;teamScanScrollY=0;
+                        if(page.equals("Team") && teamScanResults!=null){
+                            renderTeamScan(teamScanResults);
+                            final int scanGeneration=renderGeneration;
+                            scroll.post(new Runnable(){public void run(){
+                                if(!closed && page.equals("Team") && renderGeneration==scanGeneration && teamScanResults!=null){
+                                    teamScanScrollY=teamScanResults.getTop();scroll.scrollTo(0,teamScanScrollY);
+                                }
+                            }});
+                        }
+                    }
+                });
+            }
+        });
+        body.addView(results);
+    }
+    
+    private void renderTeamScan(final LinearLayout results) {
+        results.removeAllViews();
+        if(teamScanMons==null)return;
+        final JSONArray mons=teamScanMons;
+        final String token=teamScanToken;
                         for (int i = 0; i < mons.length(); i++) {
                             final JSONObject m = mons.optJSONObject(i);
                             if (m == null) continue;
@@ -1110,13 +1158,8 @@ public final class ModController {
                                 });
                             }
                         }
-                    }
-                });
-            }
-        });
-        body.addView(results);
     }
-    
+
     private void skinsPage() {
         section("Skin atelier", "Load a pack from your existing Supabase storage. Saved changes apply after restarting the game.");
         final EditText pack = input("Pack folder name", false);
@@ -1259,7 +1302,8 @@ public final class ModController {
         backdrop.setX(positionX);backdrop.setY(positionY);
         launcher.setVisibility(wasVisible?View.GONE:View.VISIBLE);
         final ScrollView rebuiltScroll=scroll;
-        rebuiltScroll.post(new Runnable(){public void run(){if(!closed&&scroll==rebuiltScroll)rebuiltScroll.scrollTo(0,scrollY);}});
+        final int rebuiltGeneration=renderGeneration;
+        rebuiltScroll.post(new Runnable(){public void run(){if(!closed&&scroll==rebuiltScroll&&renderGeneration==rebuiltGeneration)rebuiltScroll.scrollTo(0,scrollY);}});
         if(wasVisible){
             backdrop.capture(activity,new Runnable(){public void run(){if(closed||!visible)return;
                 backdrop.setVisibility(View.VISIBLE);panel.setVisibility(View.VISIBLE);
