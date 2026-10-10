@@ -45,6 +45,7 @@ public final class ModController {
     String page = "Home";
     String query = "";
     private final HashMap<String, ToggleView> switches = new HashMap<String, ToggleView>();
+    private final HashMap<Integer, TextView> partyButtons = new HashMap<Integer, TextView>();
     private final HashSet<String> inFlight = new HashSet<String>();
     private final ArrayList<TextView> statLabels = new ArrayList<TextView>();
     private final ArrayList<Dialog> dialogs = new ArrayList<Dialog>();
@@ -405,6 +406,7 @@ public final class ModController {
         connection.setTextColor(ready ? RoyalVoidTheme.colors(activity).GREEN : RoyalVoidTheme.colors(activity).MUTED);
         JSONObject f = state.optJSONObject("flags");
         JSONObject l = state.optJSONObject("locks");
+        updatePartyButtons();
         for (String k : switches.keySet()) {
             ToggleView t = switches.get(k);
             boolean on = f != null && f.optBoolean(k);
@@ -433,6 +435,19 @@ public final class ModController {
         if (grindLabel != null) {
             JSONObject g = state.optJSONObject("grind");
             grindLabel.setText(g != null && g.optBoolean("on") ? (g.optBoolean("paused") ? "PAUSED" : "RUNNING") : "IDLE");
+        }
+    }
+
+    private void updatePartyButtons() {
+        int selected = state.optInt("party", 3);
+        for (Integer size : partyButtons.keySet()) {
+            TextView button = partyButtons.get(size);
+            boolean active = size.intValue() == selected;
+            button.setSelected(active);
+            button.setTextColor(active ? RoyalVoidTheme.colors(activity).TEXT : RoyalVoidTheme.colors(activity).LAVENDER);
+            button.setBackground(RoyalVoidTheme.shape(active ? RoyalVoidTheme.colors(activity).DEEP : ThemeManager.colors(activity).BUTTON,
+                active ? RoyalVoidTheme.colors(activity).PURPLE : RoyalVoidTheme.colors(activity).LINE, dp(14)));
+            button.setContentDescription(size + " Dynamons" + (active ? ", selected" : ", select party size"));
         }
     }
     
@@ -707,6 +722,7 @@ public final class ModController {
         if (body == null) return;
         body.removeAllViews();
         switches.clear();
+        partyButtons.clear();
         statLabels.clear();
         ring = null;
         worldLabel = null;
@@ -1004,9 +1020,9 @@ public final class ModController {
     private void unlockPage() {
         section("Unlocks", "Refresh the game screen after changing your collection.");
         addButton(body, "Unlock all supported categories", true, new Runnable(){ public void run(){
-            confirm("Unlock collection entries, skins, emotes and avatars? This does not add playable monsters or validate purchases.", new Runnable(){ public void run(){ command("unlockAll", new JSONObject(), null); }});
+            confirm("Add missing playable Dynamons and unlock skins, emotes and avatars? Existing Dynamons stay unchanged. This does not validate purchases.", new Runnable(){ public void run(){ command("unlockAll", new JSONObject(), null); }});
         }});
-        String[][] kinds = {{"Mons", "All Dynamons · collection entries"}, {"Skins", "All available skins"}, {"Emotes", "All available emotes"}, {"Avatars", "All available suit avatars"}};
+        String[][] kinds = {{"Mons", "All playable Dynamons"}, {"Skins", "All available skins"}, {"Emotes", "All available emotes"}, {"Avatars", "All available suit avatars"}};
         for (final String[] kind : kinds) {
             LinearLayout c = card();
             c.addView(text(kind[1], 15, RoyalVoidTheme.colors(activity).TEXT, true));
@@ -1030,13 +1046,24 @@ public final class ModController {
         size.addView(text("PARTY SIZE", 11, RoyalVoidTheme.colors(activity).LAVENDER, true));
         for (int i = 3; i <= 5; i++) {
             final int n = i;
-            addButton(size, n + " Dynamons", state.optInt("party", 3) == i, new Runnable(){
+            TextView option = button(n + " Dynamons", state.optInt("party", 3) == i, new Runnable(){
                 
                 public void run() {
-                    command("party", args("value", n), null);
+                    command("party", args("value", n), new GameConnection.Callback(){
+                        public void result(JSONObject result) {
+                            if (!result.optBoolean("ok")) return;
+                            try { state.put("party", result.optInt("value", n)); } catch (JSONException ignored) {}
+                            updatePartyButtons();
+                        }
+                    });
                 }
             });
+            partyButtons.put(Integer.valueOf(n), option);
+            LinearLayout.LayoutParams optionParams = new LinearLayout.LayoutParams(-1, -2);
+            optionParams.topMargin = dp(8);
+            size.addView(option, optionParams);
         }
+        updatePartyButtons();
         final LinearLayout results = column();
         addButton(body, "Scan team & enemy", true, new Runnable(){
             

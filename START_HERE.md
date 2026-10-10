@@ -8,4 +8,8 @@ Existing versioned Java-And-Assets, AIDE-Build-Project and DEX-And-Assets ZIPs a
 
 This update does not change main, upload a payload, deploy Workers, modify Supabase, or build/install an APK. The user-supplied original MainActivity does not show installed mod hooks.
 
-Source ZIP SHA-256: 66e7edd366c9ab2ebd041efb5f274687050c31e6054c84314f20456b45d6d182
+Source ZIP SHA-256: a8f28357b89b901a38b04e34202a50ad51f16e774eacee31202e070aa243552d
+
+## Unlock/shop/party repairs
+
+[Royal-Void-Unlock-Party-Fixes.zip](Royal-Void-Unlock-Party-Fixes.zip) contains all 33 Java files, the supplied build files and a corrected complete dual-client updater. Follow [FIXES_README.md](FIXES_README.md) for payload-first installation and verification limits. These source fixes are not yet published to the live Worker payload or installed in an APK. Use raw-project/tools/update_payload_once.py for this repair rather than the historical update_payload.py.

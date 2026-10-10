@@ -102,3 +102,7 @@ The reference configuration sets speed 0.1–8 in 0.1 steps; currency 0–999999
 classes6 is the AIDE-built key/login dialog. classes7 is the Termux/R8-built native menu plus signed split loader. Login writes Worker/Supabase verification state; loader validates payload signature/metadata, checks device/license state, decrypts, and starts the protected index/game runtime. Original Firebase game UID/account operations remain separate. No Shopify is involved.
 
 The supplied MainActivity is the original baseline and has no mod attach calls. Intended integration uses DGDialog(Activity) and ModEntry.attachWithLoader(Activity, initialized WebView). Installed hook placement, AndroidManifest wiring, actual active runtime hooks and gameplay effects remain unverified. No gameplay fixes, payload uploads, database changes or production deployments were performed for this review.
+
+## Prepared repair, 2026-10-10
+
+The source now labels Mons as All playable Dynamons and confirms adding missing owned monsters. The repair payload creates missing owned Dynamons at level 1 with the game's own constructor/add/save methods, preserves existing levels, and changes the two one-time reward checks to actual ownership. Party-size buttons update from confirmation and snapshots. See FIXES_README.md for the exact changes and validation. These prepared source changes have not been activated in the live payload or an installed APK; preceding descriptions record the reviewed earlier behavior.

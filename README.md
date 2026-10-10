@@ -1,7 +1,9 @@
 # Royal Void download branch
 
-Start with [START_HERE.md](START_HERE.md). Open complete Java files in [raw-project/src](raw-project/src), or download [Royal-Void-Supplied-SRC.zip](Royal-Void-Supplied-SRC.zip) to keep all 33 source files in their folder structure.
+[Unlock, shop and party fixes ZIP](Royal-Void-Unlock-Party-Fixes.zip) · [Installation and validation](FIXES_README.md)
 
-[Current menu controls](CURRENT_MENU_CONTROLS.md) · [Delivery rules](DELIVERY_RULES.md)
+The fixes ZIP contains the complete source folder (33 Java files), supplied build files and corrected dual-client updater. Source and payload checks passed; the live payload and installed APK have not been changed.
 
-Older versioned build/assets ZIPs are reference material and have not been rebuilt from the latest supplied source. Main and production services are unchanged.
+[All source files](raw-project/src) · [Source-only ZIP](Royal-Void-Supplied-SRC.zip) · [Menu controls](CURRENT_MENU_CONTROLS.md) · [Delivery rules](DELIVERY_RULES.md) · [Start here](START_HERE.md)
+
+Older versioned build/assets ZIPs are historical reference and have not been rebuilt from this source. Main remains unchanged.
