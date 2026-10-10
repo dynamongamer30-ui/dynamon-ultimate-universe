@@ -53,22 +53,22 @@
     },
     {
       "key": "winTrophy",
-      "title": "Win state",
-      "description": "Apply the existing winning-state hook",
+      "title": "Win bot matches",
+      "description": "Use the correct win result for bot Arena; real-player results stay authoritative",
       "category": "Arena",
       "icon": "star"
     },
     {
       "key": "noTrophyLoss",
       "title": "No trophy loss",
-      "description": "Apply the existing arena win-state hook",
+      "description": "Prevent bot-match trophy deductions without changing a loss into a win",
       "category": "Arena",
       "icon": "shield"
     },
     {
       "key": "fullheal",
       "title": "Full-heal potions",
-      "description": "Restore full health with a potion",
+      "description": "Allow Arena heal spray and full healing while enabled; reopen inventory after switching",
       "category": "Advanced",
       "icon": "shield"
     },
@@ -124,7 +124,7 @@
     {
       "key": "shopfix",
       "title": "Shop compatibility",
-      "description": "Enable the original shop patch",
+      "description": "Always enabled; cannot be turned off",
       "category": "Advanced",
       "icon": "items"
     },

@@ -14,7 +14,7 @@
   function number(n,min,max){n=Number(n);if(!isFinite(n)||n<min||n>max)throw Error('Enter a value from '+min+' to '+max);return n;}
   function invoke(o,k,a){if(!o||typeof o[k]!=='function')throw Error('This game version does not support '+k);return o[k].apply(o,a||[]);}
   function save(){var I=window.__DG_NATIVE_INTERNAL;if(I){I.sync();I.save();}else{
-    var keys=['statcap','maxdef','fullheal','pvpcd','itemtimer','turnreset','items5','nicklen','nickval','shopfix'];window.__DGF=window.__DGF||{};keys.forEach(function(k){window.__DGF[k]=flag(k);});
+    var keys=['statcap','maxdef','fullheal','pvpcd','itemtimer','turnreset','items5','nicklen','nickval','shopfix'];window.__DGF=window.__DGF||{};keys.forEach(function(k){window.__DGF[k]=k==='shopfix'?true:flag(k);});
     if(api().F.saveSettings!==false){var values={};Object.keys(api().F).forEach(function(k){if(k!=='autoWorld'&&k!=='autoGrind'&&k!=='saveSettings')values[k]=!!api().F[k];});try{localStorage.setItem('__DG_F_v2',JSON.stringify({version:2,values:values}));}catch(e){}}
   }}
   var EMBED_SKINS=(window.__DG_CATALOG||{}).skins||[];
@@ -24,7 +24,11 @@
   function stopGrind(){if(window.__DG_grind)window.__DG_grind(false);api().F.autoGrind=false;
     if(grindPrevious){Object.keys(grindPrevious).forEach(function(k){api().set(k,locked(k)?false:grindPrevious[k]);});grindPrevious=null;}
     window.__DG_FORCEBOT=flag('botMatch');save();}
-  function setFlag(k,on){if(!Object.prototype.hasOwnProperty.call(api().F,k))throw Error('Unknown feature');requireOpen(k);
+  function setFlag(k,on){if(!Object.prototype.hasOwnProperty.call(api().F,k))throw Error('Unknown feature');
+    if(k==='shopfix'){api().set(k,true);save();return;}
+    if(k==='botMatch'&&window.__DG_matchActive&&window.__DG_matchActive()&&on!==flag(k))throw Error('Bot matchmaking is locked until this match ends');
+    if(k==='autoGrind'&&on&&!flag(k)&&window.__DG_matchActive&&window.__DG_matchActive())throw Error('Start Arena automation between matches');
+    requireOpen(k);
     if(flag('autoWorld')&&['god','oneHit','noCD'].indexOf(k)>=0)throw Error('Stop Auto World before changing this control');
     if(k==='autoGrind'){
       if(on){if(flag('autoWorld'))throw Error('Stop Auto World before starting arena automation');['botMatch','god','oneHit'].forEach(requireOpen);
@@ -43,7 +47,7 @@
     var F=api().F,L=locks(),changed=false;
     if(F.autoWorld&&(['autoWorld','god','oneHit','noCD','speed'].some(locked))){if(window.__DG_autoWorld)window.__DG_autoWorld(false);F.autoWorld=false;changed=true;}
     if(F.autoGrind&&(['autoGrind','botMatch','god','oneHit'].some(locked)))stopGrind();
-    Object.keys(F).forEach(function(k){if(locked(k)&&F[k]){F[k]=false;changed=true;}});window.__DG_FORCEBOT=!!F.botMatch;if(changed)save();
+    Object.keys(F).forEach(function(k){if(k!=='shopfix'&&locked(k)&&F[k]){F[k]=false;changed=true;}});F.shopfix=true;window.__DG_FORCEBOT=!!F.botMatch;if(changed)save();
   }
   function items(){var D=db(),suits={},mons={};invoke(D,'getAllSuits').forEach(function(x){suits[x.id]=true;});invoke(D,'getAllMons').forEach(function(x){mons[x.id]=true;});
     return invoke(D,'getAllItems').filter(function(x){var id=x.id;if(!id||id==='inferno_suit'||/^(mon#|emote#|video_counter#)/.test(id))return false;
@@ -64,7 +68,7 @@
     if(!c||typeof c!=='object'||!c.flags||typeof c.flags!=='object')throw Error('Invalid controls file');
     var F=api().F,known={},g=gs(),flags=c.flags;
     items().forEach(function(x){known[x.id]=true;});
-    Object.keys(flags).forEach(function(k){if(!Object.prototype.hasOwnProperty.call(F,k)||typeof flags[k]!=='boolean')throw Error('Unsupported saved feature');if(flags[k]&&k!=='autoWorld'&&k!=='autoGrind')requireOpen(k);});
+    Object.keys(flags).forEach(function(k){if(!Object.prototype.hasOwnProperty.call(F,k)||typeof flags[k]!=='boolean')throw Error('Unsupported saved feature');if(k==='botMatch'&&window.__DG_matchActive&&window.__DG_matchActive()&&flags[k]!==flag(k))throw Error('Bot matchmaking is locked until this match ends');if(flags[k]&&k!=='shopfix'&&k!=='autoWorld'&&k!=='autoGrind')requireOpen(k);});
     requireOpen('speed');number(c.speed,.1,8);if(!window.$DG||!window.$DG.applySpeed)throw Error('Speed patch is missing');
     requireOpen('setCoins');requireOpen('setDust');number(c.coins,0,999999999);number(c.dust,0,999999999);
     requireOpen('party');var count=Math.round(number(c.party,3,5));if(invoke(g,'getPlayerMons',[true]).filter(Boolean).length<count)throw Error('You do not own enough Dynamons for this backup');
@@ -122,7 +126,7 @@
     else if(name==='pause'){var kind=String(a.kind);if(kind==='world'){if(!window.__DG_awPause)throw Error('Update the game payload to enable pause');window.__DG_awPause(a.value===true);}else{if(!window.__DG_grindPause)throw Error('Update the game payload to enable pause');window.__DG_grindPause(a.value===true);}r.message=a.value?'Automation paused':'Automation resumed';}
     else if(name==='skinState'){try{r.skin=JSON.parse(localStorage.getItem('__DG_SKIN')||'{}');}catch(e){r.skin={};}}
     else if(name==='stopAll'){if(window.__DG_autoWorld)window.__DG_autoWorld(false);api().F.autoWorld=false;stopGrind();r.message='Automation stopped';}
-    else if(name==='profile'){var values=a.values||{};Object.keys(values).forEach(function(k){if(['autoWorld','autoGrind'].indexOf(k)<0&&Object.prototype.hasOwnProperty.call(api().F,k))requireOpen(k);});if(flag('autoWorld')||flag('autoGrind'))throw Error('Stop automation before applying a profile');Object.keys(values).forEach(function(k){if(['autoWorld','autoGrind'].indexOf(k)<0&&Object.prototype.hasOwnProperty.call(api().F,k))setFlag(k,values[k]===true);});}
+    else if(name==='profile'){var values=a.values||{};if(typeof values.botMatch==='boolean'&&window.__DG_matchActive&&window.__DG_matchActive()&&values.botMatch!==flag('botMatch'))throw Error('Bot matchmaking is locked until this match ends');Object.keys(values).forEach(function(k){if(k!=='shopfix'&&['autoWorld','autoGrind'].indexOf(k)<0&&Object.prototype.hasOwnProperty.call(api().F,k))requireOpen(k);});if(flag('autoWorld')||flag('autoGrind'))throw Error('Stop automation before applying a profile');Object.keys(values).forEach(function(k){if(['autoWorld','autoGrind'].indexOf(k)<0&&Object.prototype.hasOwnProperty.call(api().F,k))setFlag(k,values[k]===true);});}
     else throw Error('Unknown command');return r;
   }catch(e){return {ok:false,error:String(e.message||e)};}}};
   window.__DG_NATIVE_LOCK_TIMER=setInterval(function(){try{enforceLocks();}catch(e){}},1000);

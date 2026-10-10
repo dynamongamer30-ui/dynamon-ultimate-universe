@@ -17,13 +17,13 @@ Reviewed 10 October 2026. This describes the supplied Java source, supporting DE
 - Dashboard shows coins, dust and current speed.
 - Edit coins & dust opens two inputs. Apply submits `coins(value)` and `dust(value)` separately, so these are not one atomic operation.
 - Open command centre navigates to Settings.
-- Speed slider updates its label during dragging and submits `speed(value)` on release. Min/max/step come from signed menu configuration.
+- Speed slider updates its label during dragging and submits `speed(value)` on release. Min/max/step come from signed menu configuration, with reviewed 0.1–8/0.1 fallback before it arrives. The speed card explains animation gains and Arena timer/desync risks; speed remains the user choice.
 - Auto World displays map, progress, bosses, quests, elapsed/remaining time and IDLE/RUNNING/PAUSED status. Start sets `autoWorld=true`; Pause/Resume sends `pause(kind=world,value)`; Stop & restore sets it false. Pausing is available when automation is active. Exact route/battle behavior lives in the game payload.
 - Favorites are the same feature cards and switches as their original pages.
 
 ## Battle, Arena and Advanced feature switches
 
-FeatureRegistry starts empty and validates a schema-1 catalogue from the signed payload (up to 128 unique feature keys). Labels/descriptions/categories can change without recompiling the Java menu. The decrypted current payload contains these 19 switches. The catalogue is verified; actual gameplay effects are not independently device-tested.
+FeatureRegistry starts with all 19 reviewed controls and validates a schema-1 catalogue from the signed payload (up to 128 unique feature keys). Labels/descriptions/categories can change without recompiling the Java menu. The decrypted current payload contains these 19 switches. The catalogue is verified; actual gameplay effects are not independently device-tested.
 
 | Page | Key | Reference label | Intended catalogue meaning |
 |---|---|---|---|
@@ -34,7 +34,7 @@ FeatureRegistry starts empty and validates a schema-1 catalogue from the signed 
 | Battle | noCD | No cooldowns | Keep ability cards ready |
 | Battle | alwaysCatch | Always catch | Catch helper |
 | Arena | botMatch | Bot matchmaking | Arena opponent hook |
-| Arena | winTrophy | Win state | Arena win/trophy hook |
+| Arena | winTrophy | Win bot matches | Numeric result 0 for bot wins; OFF/real results preserved |
 | Arena | noTrophyLoss | No trophy loss | Trophy-loss protection |
 | Advanced | fullheal | Full-heal potions | Potion healing hook |
 | Advanced | pvpcd | Faster arena items | Arena item timing hook |
@@ -44,7 +44,7 @@ FeatureRegistry starts empty and validates a schema-1 catalogue from the signed 
 | Advanced | nicklen | Longer nicknames | Name-length hook |
 | Advanced | nickval | Name validation | Name-validation hook |
 | Advanced | statcap | Stat cap override | Stat cap hook |
-| Advanced | shopfix | Shop compatibility | Shop compatibility hook |
+| Advanced | shopfix | Shop compatibility | Permanently ON; OFF/import/reset requests normalize to ON |
 | Advanced | maxdef | Defense cap override | Defense cap hook |
 
 Arena also has Auto Grind: Start sets `autoGrind=true`, Pause/Resume sends `pause(kind=grind,value)`, Stop & restore sets it false. The card displays runtime progress/status. The Java layer sends commands; it does not itself implement battle logic.
@@ -59,7 +59,7 @@ Arena also has Auto Grind: Start sets `autoGrind=true`, Pause/Resume sends `paus
 ## Unlock
 
 - Unlock all supported categories confirms, then sends `unlockAll`. Prepared Java now confirms adding missing playable Dynamons; the unchanged live runtime still has the collection-only failure described in the repair notes.
-- Separate Mons, Skins, Emotes and Avatars buttons confirm, then send `unlock(kind)`.
+- Separate Mons, Skins, Emotes, Avatars and Worlds buttons confirm, then send `unlock(kind)`.
 - Before the repair, Mons changed collection entries and did not add playable monsters. Prepared Java labels this All playable Dynamons; its matching prepared payload adds missing owned monsters at level 1. This is not deployed yet and does not validate purchases. Refresh the relevant game screen after changes.
 
 ## Team
@@ -102,3 +102,6 @@ The reference configuration sets speed 0.1–8 in 0.1 steps; currency 0–999999
 classes6 is the AIDE-built key/login dialog. classes7 is the Termux/R8-built native menu plus signed split loader. Login writes Worker/Supabase verification state; loader validates payload signature/metadata, checks device/license state, decrypts, and starts the protected index/game runtime. Original Firebase game UID/account operations remain separate. No Shopify is involved.
 
 The supplied MainActivity is the original baseline and has no mod attach calls. Intended integration uses DGDialog(Activity) and ModEntry.attachWithLoader(Activity, initialized WebView). Installed hook placement, AndroidManifest wiring, gameplay effects remain unverified on Android; the active signed runtime itself has now been inspected. Gameplay fixes have been prepared and code-tested, but no payload upload, database change, production deployment or Android installation has been performed.
+
+
+Current prepared revision: bot matchmaking locks during any active match and releases after cleanup; other controls remain available. Full-heal gates Arena heal spray slots/text/timer and consumes stock normally. Unlock All includes current worlds and active variants without completing story quests. Scan results alone remain scan-dependent; your team is cyan and enemy cards coral with a subtle static outline/glow. Native UI changes require rebuilding classes7.dex, in addition to publishing the new payload. Live real-player action acceptance and freeze resolution remain unverified.

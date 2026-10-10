@@ -3,7 +3,7 @@
  */
 (function () {
   'use strict';
-  var revision = 'owned-mons-party-max-2';
+  var revision = 'arena-worlds-party-max-3';
   function cls(name) {
     return (window.$DW || window.$hxClasses || {})['co.doubleduck.dynamons3.' + name];
   }
@@ -64,6 +64,26 @@
     return {ok: true, added: added, upgraded: upgraded, maxLevel: maxLevel, owned: game.getPlayerMons(true).filter(Boolean).length,
       message: added + ' Dynamons added at level ' + maxLevel + '; ' + upgraded + ' owned Dynamons upgraded'};
   }
+  function unlockWorlds() {
+    requireOpen('unlockWorlds');
+    var game=cls('meta.GameState'), db=cls('data.GameplayDB');
+    if(!game||!db||typeof db.getHubData!=='function'||typeof game.setMapUnlocked!=='function'||
+       typeof game.setItemAmount!=='function'||typeof game.saveItems!=='function')throw Error('World unlock API unavailable');
+    var hub=db.getHubData(), nodes=hub&&hub.mapNodes;
+    if(!Array.isArray(nodes))throw Error('World catalogue unavailable');
+    game.setItemAmount('unlock_all_worlds',1);
+    var count=0;
+    nodes.forEach(function(node){
+      if(!node||typeof node.id!=='string'||!node.id)return;
+      game.setMapUnlocked(node.id,true);count++;
+      if(typeof db.getActiveMapVariant==='function'){
+        var variant=db.getActiveMapVariant(node.id);
+        if(variant&&variant.idModifier)game.setMapUnlocked(node.id+String(variant.idModifier),true);
+      }
+    });
+    game.saveItems();
+    return {ok:true,worlds:count,message:count+' world entries unlocked; reopen the map'};
+  }
   function install() {
     var bridge = window.__DG_NATIVE;
     if (!bridge || typeof bridge.command !== 'function' || bridge.__dgMenuFix === revision) return;
@@ -72,12 +92,13 @@
       args = args || {};
       try {
         if (name === 'unlock' && args.kind === 'Mons') return addMissingMons();
+        if (name === 'unlock' && args.kind === 'Worlds') return unlockWorlds();
         if (name === 'unlockAll') {
-          ['Mons', 'Skins', 'Emotes', 'Avatars'].forEach(function (kind) {
+          ['Mons', 'Skins', 'Emotes', 'Avatars', 'Worlds'].forEach(function (kind) {
             requireOpen('unlock' + kind);
           });
           var messages = [];
-          ['Mons', 'Skins', 'Emotes', 'Avatars'].forEach(function (kind) {
+          ['Mons', 'Skins', 'Emotes', 'Avatars', 'Worlds'].forEach(function (kind) {
             var result = bridge.command('unlock', {kind: kind});
             if (!result || !result.ok) throw Error(kind + ': ' + (result && result.error || 'Action failed'));
             messages.push(result.message);
@@ -85,6 +106,8 @@
           return {ok: true, message: messages.join(' · ')};
         }
         var result = previous.call(bridge, name, args);
+        if(name==='scan' && result && result.ok && result.mons){result.mons.forEach(function(mon){mon.sideId=mon.side==='Enemy'?'enemy':'player';});}
+
         if (name === 'party' && result && result.ok) {
           var game = cls('meta.GameState');
           result.value = game.getParty().filter(Boolean).length;
@@ -93,6 +116,18 @@
       } catch (error) {
         return {ok: false, error: String(error.message || error)};
       }
+    };
+    var snapshot=bridge.snapshot;
+    bridge.snapshot=function(){
+      var result=snapshot.apply(bridge,arguments);
+      if(result&&result.ok){
+        result.flags=result.flags||{};result.flags.shopfix=true;
+        var next={};Object.keys(result.locks||{}).forEach(function(key){next[key]=result.locks[key];});
+        next.shopfix=true;
+        if(window.__DG_matchActive&&window.__DG_matchActive())next.botMatch=true;
+        result.locks=next;
+      }
+      return result;
     };
     bridge.__dgMenuFix = revision;
   }

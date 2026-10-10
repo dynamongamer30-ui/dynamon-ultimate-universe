@@ -12,7 +12,7 @@ Updated 10 October 2026, using the owner's Asia/Kolkata date. This is the author
 | Menu DEX | Supplied classes7.dex and all 33 Java source files describe the native menu and split loader | The latest changed ModController has not been compiled into a replacement DEX here |
 | Live payload | Read from Cloudflare R2 `active_payload`: build `royalvoid-unified-20261009-161600-427662`, both legacy client 3 and split client 4 | Neither variant has been replaced by this repair |
 | Active split runtime | Decrypted and inspected for this review. Format DG-MOD-SPLIT-1, 34 edits, 118066 runtime characters, 19 feature catalogue entries | No actual Android gameplay session was run here |
-| Prepared repair | Download branch contains the complete changed Java source, menu_fixes.js and corrected update_payload_once.py. The template has 36 edits and the complete existing runtime plus the targeted repair | Prepared code is not proof that the owner's installed app or server payload was updated |
+| Prepared repair | Download branch contains the complete changed Java source, menu_fixes.js and corrected update_payload_once.py. The current template has 35 base edits plus five verified potion-site edits (40 final edits), with the complete repaired runtime | Prepared code is not proof that the owner's installed app or server payload was updated |
 | Website | GitHub main has owner/admin controls and a loader-upload page. Reviewed loader form serializes the older flat client-3 bundle | That form is not a verified upload path for a dual-variant bundle |
 | Backend records | Worker integrates Supabase keys, activation, bans, app configuration and skin storage | Client Firebase account/cloud game saves are a different subsystem |
 
@@ -141,7 +141,7 @@ The prepared menu_fixes.js wraps the current bridge/installer, preserving the ex
 
 The real saveMonsData persists MONS_DATA (owned instances, level/HP/UID/party/skin data) and CAPTURED_MONS together through the game's own Persistence layer. This repair does not rename Persistence to GameState or invent a missing API. Existing capture history is preserved; it is not cleared merely because an entry is not currently owned.
 
-Unlock all prechecks all category locks and uses the repaired Mons command plus existing Skins/Emotes/Avatars commands. It is not an atomic transaction across all game categories. Failure is reported, including partial additions when a game save/event fails. New playable ownership is intentional behavior in the prepared repair, unlike the old collection-only implementation.
+Unlock all prechecks Mons/Skins/Emotes/Avatars/Worlds category locks, then uses the repaired Mons and Worlds commands plus the existing other category commands. It is not an atomic transaction across all game categories. Failure is reported, including partial additions when a game save/event fails. New playable ownership is intentional behavior in the prepared repair, unlike the old collection-only implementation.
 
 The two one-time reward guards inspected in the active game check isMonCatched. A collection-only unlock can make them skip an unowned devil/guardian_king/spirit_dragon or a canObtainOnlyOnce reward. The added edits replace only those guard calls with playerHasMon. An owned one-time monster remains protected from duplication. This does not add a global payment-validation bypass or replace every isMonCatched use in the game.
 
@@ -256,7 +256,7 @@ Reviewed 10 October 2026. This describes the supplied Java source, supporting DE
 
 ## Battle, Arena and Advanced feature switches
 
-FeatureRegistry starts empty and validates a schema-1 catalogue from the signed payload (up to 128 unique feature keys). Labels/descriptions/categories can change without recompiling the Java menu. The decrypted current payload contains these 19 switches. The catalogue is verified; actual gameplay effects are not independently device-tested.
+FeatureRegistry starts with the complete reviewed 19-feature fallback and validates a schema-1 catalogue from the signed payload (up to 128 unique feature keys). Valid server entries update their matching fallback entries; omitted controls remain discoverable. Execution still needs the ready bridge and respects remote locks. Labels/descriptions/categories can change without recompiling the Java menu. The decrypted current payload contains these 19 switches. The catalogue is verified; actual gameplay effects are not independently device-tested.
 
 | Page | Key | Reference label | Intended catalogue meaning |
 |---|---|---|---|
@@ -267,8 +267,8 @@ FeatureRegistry starts empty and validates a schema-1 catalogue from the signed 
 | Battle | noCD | No cooldowns | Keep ability cards ready |
 | Battle | alwaysCatch | Always catch | Catch helper |
 | Arena | botMatch | Bot matchmaking | Arena opponent hook |
-| Arena | winTrophy | Win state | Arena win/trophy hook |
-| Arena | noTrophyLoss | No trophy loss | Trophy-loss protection |
+| Arena | winTrophy | Win bot matches | Numeric result 0 for bot wins; real results preserved |
+| Arena | noTrophyLoss | No trophy loss | Bot deduction protection independent of win state |
 | Advanced | fullheal | Full-heal potions | Potion healing hook |
 | Advanced | pvpcd | Faster arena items | Arena item timing hook |
 | Advanced | itemtimer | No item wait | Item wait hook |
@@ -277,7 +277,7 @@ FeatureRegistry starts empty and validates a schema-1 catalogue from the signed 
 | Advanced | nicklen | Longer nicknames | Name-length hook |
 | Advanced | nickval | Name validation | Name-validation hook |
 | Advanced | statcap | Stat cap override | Stat cap hook |
-| Advanced | shopfix | Shop compatibility | Shop compatibility hook |
+| Advanced | shopfix | Shop compatibility | Mandatory ON; UI/API/import/reset cannot disable it |
 | Advanced | maxdef | Defense cap override | Defense cap hook |
 
 Arena also has Auto Grind: Start sets `autoGrind=true`, Pause/Resume sends `pause(kind=grind,value)`, Stop & restore sets it false. The card displays runtime progress/status. The Java layer sends commands; it does not itself implement battle logic.
@@ -338,7 +338,7 @@ The supplied MainActivity is the original baseline and has no mod attach calls. 
 
 ## Appendix B. Current signed menu catalogue and limits
 
-The following is the decrypted active payload configuration, not an inferred old reference.
+The following is the complete current prepared signed catalogue. It derives from the last inspected payload with corrected descriptions and permanent shop compatibility. This is not a claim that the live payload has already been uploaded.
 
 ```json
 {
@@ -396,22 +396,22 @@ The following is the decrypted active payload configuration, not an inferred old
     },
     {
       "key": "winTrophy",
-      "title": "Win state",
-      "description": "Apply the existing winning-state hook",
+      "title": "Win bot matches",
+      "description": "Use the correct win result for bot Arena; real-player results stay authoritative",
       "category": "Arena",
       "icon": "star"
     },
     {
       "key": "noTrophyLoss",
       "title": "No trophy loss",
-      "description": "Apply the existing arena win-state hook",
+      "description": "Prevent bot-match trophy deductions without changing a loss into a win",
       "category": "Arena",
       "icon": "shield"
     },
     {
       "key": "fullheal",
       "title": "Full-heal potions",
-      "description": "Restore full health with a potion",
+      "description": "Allow Arena heal spray and full healing while enabled; reopen inventory after switching",
       "category": "Advanced",
       "icon": "shield"
     },
@@ -467,7 +467,7 @@ The following is the decrypted active payload configuration, not an inferred old
     {
       "key": "shopfix",
       "title": "Shop compatibility",
-      "description": "Enable the original shop patch",
+      "description": "Always enabled; cannot be turned off",
       "category": "Advanced",
       "icon": "items"
     },
@@ -1278,7 +1278,7 @@ public final class PayloadCrypto {
 |---|---|
 | ArtworkView.java | Displays asset artwork and supported fallback images. |
 | BrandConfig.java | Fallback menu name/version; does not make all identity fields server-editable. |
-| FeatureRegistry.java | Validates and loads the signed schema-1 feature catalogue, initially empty. |
+| FeatureRegistry.java | Starts with 19 reviewed controls and validates/merges the signed schema-1 catalogue; omitted controls stay visible. |
 | FloatingLauncher.java | Tap/drag/edge snap, compact mode and long-press quick actions. |
 | FontManager.java | Loads menu font assets with fallback typography. |
 | GameBridge.java | Local WebView snapshot/command calls, reply parsing and timeout diagnostics. |
@@ -1341,3 +1341,50 @@ The owner requested restoring an embedded administrator key for command-only upl
 ## Maximum-level unlock correction — 2026-10-10
 
 Owner reports the prior payload granted level-1 Dynamons. The replacement repair resolves Mon.getMaxLevel() at each unlock, validates a positive integer cap before mutation, constructs missing playable entries at that cap, and upgrades all existing owned instances below the cap through the verified game doLevelUp(false, cap-currentLevel) API. In the supplied original, getMaxLevel reads GameplayDB.getMonGenData().maxMonLevel; doLevelUp updates HP, abilities, XP target, dispatches game events and saves owned data. No cap of 85 is hardcoded. Pressing unlock again repairs previously granted level-1 entries without creating duplicate species. Ownership exclusions, locks, persistence, party highlight repair and both supported engine hashes remain intact. This applies to Mons unlock and the Mons stage of unlockAll, not every shop or catch reward. The owner report indicates a previous payload ran on device; the exact current server build was not rechecked here. This replacement is prepared and locally tested, not uploaded or device-tested by the assistant. Replace the updater, restore its private OWNER_ADMIN_KEY locally if desired, run --upload, then fully reopen/login and press Unlock again.
+
+
+## Arena, worlds and menu corrections — 2026-10-10 (current prepared revision)
+
+This revision supersedes the prior prepared gameplay repair. The owner reported reversed Arena trophies, blocked heal spray, missing world unlocks, incomplete initial control visibility, confusing scan colors and invisible/delayed Arena enemies. Subsequent steering explicitly keeps speed under user control and keeps other battle features available. Bot matchmaking alone is locked during an active match; shop compatibility is mandatory. No Worker, Supabase record, main-branch file, live payload or installed APK was changed for this source task. Owner reports indicate earlier payload changes ran on a device; current production build was not reverified in this task.
+
+### Result codes and trophy behavior
+
+The supplied original showMPWinner assigns its first argument to _winState and tests 0 == argument. Numeric 0 is win, 1 is loss, and 2 is give-up. The old bot wrapper passed true, which compares as 1 and produced the exact reversed winner display/reward path. The replacement passes numeric 0 only when Win bot matches is enabled and original _mpData.botBattle is true. It no longer awards automatic bot wins with the toggle OFF. Real-player result codes are preserved rather than replaced with local claims of victory.
+
+No Trophy Loss is separate: for a bot loss/give-up it temporarily sets the corresponding profile trophy delta to zero during the synchronous original result routine, then restores the profile even if the routine throws. It does not change a loss into a win. The previous unconditional monotonic-score engine edit was removed, restoring the game's actual score save when the control is OFF. Server-authoritative real-player outcomes are not fabricated; server behavior needs device verification.
+
+The polling loop no longer writes _winState on every tick and no longer sets _botBattle=true on a real match. Genuine bot identity comes from matchmaking data, not that mutable flag. Bot matchmaking changes through native commands/profiles are rejected during an active battle, and the snapshot marks its toggle locked. Whole controls-import preflight rejects a different bot flag before any mutations. Starting Arena automation during an existing match is rejected; stopping it remains available. The lock releases when battle cleanup clears the tracked current battle. Other battle toggles and scan-based stat edits remain available as requested, with original scan-token checks. Their availability is not proof of multiplayer agreement with local modifications.
+
+### Heal spray ON and OFF
+
+The game item is heal_spray. Full-heal ON removes precisely three existing Arena restrictions: the disabled item slot, the forbidden-use description, and the forbidden amount label. It also bypasses only that spray's pause and start-timer gate. The preexisting full-heal amount patch supplies 100 percent healing. The complete original handleUse still consumes one inventory unit and sends the normal chosen-item/ability action through the game's inventory/HUD flow. It does not heal by blindly writing HP from a separate timer. Full-heal OFF restores the original restrictions and spray timer. Other items retain their own selection rules; existing separate item-timer/per-turn flags still affect their documented paths. Reopen the inventory after switching so constructor-created labels and slot state rebuild. An already-open inventory is not live rebuilt. Normal stock and turn availability are still required.
+
+Five supplemental sites are located in the allowlisted original bytes on each prepare run, converted to UTF-16 code-unit offsets, and checked for expected unique counts and non-overlap before output. A changed engine layout fails closed rather than silently skipping a restriction. This task generated/syntax-tested the supplied B6 engine; the other original remains supported but its bytes were not available for a new full regeneration here. Do not call that original newly device-tested. Real-opponent action acceptance is unverified and requires a phone test.
+
+### World unlocks
+
+Both Unlock All and the new Worlds card execute the worlds command. It checks unlockWorlds/global unlock/app/mod locks, validates the hub catalogue and map/item-save APIs, sets the existing unlock_all_worlds item, invokes setMapUnlocked for every current hub map ID and its active variant suffix, and saves items. These existing map setters persist MAPS_UNLOCKED and dispatch map changes. Reopening the map rebuilds access using the game's own permanent-world item behavior. No quest/node completion IDs are forged or deleted. Expired events or worlds whose content/assets are absent remain governed by the game's availability checks; this does not promise nonexistent content. Repeating the action is safe and does not revoke existing access. Unlock All is not a database transaction across categories; partial application on a later save/event failure is still possible and reported.
+
+### Initial feature visibility and scan distinction
+
+The Java registry starts with all 19 reviewed feature cards rather than an empty catalogue. Signed descriptions and added controls can still load later, and omitted built-in controls remain visible. The speed slider uses the reviewed 0.1–8 step-0.1 fallback before limits arrive. Readiness and remote locks still control execution rather than hiding categories. Scan-created monster cards remain absent until a successful scan. Your team cards use cyan RGB(102,224,217); enemy cards use coral RGB(255,137,116). Explicit YOUR TEAM/ENEMY labels and accessibility names remain, and the glass drawable draws an accent outline plus a subtle static glow. No extra animation timer was added. Existing scan tokens reject stale battle/team changes.
+
+### Permanent shop compatibility
+
+shopfix defaults and synchronizes to true. Native snapshot reports it enabled and locked, Java displays its Always enabled description and blocks an OFF tap, API set normalizes any requested false to true, and command/profile imports preserve true. Cached old settings and reset are normalized during synchronization. Core app readiness/global locks still apply to other commands; permanent shop compatibility does not imply every unrelated purchase succeeds or validates payments. The two ownership reward guards remain the existing targeted playerHasMon replacements.
+
+### User-selected speed and its effects
+
+Final owner instruction leaves speed selectable; no automatic 1x Arena cap is present. The existing 0.1–8 slider remains. Higher values accelerate animation and local tween waits, including multiplayer timeouts. The actual game's wait function stores duration = requestedMilliseconds / 1000 / timeScale. Its TimeCheaterChecker schedules a 60-second wait on that same tween system. Executing the actual wait function produced: 1x=60 seconds; 1.25x=48; 1.5x=40; 2x=30; 3x=20; 4x=15. These are isolated code tests, not full multiplayer matches. The UI slider uses 0.1 steps, so 1.25x rounds to 1.3x through the normal setting path; 1.25 was a direct timing probe only.
+
+The menu speed card now explains the positive effect (faster animations) and risks (shorter local waits, early disconnects, delayed enemy replacement, freezes), states that it does not speed up the opponent, and suggests 1x if unstable. No promise of zero side effects is made. Network deadlines were not separated from animation timing because the final authorized change retains the existing speed behavior with a note. A future timing redesign must preserve both timing systems and test reconnect/turn handling on Android.
+
+### Invisible enemies and extra turns: limits of this repair
+
+Removing forced active-match bot conversion and repeated outcome writes addresses two confirmed conflicts. Battle method exceptions are no longer silently swallowed by the broad tracking wrapper, which previously could abort a replacement operation without reporting a failure. Local damage, critical/cooldown, God/status and scan stat controls remain available by owner instruction. Those controls, accelerated timers, packet delays or game-side transitions can still cause real-player state disagreement. No Android renderer or live opponent was available; therefore invisible enemies, six/seven-turn finishes and freezes are not declared completely resolved. Three enemy slots do not inherently guarantee exactly three player turns.
+
+### Validation and installation boundary
+
+Actual-method isolated checks cover old true-as-loss behavior; numeric bot win and OFF behavior; independent no-loss and restored profile values; unchanged real result codes; complete original potion-use method with ON/OFF timer and consumption; owned-mon persistence/max-level repeat; worlds and variants/locks; bot lock and release; other controls available; permanent shop OFF/profile normalization; party 3→4→5→4→3; and the actual timer function through 4x. Generated full supplied-engine legacy JavaScript passes Node syntax checking. Both signed/encrypted payload formats pass AES-GCM round trips and ECDSA ciphertext/metadata verification with the existing pinned public key. Unknown originals fail before upload. Three changed Java classes parse; Android type checking/R8/DEX generation and phone gameplay remain unperformed.
+
+Use the complete updated archive/source, generate/upload both payload variants, rebuild classes7.dex from the full src tree with existing Android/R8 settings, install through the existing APK/hook workflow, then close/reopen/login. No index.html or classes6 replacement is needed for these changes. A payload-only update gives Arena/world logic but not new native colors, initial fallback UI, permanent-control labels or the speed note: those require the rebuilt menu DEX. Restore OWNER_ADMIN_KEY only in the private phone updater copy after replacing it; public branch/archive keep it empty.

@@ -409,8 +409,8 @@ public final class ModController {
         updatePartyButtons();
         for (String k : switches.keySet()) {
             ToggleView t = switches.get(k);
-            boolean on = f != null && f.optBoolean(k);
-            boolean lock = l != null && (l.optBoolean(k) || l.optBoolean("app") || l.optBoolean("mods"));
+            boolean on = k.equals("shopfix") || (f != null && f.optBoolean(k));
+            boolean lock = k.equals("shopfix") || (l != null && (l.optBoolean(k) || l.optBoolean("app") || l.optBoolean("mods")));
             t.state(on, lock, motion.enabled());
             t.setAlpha(ready ? 1 : 0.45F);
         }
@@ -699,6 +699,8 @@ public final class ModController {
         toggle.setOnClickListener(new View.OnClickListener(){
             
             public void onClick(View v) {
+                if(f.key.equals("shopfix")){toast("Shop compatibility is always enabled", false);return;}
+                if(f.key.equals("botMatch") && state.optJSONObject("locks")!=null && state.optJSONObject("locks").optBoolean("botMatch")){toast("Bot matchmaking is locked until this match ends",false);return;}
                 haptics.tick(v);
                 command("flag", args("key", f.key, "value", !toggle.checked()), null);
             }
@@ -809,13 +811,16 @@ public final class ModController {
     private void speedCard() {
         LinearLayout c = card();
         c.addView(text("GAME SPEED", 11, RoyalVoidTheme.colors(activity).LAVENDER, true));
+        TextView speedNote = text("Higher speed makes animations faster and shortens local waits. In real Arena, 4x can shorten a 60-second timeout to 15 seconds, causing early disconnects, delayed enemy swaps or freezes. It does not speed up the opponent. Choose 1x if a match becomes unstable.", 11, RoyalVoidTheme.colors(activity).MUTED, false);
+        speedNote.setPadding(0,dp(6),0,dp(10));
+        c.addView(speedNote);
         final TextView value = text(String.format(java.util.Locale.US, "%.1f\u00d7", state.optDouble("speed", 1)), 24, RoyalVoidTheme.colors(activity).TEXT, true);
         c.addView(value);
         SeekBar slider = new SeekBar(activity);
         JSONObject config=state.optJSONObject("menuConfig");
         JSONObject limits=config==null?null:config.optJSONObject("limits");
         JSONObject range=limits==null?null:limits.optJSONObject("speed");
-        if(range==null){c.addView(text("Waiting for server controls",12,RoyalVoidTheme.colors(activity).MUTED,false));return;}
+        if(range==null)range=args("min",0.1,"max",8.0,"step",0.1);
         final double minimum=range.optDouble("min"),maximum=range.optDouble("max"),step=range.optDouble("step");
         if(Double.isNaN(minimum)||Double.isInfinite(minimum)||Double.isNaN(maximum)||Double.isInfinite(maximum)||Double.isNaN(step)||Double.isInfinite(step)||minimum<0||maximum<=minimum||step<=0||(maximum-minimum)/step>10000)return;
         slider.setMax((int)Math.round((maximum-minimum)/step));
@@ -1020,9 +1025,9 @@ public final class ModController {
     private void unlockPage() {
         section("Unlocks", "Refresh the game screen after changing your collection.");
         addButton(body, "Unlock all supported categories", true, new Runnable(){ public void run(){
-            confirm("Add missing playable Dynamons and unlock skins, emotes and avatars? Existing Dynamons stay unchanged. This does not validate purchases.", new Runnable(){ public void run(){ command("unlockAll", new JSONObject(), null); }});
+            confirm("Add missing Dynamons at maximum level, upgrade owned Dynamons, and unlock skins, emotes, avatars and worlds? Story completion stays unchanged.", new Runnable(){ public void run(){ command("unlockAll", new JSONObject(), null); }});
         }});
-        String[][] kinds = {{"Mons", "All playable Dynamons"}, {"Skins", "All available skins"}, {"Emotes", "All available emotes"}, {"Avatars", "All available suit avatars"}};
+        String[][] kinds = {{"Mons", "All playable Dynamons"}, {"Skins", "All available skins"}, {"Emotes", "All available emotes"}, {"Avatars", "All available suit avatars"}, {"Worlds", "All supported worlds"}};
         for (final String[] kind : kinds) {
             LinearLayout c = card();
             c.addView(text(kind[1], 15, RoyalVoidTheme.colors(activity).TEXT, true));
@@ -1081,11 +1086,14 @@ public final class ModController {
                             if (m == null) continue;
                             LinearLayout c = column();
                             c.setPadding(dp(12), dp(14), dp(12), dp(14));
-                            c.setBackground(new GlassPanelDrawable(activity, dp(16), false));
+                            boolean enemy = "enemy".equals(m.optString("sideId")) || "Enemy".equals(m.optString("side"));
+                            int sideColor = enemy ? android.graphics.Color.rgb(255, 137, 116) : android.graphics.Color.rgb(102, 224, 217);
+                            c.setBackground(new GlassPanelDrawable(activity, dp(16), false, sideColor));
+                            c.setContentDescription((enemy ? "Enemy: " : "Your team: ") + m.optString("name"));
                             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
                             lp.topMargin = dp(10);
                             results.addView(c, lp);
-                            c.addView(text(m.optString("side").toUpperCase(java.util.Locale.US), 10, RoyalVoidTheme.colors(activity).LAVENDER, true));
+                            c.addView(text(enemy ? "ENEMY" : "YOUR TEAM", 10, sideColor, true));
                             c.addView(text(m.optString("name"), 18, RoyalVoidTheme.colors(activity).TEXT, true));
                             c.addView(text("HP " + m.optInt("hp") + " / " + m.optInt("max"), 12, RoyalVoidTheme.colors(activity).MUTED, false));
                             for (final String stat : new String[]{"hp", "atk", "def", "aim"}) {

@@ -53,11 +53,11 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
   try{window.$DG=window.$DG||{};window.$DG.speed=__dgSpeed();}catch(e){}
 
   /* ===================== FEATURE STATE ===================== */
-  var F={ autoGrind:false, autoWorld:false, god:false, oneHit:false, crit:false, statusImmune:false, noCD:false, alwaysCatch:false, botMatch:false, winToss:false, winTrophy:false, noTrophyLoss:false, statcap:false, maxdef:false, fullheal:false, pvpcd:false, itemtimer:false, turnreset:false, items5:false, nicklen:false, nickval:false, shopfix:false, saveSettings:true, haptics:true };
+  var F={ autoGrind:false, autoWorld:false, god:false, oneHit:false, crit:false, statusImmune:false, noCD:false, alwaysCatch:false, botMatch:false, winToss:false, winTrophy:false, noTrophyLoss:false, statcap:false, maxdef:false, fullheal:false, pvpcd:false, itemtimer:false, turnreset:false, items5:false, nicklen:false, nickval:false, shopfix:true, saveSettings:true, haptics:true };
   var __DG_SETTINGS_KEY="__DG_F_v2", __DG_SETTINGS_VERSION=2;
   function __dgReadSettings(){ try{ var raw=localStorage.getItem(__DG_SETTINGS_KEY)||localStorage.getItem("__DG_F"); if(!raw)return; var parsed=JSON.parse(raw), values=parsed&&parsed.values?parsed.values:parsed; if(!values||typeof values!=="object")throw new Error("settings"); for(var k in values){ if(k!=="autoGrind"&&k!=="autoWorld"&&Object.prototype.hasOwnProperty.call(F,k)&&typeof values[k]==="boolean")F[k]=values[k]; } }catch(e){ try{localStorage.removeItem(__DG_SETTINGS_KEY);}catch(_e){} } }
   __dgReadSettings();
-  window.__DGF=window.__DGF||{}; function __dgSyncDGF(){ try{ var ks=["statcap","maxdef","fullheal","pvpcd","itemtimer","turnreset","items5","nicklen","nickval","shopfix"]; for(var i=0;i<ks.length;i++) window.__DGF[ks[i]]=!!F[ks[i]]; }catch(e){} } __dgSyncDGF();
+  window.__DGF=window.__DGF||{}; function __dgSyncDGF(){ F.shopfix=true; try{ var ks=["statcap","maxdef","fullheal","pvpcd","itemtimer","turnreset","items5","nicklen","nickval","shopfix"]; for(var i=0;i<ks.length;i++) window.__DGF[ks[i]]=!!F[ks[i]]; }catch(e){} } __dgSyncDGF();
   function __dgSaveF(){ if(!F.saveSettings)return; try{ var values={}; for(var k in F){ if(k!=="autoGrind"&&k!=="autoWorld"&&k!=="saveSettings")values[k]=!!F[k]; } localStorage.setItem(__DG_SETTINGS_KEY,JSON.stringify({version:__DG_SETTINGS_VERSION,values:values})); }catch(e){} }
   function __dgResetF(){ try{localStorage.removeItem(__DG_SETTINGS_KEY);localStorage.removeItem("__DG_F");}catch(e){} for(var k in F){ if(typeof F[k]==="boolean")F[k]=(k==="saveSettings"||k==="haptics"); } __dgSyncDGF(); try{__dgApplyLocks();}catch(e){} }
 
@@ -88,10 +88,17 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
     row.appendChild(yes); row.appendChild(no); card.appendChild(row); ov.appendChild(card); document.body.appendChild(ov);
   }catch(e){ log("restart prompt err "+e); } }
   function installPvP(){ /* flags enforced live in keep-alive loop */ var on=F.botMatch||F.winToss||F.winTrophy||F.noTrophyLoss; log("PvP cheats "+(on?"armed":"disarmed")); }
+  function __dgRealPvP(cb){
+    if(!cb || !cb._mpData)return false;
+    if(typeof cb.__dgRealArena!=='boolean')cb.__dgRealArena=cb._mpData.botBattle!==true;
+    return cb.__dgRealArena;
+  }
+  window.__DG_isRealArena=function(battle){return __dgRealPvP(battle||window.__curBattle);};
+  window.__DG_matchActive=function(){var b=window.__curBattle;return !!(b && !b._battleOver && !b._hasEscaped && (!("parent" in b)||b.parent!=null));};
   function enforcePvP(cb){ try{ if(!cb)return; var isMP=(cb._mpData!=null)||(cb._botBattle===true); if(!isMP)return;
-    if(F.winToss){ try{ cb._mpIsFirst=true; }catch(e){} }
-    if(F.botMatch){ try{ if(cb._mpData!=null && cb._botBattle===false) cb._botBattle=true; }catch(e){} }
-    if(F.winTrophy||F.noTrophyLoss){ try{ cb._winState=0; }catch(e){} }
+    if(F.winToss&&!__dgRealPvP(cb)){ try{ cb._mpIsFirst=true; }catch(e){} }
+    // Bot routing belongs to matchmaking. Never convert an active real match.
+    // Results are handled once by showMPWinner, not overwritten every polling tick.
   }catch(e){} }
   /* 4) Catch the client-side validator off battle instances (validateEnemyTeam/Input, writeCheat) */
   function neuterValidator(b){ try{ var cv=b&&b._clientValidator; if(cv&&!cv.__dwNeut){ var p=cv.constructor&&cv.constructor.prototype; if(p){ if(typeof p.validateEnemyTeam==="function") p.validateEnemyTeam=function(){return true;}; if(typeof p.validateEnemyInput==="function") p.validateEnemyInput=function(){return true;}; if(typeof p.writeCheat==="function") p.writeCheat=function(){}; } cv.__dwNeut=true; log("client validator neutralised"); } }catch(e){} }
@@ -188,7 +195,9 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
   function __dgSafeOriginal(orig,ctx,args){ try{return orig.apply(ctx,args);}catch(e){return undefined;} }
   function hookAll(){ try{
     var B=BattleC(); if(B&&B.prototype&&!B.__dwHook){
-      Object.getOwnPropertyNames(B.prototype).forEach(function(k){ var o=B.prototype[k]; if(typeof o!=="function")return; __dgWrapMethod(B.prototype,k,function(orig){ return function(){ var keep=(k==="fadeToMenu"||k==="onBattleEnd"||k==="cleanup"||k==="destroy"||k==="dispose"); if(!keep)window.__curBattle=this; try{return orig.apply(this,arguments);}catch(e){return undefined;} finally{if(keep)window.__curBattle=null;} }; }); });
+      Object.getOwnPropertyNames(B.prototype).forEach(function(k){ var o=B.prototype[k]; if(typeof o!=="function")return; __dgWrapMethod(B.prototype,k,function(orig){ return function(){ var keep=(k==="fadeToMenu"||k==="onBattleEnd"||k==="cleanup"||k==="destroy"||k==="dispose"); if(!keep)window.__curBattle=this;
+        /* Speed remains the user choice; see the Arena timing note. */
+        try{return orig.apply(this,arguments);} finally{if(keep){window.__curBattle=null;try{window.$DG&&window.$DG.applySpeed&&window.$DG.applySpeed();}catch(e){}}} }; }); });
       B.__dwHook=true; __DG_HOOK_STATUS.battle=true;
     }
     var M=MonC(); if(M&&M.prototype&&!M.__dwHook){ var td=M.prototype.takeDamage; if(typeof td==="function")__dgWrapMethod(M.prototype,"takeDamage",function(orig){ return function(a,b){ var cb=window.__curBattle,mine=false,foe=false; try{mine=isMine(this);foe=!mine&&cb&&((this===cb._enemyMon)||(cb._captainMons&&cb._captainMons.indexOf&&cb._captainMons.indexOf(this)!==-1)||(cb._enemyMons&&cb._enemyMons.indexOf&&cb._enemyMons.indexOf(this)!==-1));}catch(e){} if(F.god&&mine)return; if(F.oneHit&&foe){try{return orig.call(this,(this.getCurrHP?this.getCurrHP():99999)||99999,b);}catch(e){return undefined;}} return __dgSafeOriginal(orig,this,arguments); }; }); M.__dwHook=true; __DG_HOOK_STATUS.mon=true; }
@@ -196,7 +205,7 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
     try{ var HM=K("co.doubleduck.dynamons3.meta.HubMap"); if(HM&&HM.prototype&&!HM.__dwWheel){ HM.__dwWheel=true; if(typeof HM.prototype.openFortuneWheel==="function")__dgWrapMethod(HM.prototype,"openFortuneWheel",function(orig){return function(){try{return this.handleCloseWheel&&this.handleCloseWheel();}catch(e){return __dgSafeOriginal(orig,this,arguments);}};}); } }catch(e){}
   }catch(e){} }
   /* keep-alive: re-apply invuln + status immunity to current team (handles switches) */
-  setInterval(function(){ try{ var cb=window.__curBattle; if(cb && (cb._hasEscaped===true || cb._battleOver===true || (("parent" in cb) && cb.parent==null))){ window.__curBattle=null; cb=null; } if(cb){neuterValidator(cb); enforcePvP(cb);} var team=partyMons(); if(cb&&cb._selfMon&&team.indexOf(cb._selfMon)===-1)team.push(cb._selfMon); if(!team.length)return;
+  setInterval(function(){ try{ var cb=window.__curBattle; if(cb && (cb._hasEscaped===true || cb._battleOver===true || (("parent" in cb) && cb.parent==null))){ window.__curBattle=null; cb=null; } if(cb){if(!__dgRealPvP(cb))neuterValidator(cb); enforcePvP(cb);} var team=partyMons(); if(cb&&cb._selfMon&&team.indexOf(cb._selfMon)===-1)team.push(cb._selfMon); if(!team.length)return;
     team.forEach(function(m){ if(!m)return; if(m.setInvulnerable){try{m.setInvulnerable(F.god?true:false);}catch(e){}}
       if(m.setImmuneToSick||m.setImmuneToHypno){ try{m.setImmuneToSick&&m.setImmuneToSick(F.statusImmune?true:false); m.setImmuneToHypno&&m.setImmuneToHypno(F.statusImmune?true:false);}catch(e){} } }); }catch(e){} }, 600);
 
@@ -456,7 +465,8 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
   /* ===================== CSS ===================== */
   function injectCSS(){ if(document.getElementById("dw_css"))return; var s=document.createElement("style"); s.id="dw_css"; s.textContent=DW_CSS; document.head.appendChild(s); }
 
-  window.__DG_API={ F:F, hookAll:hookAll, getSpeed:__dgSpeed, setSpeed:function(v){ __dgSetSpeed(v,null,false); }, toast:function(m,t){ try{toast(m,t);}catch(e){} }, set:function(k,v){ F[k]=!!v; var sw=window.__DG_SW&&window.__DG_SW[k]; if(sw)sw.className="dw_sw"+(F[k]?" on":""); try{hookAll();}catch(e){} } };
+  F.shopfix=true;
+  window.__DG_API={ F:F, hookAll:hookAll, getSpeed:__dgSpeed, setSpeed:function(v){ __dgSetSpeed(v,null,false); }, toast:function(m,t){ try{toast(m,t);}catch(e){} }, set:function(k,v){ if(k==="shopfix")v=true; F[k]=!!v; var sw=window.__DG_SW&&window.__DG_SW[k]; if(sw)sw.className="dw_sw"+(F[k]?" on":""); try{hookAll();}catch(e){} } };
 
   window.__DG_NATIVE_INTERNAL={
     coins:setCoins,dust:setDust,items:consumables,itemAmt:itemAmt,setItem:setItem,
@@ -507,7 +517,16 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
   safe(function(){
     if (BT && BT.prototype && typeof BT.prototype.showMPWinner==='function'){
       var ow = BT.prototype.showMPWinner;
-      BT.prototype.showMPWinner = function(a,b){ try{ if(this._botBattle){ if(typeof this._winState!=='undefined') this._winState=0; a=true; } }catch(e){} return ow.call(this,a,b); };
+      BT.prototype.showMPWinner = function(a,b){
+        var A=window.__DG_API, flags=A&&A.F||{}, real=window.__DG_isRealArena&&window.__DG_isRealArena(this);
+        // The game expects numeric 0=win, 1=loss, 2=give-up. true means LOSS.
+        if(!real && this._mpData && this._mpData.botBattle===true && flags.winTrophy)a=0;
+        var profile=K('co.doubleduck.dynamons3.data.GameplayDB'), data=profile&&profile.mpProfileDat&&profile.mpProfileDat();
+        var protect=!real && this._mpData && this._mpData.botBattle===true && flags.noTrophyLoss && a!==0;
+        var lose=data&&data.pvpLoseTrophies,giveUp=data&&data.pvpGiveUpTrophies;
+        try{if(protect&&data){data.pvpLoseTrophies=0;data.pvpGiveUpTrophies=0;}return ow.call(this,a,b);}
+        finally{if(protect&&data){data.pvpLoseTrophies=lose;data.pvpGiveUpTrophies=giveUp;}}
+      };
     }
   },'alwaysWinBot');
 
@@ -907,7 +926,7 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
   function number(n,min,max){n=Number(n);if(!isFinite(n)||n<min||n>max)throw Error('Enter a value from '+min+' to '+max);return n;}
   function invoke(o,k,a){if(!o||typeof o[k]!=='function')throw Error('This game version does not support '+k);return o[k].apply(o,a||[]);}
   function save(){var I=window.__DG_NATIVE_INTERNAL;if(I){I.sync();I.save();}else{
-    var keys=['statcap','maxdef','fullheal','pvpcd','itemtimer','turnreset','items5','nicklen','nickval','shopfix'];window.__DGF=window.__DGF||{};keys.forEach(function(k){window.__DGF[k]=flag(k);});
+    var keys=['statcap','maxdef','fullheal','pvpcd','itemtimer','turnreset','items5','nicklen','nickval','shopfix'];window.__DGF=window.__DGF||{};keys.forEach(function(k){window.__DGF[k]=k==='shopfix'?true:flag(k);});
     if(api().F.saveSettings!==false){var values={};Object.keys(api().F).forEach(function(k){if(k!=='autoWorld'&&k!=='autoGrind'&&k!=='saveSettings')values[k]=!!api().F[k];});try{localStorage.setItem('__DG_F_v2',JSON.stringify({version:2,values:values}));}catch(e){}}
   }}
   var EMBED_SKINS=(window.__DG_CATALOG||{}).skins||[];
@@ -917,7 +936,11 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
   function stopGrind(){if(window.__DG_grind)window.__DG_grind(false);api().F.autoGrind=false;
     if(grindPrevious){Object.keys(grindPrevious).forEach(function(k){api().set(k,locked(k)?false:grindPrevious[k]);});grindPrevious=null;}
     window.__DG_FORCEBOT=flag('botMatch');save();}
-  function setFlag(k,on){if(!Object.prototype.hasOwnProperty.call(api().F,k))throw Error('Unknown feature');requireOpen(k);
+  function setFlag(k,on){if(!Object.prototype.hasOwnProperty.call(api().F,k))throw Error('Unknown feature');
+    if(k==='shopfix'){api().set(k,true);save();return;}
+    if(k==='botMatch'&&window.__DG_matchActive&&window.__DG_matchActive()&&on!==flag(k))throw Error('Bot matchmaking is locked until this match ends');
+    if(k==='autoGrind'&&on&&!flag(k)&&window.__DG_matchActive&&window.__DG_matchActive())throw Error('Start Arena automation between matches');
+    requireOpen(k);
     if(flag('autoWorld')&&['god','oneHit','noCD'].indexOf(k)>=0)throw Error('Stop Auto World before changing this control');
     if(k==='autoGrind'){
       if(on){if(flag('autoWorld'))throw Error('Stop Auto World before starting arena automation');['botMatch','god','oneHit'].forEach(requireOpen);
@@ -936,7 +959,7 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
     var F=api().F,L=locks(),changed=false;
     if(F.autoWorld&&(['autoWorld','god','oneHit','noCD','speed'].some(locked))){if(window.__DG_autoWorld)window.__DG_autoWorld(false);F.autoWorld=false;changed=true;}
     if(F.autoGrind&&(['autoGrind','botMatch','god','oneHit'].some(locked)))stopGrind();
-    Object.keys(F).forEach(function(k){if(locked(k)&&F[k]){F[k]=false;changed=true;}});window.__DG_FORCEBOT=!!F.botMatch;if(changed)save();
+    Object.keys(F).forEach(function(k){if(k!=='shopfix'&&locked(k)&&F[k]){F[k]=false;changed=true;}});F.shopfix=true;window.__DG_FORCEBOT=!!F.botMatch;if(changed)save();
   }
   function items(){var D=db(),suits={},mons={};invoke(D,'getAllSuits').forEach(function(x){suits[x.id]=true;});invoke(D,'getAllMons').forEach(function(x){mons[x.id]=true;});
     return invoke(D,'getAllItems').filter(function(x){var id=x.id;if(!id||id==='inferno_suit'||/^(mon#|emote#|video_counter#)/.test(id))return false;
@@ -957,7 +980,7 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
     if(!c||typeof c!=='object'||!c.flags||typeof c.flags!=='object')throw Error('Invalid controls file');
     var F=api().F,known={},g=gs(),flags=c.flags;
     items().forEach(function(x){known[x.id]=true;});
-    Object.keys(flags).forEach(function(k){if(!Object.prototype.hasOwnProperty.call(F,k)||typeof flags[k]!=='boolean')throw Error('Unsupported saved feature');if(flags[k]&&k!=='autoWorld'&&k!=='autoGrind')requireOpen(k);});
+    Object.keys(flags).forEach(function(k){if(!Object.prototype.hasOwnProperty.call(F,k)||typeof flags[k]!=='boolean')throw Error('Unsupported saved feature');if(k==='botMatch'&&window.__DG_matchActive&&window.__DG_matchActive()&&flags[k]!==flag(k))throw Error('Bot matchmaking is locked until this match ends');if(flags[k]&&k!=='shopfix'&&k!=='autoWorld'&&k!=='autoGrind')requireOpen(k);});
     requireOpen('speed');number(c.speed,.1,8);if(!window.$DG||!window.$DG.applySpeed)throw Error('Speed patch is missing');
     requireOpen('setCoins');requireOpen('setDust');number(c.coins,0,999999999);number(c.dust,0,999999999);
     requireOpen('party');var count=Math.round(number(c.party,3,5));if(invoke(g,'getPlayerMons',[true]).filter(Boolean).length<count)throw Error('You do not own enough Dynamons for this backup');
@@ -1015,7 +1038,7 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
     else if(name==='pause'){var kind=String(a.kind);if(kind==='world'){if(!window.__DG_awPause)throw Error('Update the game payload to enable pause');window.__DG_awPause(a.value===true);}else{if(!window.__DG_grindPause)throw Error('Update the game payload to enable pause');window.__DG_grindPause(a.value===true);}r.message=a.value?'Automation paused':'Automation resumed';}
     else if(name==='skinState'){try{r.skin=JSON.parse(localStorage.getItem('__DG_SKIN')||'{}');}catch(e){r.skin={};}}
     else if(name==='stopAll'){if(window.__DG_autoWorld)window.__DG_autoWorld(false);api().F.autoWorld=false;stopGrind();r.message='Automation stopped';}
-    else if(name==='profile'){var values=a.values||{};Object.keys(values).forEach(function(k){if(['autoWorld','autoGrind'].indexOf(k)<0&&Object.prototype.hasOwnProperty.call(api().F,k))requireOpen(k);});if(flag('autoWorld')||flag('autoGrind'))throw Error('Stop automation before applying a profile');Object.keys(values).forEach(function(k){if(['autoWorld','autoGrind'].indexOf(k)<0&&Object.prototype.hasOwnProperty.call(api().F,k))setFlag(k,values[k]===true);});}
+    else if(name==='profile'){var values=a.values||{};if(typeof values.botMatch==='boolean'&&window.__DG_matchActive&&window.__DG_matchActive()&&values.botMatch!==flag('botMatch'))throw Error('Bot matchmaking is locked until this match ends');Object.keys(values).forEach(function(k){if(k!=='shopfix'&&['autoWorld','autoGrind'].indexOf(k)<0&&Object.prototype.hasOwnProperty.call(api().F,k))requireOpen(k);});if(flag('autoWorld')||flag('autoGrind'))throw Error('Stop automation before applying a profile');Object.keys(values).forEach(function(k){if(['autoWorld','autoGrind'].indexOf(k)<0&&Object.prototype.hasOwnProperty.call(api().F,k))setFlag(k,values[k]===true);});}
     else throw Error('Unknown command');return r;
   }catch(e){return {ok:false,error:String(e.message||e)};}}};
   window.__DG_NATIVE_LOCK_TIMER=setInterval(function(){try{enforceLocks();}catch(e){}},1000);
@@ -1024,3 +1047,146 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
 })();
 
 };window.__DG_INSTALL_NATIVE();
+/* Royal Void targeted repair. Append to the CURRENT protected runtime.
+ * Keeps existing controls, hooks and automation. No network or key handling.
+ */
+(function () {
+  'use strict';
+  var revision = 'arena-worlds-party-max-3';
+  function cls(name) {
+    return (window.$DW || window.$hxClasses || {})['co.doubleduck.dynamons3.' + name];
+  }
+  function requireOpen(key) {
+    var locks = window.__DG_LOCKS || {};
+    if (locks.app || locks.mods || locks.unlock || locks[key]) {
+      throw Error('This feature is currently unavailable.');
+    }
+  }
+  function addMissingMons() {
+    requireOpen('unlockMons');
+    var game = cls('meta.GameState'), db = cls('data.GameplayDB'), Mon = cls('core.Mon');
+    if (!game || !db || typeof Mon !== 'function' ||
+        typeof game.getPlayerMons !== 'function' ||
+        typeof game.addPlayerMon !== 'function' ||
+        typeof game.saveMonsData !== 'function' || typeof db.getAllMons !== 'function') {
+      throw Error('This game version does not support adding owned Dynamons');
+    }
+    var maxLevel = Number(typeof Mon.getMaxLevel === 'function' ? Mon.getMaxLevel() : NaN);
+    if (!Number.isInteger(maxLevel) || maxLevel < 1) throw Error('Cannot determine the game maximum level');
+    var owned = Object.create(null), unique = Object.create(null), pending = [], upgrades = [];
+    game.getPlayerMons(true).forEach(function (mon) {
+      if (mon && typeof mon.getId === 'function') {
+        owned[mon.getId()] = true;
+        if (typeof mon.getLevel !== 'function') throw Error('Cannot read owned Dynamon level');
+        var level = Number(mon.getLevel());
+        if (!Number.isInteger(level) || level < 1) throw Error('Invalid owned Dynamon level');
+        if (level < maxLevel) {
+          if (typeof mon.doLevelUp !== 'function') throw Error('Cannot upgrade owned Dynamons');
+          upgrades.push({mon: mon, levels: maxLevel - level});
+        }
+      }
+    });
+    // Construct first: an invalid database row must not leave a partial collection.
+    db.getAllMons().forEach(function (data) {
+      if (!data || typeof data.id !== 'string' || !data.id || data.mergedDynamon != null ||
+          /^sealed_door/.test(data.id) || unique[data.id]) return;
+      unique[data.id] = true;
+      if (!owned[data.id]) pending.push(new Mon(data.id, maxLevel));
+    });
+    var added = 0, upgraded = 0;
+    try {
+      upgrades.forEach(function (entry) {
+        entry.mon.doLevelUp(false, entry.levels);
+        if (Number(entry.mon.getLevel()) !== maxLevel) throw Error('Level upgrade did not reach maximum');
+        upgraded++;
+      });
+      pending.forEach(function (mon) {
+        game.addPlayerMon(mon);
+        added++;
+      });
+      // The game's own method persists both MONS_DATA and CAPTURED_MONS.
+      // GameState has no setString method in 1.13.37.
+      game.saveMonsData();
+    } catch (error) {
+      throw Error('Unlock stopped after ' + added + ' additions and ' + upgraded + ' upgrades: ' + String(error.message || error));
+    }
+    return {ok: true, added: added, upgraded: upgraded, maxLevel: maxLevel, owned: game.getPlayerMons(true).filter(Boolean).length,
+      message: added + ' Dynamons added at level ' + maxLevel + '; ' + upgraded + ' owned Dynamons upgraded'};
+  }
+  function unlockWorlds() {
+    requireOpen('unlockWorlds');
+    var game=cls('meta.GameState'), db=cls('data.GameplayDB');
+    if(!game||!db||typeof db.getHubData!=='function'||typeof game.setMapUnlocked!=='function'||
+       typeof game.setItemAmount!=='function'||typeof game.saveItems!=='function')throw Error('World unlock API unavailable');
+    var hub=db.getHubData(), nodes=hub&&hub.mapNodes;
+    if(!Array.isArray(nodes))throw Error('World catalogue unavailable');
+    game.setItemAmount('unlock_all_worlds',1);
+    var count=0;
+    nodes.forEach(function(node){
+      if(!node||typeof node.id!=='string'||!node.id)return;
+      game.setMapUnlocked(node.id,true);count++;
+      if(typeof db.getActiveMapVariant==='function'){
+        var variant=db.getActiveMapVariant(node.id);
+        if(variant&&variant.idModifier)game.setMapUnlocked(node.id+String(variant.idModifier),true);
+      }
+    });
+    game.saveItems();
+    return {ok:true,worlds:count,message:count+' world entries unlocked; reopen the map'};
+  }
+  function install() {
+    var bridge = window.__DG_NATIVE;
+    if (!bridge || typeof bridge.command !== 'function' || bridge.__dgMenuFix === revision) return;
+    var previous = bridge.command;
+    bridge.command = function (name, args) {
+      args = args || {};
+      try {
+        if (name === 'unlock' && args.kind === 'Mons') return addMissingMons();
+        if (name === 'unlock' && args.kind === 'Worlds') return unlockWorlds();
+        if (name === 'unlockAll') {
+          ['Mons', 'Skins', 'Emotes', 'Avatars', 'Worlds'].forEach(function (kind) {
+            requireOpen('unlock' + kind);
+          });
+          var messages = [];
+          ['Mons', 'Skins', 'Emotes', 'Avatars', 'Worlds'].forEach(function (kind) {
+            var result = bridge.command('unlock', {kind: kind});
+            if (!result || !result.ok) throw Error(kind + ': ' + (result && result.error || 'Action failed'));
+            messages.push(result.message);
+          });
+          return {ok: true, message: messages.join(' · ')};
+        }
+        var result = previous.call(bridge, name, args);
+        if(name==='scan' && result && result.ok && result.mons){result.mons.forEach(function(mon){mon.sideId=mon.side==='Enemy'?'enemy':'player';});}
+
+        if (name === 'party' && result && result.ok) {
+          var game = cls('meta.GameState');
+          result.value = game.getParty().filter(Boolean).length;
+        }
+        return result;
+      } catch (error) {
+        return {ok: false, error: String(error.message || error)};
+      }
+    };
+    var snapshot=bridge.snapshot;
+    bridge.snapshot=function(){
+      var result=snapshot.apply(bridge,arguments);
+      if(result&&result.ok){
+        result.flags=result.flags||{};result.flags.shopfix=true;
+        var next={};Object.keys(result.locks||{}).forEach(function(key){next[key]=result.locks[key];});
+        next.shopfix=true;
+        if(window.__DG_matchActive&&window.__DG_matchActive())next.botMatch=true;
+        result.locks=next;
+      }
+      return result;
+    };
+    bridge.__dgMenuFix = revision;
+  }
+  var previousInstaller = window.__DG_INSTALL_NATIVE;
+  if (typeof previousInstaller === 'function') {
+    window.__DG_INSTALL_NATIVE = function () {
+      var result = previousInstaller.apply(this, arguments);
+      install();
+      return result;
+    };
+  }
+  install();
+})();

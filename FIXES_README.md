@@ -1,10 +1,10 @@
-# Royal Void unlock, shop and party-button fixes
+# Royal Void Arena, unlocks and native menu fixes
 
 These are complete source files, reviewed against the active Cloudflare build `royalvoid-unified-20261009-161600-427662`. Production has NOT been updated by this package. No APK/DEX was built or installed here.
 
 ## What changes
 
-- Unlock Mons now adds missing playable owned Dynamons through the game's `Mon` constructor and `GameState.addPlayerMon`, then saves with `saveMonsData`. It no longer calls the nonexistent `GameState.setString`. New Dynamons start at level 1; existing Dynamons and levels are preserved. Repeating the action does not add duplicates. Retired merged entries and sealed-door entities are excluded.
+- Unlock Mons now adds missing playable owned Dynamons through the game's `Mon` constructor and `GameState.addPlayerMon`, then saves with `saveMonsData`. It no longer calls the nonexistent `GameState.setString`. New Dynamons start at Mon.getMaxLevel(); existing owned Dynamons below that cap are upgraded through the game level-up method. Repeating the action does not add duplicates. Retired merged entries and sealed-door entities are excluded.
 - Unlock all checks category locks before starting, then uses the repaired Mons command and existing skin/emote/avatar commands. Like the game's other save operations, this is not a transaction across all categories; an error is reported rather than a false all-success message.
 - The two one-time reward guards use `playerHasMon` instead of the Dynadex's `isMonCatched`. A collection entry alone no longer blocks an unowned reward; owning the Dynamon still blocks a duplicate one-time reward. No payment validation was bypassed.
 - Party size highlight updates from successful command confirmation and game snapshots without reopening the menu. Failed changes do not select the requested size. The payload returns the actual party size. This does not add more visible on-screen seats; the game can show three front-row Dynamons while extras are in reserve.
@@ -21,7 +21,7 @@ Extract the ORIGINAL `assets/www/dynamons_world.min.js` from your CURRENT instal
 
 `044e46362e4a286ea279be3762c02d1934afdc682f539cb68dd194e74ec4b9cb`
 
-Your earlier uploaded JavaScript has SHA-256 `b6f5470f21360435bc98c868bad208d79ab03493d045598a8f3924b099f818eb`, which differs. The refreshed updater now supports that hash too, using its own separately validated 36-edit table. It retains support for the active build’s original and rejects unknown hashes. Never replace the installed APK's original game file with a patched legacy payload.
+Your earlier uploaded JavaScript has SHA-256 `b6f5470f21360435bc98c868bad208d79ab03493d045598a8f3924b099f818eb`, which differs. The refreshed updater now supports that hash too, using its own separately validated base edit table plus five checked potion sites. It retains support for the active build’s original and rejects unknown hashes. Never replace the installed APK's original game file with a patched legacy payload.
 
 With Python and the `cryptography` package available, run from the extracted package directory (replace paths with your actual files):
 
@@ -37,7 +37,7 @@ python update_payload_once.py --original /path/to/current-apk/dynamons_world.min
 
 The private signing key and ADMIN_KEY are not included in the ZIP. Use your existing keys; no replacement signing key is generated. Both variants stay compatible with the existing Worker and pinned DEX public key. Fully close/reopen the game and log in again after publishing.
 
-## Build the party-button fix
+## Build the native menu fixes
 
 Use the complete `src` folder with your existing Termux Android/R8 setup. Run your existing build command; the packaged script is:
 
@@ -72,3 +72,15 @@ The supplied-original table was validated by generating the full patched game an
 For a command-only upload, set OWNER_ADMIN_KEY once in your private phone copy of update_payload_once.py. The GitHub copy keeps that constant empty. Updating the script requires setting it again. Environment DG_ADMIN_KEY takes precedence. Never publish your customized private copy.
 
 Maximum-level correction: Mons unlock adds missing playable Dynamons at Mon.getMaxLevel() and upgrades existing owned Dynamons below that cap via the game level-up API. Repeating Unlock repairs the prior level-1 grants without duplicates. Upload the new payload and reopen/login before pressing Unlock again. Restore OWNER_ADMIN_KEY in your private updated Python file if using the no-prompt option. Shop/catch rewards retain their own level rules.
+
+## Current Arena/UI corrections
+
+- Numeric bot win result 0 replaces the incorrect boolean true (loss). Win bot matches OFF preserves the original result. Real-player result codes are preserved; no server outcome is fabricated. No Trophy Loss operates separately for bot losses/give-up.
+- Bot matchmaking is locked during an active match. Starting bot automation mid-match is rejected. Other match controls stay available. Active real matches are not rewritten into bots by polling.
+- Full-heal ON enables Arena heal spray slots/text and bypasses only its timer; the original item action consumes stock. OFF restores normal restrictions. Reopen inventory after switching. Live real-opponent acceptance still needs phone verification.
+- Unlock All includes supported worlds and active variants, using map persistence and the existing world-unlock item. Story completion is unchanged. A separate Worlds button is included.
+- All 19 feature cards and the speed slider are discoverable from startup. Scan results still require Scan. Enemy cards use coral with a subtle outline/glow; your team uses cyan.
+- Shop compatibility is permanently ON, including saved-profile/reset paths; the UI labels it Always enabled.
+- Speed remains your choice. The speed card explains that it speeds animation and also local waits: at 4x a 60-second network timer can become 15 seconds. The opponent is not accelerated. Use 1x if swaps/disconnects/freezes occur. Zero side effects and live stability are not promised.
+
+Both the new payload and a rebuilt classes7.dex are required for the full delivery. The updater alone does not change the native colors/initial panels/speed note. No live upload, DEX build or phone installation was performed by the assistant. Confirmed conflicts were corrected, but invisible enemies and every real-player freeze cannot be declared resolved without live testing.
