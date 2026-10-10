@@ -26,6 +26,7 @@ public final class ModController {
     private GlassBackdropView backdrop;
     private ScrollMotion scrollMotion;
     private NativePayloadLoader payloadLoader;
+    private String loaderStatus;
     private final PublicConfigClient publicConfig=new PublicConfigClient();
     private JSONObject remoteBrand;
     private TextView brandTitle;
@@ -346,7 +347,7 @@ public final class ModController {
     void startNativeLoader(android.webkit.WebView webView) {
         if(payloadLoader!=null) return;
         payloadLoader=new NativePayloadLoader(webView,new NativePayloadLoader.Listener(){
-            public void status(String message,boolean error){toast(message,error);}
+            public void status(String message,boolean error){loaderStatus=message;if(connection!=null)updateState();toast(message,error,true);}
             public void appearance(JSONObject config){if(ThemeManager.configure(activity,config))rebuildAppearance();}
         });
         payloadLoader.start();
@@ -396,7 +397,11 @@ public final class ModController {
         if(brand==null)brand=remoteBrand;
         if(brandTitle!=null && brand!=null) brandTitle.setText(brand.optString("name",BrandConfig.NAME).toUpperCase(java.util.Locale.US));
         boolean ready = state.optBoolean("ready");
-        connection.setText(game.preview() ? "\u25cf  PREVIEW  \u00b7  Sample data; game unchanged" : ready ? "\u25cf  GAME CONNECTED" : "\u25cb  " + state.optString("error", "Waiting for game"));
+        String startupError=state.optString("error", "Waiting for game");
+        if(!game.preview() && !ready && state.optBoolean("bridgeMissing")){
+            startupError=payloadLoader==null?"Native loader was not started. Check MainActivity: use ModEntry.attachWithLoader, not attach.":(loaderStatus==null?"Preparing protected mod…":loaderStatus);
+        }
+        connection.setText(game.preview() ? "\u25cf  PREVIEW  \u00b7  Sample data; game unchanged" : ready ? "\u25cf  GAME CONNECTED" : "\u25cb  " + startupError);
         connection.setTextColor(ready ? RoyalVoidTheme.colors(activity).GREEN : RoyalVoidTheme.colors(activity).MUTED);
         JSONObject f = state.optJSONObject("flags");
         JSONObject l = state.optJSONObject("locks");
@@ -454,7 +459,11 @@ public final class ModController {
                 inFlight.remove(id);
                 if (closed) return;
                 boolean ok = r.optBoolean("ok");
-                if (!ok) toast(r.optString("error", "Action failed"), true); else {
+                if (!ok) {
+                    String failure=r.optString("error", "Action failed");
+                    if("Game is not ready".equals(failure) && loaderStatus!=null)failure=loaderStatus;
+                    toast(failure,true);
+                } else {
                     if (!name.equals("items") && !name.equals("scan") && !name.equals("exportControls")) {
                         haptics.success(panel);
                         sounds.play(true);
@@ -520,7 +529,8 @@ public final class ModController {
         }});
     }
 
-    void toast(String message, boolean error) {
+    void toast(String message, boolean error) { toast(message,error,false); }
+    private void toast(String message, boolean error, boolean loadingStatus) {
         if (closed) return;
         if (error) {
             haptics.warning(panel);
@@ -539,13 +549,14 @@ public final class ModController {
         root.addView(t, lp);
         motion.enter(t, 0);
         t.announceForAccessibility(message);
+        if(loadingStatus && error) return;
         handler.postDelayed(new Runnable(){
             
             public void run() {
                 root.removeView(t);
                 if (notice == t) notice = null;
             }
-        }, error ? 2600 : 1000);
+        }, loadingStatus ? 6000 : (error ? 2600 : 1000));
     }
     
     TextView text(String s, int size, int color, boolean bold) {
