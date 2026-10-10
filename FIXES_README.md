@@ -17,11 +17,11 @@ The ZIP keeps the complete `src/com/dynamongamer/royalvoid` tree (33 Java files)
 
 ## Generate and publish the corrected payload first
 
-Extract the ORIGINAL `assets/www/dynamons_world.min.js` from your CURRENT installed APK. The required SHA-256 is:
+Extract the ORIGINAL `assets/www/dynamons_world.min.js` from your CURRENT installed APK. The active build’s original SHA-256 is:
 
 `044e46362e4a286ea279be3762c02d1934afdc682f539cb68dd194e74ec4b9cb`
 
-Your earlier uploaded JavaScript has SHA-256 `b6f5470f21360435bc98c868bad208d79ab03493d045598a8f3924b099f818eb`, which differs. The updater rejects it before uploading. Never replace the installed APK's original game file with a patched legacy payload.
+Your earlier uploaded JavaScript has SHA-256 `b6f5470f21360435bc98c868bad208d79ab03493d045598a8f3924b099f818eb`, which differs. The refreshed updater now supports that hash too, using its own separately validated 36-edit table. It retains support for the active build’s original and rejects unknown hashes. Never replace the installed APK's original game file with a patched legacy payload.
 
 With Python and the `cryptography` package available, run from the extracted package directory (replace paths with your actual files):
 
@@ -66,3 +66,5 @@ cd /storage/emulated/0/Dynamons/Mod && python update_payload_once.py --original 
 ```
 
 Without --upload or --bundle-out, argument validation stops before generating/uploading anything. No script replacement is needed for that error.
+
+The supplied-original table was validated by generating the full patched game and both signed/encrypted client variants. Replace the old Python file with the latest complete GitHub copy before retrying. No live publication was performed during these checks.

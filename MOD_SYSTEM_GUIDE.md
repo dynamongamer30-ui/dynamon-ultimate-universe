@@ -101,7 +101,7 @@ Updating the website uploader is an outstanding compatibility task, not a change
 
 ## 7. Payload-first repair and current original-game requirement
 
-The last task prepared fixes for unlock Mons, unlock all categories, one-time reward/shop ownership checks and party-button highlighting. It did not publish a new live payload or build/install a replacement classes7.dex. The owner must not be told the live game is fixed solely because source tests pass.
+The repair tasks prepared fixes for unlock Mons, unlock all categories, one-time reward/shop ownership checks and party-button highlighting, followed by a separately validated patch table for the supplied original engine. It did not publish a new live payload or build/install a replacement classes7.dex. The owner must not be told the live game is fixed solely because source tests pass.
 
 The current active split payload is signed for original-game SHA-256:
 
@@ -115,9 +115,9 @@ The earlier uploaded original JavaScript has SHA-256:
 b6f5470f21360435bc98c868bad208d79ab03493d045598a8f3924b099f818eb
 ```
 
-Those bytes differ. Extract original `assets/www/dynamons_world.min.js` from the current installed APK. The corrected standalone updater deliberately refuses the wrong hash. Do not change its expected hash just to silence the error, patch a previous patched payload as though it were original, or assume offset compatibility because a version label looks the same.
+Those bytes differ. Use the unmodified engine matching the APK you will install. The corrected updater now has separately validated patch tables for both hashes above: the active build's original and the earlier supplied original. It selects by SHA-256 and still refuses every unknown hash. Do not change its expected hash just to silence the error, patch a previous patched payload as though it were original, or assume offset compatibility because a version label looks the same.
 
-`raw-project/tools/update_payload_once.py` contains the complete current split template/runtime, plus the repair and thirty-six sorted edits. It generates both variants from the matching original engine, uses the existing pinned ECDSA private key, fresh AES keys/IVs and one shared new build. It has no undocumented import dependency on an edited old bootstrap file; its template is embedded in the Python file. Rebuilding that embedded snapshot is necessary for a future gameplay/runtime change.
+`raw-project/tools/update_payload_once.py` contains the complete current split template/runtime, plus the repair and thirty-six sorted edits. It selects the validated edit table for one of the two supported original hashes, generates both variants from those engine bytes, and uses the existing pinned ECDSA private key, fresh AES keys/IVs and one shared new build. It has no undocumented import dependency on an edited old bootstrap file; its template is embedded in the Python file. Rebuilding that embedded snapshot is necessary for a future gameplay/runtime change.
 
 After extracting the complete fixes ZIP and using Python with cryptography available:
 
@@ -145,7 +145,7 @@ Unlock all prechecks all category locks and uses the repaired Mons command plus 
 
 The two one-time reward guards inspected in the active game check isMonCatched. A collection-only unlock can make them skip an unowned devil/guardian_king/spirit_dragon or a canObtainOnlyOnce reward. The added edits replace only those guard calls with playerHasMon. An owned one-time monster remains protected from duplication. This does not add a global payment-validation bypass or replace every isMonCatched use in the game.
 
-The two extra original-file edits are ranges 1894544–1894564 and 1894657–1894677, replacing `h.isMonCatched(t[1])` with `h.playerHasMon(t[1])`. They were mapped from the decrypted active legacy source back to the signed split's original offset space and checked against existing ranges. They apply only to the original hash above. JavaScript offsets are UTF-16 code units; Python prepare applies them using UTF-16 encoding rather than treating Python code-point indices as identical.
+The two extra original-file edits are ranges 1894544–1894564 and 1894657–1894677, replacing `h.isMonCatched(t[1])` with `h.playerHasMon(t[1])`. They were mapped from the decrypted active legacy source back to the signed split's original offset space and checked against existing ranges. These specific offsets apply only to the active original hash. The supplied-engine table has separately located offsets and is selected only for its own exact SHA-256. JavaScript offsets are UTF-16 code units; Python prepare applies them using UTF-16 encoding rather than treating Python code-point indices as identical.
 
 The party-size gameplay command already changes the real party. Its stale native highlight came from styling buttons only during teamPage rendering. The changed Java tracks each party button, updates selected state/text/background/accessibility labels on snapshots and successful confirmations, and clears the references when rendering another page. The repair bridge returns actual party count in the successful command value. Failed commands do not select the requested new size.
 
@@ -1320,4 +1320,14 @@ To publish using the existing files in that folder, run:
 cd /storage/emulated/0/Dynamons/Mod && python update_payload_once.py --original dynamons_world.min.js --signing-key signing_key.pem --upload
 ```
 
-It prompts for ADMIN_KEY unless DG_ADMIN_KEY is set. --upload publishes both corrected variants through the Worker; --bundle-out exports privately instead. The current screenshot proves the earlier invocation stopped at argument validation, not that the payload was published. No replacement Python file is needed for this error. Original-file hash validation still runs next and can reject an incompatible game engine.
+It prompts for ADMIN_KEY unless DG_ADMIN_KEY is set. --upload publishes both corrected variants through the Worker; --bundle-out exports privately instead. The current screenshot proves the earlier invocation stopped at argument validation, not that the payload was published. No replacement Python file is needed for this error. Original-file hash validation still runs next and rejects unknown engines; the refreshed updater supports the two explicitly reviewed hashes above.
+
+## Supported-original repair after the hash rejection
+
+The initial repair updater contained only the active payload’s fixed offset table and rejected the earlier supplied engine. This was a limitation of that generated updater, not evidence that the supplied file could never be patched. The corrected updater now selects between two validated SHA-256 tables; it does not bypass the hash check.
+
+For the supplied hash b6f5470f21360435bc98c868bad208d79ab03493d045598a8f3924b099f818eb, all 34 base rules and the 2 ownership guards match uniquely. The wheel rule’s version-specific shop-promo class is Nb rather than the old Cb; the exact match/replacement was corrected for this table. All 36 ranges are non-overlapping and converted to JavaScript UTF-16 offsets.
+
+Validation completed: generated the complete patched legacy source from the supplied original and checked its JavaScript syntax; generated both actual client payloads and verified their AES-GCM round trips and pinned ciphertext/metadata signatures; verified the selected split original hash and 36 edits; reran the gameplay bridge tests; unknown-engine rejection remains. The active original’s existing edit table is retained. Production remains unchanged; neither Android installation nor in-device gameplay verification has been performed.
+
+Replace update_payload_once.py with the complete latest GitHub file, then rerun the same --upload command. The original game JS and private signing key do not need modification for either supported hash. If another file is rejected, the updater reports its found hash; inspect that exact file rather than editing the expected SHA or skipping patches. The APK local original must match the newly generated signed original_sha256.

@@ -6,7 +6,7 @@ Read [MOD_SYSTEM_GUIDE.md](MOD_SYSTEM_GUIDE.md), the authoritative detailed guid
 
 [Royal-Void-Unlock-Party-Fixes.zip](Royal-Void-Unlock-Party-Fixes.zip) preserves the complete source folder and contains 39 files including the current guide, supplied build files and corrected dual-client updater. [FIXES_README.md](FIXES_README.md) explains payload-first publication and the classes7 build/install steps. Do not use the reviewed old website upload form for the dual-client JSON; use the corrected updater's --upload command. No production publication or new DEX build has been performed here.
 
-The updater requires the original game file from the current APK, SHA-256 044e46362e4a286ea279be3762c02d1934afdc682f539cb68dd194e74ec4b9cb. The earlier uploaded engine differs and is deliberately rejected before upload.
+The refreshed updater supports two separately validated original engines: active-original SHA-256 044e46362e4a286ea279be3762c02d1934afdc682f539cb68dd194e74ec4b9cb and supplied-original SHA-256 b6f5470f21360435bc98c868bad208d79ab03493d045598a8f3924b099f818eb. Each has its own 36-edit table. Unknown hashes are rejected; the original local engine in the APK must match the file used to generate the selected payload. Replace the previous updater before retrying --upload.
 
 [Royal-Void-Supplied-SRC.zip](Royal-Void-Supplied-SRC.zip) contains only all 33 Java source files under src/. Browse them in [raw-project/src](raw-project/src). Verify archives using [SHA256SUMS.txt](SHA256SUMS.txt).
 
