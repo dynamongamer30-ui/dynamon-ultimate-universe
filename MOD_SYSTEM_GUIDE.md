@@ -1,187 +1,344 @@
-# Royal Void: complete owner and AI handover
+# Royal Void / Thunder: current mod system and owner handover
 
-Updated 9 October 2026. This file is documentation for the owner, not an APK asset.
+Updated 10 October 2026, using the owner's Asia/Kolkata date. This is the authoritative guide on the download branch. It describes reviewed deployed services, the supplied client, and prepared repairs separately. It contains no admin key, private signing key, AES key, service-role credential or user key records.
 
-## Current state and boundaries
+## 1. Current state: deployed, observed and prepared
 
-- Host is a Cordova game, package com.funtomic.dynamons4, Activity com.funtomic.dynamons3.MainActivity. Activity namespace and manifest package intentionally differ.
-- UI and Android effects are Java under com.dynamongamer.royalvoid. Gameplay runs inside the existing game WebView.
-- User successfully uploaded build royalvoid-03-20261009-070357-a0030a. Phone functionality beyond upload is not independently verified.
-- Newly supplied raw Java has spacing/connection diagnostics plus launch-time remote branding support. No new DEX has been built for these changes. Owner must build it.
-- Main website branch adds DEX controls and signed-metadata support to its admin panel. Updated dg Worker source must be deployed separately to serve remote branding. Worker settings, existing keys and routes must be retained.
-- There are no periodic HTTP heartbeats or config polling in the native path. Local UI/game timers are not network heartbeats. Settings and revocation take effect on the next payload load; already running sessions do not receive immediate revocation.
-- Values which execute on a user's phone can be extracted or modified. R8 and encrypted delivery raise the effort; they do not guarantee uneditable branding or theft-proof code. Device fingerprints are identifiers, not cryptographic proof of identity.
+| Layer | Evidence and current state | What is not established |
+|---|---|---|
+| Installed game | Owner screenshots show Royal Void 0.3.0, GAME CONNECTED, 353/353 Dynadex, an unlock setString error, and stale party selection styling | Full installed APK, patched MainActivity and AndroidManifest were not supplied |
+| Host activity | Supplied original `com.funtomic.dynamons3.MainActivity` extends CordovaActivity and stores the game WebView in `z` | This original baseline contains no mod attach call; it is not the patched installed host |
+| Login DEX | Supplied classes6.dex and android-dialog-fixed source describe the AIDE key dialog and periodic verification | Device behavior beyond the source/DEX evidence was not independently exercised |
+| Menu DEX | Supplied classes7.dex and all 33 Java source files describe the native menu and split loader | The latest changed ModController has not been compiled into a replacement DEX here |
+| Live payload | Read from Cloudflare R2 `active_payload`: build `royalvoid-unified-20261009-161600-427662`, both legacy client 3 and split client 4 | Neither variant has been replaced by this repair |
+| Active split runtime | Decrypted and inspected for this review. Format DG-MOD-SPLIT-1, 34 edits, 118066 runtime characters, 19 feature catalogue entries | No actual Android gameplay session was run here |
+| Prepared repair | Download branch contains the complete changed Java source, menu_fixes.js and corrected update_payload_once.py. The template has 36 edits and the complete existing runtime plus the targeted repair | Prepared code is not proof that the owner's installed app or server payload was updated |
+| Website | GitHub main has owner/admin controls and a loader-upload page. Reviewed loader form serializes the older flat client-3 bundle | That form is not a verified upload path for a dual-variant bundle |
+| Backend records | Worker integrates Supabase keys, activation, bans, app configuration and skin storage | Client Firebase account/cloud game saves are a different subsystem |
 
-## Architecture
+The retained GitHub branches are main and royal-void-downloads-20261009. A third branch, free-tier-presence, remains because the connected GitHub tools expose no branch deletion operation. The owner authorized deleting other branches; do not claim that authorization alone completed deletion. Main has not been changed by the reviews or repairs described here.
 
-1. The game Activity initializes Cordova and stores the game's WebView.
-2. One ModEntry.attachWithLoader(Activity,WebView) hook attaches the native launcher and starts NativePayloadLoader.
-3. index.html loads Cordova and the original support libraries. On deviceready it sets window.__DG_NATIVE_BOOT_READY=true. It does not load loader.js or directly embed a local game engine.
-4. Loader waits for that flag and Cordova device.uuid. Existing login/gate DEX must still verify the user.
-5. GET /payload fetches ciphertext plus signed metadata from dg. POST /check asks for its AES key using fp/build/ctsha. That route checks bans, fresh login, license/device/expiry, maintenance and feature locks.
-6. Java verifies SHA-256 and both ECDSA signatures, decrypts AES-GCM, and injects the code into the local game WebView. No AES key or plaintext payload is saved to client disk by the loader.
-7. Payload contains the patched game engine, branding/catalogue/menu configuration, headless gameplay runtime and window.__DG_INSTALL_NATIVE bridge installer.
-8. Loader installs launch locks. New raw loader also applies the optional server-provided brand override after evaluating the signed payload. It then calls lime.embed using the original getSize function.
-9. Native GameBridge calls window.__DG_NATIVE.snapshot()/command(); ModController draws the UI and applies responses. Item artwork uses game image paths; Java logo/fonts/sounds are APK assets.
+The owner's platform correction is definitive: there is no Shopify integration in this project. Cloudflare, Supabase, GitHub, the website, and the original game's Firebase operations are the relevant systems.
 
-## Exact hook and APK contents
+## 2. How the layers connect
 
-After this existing instruction:
+The original game runs through Cordova in a WebView. Java adds a native launcher/panel on top of the Activity. Feature buttons are not HTML elements: ModController builds Android views, GameBridge communicates with the local WebView, and the signed JavaScript runtime performs game actions through the game's Haxe registry. The original game engine/data/art remain APK assets.
 
-```smali
-iput-object p1, p0, Lcom/funtomic/dynamons3/MainActivity;->z:Landroid/webkit/WebView;
+The login and menu are separate DEX components. classes6 supplies DGDialog/key verification. classes7 supplies ModEntry, the native UI, NativePayloadLoader and crypto helpers. They do not directly invoke each other's classes in the supplied DEX method references. The login writes server state, and the loader's /check request uses that state to decide whether to release a payload key. Do not remove the login DEX merely because the native menu is visible.
+
+The intended host integration uses DGDialog(Activity) and ModEntry.attachWithLoader(Activity, initialized WebView). The exact original Activity snippet confirms the WebView becomes available through Cordova `q.h().f()` and is stored in `z`. It also performs original-game Firebase initialization/UID work. Its `J()` evaluates `window.userUid || null`; `K(String)` schedules Firebase tasks using a UID. The obfuscated callback implementations were not included, so the exact Firebase function/response cannot be reconstructed from that snippet alone.
+
+The expected public Java menu entrypoint is:
+
+```text
+com.dynamongamer.royalvoid.ModEntry.attachWithLoader(android.app.Activity, android.webkit.WebView)
 ```
 
-add exactly one hook:
+Preserve that signature through R8. `attach(Activity,WebView)` attaches UI without starting the native loader; using it alone can leave the game bridge missing. `attach(Activity)` searches for a WebView, whereas explicit host-WebView attachment avoids selecting the wrong view. `preview(Activity)` uses sample data. It is for the preview app, not real gameplay.
 
-```smali
-invoke-static {p0, p1}, Lcom/dynamongamer/royalvoid/ModEntry;->attachWithLoader(Landroid/app/Activity;Landroid/webkit/WebView;)V
+The review has not inserted a hook into the original activity or changed its register count. Do not copy the old guide's exact hook-placement/register claim as if it were verified in the installed APK. Preserve original game code and existing login wiring; attach after the real WebView exists and on the Android UI thread. The package declared by the actual AndroidManifest is not established by the supplied original class name alone.
+
+## 3. Current split boot sequence
+
+The supplied update_index.py generates a split-loader index. It performs no network publication or signing and should not be confused with the payload updater. The old loader.js architecture is retired according to the owner.
+
+1. index.html loads existing Cordova/support resources and defines the normal/protected boot functions.
+2. It declares `__DG_SPLIT_INDEX_READY`, `__DG_INDEX_REVISION`, protected-mode query handling and `__DG_START_PROTECTED`.
+3. Normal mode loads the local original `./dynamons_world.min.js` and calls lime.embed. This remains a usable normal-game path while the key dialog authorizes the mod.
+4. NativePayloadLoader recognizes the local index and waits for the appropriate readiness/device state. It prefers Cordova device.uuid and has an ANDROID_ID fallback.
+5. It fetches `/payload?client=4`. It validates build syntax, ciphertext SHA-256, protocol 2, min_client 4, positive issued time/future limit, ciphertext signature and metadata signature before authorizing the key.
+6. POST `/check` sends fp, build and ctsha. The server considers ban/block status, login freshness, license/device/expiry, maintenance and locks.
+7. For `no-login`, the Java source retries authorization with delays 3, 7, 10, 15 and 20 seconds, then reports that the existing key dialog must be completed. Other rejection reasons are surfaced without inventing a successful boot.
+8. On success, Java receives the AES key plus featureLocks and optional brand/themes. Missing required lock/key data is treated as a server compatibility error. app/mods locks block mod boot.
+9. It decrypts a DG-MOD-SPLIT-1 bundle. It hashes APK `assets/www/dynamons_world.min.js` and requires the signed original_sha256 to match before proceeding.
+10. It reloads the local index with `?dg-protected=<token>` and transfers the bundle through evaluateJavascript chunks. The current Java transfer chunk size is 24000 characters.
+11. Protected index reads the local original engine, validates sorted patch ranges, applies edits backwards, sets launch server/locks/config globals, evaluates the patched engine and runtime, calls lime.embed, then calls `__DG_INSTALL_NATIVE` and requires `__DG_NATIVE`.
+12. A canvas watcher reports whether the game created a nonzero canvas; this is a rendering/startup signal, not a guarantee that every feature behaves correctly.
+
+Changing the supplied original game file, local index, protected bundle or loader independently can break boot. A signature-valid bundle still fails when its original hash differs from the installed APK's local engine. Loader failures are not a reason to disable cryptographic checks. The loader zeros temporary key/plaintext byte arrays in a finally block; transient JSON/string copies are still needed for the WebView transfer, so this is not a claim of guaranteed secret erasure from all process memory.
+
+Legacy client 3 instead receives a complete encrypted patched-engine/runtime payload. Preserve this variant when generating a new release. Client-3 and client-4 are protocol compatibility choices, not DEX numbers; classes6/classes7 name the injected components in the owner's APK.
+
+## 4. Key dialog, settings checks and network timing
+
+The AIDE-built dialog fetches /config for login-related settings such as maintenance/update/link information and submits /verify-key. Its device identifier uses ANDROID_ID; NativePayloadLoader prefers a Cordova UUID. Whether those identifiers resolve identically in the installed APK must be checked when diagnosing no-login/device mismatch. Do not assume identical fingerprints or assume the mismatch always occurs.
+
+The dialog stores the entered/successful key in DG_Prefs saved_key and renews key verification approximately every ten minutes in the reviewed source. Expiry/rejection can bring back a dialog/ban screen; that code does not independently demonstrate termination of an already running WebView/runtime. The native menu's local snapshot loop runs about 1.2 seconds while visible and 4 seconds hidden. These evaluateJavascript calls are not HTTP presence requests.
+
+The native split loader fetches payload/check at boot/retry rather than adding a periodic HTTP heartbeat. The live Worker's /heartbeat is a compatibility no-op, and untrusted /tamper reporting does not automatically ban a user. This does not mean the entire app has no periodic network activity: key verification and the original game's Firebase/cloud operations remain separate network paths.
+
+PublicConfigClient is instantiated/closed by ModController but its load method is not invoked in the supplied startup path. It is not evidence of a running public-config polling loop. Branding/community data normally comes from the signed runtime snapshot and optional startup server override. Theme changes/local settings do not need a network call merely to redraw chrome.
+
+## 5. Worker and private storage contract
+
+License/payload service: `https://dg.dynamongamer30.workers.dev`. Generator service: `https://generator.dynamongamer30.workers.dev`. Supabase is accessed by the Worker for the mod records. Administrative secrets are owner/server values, not source assets.
+
+The current upload route requires `format: DG-ACTIVE-PAYLOAD-1`, a shared build ID and both variants. Legacy has protocol 2/min_client 3; split has protocol 2/min_client 4. Each view has ciphertext, IV, ciphertext SHA, ciphertext signature, metadata signature, issued time and its own AES key. A flat old client-3 bundle is rejected by the deployed upload route with a unified-updater compatibility error.
+
+The current R2 representation is a single private `active_payload` object. Its custom metadata declares DG-ACTIVE-PAYLOAD-2, shared build, legacy length, split offset/length, each variant's ciphertext SHA, and each AES key. The object body is public-view legacy JSON, a newline, then public-view split JSON. `readActive` reads metadata; `activeView` reads the relevant byte range with an ETag condition so a concurrent overwrite cannot mix metadata from one build with ciphertext from another. The reviewed object was 7167763 bytes.
+
+Do not describe the retired separate `ct:<build>`, `key:<build>` and current_build storage design as current. The code retains a fallback for an older complete-object representation, but that is not evidence that the active object uses it. Keep the efficient split/range layout when publishing through the current Worker; direct ad hoc R2 rewrites can lose required custom metadata or alter request cost.
+
+`/payload` serves the legacy public ciphertext view by default. `/payload?client=4` selects split. Neither public response should contain key_b64. `/check` gates an AES key using the fingerprint, recent login, license state and matching ciphertext digest. The same build serves two different ciphertext hashes; check must choose the matching variant, not assume only one hash exists.
+
+FeatureLocks is an app_config row containing boolean lock keys. app/mods are global mod gates; unlock blocks unlock categories and individual unlockMons/unlockSkins/unlockEmotes/unlockAvatars can restrict them separately. FeatureRegistry catalogue keys, automation keys and owner policy keys overlap but are not the same list. Do not infer that nineteen visible feature cards represent all server-controllable functions.
+
+The reviewed login grace is thirty minutes; the Worker normalizes seconds/milliseconds where its existing login code expects timestamps and rejects implausible future login times. A currently valid key does not itself prove a fresh login record or that the loader's fingerprint matches the dialog record. Review the specific rejection reason before changing UI code.
+
+DexBranding config provides startup brand name/links; DexThemes provides schema/default/enabled palette information. Worker sanitation restricts supported theme IDs and color fields. HTTPS startup overrides are not part of the ECDSA-signed payload defaults. Java's fixed edition/version label is not a fully server-editable field just because a branding row contains an edition. Logos/fonts/sounds remain APK assets.
+
+Supabase records reviewed include valid_keys, activated_users, banned_devices, suspicious_activity and app_config. Owner-auth RLS policies were reviewed for the website; a browser UI gate alone is not the database security rule. Public skin-pack storage is a separate bucket/manifest path. No Supabase schema change, user record migration or production setting change has been performed by the menu repairs here.
+
+The website's owner login is described by the user as restricted to a particular Gmail. Actual enforcement belongs in the existing auth/owner/RLS code; do not place the private email or a service-role key in this public guide. Original-game Firebase user UID, trophy writes and cloud saves are not Supabase mod key records.
+
+## 6. Owner website and upload compatibility
+
+Main remains the website branch. The download branch contains mod deliverables and is not a replacement production website source tree. /admin-control contains DEX control/theme configuration; /admin-loader contains device/admin-key/payload controls. The reviewed TypeScript uploadPayload helper checks a flat protocol-2/min_client-3 payload; the form selects flat ciphertext/key/metadata fields and does not preserve a dual-variant object.
+
+Therefore the last repair package's suggestion to upload its dual JSON through that existing form was incorrect. Use the corrected Python updater with `--upload` and the existing ADMIN_KEY, or a separately reviewed uploader that preserves the exact DG-ACTIVE-PAYLOAD-1 variants contract. The --bundle-out option remains useful for a private owner export; it is not proof the website form can consume that export.
+
+Updating the website uploader is an outstanding compatibility task, not a change silently made in main. Do not write main or deploy the website as part of a documentation sync. The current admin/list presence response deliberately has presence_disabled/empty active data; an empty active list does not prove nobody uses the mod.
+
+## 7. Payload-first repair and current original-game requirement
+
+The last task prepared fixes for unlock Mons, unlock all categories, one-time reward/shop ownership checks and party-button highlighting. It did not publish a new live payload or build/install a replacement classes7.dex. The owner must not be told the live game is fixed solely because source tests pass.
+
+The current active split payload is signed for original-game SHA-256:
+
+```text
+044e46362e4a286ea279be3762c02d1934afdc682f539cb68dd194e74ec4b9cb
 ```
 
-Keep .registers 5 for the previously supplied Activity; this hook needs no new registers. Do not move it before invoke-super. Preserve original game DEX files and existing login hooks. Replace only the prior Royal Void DEX, without leaving duplicate class definitions. Use an unused sequential classesN.dex filename when adding a new DEX. DEX numbering is packaging, not part of the class descriptor.
+The earlier uploaded original JavaScript has SHA-256:
 
-Copy assets/royal_void directly into APK assets/royal_void, not assets/www/assets. Runtime assets: ui_regular.ttf, ui_medium.ttf, ui_bold.ttf; brand_logo.png; select.wav, success.wav, warning.wav. Keep WAV entries uncompressed. Do not copy docs, JSON, Python, tests, build tools, a signing key, mappings, server source or Gradle files into the game APK. Keep all original Cordova/game libraries, data, art and audio. Remove old loader.js only after native loading is configured; keep version.js and local engine files until their references are confirmed unnecessary. Old JS menu code can live in a previously uploaded payload, not only in loader.js.
-
-Verification deep link, if used, belongs in a separate intent-filter inside the existing launcher Activity:
-
-```xml
-<intent-filter>
-  <action android:name="android.intent.action.VIEW" />
-  <category android:name="android.intent.category.DEFAULT" />
-  <category android:name="android.intent.category.BROWSABLE" />
-  <data android:host="verify" android:scheme="dynamongamer" />
-</intent-filter>
+```text
+b6f5470f21360435bc98c868bad208d79ab03493d045598a8f3924b099f818eb
 ```
 
-No new game Activity, service, SYSTEM_ALERT_WINDOW or overlay permission is required for the menu attached to the Activity.
+Those bytes differ. Extract original `assets/www/dynamons_world.min.js` from the current installed APK. The corrected standalone updater deliberately refuses the wrong hash. Do not change its expected hash just to silence the error, patch a previous patched payload as though it were original, or assume offset compatibility because a version label looks the same.
 
-## Raw project and manual protected builds
+`raw-project/tools/update_payload_once.py` contains the complete current split template/runtime, plus the repair and thirty-six sorted edits. It generates both variants from the matching original engine, uses the existing pinned ECDSA private key, fresh AES keys/IVs and one shared new build. It has no undocumented import dependency on an edited old bootstrap file; its template is embedded in the Python file. Rebuilding that embedded snapshot is necessary for a future gameplay/runtime change.
 
-All raw source/config is under raw-project on the download branch. AIDE standalone preview uses src/, preview/, assets/, AndroidManifest.xml, build.gradle, settings.gradle, gradle.properties, project.properties and proguard-rules.pro. Its manifest and preview Activity are for the preview app only. Do not replace the game's manifest with them.
+After extracting the complete fixes ZIP and using Python with cryptography available:
 
-AIDE debug output is normally readable. Release minifyEnabled=true, the supplied keep rules and android.enableR8=true request R8 in the legacy AGP3.2.1 project. Whether that Gradle configuration runs depends on the installed AIDE/JDK/SDK; it has not been verified on the owner's phone. An AIDE release APK can include its preview Activity. For a core-only DEX use the Termux R8 path below, which excludes preview entirely. MT Manager is used to inspect/inject/sign; it does not by itself reproduce the Java-to-R8 build.
-
-Termux core build:
-
-```sh
-pkg install openjdk-17 python zip
-cd /storage/emulated/0/AideProjects/RoyalVoid
-export ANDROID_JAR="/absolute/path/to/android.jar"
-export R8_JAR="/absolute/path/to/d8.jar"
-bash tools/build_dex.sh
-bash tools/package_dex_release.sh
+```bash
+python update_payload_once.py --original /path/to/current-apk/dynamons_world.min.js --signing-key /path/to/signing_key.pem --upload
 ```
 
-Get android.jar from an Android SDK platform API28 or newer. For the same toolchain family as the earlier release use platform35 and SDK build-tools35.0.0/lib/d8.jar (it contains R8). Obtain these from the official Android SDK/SDK Manager, or copy them from a SDK installation. They are build tools, not files injected into the APK. Do not use a platform stub jar bundled in an unrelated APK. Source uses Java7 syntax; if the JDK no longer supports source7 set DG_SOURCE_LEVEL=8. JDK17 accepts source7 with deprecation warnings.
+The updater prompts for ADMIN_KEY or reads DG_ADMIN_KEY from the environment. A private export instead of publication is:
 
-Output: dist/dex/classes.dex. Packaging script emits dist/royal-void-dex-package.zip containing only DEX and seven runtime assets. build/royal-void-mapping.txt is private for crash diagnosis. The public keep entrypoints must retain ModEntry.attachWithLoader signature; PortableProfile is kept for Android fragment restoration. Renamed implementation classes and a smaller DEX are expected. Same protection settings do not imply byte-identical output across R8/AIDE/toolchain versions.
-
-## File responsibilities
-
-- `ArtworkView.java`: Image display.
-- `BrandConfig.java`: Local fallback identity/version, not authoritative server identity.
-- `FeatureRegistry.java`: Validates signed menu configuration and turns entries into native feature cards.
-- `FloatingLauncher.java`: Draggable launcher/edge handle.
-- `FontManager.java`: Asset fonts and fallback typography.
-- `GameBridge.java`: WebView evaluateJavascript bridge with timeout and clearer missing-payload errors.
-- `GameConnection.java`: Common connection callback contract.
-- `GameScripts.java`: Small pointer calling the server-provided installer; does not contain gameplay patches.
-- `GlassBackdropView.java`: Backdrop treatment; device capability affects real blur.
-- `GlassPanelDrawable.java`: Translucent panel/card rendering.
-- `GlowDrawable.java`: Glow treatment.
-- `HapticEngine.java`: Haptic preferences and feedback.
-- `IconView.java`: Vector-style Java-drawn symbols.
-- `LocalArtworkLoader.java`: Asynchronous loading of inventory art from game assets.
-- `ModController.java`: Panel/sidebar, page rendering, spacing, inputs, command feedback, settings and item images.
-- `ModEntry.java`: Stable smali hooks, per-Activity instance handling and lifecycle attachment.
-- `MotionEffects.java`: Press/entrance/motion preferences.
-- `NativePayloadLoader.java`: Launch sequence, HTTPS/key request, signatures/decryption, lock and brand injection, game embed.
-- `NavigationAnimator.java`: Sidebar transitions.
-- `PayloadCrypto.java`: SHA/signature/decryption helpers.
-- `PortableProfile.java`: SAF import/export of one user-selected profile, retained outside app-private storage when chosen by user.
-- `PreferencesStore.java`: Local UI/settings preferences.
-- `PreviewConnection.java`: Standalone sample data; never use as the real game connection.
-- `ProgressRingView.java`: Automation progress visualization.
-- `PublicConfigClient.java`: Legacy helper; native startup does not call it for periodic/public configuration.
-- `RoyalVoidTheme.java`: Colors, dimensions and shape helpers.
-- `ScrollMotion.java`: Scroll-dependent visual motion.
-- `SelectionView.java`: Theme-aware selection markers.
-- `SkinPackManager.java`: Remote skin manifest loading and selection.
-- `SoundEngine.java`: Asset audio feedback.
-- `ToggleView.java`: Theme-aware toggles.
-- `WebViewFinder.java`: Optional Activity-only attachment helper; explicit WebView hook is preferred.
-
-## Server and admin contract
-
-License/payload Worker: https://dg.dynamongamer30.workers.dev
-
-Bindings: DG (KV fallback), DG_R2 (R2), ADMIN_KEY (secret), SUPABASE_URL (secret), SUPABASE_SERVICE_KEY (secret). Never embed ADMIN_KEY or service-role credentials in a public project, DEX or guide. The owner-specific Python file can contain an admin key by explicit owner choice, but must remain private. The raw public tool prompts or uses DG_ADMIN_KEY environment variable.
-
-R2 objects: ct:<build> holds ciphertext/metadata; key:<build> holds key_b64 and ct_sha; current_build selects the active build. Publish unique build IDs. GET /payload is public ciphertext; /check gates the key. Admin upload requires X-Admin and stores ciphertext then key then current_build. The Worker currently does not verify upload signatures itself; the DEX verifies them before execution. Admin must upload only valid signed bundles.
-
-Supabase tables use id/data JSONB rows: valid_keys, activated_users, banned_devices, suspicious_activity, app_config. app_config has existing owner-only RLS writes; no new table/migration is required for FeatureLocks or DexBranding. Verified existing policies before adding UI. No production settings/data were changed during this code update.
-
-- app_config row FeatureLocks: object of boolean feature keys; true means locked. app/mods block access, unlock locks all unlock categories. Unknown boolean keys are preserved by the panel.
-- app_config row DexBranding: name/edition/links array, served by the new Worker at /check. New Java applies name and community links at next launch. Edition remains payload/local UI copy in current rendering; logo/fonts require asset update and rebuild.
-- Maintenance blocks new loading; it is a separate existing configuration setting.
-- ValidKeys expiry is Unix seconds. ActivatedUsers.lastLogin is milliseconds (seconds also normalized). Login grace is30 minutes; timestamps more than60 seconds in future are blocked.
-- Current /verify-key route preserves legacy binding behavior; do not claim an atomic multi-device binding guarantee. Concurrent first-use activation still needs a separate reviewed server fix.
-- Legacy /heartbeat is a no-op; /tamper does not auto-ban untrusted reports. admin/list returns presence_disabled:true and active:[] rather than polling presence. Empty active[] does not mean zero users.
-
-Admin routes on main: /admin-control (Royal Void DEX tab) and /admin-loader (payload upload). Feature access and branding appear next launch. Main's VITE_LICENSE_WORKER_URL must point to dg. Website production branch should be main, not the DEX download branch; pnpm build fails on a branch that only contains download files.
-
-## Payload encryption and signing
-
-Existing signing_key.pem is an ECDSA P-256 private key generated by the old build tool. It must match the public key pinned in NativePayloadLoader. Do not generate a replacement without updating the DEX trust anchor. Never share the private key with another AI, add it to GitHub or include it in APK assets.
-
-Public trust anchor (not secret):
-
+```bash
+python update_payload_once.py --original /path/to/current-apk/dynamons_world.min.js --signing-key /path/to/signing_key.pem --bundle-out /path/to/private-fixed-payload.json
 ```
+
+Choose exactly one of --upload and --bundle-out. The private export includes AES keys and must stay out of GitHub/APK/chat downloads. The public archive includes source and tools, not signing keys, ADMIN_KEY or a private upload bundle. No new signing key is generated. A failed request with an uncertain network outcome requires checking current_build before retrying rather than assuming publication definitely failed.
+
+## 8. What the prepared gameplay repair does
+
+The active unmodified adapter's Mons command first appends IDs to GameState._capturedMons, then invokes GameState.setString. In the inspected game, setString belongs to Persistence/storage adapters; GameState has no such method. The UI can therefore show an inflated/correct-looking Dynadex total and still report `This game version does not support setString`. That counter is a collection-history list, not the live owned-monster list.
+
+The prepared menu_fixes.js wraps the current bridge/installer, preserving the existing runtime, automation, item, skin and other commands. Its Mons path checks locks, obtains existing owned IDs from getPlayerMons(true), constructs missing supported core.Mon instances at level 1, invokes addPlayerMon, and calls saveMonsData. Existing monsters/levels remain unchanged. Merged retired entries and sealed-door entities are excluded. Repeated unlocks do not duplicate already owned types.
+
+The real saveMonsData persists MONS_DATA (owned instances, level/HP/UID/party/skin data) and CAPTURED_MONS together through the game's own Persistence layer. This repair does not rename Persistence to GameState or invent a missing API. Existing capture history is preserved; it is not cleared merely because an entry is not currently owned.
+
+Unlock all prechecks all category locks and uses the repaired Mons command plus existing Skins/Emotes/Avatars commands. It is not an atomic transaction across all game categories. Failure is reported, including partial additions when a game save/event fails. New playable ownership is intentional behavior in the prepared repair, unlike the old collection-only implementation.
+
+The two one-time reward guards inspected in the active game check isMonCatched. A collection-only unlock can make them skip an unowned devil/guardian_king/spirit_dragon or a canObtainOnlyOnce reward. The added edits replace only those guard calls with playerHasMon. An owned one-time monster remains protected from duplication. This does not add a global payment-validation bypass or replace every isMonCatched use in the game.
+
+The two extra original-file edits are ranges 1894544–1894564 and 1894657–1894677, replacing `h.isMonCatched(t[1])` with `h.playerHasMon(t[1])`. They were mapped from the decrypted active legacy source back to the signed split's original offset space and checked against existing ranges. They apply only to the original hash above. JavaScript offsets are UTF-16 code units; Python prepare applies them using UTF-16 encoding rather than treating Python code-point indices as identical.
+
+The party-size gameplay command already changes the real party. Its stale native highlight came from styling buttons only during teamPage rendering. The changed Java tracks each party button, updates selected state/text/background/accessibility labels on snapshots and successful confirmations, and clears the references when rendering another page. The repair bridge returns actual party count in the successful command value. Failed commands do not select the requested new size.
+
+More party members do not guarantee more front-row artwork. The supplied game can display three front-row seats while extra party entries are reserves. Do not diagnose a three-monster screenshot as proof that a fourth/fifth party member was not saved. Use the snapshot and actual game party data as well as the UI.
+
+## 9. Build and APK placement
+
+The current repair archive contains all thirty-three Java files under src/com/dynamongamer/royalvoid. ModController.java is the changed Java file for this repair. The included build_dex.sh and proguard-rules.pro are the owner's supplied build files, unchanged. The ZIP does not include an already compiled new classes7.dex.
+
+In the owner's existing Termux/JDK/Android/R8 setup, run `bash build_dex.sh` from the extracted package root. ANDROID_JAR and R8_JAR must point to the existing installed tools. The script emits dist/dex/classes.dex, not a file automatically named classes7.dex. The owner applies that output as the menu DEX using the existing APK injection/sign/install process. Build mappings are private diagnostics, not APK runtime assets.
+
+The script compiles the supplied src tree; it does not patch MainActivity, merge/sign an APK, upload a payload, change Cloudflare or update Supabase. AIDE classes6 and Termux classes7 are different build steps. The AIDE preview application's manifest/activity are not a replacement for the original game's manifest/activity. Preserve the existing login DEX and original Cordova/game libraries.
+
+Required runtime assets include the existing royal_void fonts/images/sounds; keep their paths compatible with the Java loaders. Optional theme artwork uses royal_void/images/themes/<id>.png with fallback to brand_logo.png. Do not claim eight owner-provided theme logo files are installed merely because ThemeManager knows eight IDs. Complete Android asset presence was not independently inspected in an installed APK.
+
+The payload repair does not require a new index.html, classes6, game manifest, hook or skin pack. Rebuild classes7 for the Java highlight/label changes. Upload the new payload for gameplay/bridge behavior. Installing only one half leaves the other half's behavior unchanged.
+
+## 10. Crypto and validation boundaries
+
+AES-256-GCM uses a fresh 32-byte key and 12-byte IV per variant; ciphertext includes the authentication tag. ct_sha is SHA-256 of ciphertext. ECDSA is P-256/SHA-256; wire signatures are raw 64-byte r||s, base64 encoded. Java verifies both ciphertext and metadata signatures. Public pin:
+
+```text
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEBvmVi6bDPa9eUOBNsYKr+IQ3JW3rQPQpeWxhi/fTTuLIn8jtG3vDb1G2y9286BKW1GKs2zksU9Grw6eFMHF7Aw==
 ```
 
-AES-256-GCM uses fresh32-byte key and12-byte IV. Ciphertext includes GCM tag. ct_sha is SHA256 of ciphertext. ECDSA signatures use SHA256 and raw64-byte r||s, base64 encoded. protocol=2, min_client=3, issued=Unix seconds. Ciphertext signature is sig_b64. meta_sig_b64 signs the exact UTF8 text:
+The metadata message is exactly UTF-8, with no trailing newline:
 
-```
+```text
 DG-PAYLOAD-V2
 {build}
 {ct_sha}
 {iv_b64}
 {issued}
-3
+{min_client}
 ```
 
-No trailing newline. The DEX verifies both signatures. Signed metadata prevents unauthenticated swaps of build/IV/version/timestamp; issued is not a persistent anti-replay counter. There is no client certificate/session attestation. Already decrypted client code cannot be guaranteed secret.
+min_client is 3 for legacy and 4 for split. The public trust anchor is not an ADMIN_KEY, Supabase key or Cloudflare token. The existing private signing key matched this pin during the isolated signing checks. Do not publish that private key or generate a replacement without a separately reviewed client trust-anchor change.
 
-Owner updater commands:
+Completed checks: reproduced the old setString failure; added/persisted owned monsters using isolated real game add/save functions; repeated unlock without duplicates; respected category locks; delegated unlock-all; party size 3→4→5→4→3 and rejected-party behavior; one-time reward ownership logic; runtime/updater syntax; Java parser; both variants' AES-GCM round trips and ECDSA ciphertext/metadata signature verification; wrong-original rejection; additional range non-overlap; GitHub source/archive blob hashes.
 
-```sh
-python tools/update_payload.py --original original_game.js --signing-key /private/path/signing_key.pem
-```
+Actual active payload was read/decrypted, and the reward guards/add/save/ownership APIs were confirmed there. Native Android type checking, R8 compilation, APK installation and real gameplay verification were not completed. A Cloudflare execution sandbox refused dynamic code compilation; do not report that attempt as a successful full-game syntax/device test. No live payload publication was performed.
 
-Reads original unmodified same-version game engine, checks matching key and all rules, stops on ambiguity/overlap, adds headless runtime/config, encrypts/signs, asks ADMIN_KEY then uploads. It sets browser-compatible User-Agent because default Python headers were blocked by Cloudflare1010. No heartbeat is added. Original JS and private key are untouched. A HTTP403 body 'forbidden' is Worker auth; non-JSON1010 is Cloudflare browser-signature block.
+## 11. Troubleshooting without confusing layers
 
-To edit values/config files manually:
+| Symptom | Relevant evidence/check | What not to infer |
+|---|---|---|
+| setString error when unlocking Mons | Old active command mutates history and calls a missing GameState method | A 353/353 counter proves 353 playable owned monsters |
+| Shop skips one-time monster | Captured history may include the type even when not owned; inspect the two reward guards | This proves payment verification is the failure |
+| Party highlight remains old | Confirm whether new Java was compiled/installed; compare response/snapshot count | Three front-row drawings imply party size never changed |
+| Wrong original hash | Extract local engine from current APK and compare the signed expected hash | Same version label means same engine bytes |
+| No-login | Complete existing dialog; inspect normalized fingerprint/login freshness | A visible launcher proves authorization succeeded |
+| Bridge missing | Check attachWithLoader, local index, signed runtime installer and boot order | Missing features can be fixed only by adding Android views |
+| Owner locks do not update during an existing session | Boot/check supplies launch configuration; no continuous native settings fetch | App_config write instantly modifies every already running client |
+| Empty active list in admin | Presence polling is disabled by current contract | There are zero active users |
+| Payload upload rejects flat JSON | Current route requires both variants; use corrected updater direct upload | Removing min_client/signatures is a valid repair |
+| Skin selection not visible immediately | Selection saves first; restart applies asset substitutions | A pending check mark immediately changes sprites |
+| Theme logo missing | Verify optional APK asset and brand-logo fallback | Eight theme IDs guarantee eight installed logos |
+| Profile survives uninstall only in some location | Use SAF export to a document retained outside app-private data | SharedPreferences survives uninstall automatically |
 
-```sh
-python tools/update_payload.py --original original_game.js --signing-key /private/path/signing_key.pem --config-dir integration
-```
+## 12. Documentation and branch-sync rule after every task
 
-Overrides brand.json, menu_config.json, catalog.json, patches.json if present. Be careful: numeric backend command ceilings are also hardcoded in native_adapter.js; changing UI menu_config alone does not change all command bounds. To change actual behavior, edit adapter/headless runtime, run tools/embed_runtime.py to regenerate tests/bootstrap.js, then prepare/seal the updated payload. The standalone embedded updater contains a runtime snapshot, so run `python tools/rebuild_updater.py` to regenerate its embedded owner data, or use tools/prepare_payload.py followed by tools/seal_payload.py after editing runtime source. The two-stage tools read current source directly; the standalone tool does not magically read an edited bootstrap.js.
+The owner's standing instruction is to maintain this detailed guide, approximately the size of the previous 80 KB handover, after every completed mod task. Accuracy/completeness takes precedence over an exact byte count: do not pad, abbreviate code or preserve false statements merely to hit a number.
 
-For the admin Loader page export a private bundle instead of uploading:
+After a task, update the affected guide sections, status/evidence/limits, file placement and commands. Remove superseded claims, fill gaps from verified code/service observations, and record remaining unknowns as unknown. Distinguish planned/prepared/compiled/installed/deployed/device-tested states. Refresh the current-state table instead of endlessly appending contradictory history.
 
-```sh
-python tools/update_payload.py --original original_game.js --signing-key /private/path/signing_key.pem --config-dir integration --bundle-out /private/path/upload.json
-```
+Sync the guide, complete changed files, relevant ZIPs, README/START_HERE links and checksums to royal-void-downloads-20261009. Compare the branch head before committing; use a lease/expected-head check so another owner's commit is not silently overwritten. Verify GitHub contents and archives after writing. Main must remain unchanged unless the owner separately authorizes a main change.
 
-Then select upload.json in the owner admin-loader form. The updated form preserves protocol/issued/min_client/meta_sig_b64 and rejects incomplete protocol2 metadata. Bundle contains the AES key: keep it owner-only. Do not publish it. Branding overrides are delivered over HTTPS in the authorized /check response; unlike payload-embedded defaults they are not covered by the payload ECDSA signature. Keys/settings can be cached in process but the native path does not store decrypted content on disk.
+Clean superseded download archives and stale entrypoints only after their necessary source/assets are retained and links/workflows are updated. Do not delete needed runtime assets, build inputs or unrelated website branches/files by guessing. The owner authorized removal of other branches, but the current connector cannot delete branches. Record that outstanding action truthfully.
 
-## Values, features and patch definitions
+Delivery uses complete openable GitHub file links for a small number of files and a GitHub ZIP for larger sets. Preserve folder paths and include only task-needed files; never silently omit lines/words/placeholders. Do not return direct ChatGPT download attachments or render index.html as an HTML chat attachment. For a long index, use GitHub's code/file view and save/raw controls per the owner's latest preference.
 
-These are current supported values, not all desired future features. Original menu IAP-marking actions are not proof of paid entitlement and are intentionally not implemented as validated purchases. There is no first-turn control in this catalogue. Unlock collection records does not grant playable creatures. noTrophyLoss and winTrophy share existing winning-state hooks; assess behavior against the current game before making stronger claims.
+This is a standing post-task workflow for the assistant/project. It is not a separately deployed background synchronization service or a promise that unobserved phone edits automatically reach GitHub. A source change or phone installation unknown to the assistant must be confirmed before the guide can describe it as current deployed behavior.
 
-Current native command bounds: speed0.1–8; coins/dust0–999999999; item quantities0–999999; party3–5; stat edits0–1000000 with extra HP maximum and battle scan-token checks. Stats/party validity still depends on the game. Flags and limits in signed menu config:
+## 13. Evidence retained and historical material
+
+Reviewed inputs include src.zip, proguard-rules.pro, build_dex.sh, classes6.dex, classes7.dex, original MainActivity text, index.html, update_index.py, the original JS, dialog source ZIP, original/modded game JSON and json_patcher.py, and historical Mod.zip. Uploaded command/documents were treated as documentation to inspect, not as instructions to execute wholesale.
+
+The static JSON patcher modifies data such as shop offers and game progression independently of DEX/runtime hooks. Low prices or new offers in a JSON file do not establish playable ownership in GameState. The original/modded JSON installation step was not shown in an APK, so file changes alone are not a tested live data integration.
+
+Historical Mod.zip uses a DOM/WebView menu, loader template, patch definitions and an older encryption/signing pipeline. It is useful for comparisons but not the current native launcher or split-index boot. Its embedded fonts/logo and private key are not copied into public documentation. Old branch server/config/build tools remain historical unless specifically synchronized against live services. Do not deploy an old raw-project server file merely because it is stored beside updated Java.
+
+The appendices below preserve complete reviewed implementation contracts/configurations rather than the old guide's obsolete regex manifest. Active runtime source is explicitly labelled active; the repair source is labelled prepared. Those code snapshots explain the command interface and boot/crypto behavior. Canonical editable source files still live in raw-project; update relevant snapshots whenever those contracts change.
+
+## Appendix A. Complete menu control inventory
+
+# Current Royal Void / Thunder menu: control map
+
+Reviewed 10 October 2026. This describes the supplied Java source, supporting DEX/build material and the decrypted active signed runtime. The installed patched host activity was not supplied and Android gameplay was not independently tested. Prepared repairs are distinguished from unchanged live behavior. The old Mod.zip is historical reference, not today's loader.
+
+## Launcher and shared controls
+
+- Floating launcher: tap opens the panel; drag repositions and snaps to an edge, saving normalized coordinates. Compact mode uses an edge handle. Long press opens four actions: Open menu, Stop all automation, Expand launcher/Collapse to edge handle, Retry game loading. Retry invokes the native payload loader when present.
+- Panel header can be dragged within screen bounds. Close and Android Back hide the menu. Opening/hiding controls backdrop capture, ambient glow, focus and keyboard dismissal.
+- Navigation expands/collapses and selects Home, Battle, Arena, Items, Unlock, Team, Skins, Advanced, Settings (Command centre), Community. Page scroll positions are saved.
+- Search matches feature title, description and category across the catalogue, replacing page content while a query exists. It does not search inventory quantities or every page action. Clear the query to return to page content.
+- Long press a feature card adds/removes it from local Favorites, shown on Home. Tap its switch sends `flag(key,value)`. Runtime readiness and app/mod/individual locks affect availability; the payload must enforce them too.
+- GAME CONNECTED reflects snapshot readiness. Preview mode uses sample data. Loader errors appear as notices. Snapshot polling is approximately 1.2 seconds with the panel visible and 4 seconds hidden; this is local WebView communication.
+- Commands are deduplicated while pending. Successful commands update feedback/state; rejected commands show errors. Numeric dialogs have Apply and Cancel; confirmation dialogs have Continue and Cancel. Numeric input must parse as a whole number; final bounds depend on runtime validation.
+
+## Home
+
+- Dashboard shows coins, dust and current speed.
+- Edit coins & dust opens two inputs. Apply submits `coins(value)` and `dust(value)` separately, so these are not one atomic operation.
+- Open command centre navigates to Settings.
+- Speed slider updates its label during dragging and submits `speed(value)` on release. Min/max/step come from signed menu configuration.
+- Auto World displays map, progress, bosses, quests, elapsed/remaining time and IDLE/RUNNING/PAUSED status. Start sets `autoWorld=true`; Pause/Resume sends `pause(kind=world,value)`; Stop & restore sets it false. Pausing is available when automation is active. Exact route/battle behavior lives in the game payload.
+- Favorites are the same feature cards and switches as their original pages.
+
+## Battle, Arena and Advanced feature switches
+
+FeatureRegistry starts empty and validates a schema-1 catalogue from the signed payload (up to 128 unique feature keys). Labels/descriptions/categories can change without recompiling the Java menu. The decrypted current payload contains these 19 switches. The catalogue is verified; actual gameplay effects are not independently device-tested.
+
+| Page | Key | Reference label | Intended catalogue meaning |
+|---|---|---|---|
+| Battle | god | God mode | Protect active team from damage |
+| Battle | oneHit | One-hit damage | Defeat active enemy quickly |
+| Battle | crit | Critical hits | Force critical ability hits |
+| Battle | statusImmune | Status immunity | Protection from sickness/hypnosis |
+| Battle | noCD | No cooldowns | Keep ability cards ready |
+| Battle | alwaysCatch | Always catch | Catch helper |
+| Arena | botMatch | Bot matchmaking | Arena opponent hook |
+| Arena | winTrophy | Win state | Arena win/trophy hook |
+| Arena | noTrophyLoss | No trophy loss | Trophy-loss protection |
+| Advanced | fullheal | Full-heal potions | Potion healing hook |
+| Advanced | pvpcd | Faster arena items | Arena item timing hook |
+| Advanced | itemtimer | No item wait | Item wait hook |
+| Advanced | turnreset | Refill items each turn | Per-turn item reset hook |
+| Advanced | items5 | Five items per turn | Item-use limit hook |
+| Advanced | nicklen | Longer nicknames | Name-length hook |
+| Advanced | nickval | Name validation | Name-validation hook |
+| Advanced | statcap | Stat cap override | Stat cap hook |
+| Advanced | shopfix | Shop compatibility | Shop compatibility hook |
+| Advanced | maxdef | Defense cap override | Defense cap hook |
+
+Arena also has Auto Grind: Start sets `autoGrind=true`, Pause/Resume sends `pause(kind=grind,value)`, Stop & restore sets it false. The card displays runtime progress/status. The Java layer sends commands; it does not itself implement battle logic.
+
+## Items
+
+- Set all consumables: numeric dialog (initial 99), then confirmation, then `allItems(value)`.
+- Inventory filter matches item titles without case sensitivity. At most 60 rows display; refine the filter for larger inventories.
+- Each row shows icon, name and quantity. Edit opens numeric input and sends `item(id,label,value)`.
+- Inventory is obtained through `items`; successful edits trigger refreshed display.
+
+## Unlock
+
+- Unlock all supported categories confirms, then sends `unlockAll`. Prepared Java now confirms adding missing playable Dynamons; the unchanged live runtime still has the collection-only failure described in the repair notes.
+- Separate Mons, Skins, Emotes and Avatars buttons confirm, then send `unlock(kind)`.
+- Before the repair, Mons changed collection entries and did not add playable monsters. Prepared Java labels this All playable Dynamons; its matching prepared payload adds missing owned monsters at level 1. This is not deployed yet and does not validate purchases. Refresh the relevant game screen after changes.
+
+## Team
+
+- Party size buttons 3, 4 and 5 send `party(value)` and highlight current snapshot selection.
+- Scan team & enemy sends `scan`, returning monster cards and a scan token.
+- Each card shows side/name/current and maximum HP. HP, ATK, DEF and AIM edit buttons open numeric dialogs and send `stat(token,index,stat,value)`.
+- Scan again after changing battles/monsters; a stale token must not edit a different monster.
+
+## Skins
+
+- Pack folder input defaults to `mypack`. Load manifest reads the existing Supabase skin-pack storage manifest.
+- Monster IDs/names are collected, sorted, and preselected from current enabled selection when the pack matches.
+- Each visible row has icon/name/selection. Row selection is pending until saved. At most 60 rows display, while Apply all uses the complete loaded list.
+- Save selected sends `skinConfig(pack,manifest,enabled)` for selected IDs. Apply all sends the same command with every ID. Restore original sends `resetSkins`.
+- Changes apply after restarting the game; storage errors are reported. This is separate from the original game's Firebase account subsystem.
+
+## Settings / Command centre
+
+- Theme choices: Dark, Fire, Thunder, Water, Earth, Diamond, Gold and Spirit, subject to enabled-theme configuration. Each row has logo, swatches and selected indicator. Tap saves the device preference and rebuilds menu/launcher appearance, preserving panel position/scroll. Selecting the already active theme does nothing.
+- Export all settings calls `exportControls`, combines runtime controls with local interface preferences and opens Android's document picker. JSON format `dg-royal-void-profile`, schema 1, default name `Dynamon-Gamer-Controls.json`, maximum 1 MiB.
+- Import and restore all settings opens a document picker, validates format/schema/controls, asks confirmation, calls `restoreControls`, then restores local preferences/theme/sounds/launcher and redraws. Currency/inventory can change. Automation stays stopped until started. Cancellation makes no restore request.
+- Haptic feedback (default on), Interface sounds (on), Subtle 3D depth (on), Ambient glow (on), Reduced motion (off): local switches. Sounds prepares audio; glow immediately adjusts visibility. Preferences persist on device.
+- Glass opacity slider: 65–100%, default 86%; updates locally during dragging.
+- Sound volume slider: 0–60%, default 22%; saves locally, with feedback on release.
+- Panel size slider: height 60–95%, default 78%; resizes while dragging.
+- Toggle compact edge launcher saves launcher mode.
+- Stop all automation sends `stopAll`; it is also in launcher quick actions.
+
+## Community
+
+- Branding/logo comes from configured appearance. Up to eight valid configured HTTPS community links are shown as icon/button rows and opened with Android ACTION_VIEW. URLs with user information or missing hosts are rejected.
+- If branding links are unavailable, a loading/connection explanation is displayed. If no application can open a link, an error notice is shown.
+- Footer shows Royal Void version 0.3.0 and Open Sans typography.
+
+## Limits and architecture
+
+The reference configuration sets speed 0.1–8 in 0.1 steps; currency 0–999999999; item quantities 0–999999; party size 3–5; stats 0–1000000. These values are also present in the decrypted active signed menu configuration. Runtime command ceilings must be updated together with UI limits for a future range change.
+
+classes6 is the AIDE-built key/login dialog. classes7 is the Termux/R8-built native menu plus signed split loader. Login writes Worker/Supabase verification state; loader validates payload signature/metadata, checks device/license state, decrypts, and starts the protected index/game runtime. Original Firebase game UID/account operations remain separate. No Shopify is involved.
+
+The supplied MainActivity is the original baseline and has no mod attach calls. Intended integration uses DGDialog(Activity) and ModEntry.attachWithLoader(Activity, initialized WebView). Installed hook placement, AndroidManifest wiring, gameplay effects remain unverified on Android; the active signed runtime itself has now been inspected. Gameplay fixes have been prepared and code-tested, but no payload upload, database change, production deployment or Android installation has been performed.
+
+## Appendix B. Current signed menu catalogue and limits
+
+The following is the decrypted active payload configuration, not an inferred old reference.
 
 ```json
 {
@@ -348,2499 +505,807 @@ Current native command bounds: speed0.1–8; coins/dust0–999999999; item quant
 }
 ```
 
-Exact patch rules follow for AI maintenance. They were derived from engine logic, so match contexts may change between game versions. Never choose the first ambiguous regex occurrence automatically. Rule32 was corrected against original SHA256044e46362e4a286ea279be3762c02d1934afdc682f539cb68dd194e74ec4b9cb: both wheel actions are in one post-battle ternary; both require the spin gate. All34 rules and generated JS syntax passed for that input. A future engine needs matching diagnostics and re-derived anchors.
+## Appendix C. Current signed collection catalogue
+
+These IDs support the current runtime inventory/unlock helpers; they are not all owned-monster instances.
 
 ```json
 {
-  "version": 1,
-  "source": {
-    "original": "dynamons_world.min-kr6g.js",
-    "patch": "patch.js"
-  },
-  "rules": [
-    {
-      "find": "\\.__id__\\]=(?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\),(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\);var\\ (?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\}(?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)\\.lime=(?P<g4>[A-Za-z_$][A-Za-z0-9_$]*)\\.lime\\|\\|\\{\\};var\\ (?P<g5>[A-Za-z_$][A-Za-z0-9_$]*)=\\{\\},(?P<g6>[A-Za-z_$][A-Za-z0-9_$]*)=function\\(\\)\\{return\\ (?P<g7>[A-Za-z_$][A-Za-z0-9_$]*)\\.__string_rec\\(this,\"",
-      "repl_segs": [
-        {
-          "lit": "."
-        },
-        {
-          "lit": "__id__"
-        },
-        {
-          "lit": "]="
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "),"
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": ");"
-        },
-        {
-          "lit": "var"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "}"
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "lime"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "grp": "g4"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "lime"
-        },
-        {
-          "lit": "||{};"
-        },
-        {
-          "lit": "var"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "grp": "g5"
-        },
-        {
-          "lit": "=(window||self).$DW"
-        },
-        {
-          "lit": "={},"
-        },
-        {
-          "grp": "g6"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "lit": "function"
-        },
-        {
-          "lit": "(){"
-        },
-        {
-          "lit": "return"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "grp": "g7"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "__string_rec"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": ",\""
-        }
-      ],
-      "anchor": "__string_rec",
-      "expect": ".__id__]=c),c);var c}J.lime=J.lime||{};var t=(window||self).$DW={},q=function(){return Pa.__string_rec(this,\"",
-      "strategy": "generalized",
-      "ctx": 45,
-      "a_pos": 5162,
-      "orig_core": "",
-      "patch_core": "(window||self).$DW=",
-      "radius": 130,
-      "id": 0,
-      "feature": "inline logic edit"
-    },
-    {
-      "find": "und\\((?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\.getTotalHP\\(\\)\\*\\((?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)/100\\)\\),this\\._actoutD",
-      "repl_segs": [
-        {
-          "lit": "und"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "getTotalHP"
-        },
-        {
-          "lit": "()*("
-        },
-        {
-          "lit": "((window.__DGF&&window.__DGF.fullhe"
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "l)?100:a)"
-        },
-        {
-          "lit": "/100)),"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_actoutD"
-        }
-      ],
-      "anchor": "getTotalHP",
-      "expect": "und(b.getTotalHP()*(((window.__DGF&&window.__DGF.fullheal)?100:a)/100)),this._actoutD",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 564252,
-      "orig_core": "a",
-      "patch_core": "((window.__DGF&&window.__DGF.fullheal)?100:a)",
-      "radius": 81,
-      "id": 1,
-      "feature": "Full Heal (potions=100%)  [flag: fullheal]"
-    },
-    {
-      "find": "this\\._hasEscaped=!0,null==this\\._mpData\\?this\\.fadeToMenu\\(\\):\\(",
-      "repl_segs": [
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_hasEscaped"
-        },
-        {
-          "lit": "=!0,"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "null"
-        },
-        {
-          "lit": "=="
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_mpData"
-        },
-        {
-          "lit": "||null==this._mpUser)"
-        },
-        {
-          "lit": "?"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "fadeToMenu"
-        },
-        {
-          "lit": "():("
-        }
-      ],
-      "anchor": "_hasEscaped",
-      "expect": "this._hasEscaped=!0,(null==this._mpData||null==this._mpUser)?this.fadeToMenu():(",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 639566,
-      "orig_core": "null==this._mpData",
-      "patch_core": "(null==this._mpData||null==this._mpUser)",
-      "radius": 98,
-      "id": 2,
-      "feature": "inline logic edit"
-    },
-    {
-      "find": "displayMPErrors:function\\(\\)\\{this\\.stopEnemyTurnTimeout\\(\\),this\\.executeBotTransition\\(\\)\\}",
-      "repl_segs": [
-        {
-          "lit": "displayMPErrors:function(){this.stopEnemyTurnTimeout(),this.executeBotTransition()}"
-        }
-      ],
-      "anchor": "displayMPErrors:function()",
-      "expect": "displayMPErrors:function(){this.stopEnemyTurnTimeout(),this.executeBotTransition()}",
-      "strategy": "compatibility-noop",
-      "ctx": 0,
-      "a_pos": 674833,
-      "orig_core": "displayMPErrors:function(){this.stopEnemyTurnTimeout(),this.executeBotTransition()}",
-      "patch_core": "already safe in this game build",
-      "radius": 100,
-      "id": 3,
-      "feature": "inline logic edit (already safe in this build)"
-    },
-    {
-      "find": "\\),this\\._turnRingWait\\.destroy\\(\\),this\\._tur",
-      "repl_segs": [
-        {
-          "lit": "),"
-        },
-        {
-          "lit": "this._turnRingWait&&"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_turnRingWait"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "destroy"
-        },
-        {
-          "lit": "(),"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_tur"
-        }
-      ],
-      "anchor": "_turnRingWait",
-      "expect": "),this._turnRingWait&&this._turnRingWait.destroy(),this._tur",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 690032,
-      "orig_core": "",
-      "patch_core": "&&this._turnRingWait",
-      "radius": 80,
-      "id": 4,
-      "feature": "inline logic edit"
-    },
-    {
-      "find": "top\\(\\),this\\._emoteHud\\.removeEventListener\\(\"OpenUIEvent\",(?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\(this,this\\.handleEmoteHud\\)\\),this\\._emoteHud\\.removeEventListener\\(\"EmoteEvent\",(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\(this,this\\.handleEmoteHud\\)\\)\\):this\\._botBattle\\&\\&\\((?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\.removeTweens\\(this\\._botTurnExpectant\\),(?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)\\.removeTweens\\(this\\._emoteExpectant\\),this\\._emoteHud\\.removeEventListener\\(\"OpenUIEvent\",(?P<g4>[A-Za-z_$][A-Za-z0-9_$]*)\\(this,this\\.handleEmoteHud\\)\\),this\\._emoteHud\\.removeEventListener",
-      "repl_segs": [
-        {
-          "lit": "top"
-        },
-        {
-          "lit": "(),"
-        },
-        {
-          "lit": "this._emoteHud&&"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_emoteHud"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "removeEventListener"
-        },
-        {
-          "lit": "(\""
-        },
-        {
-          "lit": "OpenUIEvent"
-        },
-        {
-          "lit": "\","
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "handleEmoteHud"
-        },
-        {
-          "lit": ")),"
-        },
-        {
-          "lit": "this._emoteHud&&"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_emoteHud"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "removeEventListener"
-        },
-        {
-          "lit": "(\""
-        },
-        {
-          "lit": "EmoteEvent"
-        },
-        {
-          "lit": "\","
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "handleEmoteHud"
-        },
-        {
-          "lit": "))):"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_botBattle"
-        },
-        {
-          "lit": "&&("
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "removeTweens"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_botTurnExpectant"
-        },
-        {
-          "lit": "),"
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "removeTweens"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_emoteExpectant"
-        },
-        {
-          "lit": "),"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_emoteHud"
-        },
-        {
-          "lit": "&&this._emoteHud"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "removeEventListener"
-        },
-        {
-          "lit": "(\""
-        },
-        {
-          "lit": "OpenUIEvent"
-        },
-        {
-          "lit": "\","
-        },
-        {
-          "grp": "g4"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "handleEmoteHud"
-        },
-        {
-          "lit": ")),"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_emoteHud"
-        },
-        {
-          "lit": "&&this._emoteHud"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "removeEventListener"
-        }
-      ],
-      "anchor": "removeEventListener",
-      "expect": "top(),this._emoteHud&&this._emoteHud.removeEventListener(\"OpenUIEvent\",g(this,this.handleEmoteHud)),this._emoteHud&&this._emoteHud.removeEventListener(\"EmoteEvent\",g(this,this.handleEmoteHud))):this._botBattle&&(k.removeTweens(this._botTurnExpectant),k.removeTweens(this._emoteExpectant),this._emoteHud&&this._emoteHud.removeEventListener(\"OpenUIEvent\",g(this,this.handleEmoteHud)),this._emoteHud&&this._emoteHud.removeEventListener",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 690140,
-      "orig_core": ".removeEventListener(\"OpenUIEvent\",g(this,this.handleEmoteHud)),this._emoteHud.removeEventListener(\"EmoteEvent\",g(this,this.handleEmoteHud))):this._botBattle&&(k.removeTweens(this._botTurnExpectant),k.removeTweens(this._emoteExpectant),this._emoteHud.removeEventListener(\"OpenUIEvent\",g(this,this.handleEmoteHud)),this._emoteHud",
-      "patch_core": "&&this._emoteHud.removeEventListener(\"OpenUIEvent\",g(this,this.handleEmoteHud)),this._emoteHud&&this._emoteHud.removeEventListener(\"EmoteEvent\",g(this,this.handleEmoteHud))):this._botBattle&&(k.removeTweens(this._botTurnExpectant),k.removeTweens(this._emoteExpectant),this._emoteHud&&this._emoteHud.removeEventListener(\"OpenUIEvent\",g(this,this.handleEmoteHud)),this._emoteHud&&this._emoteHud",
-      "radius": 408,
-      "id": 5,
-      "feature": "near string: OpenUIEvent"
-    },
-    {
-      "find": "rnDat=function\\((?P<g0>[A-Za-z_$][A-Za-z0-9_$]*),(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\)\\{(?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\.init\\(\\);for\\(var\\ (?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)=",
-      "repl_segs": [
-        {
-          "lit": "rnDat"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "lit": "function"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "){"
-        },
-        {
-          "lit": "if(!a||typeof a.sendTurn!==\"function\")return;"
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "init"
-        },
-        {
-          "lit": "();"
-        },
-        {
-          "lit": "for"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "var"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": "="
-        }
-      ],
-      "anchor": "function",
-      "expect": "rnDat=function(a,b){if(!a||typeof a.sendTurn!==\"function\")return;Vb.init();for(var c=",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 703150,
-      "orig_core": "",
-      "patch_core": "if(!a||typeof a.sendTurn!==\"function\")return;",
-      "radius": 80,
-      "id": 6,
-      "feature": "near string: function"
-    },
-    {
-      "find": "his\\._invCooldownMax=3\\),this\\._invIsAvail=",
-      "repl_segs": [
-        {
-          "lit": "his"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_invCooldownMax"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "lit": "(window.__DGF&&window.__DGF.pvpcd)?1:"
-        },
-        {
-          "lit": "3),"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_invIsAvail"
-        },
-        {
-          "lit": "="
-        }
-      ],
-      "anchor": "_invCooldownMax",
-      "expect": "his._invCooldownMax=(window.__DGF&&window.__DGF.pvpcd)?1:3),this._invIsAvail=",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 839661,
-      "orig_core": "",
-      "patch_core": "(window.__DGF&&window.__DGF.pvpcd)?1:",
-      "radius": 80,
-      "id": 8,
-      "feature": "PvP Cooldown Skip  [flag: pvpcd]"
-    },
-    {
-      "find": "apBox\\.addChild\\((?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\)\\}\\},setupAbilsBox:function\\(\\)\\{for\\(var\\ (?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)=0,(?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)=this\\._abilsBox\\.get_numChildren\\(",
-      "repl_segs": [
-        {
-          "lit": "apBox"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "addChild"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": ")}},"
-        },
-        {
-          "lit": "setupAbilsBox"
-        },
-        {
-          "lit": ":"
-        },
-        {
-          "lit": "function"
-        },
-        {
-          "lit": "(){"
-        },
-        {
-          "lit": "try{window.__DG_HUD=this;}catch(e){}"
-        },
-        {
-          "lit": "for"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "var"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "=0,"
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_abilsBox"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "get_numChildren"
-        },
-        {
-          "lit": "("
-        }
-      ],
-      "anchor": "get_numChildren",
-      "expect": "apBox.addChild(d)}},setupAbilsBox:function(){try{window.__DG_HUD=this;}catch(e){}for(var a=0,b=this._abilsBox.get_numChildren(",
-      "strategy": "generalized",
-      "ctx": 45,
-      "a_pos": 849429,
-      "orig_core": "",
-      "patch_core": "try{window.__DG_HUD=this;}catch(e){}",
-      "radius": 130,
-      "id": 9,
-      "feature": "inline logic edit"
-    },
-    {
-      "find": "ssedTurn:function\\(\\)\\{0<this\\._invCooldown\\&",
-      "repl_segs": [
-        {
-          "lit": "ssedTurn"
-        },
-        {
-          "lit": ":"
-        },
-        {
-          "lit": "function"
-        },
-        {
-          "lit": "(){"
-        },
-        {
-          "lit": "(window.__DGF&&window.__DGF.turnreset)&&(this._itemsUsedThisTurn=0);"
-        },
-        {
-          "lit": "0<"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_invCooldown"
-        },
-        {
-          "lit": "&"
-        }
-      ],
-      "anchor": "_invCooldown",
-      "expect": "ssedTurn:function(){(window.__DGF&&window.__DGF.turnreset)&&(this._itemsUsedThisTurn=0);0<this._invCooldown&",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 851677,
-      "orig_core": "",
-      "patch_core": "(window.__DGF&&window.__DGF.turnreset)&&(this._itemsUsedThisTurn=0);",
-      "radius": 80,
-      "id": 10,
-      "feature": "Turn Reset  [flag: turnreset]"
-    },
-    {
-      "find": "=(?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\.data\\&\\&null!=(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\.data\\.choseItem\\&\\&\\(this\\._itemsBtn\\.addChild\\(this\\._itemsBtnOff\\),this\\._itemsBt",
-      "repl_segs": [
-        {
-          "lit": "="
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "data"
-        },
-        {
-          "lit": "&&"
-        },
-        {
-          "lit": "null"
-        },
-        {
-          "lit": "!="
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "data"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "choseItem"
-        },
-        {
-          "lit": "&&("
-        },
-        {
-          "lit": "this._itemsUsedThisTurn=(this._itemsUsedThisTurn||0)+1,((window.__DGF&&window.__DGF.items5)?5<=this._itemsUsedThisTurn:!0)&&(this._itemsUsedThisTurn=0,"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_itemsBtn"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "addChild"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_itemsBtnOff"
-        },
-        {
-          "lit": "),"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_itemsBt"
-        }
-      ],
-      "anchor": "_itemsBtnOff",
-      "expect": "=a.data&&null!=a.data.choseItem&&(this._itemsUsedThisTurn=(this._itemsUsedThisTurn||0)+1,((window.__DGF&&window.__DGF.items5)?5<=this._itemsUsedThisTurn:!0)&&(this._itemsUsedThisTurn=0,this._itemsBtn.addChild(this._itemsBtnOff),this._itemsBt",
-      "strategy": "generalized",
-      "ctx": 45,
-      "a_pos": 857061,
-      "orig_core": "",
-      "patch_core": "UsedThisTurn=(this._itemsUsedThisTurn||0)+1,((window.__DGF&&window.__DGF.items5)?5<=this._itemsUsedThisTurn:!0)&&(this._itemsUsedThisTurn=0,this._items",
-      "radius": 130,
-      "id": 11,
-      "feature": "5x Item Use  [flag: items5]"
-    },
-    {
-      "find": ",this\\._itemsBtn\\.getChildAt\\(0\\)\\.set_visible\\(!1\\),null!=(?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\.data\\.ability\\?\\(this\\._itemsUsed\\+\\+,this",
-      "repl_segs": [
-        {
-          "lit": ","
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_itemsBtn"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "getChildAt"
-        },
-        {
-          "lit": "(0)."
-        },
-        {
-          "lit": "set_visible"
-        },
-        {
-          "lit": "(!1"
-        },
-        {
-          "lit": ")"
-        },
-        {
-          "lit": "),"
-        },
-        {
-          "lit": "null"
-        },
-        {
-          "lit": "!="
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "data"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "ability"
-        },
-        {
-          "lit": "?("
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_itemsUsed"
-        },
-        {
-          "lit": "++,"
-        },
-        {
-          "lit": "this"
-        }
-      ],
-      "anchor": "set_visible",
-      "expect": ",this._itemsBtn.getChildAt(0).set_visible(!1)),null!=a.data.ability?(this._itemsUsed++,this",
-      "strategy": "generalized",
-      "ctx": 45,
-      "a_pos": 857287,
-      "orig_core": "",
-      "patch_core": ")",
-      "radius": 130,
-      "id": 12,
-      "feature": "inline logic edit"
-    },
-    {
-      "find": ",(?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\.items=\\[\\],(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\.name=\"Player\"\\+\\(1(?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\*Math\\.random\\(\\)",
-      "repl_segs": [
-        {
-          "lit": ","
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "items"
-        },
-        {
-          "lit": "=[],"
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "name"
-        },
-        {
-          "lit": "=\""
-        },
-        {
-          "lit": "BOT_"
-        },
-        {
-          "lit": "\"+(1"
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "*"
-        },
-        {
-          "lit": "Math"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "random"
-        },
-        {
-          "lit": "()"
-        }
-      ],
-      "anchor": "random",
-      "expect": ",b.items=[],b.name=\"BOT_\"+(1e7*Math.random()",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 1101777,
-      "orig_core": "Player",
-      "patch_core": "BOT_",
-      "radius": 86,
-      "id": 13,
-      "feature": "inline logic edit"
-    },
-    {
-      "find": "his\\._fullTimeToWait=240,this\\._isWorking=",
-      "repl_segs": [
-        {
-          "lit": "his"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_fullTimeToWait"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "lit": "(window.__DGF&&window.__DGF.itemtimer)?0:"
-        },
-        {
-          "lit": "240,"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_isWorking"
-        },
-        {
-          "lit": "="
-        }
-      ],
-      "anchor": "_fullTimeToWait",
-      "expect": "his._fullTimeToWait=(window.__DGF&&window.__DGF.itemtimer)?0:240,this._isWorking=",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 1301737,
-      "orig_core": "",
-      "patch_core": "(window.__DGF&&window.__DGF.itemtimer)?0:",
-      "radius": 80,
-      "id": 14,
-      "feature": "Item Timer Skip  [flag: itemtimer]"
-    },
-    {
-      "find": "_timeToTick:null,_timerToTick:null,_isWorking:null,_dispatcher:null,startTimer:function\\(\\)\\{this\\._isWorking=!0,this\\._timerToTick=new\\ (?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\(this\\._timeToTick\\),this\\._timerToTick\\.run=(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\(this",
-      "repl_segs": [
-        {
-          "lit": "_timeToTick"
-        },
-        {
-          "lit": ":"
-        },
-        {
-          "lit": "null"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "lit": "_timerToTick"
-        },
-        {
-          "lit": ":"
-        },
-        {
-          "lit": "null"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "lit": "_isWorking"
-        },
-        {
-          "lit": ":"
-        },
-        {
-          "lit": "null"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "lit": "_dispatcher"
-        },
-        {
-          "lit": ":"
-        },
-        {
-          "lit": "null"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "lit": "startTimer"
-        },
-        {
-          "lit": ":"
-        },
-        {
-          "lit": "function"
-        },
-        {
-          "lit": "(){"
-        },
-        {
-          "lit": "if(window.__DGF&&window.__DGF.itemtimer){this._isWorking=!1;this._timeToWait=0;this.dispatch(new da(\"complete\"));return;}"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_isWorking"
-        },
-        {
-          "lit": "=!0,"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_timerToTick"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "lit": "new"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_timeToTick"
-        },
-        {
-          "lit": "),"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_timerToTick"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "run"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "this"
-        }
-      ],
-      "anchor": "_timerToTick",
-      "expect": "_timeToTick:null,_timerToTick:null,_isWorking:null,_dispatcher:null,startTimer:function(){if(window.__DGF&&window.__DGF.itemtimer){this._isWorking=!1;this._timeToWait=0;this.dispatch(new da(\"complete\"));return;}this._isWorking=!0,this._timerToTick=new ik(this._timeToTick),this._timerToTick.run=g(this",
-      "strategy": "generalized",
-      "ctx": 90,
-      "a_pos": 1302041,
-      "orig_core": "",
-      "patch_core": "if(window.__DGF&&window.__DGF.itemtimer){this._isWorking=!1;this._timeToWait=0;this.dispatch(new da(\"complete\"));return;}",
-      "radius": 220,
-      "id": 15,
-      "feature": "Item Timer Skip  [flag: itemtimer]"
-    },
-    {
-      "find": "ction\\(\\)\\{return\\ this\\._dispatcher\\.hasEventListener\\(\"change\"\\)\\},getLeftTime:function\\(\\)\\{return\\ this\\._timeToWait\\},addListener:function\\((?P<g0>[A-Za-z_$][A-Za-z0-9_$]*),(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\)\\{this\\._dispatcher\\.addEventListener\\((?P<g2>[A-Za-z_$][A-Za-z0-9_$]*),(?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)\\)\\},remove",
-      "repl_segs": [
-        {
-          "lit": "ction"
-        },
-        {
-          "lit": "(){"
-        },
-        {
-          "lit": "return"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_dispatcher"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "hasEventListener"
-        },
-        {
-          "lit": "(\""
-        },
-        {
-          "lit": "change"
-        },
-        {
-          "lit": "\")},"
-        },
-        {
-          "lit": "getLeftTime"
-        },
-        {
-          "lit": ":"
-        },
-        {
-          "lit": "function"
-        },
-        {
-          "lit": "(){"
-        },
-        {
-          "lit": "return"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "lit": "(window.__DGF&&window.__DGF.itemtimer)?0:"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_timeToWait"
-        },
-        {
-          "lit": "},"
-        },
-        {
-          "lit": "addListener"
-        },
-        {
-          "lit": ":"
-        },
-        {
-          "lit": "function"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "){"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_dispatcher"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "addEventListener"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": ")},"
-        },
-        {
-          "lit": "remove"
-        }
-      ],
-      "anchor": "hasEventListener",
-      "expect": "ction(){return this._dispatcher.hasEventListener(\"change\")},getLeftTime:function(){return (window.__DGF&&window.__DGF.itemtimer)?0:this._timeToWait},addListener:function(a,b){this._dispatcher.addEventListener(a,b)},remove",
-      "strategy": "generalized",
-      "ctx": 90,
-      "a_pos": 1302606,
-      "orig_core": "",
-      "patch_core": "(window.__DGF&&window.__DGF.itemtimer)?0:",
-      "radius": 220,
-      "id": 16,
-      "feature": "Item Timer Skip  [flag: itemtimer]"
-    },
-    {
-      "find": "ialBattle:(?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\.specialBattle\\};(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\.get\\(this\\._overlay\\)\\.tto\\(\\{alpha:1\\},350\\)\\.call\\(function\\(\\)\\{return\\ (?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\.removeChild\\((?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)\\._pvpModal\\),(?P<g4>[A-Za-z_$][A-Za-z0-9_$]*)\\._pvpModal\\.removeEventListener\\(\"close\",(?P<g5>[A-Za-z_$][A-Za-z0-9_$]*)\\((?P<g6>[A-Za-z_$][A-Za-z0-9_$]*),(?P<g7>[A-Za-z_$][A-Za-z0-9_$]*)\\.handleClosePVP\\)\\),",
-      "repl_segs": [
-        {
-          "lit": "ialBattle"
-        },
-        {
-          "lit": ":"
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "specialBattle"
-        },
-        {
-          "lit": "};"
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "get"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_overlay"
-        },
-        {
-          "lit": ")."
-        },
-        {
-          "lit": "tto"
-        },
-        {
-          "lit": "({"
-        },
-        {
-          "lit": "alpha"
-        },
-        {
-          "lit": ":1},350)."
-        },
-        {
-          "lit": "call"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "function"
-        },
-        {
-          "lit": "(){"
-        },
-        {
-          "lit": "return"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "lit": "(null!=b._pvpModal&&("
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "removeChild"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_pvpModal"
-        },
-        {
-          "lit": "),"
-        },
-        {
-          "grp": "g4"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_pvpModal"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "removeEventListener"
-        },
-        {
-          "lit": "(\""
-        },
-        {
-          "lit": "close"
-        },
-        {
-          "lit": "\","
-        },
-        {
-          "grp": "g5"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "grp": "g6"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "grp": "g7"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "handleClosePVP"
-        },
-        {
-          "lit": ")),"
-        }
-      ],
-      "anchor": "removeEventListener",
-      "expect": "ialBattle:c.specialBattle};k.get(this._overlay).tto({alpha:1},350).call(function(){return (null!=b._pvpModal&&(b.removeChild(b._pvpModal),b._pvpModal.removeEventListener(\"close\",g(b,b.handleClosePVP)),",
-      "strategy": "generalized",
-      "ctx": 90,
-      "a_pos": 1333240,
-      "orig_core": "",
-      "patch_core": "(null!=b._pvpModal&&(",
-      "radius": 220,
-      "id": 17,
-      "feature": "inline logic edit"
-    },
-    {
-      "find": "ttle\\)\\),(?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\._pvpModal\\.destroy\\(\\),(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\._pvpModal=null,(?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\.dispatchEvent\\(new\\ (?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)\\((?P<g4>[A-Za-z_$][A-Za-z0-9_$]*)\\.START_BATTLE,(?P<g5>[A-Za-z_$][A-Za-z0-9_$]*)\\)\\)\\}\\)",
-      "repl_segs": [
-        {
-          "lit": "ttle"
-        },
-        {
-          "lit": ")),"
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_pvpModal"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "destroy"
-        },
-        {
-          "lit": "(),"
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_pvpModal"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "lit": "null"
-        },
-        {
-          "lit": "))"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "dispatchEvent"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "new"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "grp": "g4"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "START_BATTLE"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "grp": "g5"
-        },
-        {
-          "lit": "))})"
-        }
-      ],
-      "anchor": "dispatchEvent",
-      "expect": "ttle)),b._pvpModal.destroy(),b._pvpModal=null)),b.dispatchEvent(new ja(Ua.START_BATTLE,d))})",
-      "strategy": "generalized",
-      "ctx": 45,
-      "a_pos": 1333449,
-      "orig_core": "",
-      "patch_core": "))",
-      "radius": 130,
-      "id": 18,
-      "feature": "inline logic edit"
-    },
-    {
-      "find": "tton\\.set_enabled\\(!0\\)\\},onContinueButtonCl",
-      "repl_segs": [
-        {
-          "lit": "tton"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "set_enabled"
-        },
-        {
-          "lit": "(!0)"
-        },
-        {
-          "lit": ",window.__DG_RESULT=this"
-        },
-        {
-          "lit": "},"
-        },
-        {
-          "lit": "onContinueButtonCl"
-        }
-      ],
-      "anchor": "onContinueButtonCl",
-      "expect": "tton.set_enabled(!0),window.__DG_RESULT=this},onContinueButtonCl",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 1494748,
-      "orig_core": "",
-      "patch_core": ",window.__DG_RESULT=this",
-      "radius": 80,
-      "id": 19,
-      "feature": "inline logic edit"
-    },
-    {
-      "find": "\\.indexOf\\((?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\)\\&\\&\\((?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\+=(?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\),12==(?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)\\.length\\)break\\}if\\(",
-      "repl_segs": [
-        {
-          "lit": "."
-        },
-        {
-          "lit": "indexOf"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": ")&&("
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "+="
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "),"
-        },
-        {
-          "lit": "((window.__DGF&&window.__DGF.nickval)?20:"
-        },
-        {
-          "lit": "12"
-        },
-        {
-          "lit": ")"
-        },
-        {
-          "lit": "=="
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "length"
-        },
-        {
-          "lit": ")"
-        },
-        {
-          "lit": "break"
-        },
-        {
-          "lit": "}"
-        },
-        {
-          "lit": "if"
-        },
-        {
-          "lit": "("
-        }
-      ],
-      "anchor": "indexOf",
-      "expect": ".indexOf(x)&&(t+=x),((window.__DGF&&window.__DGF.nickval)?20:12)==t.length)break}if(",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 2260061,
-      "orig_core": "12",
-      "patch_core": "((window.__DGF&&window.__DGF.nickval)?20:12)",
-      "radius": 82,
-      "id": 20,
-      "feature": "Nickname Validation Bypass  [flag: nickval]"
-    },
-    {
-      "find": "kField\\.set_maxChars\\(12\\),this\\._nickField\\.",
-      "repl_segs": [
-        {
-          "lit": "kField"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "set_maxChars"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "(window.__DGF&&window.__DGF.nicklen)?20:"
-        },
-        {
-          "lit": "12),"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_nickField"
-        },
-        {
-          "lit": "."
-        }
-      ],
-      "anchor": "set_maxChars",
-      "expect": "kField.set_maxChars((window.__DGF&&window.__DGF.nicklen)?20:12),this._nickField.",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 2357365,
-      "orig_core": "",
-      "patch_core": "(window.__DGF&&window.__DGF.nicklen)?20:",
-      "radius": 80,
-      "id": 21,
-      "feature": "Nickname Length Unlock  [flag: nicklen]"
-    },
-    {
-      "find": "htRandom:function\\(\\)\\{var\\ (?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)=this;this\\._mat",
-      "repl_segs": [
-        {
-          "lit": "htRandom"
-        },
-        {
-          "lit": ":"
-        },
-        {
-          "lit": "function"
-        },
-        {
-          "lit": "(){"
-        },
-        {
-          "lit": "if(typeof window!==\"undefined\"&&window.__DG_FORCEBOT===true){try{return window.$DW[\"co.doubleduck.dynamons3.meta.BotBattleMatchmake\"].Instance().createFight(null)}catch(e){console.log(\"[DG] bot redirect failed\",e)}}"
-        },
-        {
-          "lit": "var"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": ";"
-        },
-        {
-          "lit": "this"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_mat"
-        }
-      ],
-      "anchor": "htRandom",
-      "expect": "htRandom:function(){if(typeof window!==\"undefined\"&&window.__DG_FORCEBOT===true){try{return window.$DW[\"co.doubleduck.dynamons3.meta.BotBattleMatchmake\"].Instance().createFight(null)}catch(e){console.log(\"[DG] bot redirect failed\",e)}}var a=this;this._mat",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 2396919,
-      "orig_core": "",
-      "patch_core": "if(typeof window!==\"undefined\"&&window.__DG_FORCEBOT===true){try{return window.$DW[\"co.doubleduck.dynamons3.meta.BotBattleMatchmake\"].Instance().createFight(null)}catch(e){console.log(\"[DG] bot redirect failed\",e)}}",
-      "radius": 80,
-      "id": 22,
-      "feature": "near string: undefined"
-    },
-    {
-      "find": "tring=function\\((?P<g0>[A-Za-z_$][A-Za-z0-9_$]*),(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\)\\{if\\(0==(?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\.length\\)return\\ (?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)(?P<g4>[A-Za-z_$][A-Za-z0-9_$]*)(?P<g5>[A-Za-z_$][A-Za-z0-9_$]*)\\ (?P<g6>[A-Za-z_$][A-Za-z0-9_$]*);if\\(null==(?P<g7>[A-Za-z_$][A-Za-z0-9_$]*)\\)\\{if\\(null=",
-      "repl_segs": [
-        {
-          "lit": "tring"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "lit": "function"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "){"
-        },
-        {
-          "lit": "var __dgs=a;"
-        },
-        {
-          "lit": "if"
-        },
-        {
-          "lit": "(0=="
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "length"
-        },
-        {
-          "lit": ")"
-        },
-        {
-          "lit": "{var __e=new w;try{__e._dgText=\"\";}catch(_){}"
-        },
-        {
-          "lit": "return"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "lit": "__"
-        },
-        {
-          "grp": "g4"
-        },
-        {
-          "lit": ";"
-        },
-        {
-          "lit": "}"
-        },
-        {
-          "lit": "if"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "null"
-        },
-        {
-          "lit": "=="
-        },
-        {
-          "grp": "g7"
-        },
-        {
-          "lit": "){"
-        },
-        {
-          "lit": "if"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "lit": "null"
-        },
-        {
-          "lit": "="
-        }
-      ],
-      "anchor": "function",
-      "expect": "tring=function(a,b){var __dgs=a;if(0==a.length){var __e=new w;try{__e._dgText=\"\";}catch(_){}return __e;}if(null==b){if(null=",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 2500201,
-      "orig_core": "if(0==a.length)return new w;",
-      "patch_core": "var __dgs=a;if(0==a.length){var __e=new w;try{__e._dgText=\"\";}catch(_){}return __e;}",
-      "radius": 108,
-      "id": 23,
-      "feature": "inline logic edit"
-    },
-    {
-      "find": "\\.set_x\\((?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\.get_x\\(\\)\\-(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\);return\\ (?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\},(?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)\\.getChar=",
-      "repl_segs": [
-        {
-          "lit": "."
-        },
-        {
-          "lit": "set_x"
-        },
-        {
-          "lit": "("
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "get_x"
-        },
-        {
-          "lit": "()-"
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": ");"
-        },
-        {
-          "lit": "try{d._dgText=__dgs;}catch(_){}"
-        },
-        {
-          "lit": "return"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "},"
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "getChar"
-        },
-        {
-          "lit": "="
-        }
-      ],
-      "anchor": "getChar",
-      "expect": ".set_x(f.get_x()-a);try{d._dgText=__dgs;}catch(_){}return d},I.getChar=",
-      "strategy": "generalized",
-      "ctx": 20,
-      "a_pos": 2500831,
-      "orig_core": "",
-      "patch_core": "try{d._dgText=__dgs;}catch(_){}",
-      "radius": 80,
-      "id": 24,
-      "feature": "inline logic edit"
-    },
-    {
-      "find": "inigame\",(?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\.TIP_FONT=(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\.WHITE_SMALL,(?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\.MAX_DEF=500,(?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)\\._inited=!1,(?P<g4>[A-Za-z_$][A-Za-z0-9_$]*)\\._dispatcher=new\\ (?P<g5>[A-Za-z_$][A-Za-z0-9_$]*),(?P<g6>[A-Za-z_$][A-Za-z0-9_$]*)\\._need",
-      "repl_segs": [
-        {
-          "lit": "inigame"
-        },
-        {
-          "lit": "\","
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "TIP_FONT"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "WHITE_SMALL"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "MAX_DEF"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "lit": "(window.__DGF&&window.__DGF.maxdef)?100000000000000:"
-        },
-        {
-          "lit": "500,"
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_inited"
-        },
-        {
-          "lit": "=!1,"
-        },
-        {
-          "grp": "g4"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_dispatcher"
-        },
-        {
-          "lit": "="
-        },
-        {
-          "lit": "new"
-        },
-        {
-          "lit": " "
-        },
-        {
-          "grp": "g5"
-        },
-        {
-          "lit": ","
-        },
-        {
-          "grp": "g6"
-        },
-        {
-          "lit": "."
-        },
-        {
-          "lit": "_need"
-        }
-      ],
-      "anchor": "WHITE_SMALL",
-      "expect": "inigame\",hd.TIP_FONT=O.WHITE_SMALL,h.MAX_DEF=(window.__DGF&&window.__DGF.maxdef)?100000000000000:500,h._inited=!1,h._dispatcher=new Aa,h._need",
-      "strategy": "generalized",
-      "ctx": 45,
-      "a_pos": 4965953,
-      "orig_core": "",
-      "patch_core": "(window.__DGF&&window.__DGF.maxdef)?100000000000000:",
-      "radius": 130,
-      "id": 25,
-      "feature": "Max Defense Cap  [flag: maxdef]"
-    },
-    {
-      "find": "(?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\.shopPromoIds=\\[\"unlimited_snacks_sale\"\\]",
-      "repl_segs": [
-        {
-          "lit": "Object.defineProperty("
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": ",\"shopPromoIds\",{configurable:true,get:function(){return [];}})"
-        }
-      ],
-      "anchor": "shopPromoIds=[\"unlimited_snacks_sale\"]",
-      "radius": 200,
-      "ctx": 0,
-      "strategy": "generalized",
-      "orig_core": "fb.shopPromoIds=[\"unlimited_snacks_sale\"]",
-      "patch_core": "Object.defineProperty(fb,\"shopPromoIds\",{configurable:true,get:function(){return [];}})",
-      "expect": "Object.defineProperty(fb,\"shopPromoIds\",{configurable:true,get:function(){return [];}})",
-      "id": 26,
-      "a_pos": 4967502,
-      "feature": "near string: shopPromoIds"
-    },
-    {
-      "find": "elete\\ define\\.__amd\\);",
-      "repl_segs": [
-        {
-          "lit": "elete define.__amd);"
-        }
-      ],
-      "anchor": "define",
-      "expect": "elete define.__amd);\n;(function(){try{if(window.__DG_ERRCATCH)return;window.__DG_ERRCATCH=1;function box(title,msg){try{var d=document.getElementById('dg_err');if(!d){d=document.createElement('div');d.id='dg_err';d.style.cssText='position:fixed;left:8px;right:8px;top:90px;max-height:70vh;overflow:auto;z-index:2147483647;background:rgba(140,0,0,.96);color:#fff;font:12px/1.4 monospace;padding:12px;border:2px solid #ff5555;border-radius:10px;white-space:pre-wrap;word-break:break-word;box-shadow:0 8px 30px rgba(0,0,0,.6)';var x=document.createElement('div');x.textContent='\\u2715 close';x.style.cssText='position:sticky;top:0;float:right;cursor:pointer;background:#fff;color:#900;padding:2px 8px;border-radius:6px;font-weight:700';x.onclick=function(){d.remove();};d.appendChild(x);var c=document.createElement('div');c.textContent='\\u29C9 copy';c.style.cssText='position:sticky;top:0;float:right;margin-right:8px;cursor:pointer;background:#fff;color:#900;padding:2px 8px;border-radius:6px;font-weight:700';c.onclick=function(){try{navigator.clipboard.writeText(d.innerText);}catch(e){}};d.appendChild(c);var p=document.createElement('div');p.id='dg_err_body';d.appendChild(p);document.body.appendChild(d);}var body=document.getElementById('dg_err_body');body.textContent=(body.textContent?body.textContent+'\\n\\n---\\n':'')+'['+title+']\\n'+msg;}catch(e){}}window.addEventListener('error',function(e){try{if(e&&e.target&&e.target!==window&&(e.target.tagName||e.target.src||e.target.href))return;if(!e.message&&!e.error)return;var m=(e.message||'')+'\\n@ '+(e.filename||'?')+':'+(e.lineno||'?')+':'+(e.colno||'?');if(e.error&&e.error.stack)m+='\\n'+e.error.stack;box('JS ERROR',m);}catch(_){}}, true);window.addEventListener('unhandledrejection',function(e){try{var r=e.reason;box('PROMISE REJECTION',(r&&(r.stack||r.message))||String(r));}catch(_){}});}catch(e){}})();\n\n;\n",
-      "strategy": "compatibility-noop",
-      "ctx": 20,
-      "a_pos": 5070158,
-      "orig_core": "",
-      "patch_core": "",
-      "radius": 80,
-      "id": 27,
-      "feature": "Internal error isolation (no visible debug overlay)"
-    },
-    {
-      "find": "0\\=\\=e\\.getId\\(\\)\\.indexOf\\(\\\"suit\\#inferno\\\"\\)\\&\\&h\\.setItemAmount\\(\\\"inferno_suit\\\"\\,1\\)",
-      "repl_segs": [
-        {
-          "lit": "0==e.getId().indexOf(\"suit#inferno\")&&(h.setItemAmount(\"inferno_suit\",1),h.setItemAmount(\"inferno_armor\",1))"
-        }
-      ],
-      "anchor": "setItemAmount(\"inferno_suit\"",
-      "expect": "0==e.getId().indexOf(\"suit#inferno\")&&(h.setItemAmount(\"inferno_suit\",1),h.setItemAmount(\"inferno_armor\",1))",
-      "strategy": "literal",
-      "radius": 200,
-      "id": 28,
-      "feature": "Inferno suit: grant inferno_armor so it appears in items"
-    },
-    {
-      "find": "openFortuneWheel:function\\(\\)\\{if\\((?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\.isEnoughMemoryForContinue\\((?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\.memoryInfo\\)\\)\\{var\\ (?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)=new\\ (?P<g3>[A-Za-z_$][A-Za-z0-9_$]*);(?P=g2)\\.addEventListener\\(\"close\",(?P<g4>[A-Za-z_$][A-Za-z0-9_$]*)\\(this,this\\.handleCloseModal\\)\\),this\\._modalLayer\\.addChild\\((?P=g2)\\),this\\.toggleScrolls\\(!1\\)\\}\\}",
-      "repl_segs": [
-        {
-          "lit": "openFortuneWheel:function(){if((window||self).$DG&&(window||self).$DG.spin){if("
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": ".isEnoughMemoryForContinue("
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": ".memoryInfo)){var "
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "=new "
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": ";"
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": ".addEventListener(\"close\","
-        },
-        {
-          "grp": "g4"
-        },
-        {
-          "lit": "(this,this.handleCloseModal)),this._modalLayer.addChild("
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": "),this.toggleScrolls(!1)}}else this.handleCloseWheel()}"
-        }
-      ],
-      "anchor": "openFortuneWheel:function()",
-      "expect": "openFortuneWheel:function(){if((window||self).$DG&&(window||self).$DG.spin){if(ja.isEnoughMemoryForContinue(h.memoryInfo)){var a=new Xg;a.addEventListener(\"close\",g(this,this.handleCloseModal)),this._modalLayer.addChild(a),this.toggleScrolls(!1)}}else this.handleCloseWheel()}",
-      "strategy": "literal",
-      "radius": 400,
-      "id": 29,
-      "feature": "Remove Fortune/Spin wheel (worlds + after battles) \u2014 gated by $DG.spin"
-    },
-    {
-      "find": "(?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\.setPreferedAsTimeScale=function\\(\\)\\{(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\.setTimeScale\\((?P=g0)\\._preferTimeScale\\),(?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\.setTimeScale\\((?P=g0)\\._preferTimeScale\\),(?P=g0)\\.dispatch\\(new\\ (?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)\\(\"TIME_SCALE_CHANGED\"\\)\\)\\}",
-      "repl_segs": [
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": ".setPreferedAsTimeScale=function(){var __s=(window||self).$DG&&+(window||self).$DG.speed||"
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": "._preferTimeScale;"
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": ".setTimeScale(__s),"
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": ".setTimeScale(__s),"
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": ".dispatch(new "
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": "(\"TIME_SCALE_CHANGED\"))},((window||self).$DG=(window||self).$DG||{}).applySpeed=function(){var __t=+((window||self).$DG.speed)||0;if(__t<=0)return;if("
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": ".timeScale!==__t){"
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": ".setTimeScale(__t),"
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": ".setTimeScale(__t)}}"
-        }
-      ],
-      "anchor": "setPreferedAsTimeScale=function",
-      "expect": "h.setPreferedAsTimeScale=function(){var __s=(window||self).$DG&&+(window||self).$DG.speed||h._preferTimeScale;k.setTimeScale(__s),Tb.setTimeScale(__s),h.dispatch(new fa(\"TIME_SCALE_CHANGED\"))},((window||self).$DG=(window||self).$DG||{}).applySpeed=function(){var __t=+((window||self).$DG.speed)||0;if(__t<=0)return;if(k.timeScale!==__t){k.setTimeScale(__t),Tb.setTimeScale(__t)}}",
-      "strategy": "literal",
-      "radius": 300,
-      "id": 30,
-      "feature": "Global speed: setPreferedAsTimeScale honors $DG.speed at FULL chosen speed (k==Tb lockstep) + drift-only $DG.applySpeed"
-    },
-    {
-      "find": "(?P<g0>[A-Za-z_$][A-Za-z0-9_$]*)\\.resetTimeScale=function\\(\\)\\{(?P<g1>[A-Za-z_$][A-Za-z0-9_$]*)\\.setTimeScale\\(1\\),(?P<g2>[A-Za-z_$][A-Za-z0-9_$]*)\\.setTimeScale\\(1\\),(?P=g0)\\.dispatch\\(new\\ (?P<g3>[A-Za-z_$][A-Za-z0-9_$]*)\\(\"TIME_SCALE_CHANGED\"\\)\\)\\}",
-      "repl_segs": [
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": ".resetTimeScale=function(){var __s=(window||self).$DG&&+(window||self).$DG.speed||1;"
-        },
-        {
-          "grp": "g1"
-        },
-        {
-          "lit": ".setTimeScale(__s),"
-        },
-        {
-          "grp": "g2"
-        },
-        {
-          "lit": ".setTimeScale(__s),"
-        },
-        {
-          "grp": "g0"
-        },
-        {
-          "lit": ".dispatch(new "
-        },
-        {
-          "grp": "g3"
-        },
-        {
-          "lit": "(\"TIME_SCALE_CHANGED\"))}"
-        }
-      ],
-      "anchor": "resetTimeScale=function",
-      "expect": "h.resetTimeScale=function(){var __s=(window||self).$DG&&+(window||self).$DG.speed||1;k.setTimeScale(__s),Tb.setTimeScale(__s),h.dispatch(new fa(\"TIME_SCALE_CHANGED\"))}",
-      "strategy": "literal",
-      "radius": 300,
-      "id": 31,
-      "feature": "Global speed: resetTimeScale honors $DG.speed (k==Tb lockstep)"
-    },
-    {
-      "find": "m\\&\\&c\\?Math\\.random\\(\\)<\\.5\\?this\\._actionQeue\\.push\\(\\{type:\"wheel\"\\}\\):1!=d\\?this\\._actionQeue\\.push\\(\\{type:\"promo\",promoType:d\\}\\):\"\"!=\\(b=Cb\\.getShopPromoId\\(\\)\\)\\&\\&this\\._actionQeue\\.push\\(\\{type:\"shopPromo\",id:b\\}\\):m\\?this\\._actionQeue\\.push\\(\\{type:\"wheel\"\\}\\)",
-      "repl_segs": [
-        {
-          "lit": "m&&c?Math.random()<.5?((window||self).$DG?(window||self).$DG.spin:!0)&&this._actionQeue.push({type:\"wheel\"}):1!=d?this._actionQeue.push({type:\"promo\",promoType:d}):\"\"!=(b=Cb.getShopPromoId())&&this._actionQeue.push({type:\"shopPromo\",id:b}):m?((window||self).$DG?(window||self).$DG.spin:!0)&&this._actionQeue.push({type:\"wheel\"})"
-        }
-      ],
-      "anchor": "m&&c?Math.random()<.5?",
-      "expect": "m&&c?Math.random()<.5?((window||self).$DG?(window||self).$DG.spin:!0)&&this._actionQeue.push({type:\"wheel\"}):1!=d?this._actionQeue.push({type:\"promo\",promoType:d}):\"\"!=(b=Cb.getShopPromoId())&&this._actionQeue.push({type:\"shopPromo\",id:b}):m?((window||self).$DG?(window||self).$DG.spin:!0)&&this._actionQeue.push({type:\"wheel\"})",
-      "strategy": "exact",
-      "radius": 700,
-      "id": 32,
-      "feature": "Spin-wheel: gate both post-battle wheel queue branches behind $DG.spin"
-    },
-    {
-      "find": "\"arena_event_set_score_failed\"==a\\.type\\?\\(null!=\\(a=a\\.data\\.oldScore\\)&&\\(h\\.pvpSeasons\\.seasons\\.h\\[c\\]\\.scoreData\\.score=a\\),h\\.saveSeasonData\\(\\),this\\.onFailed\\(\"SET_SCORE_FAILED\"\\)\\)",
-      "repl_segs": [
-        {
-          "lit": "\"arena_event_set_score_failed\"==a.type?(this.onFailed(\"SET_SCORE_FAILED\"))"
-        }
-      ],
-      "anchor": "arena_event_set_score_failed",
-      "expect": "\"arena_event_set_score_failed\"==a.type?(this.onFailed(\"SET_SCORE_FAILED\"))",
-      "strategy": "literal",
-      "radius": 300,
-      "id": 33,
-      "feature": "Arena trophies: stop destructive rollback on failed score write (failed write no longer erases earned trophies; next success re-pushes the true value)"
-    },
-    {
-      "find": "h\\.pvpSeasons\\.seasons\\.h\\[this\\._currentEventId\\]\\.scoreData\\.score=c,h\\.saveMonsData\\(\\)",
-      "repl_segs": [
-        {
-          "lit": "(c>(+h.pvpSeasons.seasons.h[this._currentEventId].scoreData.score||0)&&(h.pvpSeasons.seasons.h[this._currentEventId].scoreData.score=c)),h.saveMonsData()"
-        }
-      ],
-      "anchor": "SCORE_RECORD_GET_FAILED",
-      "expect": "(c>(+h.pvpSeasons.seasons.h[this._currentEventId].scoreData.score||0)&&(h.pvpSeasons.seasons.h[this._currentEventId].scoreData.score=c)),h.saveMonsData()",
-      "strategy": "literal",
-      "radius": 300,
-      "id": 34,
-      "feature": "Arena trophies: server-read never lowers local (onScoreRecordGot max-clamp). Stale/lagging server score can't erase earned trophies or corrupt the base used for the next reward."
-    }
+  "skins": [
+    "tydonyx_skin",
+    "anubolt_skin",
+    "aragonyx_skin",
+    "dagaryx_skin",
+    "sauryx_skin",
+    "horzaryx_skin",
+    "tholanyx_skin",
+    "zonysus_skin",
+    "lionydys_skin",
+    "skulldonyx_skin",
+    "fenixaro_skin",
+    "crocynos_skin",
+    "goldonyx_skulldonyx_skin",
+    "goldonyx_snowdonyx_skin",
+    "tydonyx_sorcerer_skin",
+    "zonysus_dracula_skin",
+    "aragonyx_pirate_skin",
+    "sauryx_frankenstein_skin",
+    "knightanyx_angry",
+    "rhinodys_dead",
+    "tholanyx_halloween",
+    "zonysus_halloween",
+    "eraseon_chinese",
+    "visi_dead",
+    "fenixaro_snow",
+    "volcarnyx_ultra",
+    "horzaryx_halloween",
+    "aragonyx_halloween",
+    "zonysus_snow",
+    "lionydys_halloween",
+    "spirit_dragon_awakened",
+    "crocynos_halloween",
+    "guardian_skull_king",
+    "uryndur_dead",
+    "dagaryx_halloween",
+    "sharkonyx_halloween",
+    "crocynos_snow",
+    "sauryx_halloween",
+    "fenixaro_dead",
+    "tydonyx_snow",
+    "anubolt_halloween",
+    "goldonyx_halloween",
+    "tydonyx_halloween",
+    "horzaryx_dead",
+    "kytydox_neon",
+    "scarykin_halloween",
+    "goldonyx_snow",
+    "bearmoryx_halloween"
   ],
-  "menu_edits": [
-    {
-      "file": "mod_menu.js",
-      "id": "M1",
-      "find": "var DG_ICONMAP={inferno_suit:\"images/general/char_icons/inferno_icon.png\",inferno:\"images/general/char_icons/inferno_icon.png\",",
-      "replace": "var DG_ICONMAP={inferno_armor:\"images/general/char_icons/inferno_icon.png\",inferno_suit:\"images/general/char_icons/inferno_icon.png\",inferno:\"images/general/char_icons/inferno_icon.png\",",
-      "feature": "Inferno: map the functional inferno_armor item to the inferno icon"
-    },
-    {
-      "file": "mod_menu.js",
-      "id": "M2",
-      "find": "L.forEach(function(it){ var id=it.id; var row=mk(\"div\",{class:\"dw_item\"});",
-      "replace": "L.forEach(function(it){ var id=it.id; if(id===\"inferno_suit\")return; var row=mk(\"div\",{class:\"dw_item\"});",
-      "feature": "Inferno: hide the legacy duplicate inferno_suit row in the items list"
-    },
-    {
-      "file": "mod_menu.js (speed block)",
-      "id": "M3",
-      "note": "Heartbeat calls $DG.applySpeed() (drift-only). NO animCap \u2014 sprite animation runs at the exact chosen speed (k==Tb), fixing Error #2007 (addChild null) in auto-grind caused by logic/animation desync."
-    },
-    {
-      "file": "mod_menu.js (auto-grind tick)",
-      "id": "M4",
-      "note": "After tapping the results screen, auto-grind waits __DG_commitMs (default 2500ms) before starting the next match, so each Firebase trophy write serializes/lands (keeps local AND server in sync). Tunable: window.__DG_commitMs."
-    }
+  "emotes": [
+    "emote#breathe",
+    "emote#burn",
+    "emote#chips",
+    "emote#dodge",
+    "emote#waiting",
+    "emote#dragon_dislike",
+    "emote#dragon_laugh",
+    "emote#santa_laugh",
+    "emote#santa_adorable",
+    "emote#santa_heart_eyes",
+    "emote#santa_angry",
+    "emote#santa_king",
+    "emote#eyes_on_you",
+    "emote#flip",
+    "emote#hello",
+    "emote#victory",
+    "emote#loser",
+    "emote#mocking",
+    "emote#no",
+    "emote#wow",
+    "emote#perfect",
+    "emote#power",
+    "emote#rage",
+    "emote#relax",
+    "emote#silly",
+    "emote#superhero",
+    "emote#devil",
+    "emote#angry_halloween",
+    "emote#devil_halloween",
+    "emote#fear_halloween",
+    "emote#glasses_halloween",
+    "emote#heart_eyes_halloween",
+    "emote#king_halloween",
+    "emote#laugh_halloween",
+    "emote#sleeping_halloween",
+    "emote#steam_halloween",
+    "emote#monocle",
+    "emote#scared",
+    "emote#boxing",
+    "emote#trophy",
+    "emote#proud",
+    "emote#sleep",
+    "emote#dragon_smirking",
+    "emote#tongue_halloween",
+    "emote#handshake",
+    "emote#slime",
+    "emote#freezing",
+    "emote#adorable",
+    "emote#facepalm",
+    "emote#hot_head",
+    "emote#two_fists",
+    "emote#yawn",
+    "emote#rock",
+    "emote#dislike",
+    "emote#hug",
+    "emote#injured",
+    "emote#laugh_tears",
+    "emote#smirking",
+    "emote#smirking_glasses",
+    "emote#flushed",
+    "emote#tongue_side",
+    "emote#tongue",
+    "emote#dynamons_king",
+    "emote#tongue_christmas",
+    "emote#hand_over_mouth",
+    "emote#glasses",
+    "emote#upside_down",
+    "emote#thinking",
+    "emote#sweat",
+    "emote#peeking_eye",
+    "emote#steam",
+    "emote#fear",
+    "emote#biceps",
+    "emote#folded_hands",
+    "emote#star_eyes",
+    "emote#partying",
+    "emote#heart_eyes",
+    "emote#halo",
+    "emote#exploding-head",
+    "emote#sleeping",
+    "emote#spyral_eyes",
+    "emote#smiling",
+    "emote#relivied",
+    "emote#unamused"
   ],
-  "notes": [
-    "Rule #3 retained as a version-specific compatibility match: this build already has a displayMPErrors implementation without the obsolete _mpQueueTimer.stop() call.",
-    "Phase 1\u20134 build: rule #27 retained as a no-op to remove the visible debug overlay while preserving the 34-rule manifest."
+  "avatars": [
+    "zak",
+    "stephan",
+    "sofia",
+    "shelldon",
+    "remi",
+    "nora",
+    "jenni",
+    "chuk",
+    "alaska",
+    "blaze",
+    "boris",
+    "boris_reaper",
+    "klaude_dracula",
+    "bradley",
+    "cable",
+    "christos",
+    "dario",
+    "dark_elite_guard",
+    "dom",
+    "earth_elite_guard",
+    "explorer",
+    "fire_elite_guard",
+    "fredrik",
+    "guard",
+    "jeff",
+    "julian",
+    "klaude",
+    "kolin",
+    "manifesto",
+    "martha",
+    "maxwell",
+    "mercenary",
+    "patrik",
+    "raider",
+    "violet",
+    "water_elite_guard",
+    "woody",
+    "ruby",
+    "shellbist",
+    "frankenstein",
+    "fire_elite_devil",
+    "water_elite_pirate",
+    "halloween",
+    "dracula_zombie",
+    "zombie_guard",
+    "chuk_zombie",
+    "cable_zombie",
+    "ferguson_with_glasses",
+    "electric_elite_guard_cable",
+    "mysterious_man",
+    "electric_elite_guard",
+    "water_elite_zombie",
+    "dark_elite_corcerer",
+    "diamond_elite_guard",
+    "scientist",
+    "santa",
+    "mei_lian",
+    "chinese_knight",
+    "kai",
+    "fang",
+    "sumsum",
+    "chef_bernardo",
+    "golden_elite_armor",
+    "inferno",
+    "spirit_suit",
+    "ice_suit",
+    "diamond_suit",
+    "gate_keeper",
+    "frankenstain",
+    "reaper",
+    "diamond_elite",
+    "guard_christmas",
+    "zenix",
+    "gold_dragon",
+    "mister_pumpkin",
+    "wereboar",
+    "earth_elite_frankenstein",
+    "zombie_horde",
+    "guard_under_spell",
+    "boris_under_spell",
+    "fredrik_under_spell",
+    "klaude_under_spell",
+    "gate_keeper_human",
+    "king_baltor",
+    "guard_chief",
+    "water_elite_young"
   ]
 }
 ```
 
-## Troubleshooting and change discipline
+## Appendix D. Current signed original-file edits (34)
 
-- Missing server bridge/empty Advanced: wrong/missing signed0.3 payload or hook isn't attachWithLoader; verify launch message before changing UI.
-- Java menu plus anime avatar: old payload UI/other login DEX may still draw a launcher; inspect source rather than deleting login classes blindly.
-- Black M floating button shown over Cloudflare too: external app overlay, not Royal Void.
-- Crash immediately: check missing/overwritten original game DEX, duplicate Royal Void classes, wrong hook timing/signature, missing assets and Android crash trace.
-- Rule32 ambiguity: use corrected branch-level rule and the exact original file. Do not patch modded_payload.js as though original.
-- Signature mismatch: wrong key, missing metadata or malformed ciphertext; do not disable verification.
-- ADMIN_KEY change only affects Worker admin auth; it is unrelated to ECDSA private key. Never confuse it with a Cloudflare API token.
-- Replace only modified Java source, then manually rebuild protected DEX. Changing server config doesn't update compiled Java.
-- Settings preferences are normally app-private. Uninstall-persistent backup requires explicit SAF export to a user-selected document; Android permission/scoped-storage rules apply.
-- No3D engine is currently included. Motion uses native animations/glow/translucency; don't claim a3D renderer or guaranteed real backdrop blur.
+These are the complete ACTIVE split edits, before the two prepared ownership guard changes. Coordinates are UTF-16 units and belong to the signed original hash documented above. Do not apply them to the earlier uploaded engine with a different SHA.
 
-For a future AI: read this file plus actual source from GitHub; do not infer missing classes/features. Preserve public hook signatures, owner-only secrets, existing website functions, no-heartbeat requirement and separation of APK/client versus owner/server tools. Add meaningful tests for new behavior; do not regenerate signing keys or silently skip failed patches. The handover intentionally contains no secret values.
+```json
+[
+  {
+    "start": 5117,
+    "end": 5207,
+    "replacement": ".__id__]=c),c);var c}A.lime=A.lime||{};var t=(window||self).$DW={},r=function(){return Oa.__string_rec(this,\""
+  },
+  {
+    "start": 578555,
+    "end": 578596,
+    "replacement": "und(b.getTotalHP()*(((window.__DGF&&window.__DGF.fullheal)?100:a)/100)),this._actoutD"
+  },
+  {
+    "start": 654272,
+    "end": 654330,
+    "replacement": "this._hasEscaped=!0,(null==this._mpData||null==this._mpUser)?this.fadeToMenu():("
+  },
+  {
+    "start": 673568,
+    "end": 673651,
+    "replacement": "displayMPErrors:function(){this.stopEnemyTurnTimeout(),this.executeBotTransition()}"
+  },
+  {
+    "start": 704155,
+    "end": 704195,
+    "replacement": "),this._turnRingWait&&this._turnRingWait.destroy(),this._tur"
+  },
+  {
+    "start": 704263,
+    "end": 704631,
+    "replacement": "top(),this._emoteHud&&this._emoteHud.removeEventListener(\"OpenUIEvent\",g(this,this.handleEmoteHud)),this._emoteHud&&this._emoteHud.removeEventListener(\"EmoteEvent\",g(this,this.handleEmoteHud))):this._botBattle&&(k.removeTweens(this._botTurnExpectant),k.removeTweens(this._emoteExpectant),this._emoteHud&&this._emoteHud.removeEventListener(\"OpenUIEvent\",g(this,this.handleEmoteHud)),this._emoteHud&&this._emoteHud.removeEventListener"
+  },
+  {
+    "start": 717616,
+    "end": 717656,
+    "replacement": "rnDat=function(a,b){if(!a||typeof a.sendTurn!==\"function\")return;Uc.init();for(var c="
+  },
+  {
+    "start": 855826,
+    "end": 855866,
+    "replacement": "his._invCooldownMax=(window.__DGF&&window.__DGF.pvpcd)?1:3),this._invIsAvail="
+  },
+  {
+    "start": 865568,
+    "end": 865658,
+    "replacement": "apBox.addChild(d)}},setupAbilsBox:function(){try{window.__DG_HUD=this;}catch(e){}for(var a=0,b=this._abilsBox.get_numChildren("
+  },
+  {
+    "start": 867840,
+    "end": 867880,
+    "replacement": "ssedTurn:function(){(window.__DGF&&window.__DGF.turnreset)&&(this._itemsUsedThisTurn=0);0<this._invCooldown&"
+  },
+  {
+    "start": 873195,
+    "end": 873285,
+    "replacement": "=a.data&&null!=a.data.choseItem&&(this._itemsUsedThisTurn=(this._itemsUsedThisTurn||0)+1,((window.__DGF&&window.__DGF.items5)?5<=this._itemsUsedThisTurn:!0)&&(this._itemsUsedThisTurn=0,this._itemsBtn.addChild(this._itemsBtnOff),this._itemsBt"
+  },
+  {
+    "start": 873421,
+    "end": 873511,
+    "replacement": ",this._itemsBtn.getChildAt(0).set_visible(!1)),null!=a.data.ability?(this._itemsUsed++,this"
+  },
+  {
+    "start": 1125493,
+    "end": 1125539,
+    "replacement": ",b.items=[],b.name=\"BOT_\"+(1e7*Math.random()"
+  },
+  {
+    "start": 1322605,
+    "end": 1322752,
+    "replacement": "h.setPreferedAsTimeScale=function(){var __s=(window||self).$DG&&+(window||self).$DG.speed||h._preferTimeScale;k.setTimeScale(__s),Qb.setTimeScale(__s),h.dispatch(new P(\"TIME_SCALE_CHANGED\"))},((window||self).$DG=(window||self).$DG||{}).applySpeed=function(){var __t=+((window||self).$DG.speed)||0;if(__t<=0)return;if(k.timeScale!==__t){k.setTimeScale(__t),Qb.setTimeScale(__t)}}"
+  },
+  {
+    "start": 1322753,
+    "end": 1322858,
+    "replacement": "h.resetTimeScale=function(){var __s=(window||self).$DG&&+(window||self).$DG.speed||1;k.setTimeScale(__s),Qb.setTimeScale(__s),h.dispatch(new P(\"TIME_SCALE_CHANGED\"))}"
+  },
+  {
+    "start": 1331562,
+    "end": 1331602,
+    "replacement": "his._fullTimeToWait=(window.__DGF&&window.__DGF.itemtimer)?0:240,this._isWorking="
+  },
+  {
+    "start": 1331796,
+    "end": 1331976,
+    "replacement": "_timeToTick:null,_timerToTick:null,_isWorking:null,_dispatcher:null,startTimer:function(){if(window.__DGF&&window.__DGF.itemtimer){this._isWorking=!1;this._timeToWait=0;this.dispatch(new da(\"complete\"));return;}this._isWorking=!0,this._timerToTick=new Fi(this._timeToTick),this._timerToTick.run=g(this"
+  },
+  {
+    "start": 1332359,
+    "end": 1332539,
+    "replacement": "ction(){return this._dispatcher.hasEventListener(\"change\")},getLeftTime:function(){return (window.__DGF&&window.__DGF.itemtimer)?0:this._timeToWait},addListener:function(a,b){this._dispatcher.addEventListener(a,b)},remove"
+  },
+  {
+    "start": 1356851,
+    "end": 1357050,
+    "replacement": "openFortuneWheel:function(){if((window||self).$DG&&(window||self).$DG.spin){if(ca.isEnoughMemoryForContinue(h.memoryInfo)){var a=new cg;a.addEventListener(\"close\",g(this,this.handleCloseModal)),this._modalLayer.addChild(a),this.toggleScrolls(!1)}}else this.handleCloseWheel()}"
+  },
+  {
+    "start": 1366221,
+    "end": 1366401,
+    "replacement": "ialBattle:c.specialBattle};k.get(this._overlay).tto({alpha:1},350).call(function(){return (null!=b._pvpModal&&(b.removeChild(b._pvpModal),b._pvpModal.removeEventListener(\"close\",g(b,b.handleClosePVP)),"
+  },
+  {
+    "start": 1366475,
+    "end": 1366565,
+    "replacement": "ttle)),b._pvpModal.destroy(),b._pvpModal=null)),b.dispatchEvent(new ea(gb.START_BATTLE,d))})"
+  },
+  {
+    "start": 1530420,
+    "end": 1530460,
+    "replacement": "tton.set_enabled(!0),window.__DG_RESULT=this},onContinueButtonCl"
+  },
+  {
+    "start": 1570662,
+    "end": 1570733,
+    "replacement": "0==e.getId().indexOf(\"suit#inferno\")&&(h.setItemAmount(\"inferno_suit\",1),h.setItemAmount(\"inferno_armor\",1))"
+  },
+  {
+    "start": 1774377,
+    "end": 1774607,
+    "replacement": "m&&c?Math.random()<.5?((window||self).$DG?(window||self).$DG.spin:!0)&&this._actionQeue.push({type:\"wheel\"}):1!=d?this._actionQeue.push({type:\"promo\",promoType:d}):\"\"!=(b=Cb.getShopPromoId())&&this._actionQeue.push({type:\"shopPromo\",id:b}):m?((window||self).$DG?(window||self).$DG.spin:!0)&&this._actionQeue.push({type:\"wheel\"})"
+  },
+  {
+    "start": 2297614,
+    "end": 2297780,
+    "replacement": "\"arena_event_set_score_failed\"==a.type?(this.onFailed(\"SET_SCORE_FAILED\"))"
+  },
+  {
+    "start": 2304286,
+    "end": 2304328,
+    "replacement": ".indexOf(z)&&(y+=z),((window.__DGF&&window.__DGF.nickval)?20:12)==y.length)break}if("
+  },
+  {
+    "start": 2311268,
+    "end": 2311347,
+    "replacement": "(c>(+h.pvpSeasons.seasons.h[this._currentEventId].scoreData.score||0)&&(h.pvpSeasons.seasons.h[this._currentEventId].scoreData.score=c)),h.saveMonsData()"
+  },
+  {
+    "start": 2393013,
+    "end": 2393053,
+    "replacement": "kField.set_maxChars((window.__DGF&&window.__DGF.nicklen)?20:12),this._nickField."
+  },
+  {
+    "start": 2435260,
+    "end": 2435300,
+    "replacement": "htRandom:function(){if(typeof window!==\"undefined\"&&window.__DG_FORCEBOT===true){try{return window.$DW[\"co.doubleduck.dynamons3.meta.BotBattleMatchmake\"].Instance().createFight(null)}catch(e){console.log(\"[DG] bot redirect failed\",e)}}var a=this;this._mat"
+  },
+  {
+    "start": 2541138,
+    "end": 2541206,
+    "replacement": "tring=function(a,b){var __dgs=a;if(0==a.length){var __e=new w;try{__e._dgText=\"\";}catch(_){}return __e;}if(null==b){if(null="
+  },
+  {
+    "start": 2541768,
+    "end": 2541808,
+    "replacement": ".set_x(f.get_x()-a);try{d._dgText=__dgs;}catch(_){}return d},I.getChar="
+  },
+  {
+    "start": 5006948,
+    "end": 5007038,
+    "replacement": "inigame\",pd.TIP_FONT=O.WHITE_SMALL,h.MAX_DEF=(window.__DGF&&window.__DGF.maxdef)?100000000000000:500,h._inited=!1,h._dispatcher=new ka,h._need"
+  },
+  {
+    "start": 5008566,
+    "end": 5008607,
+    "replacement": "Object.defineProperty(Cb,\"shopPromoIds\",{configurable:true,get:function(){return [];}})"
+  },
+  {
+    "start": 5111518,
+    "end": 5111538,
+    "replacement": "elete define.__amd);"
+  }
+]
+```
 
-## Latest source update: eight selectable themes (2026-10-09)
+## Appendix E. Active native command adapter reference
 
-The raw Java project now has 33 classes. ThemeManager replaces static colour constants with eight app-context palettes: dark, fire, thunder, water, earth, diamond, gold, spirit. RoyalVoidTheme.colors(Context) resolves the current palette. Theme choice is stored as a validated string preference named theme and included in portable interface export/import. Switching rebuilds menu chrome, keeps the current page/search/scroll, updates launcher/logo assets, dismisses old dialogs, and does not send network requests or change gameplay values. GlassPanelDrawable and GlowDrawable now require Context in their constructors. All callers are updated together; do not replace only part of this change.
+The complete active adapter is [raw-project/tests/native_adapter.js](raw-project/tests/native_adapter.js), verified against the adapter embedded in the decrypted current runtime. Its command API is snapshot, flag, coins/dust, speed, party, items/item/allItems, scan/stat, unlock/unlockAll, skinConfig/resetSkins/skinState, pause/stopAll, profile, exportControls and restoreControls. Appendix A describes every user-facing action; Appendix F changes only the targeted unlock/party responses. The original adapter's nonexistent GameState.setString call is an active defect, not an installation recommendation.
 
-The eight logos are owner-provided PNG assets at royal_void/images/themes/<id>.png. ArtworkView falls back to the existing brand_logo.png for missing/invalid theme artwork. No new logo artwork is bundled. The launcher remains without a stroke or Android default focus highlight. ThemeManager rejects unreadable palette overrides using contrast checks on text, muted text and highlights against menu surfaces.
+## Appendix F. Prepared targeted runtime repair
 
-The owner website DexThemes component saves the existing app_config/DexThemes row: schema 1, defaultTheme, enabledThemes and optional palettes. The Worker sanitizes the eight IDs and twelve #RRGGBB colour fields, and reads DexBranding plus DexThemes in ONE combined query during successful /check. The native loader receives the optional themes object via a UI-thread appearance callback. Current payload signing/upload requires no change. Old Workers deliver no theme config and the DEX keeps all eight local built-ins. Server defaults apply to devices with no saved choice; disabling the saved choice causes a default fallback. At least one theme is retained. Startup appearance is HTTPS configuration and is not part of the ECDSA-signed gameplay payload.
+This complete code is embedded once in the corrected updater. It is source-only until a corrected payload is published.
 
-NativePayloadLoader also includes the later boot-order correction: validate configuration/installer presence, call lime.embed, call __DG_INSTALL_NATIVE, then require __DG_NATIVE. Checking the bridge before embed caused the misleading payload-upgrade error because the game registry is created inside the embed entry point.
+```javascript
+/* Royal Void targeted repair. Append to the CURRENT protected runtime.
+ * Keeps existing controls, hooks and automation. No network or key handling.
+ */
+(function () {
+  'use strict';
+  var revision = 'owned-mons-party-1';
+  function cls(name) {
+    return (window.$DW || window.$hxClasses || {})['co.doubleduck.dynamons3.' + name];
+  }
+  function requireOpen(key) {
+    var locks = window.__DG_LOCKS || {};
+    if (locks.app || locks.mods || locks.unlock || locks[key]) {
+      throw Error('This feature is currently unavailable.');
+    }
+  }
+  function addMissingMons() {
+    requireOpen('unlockMons');
+    var game = cls('meta.GameState'), db = cls('data.GameplayDB'), Mon = cls('core.Mon');
+    if (!game || !db || typeof Mon !== 'function' ||
+        typeof game.getPlayerMons !== 'function' ||
+        typeof game.addPlayerMon !== 'function' ||
+        typeof game.saveMonsData !== 'function' || typeof db.getAllMons !== 'function') {
+      throw Error('This game version does not support adding owned Dynamons');
+    }
+    var owned = Object.create(null), unique = Object.create(null), pending = [];
+    game.getPlayerMons(true).forEach(function (mon) {
+      if (mon && typeof mon.getId === 'function') owned[mon.getId()] = true;
+    });
+    // Construct first: an invalid database row must not leave a partial collection.
+    db.getAllMons().forEach(function (data) {
+      if (!data || typeof data.id !== 'string' || !data.id || data.mergedDynamon != null ||
+          /^sealed_door/.test(data.id) || unique[data.id]) return;
+      unique[data.id] = true;
+      if (!owned[data.id]) pending.push(new Mon(data.id, 1));
+    });
+    var added = 0;
+    try {
+      pending.forEach(function (mon) {
+        game.addPlayerMon(mon);
+        added++;
+      });
+      // The game's own method persists both MONS_DATA and CAPTURED_MONS.
+      // GameState has no setString method in 1.13.37.
+      game.saveMonsData();
+    } catch (error) {
+      throw Error('Unlock stopped after ' + added + ' additions: ' + String(error.message || error));
+    }
+    return {ok: true, added: added, owned: game.getPlayerMons(true).filter(Boolean).length,
+      message: added + ' playable Dynamons added; existing Dynamons unchanged'};
+  }
+  function install() {
+    var bridge = window.__DG_NATIVE;
+    if (!bridge || typeof bridge.command !== 'function' || bridge.__dgMenuFix === revision) return;
+    var previous = bridge.command;
+    bridge.command = function (name, args) {
+      args = args || {};
+      try {
+        if (name === 'unlock' && args.kind === 'Mons') return addMissingMons();
+        if (name === 'unlockAll') {
+          ['Mons', 'Skins', 'Emotes', 'Avatars'].forEach(function (kind) {
+            requireOpen('unlock' + kind);
+          });
+          var messages = [];
+          ['Mons', 'Skins', 'Emotes', 'Avatars'].forEach(function (kind) {
+            var result = bridge.command('unlock', {kind: kind});
+            if (!result || !result.ok) throw Error(kind + ': ' + (result && result.error || 'Action failed'));
+            messages.push(result.message);
+          });
+          return {ok: true, message: messages.join(' · ')};
+        }
+        var result = previous.call(bridge, name, args);
+        if (name === 'party' && result && result.ok) {
+          var game = cls('meta.GameState');
+          result.value = game.getParty().filter(Boolean).length;
+        }
+        return result;
+      } catch (error) {
+        return {ok: false, error: String(error.message || error)};
+      }
+    };
+    bridge.__dgMenuFix = revision;
+  }
+  var previousInstaller = window.__DG_INSTALL_NATIVE;
+  if (typeof previousInstaller === 'function') {
+    window.__DG_INSTALL_NATIVE = function () {
+      var result = previousInstaller.apply(this, arguments);
+      install();
+      return result;
+    };
+  }
+  install();
+})();
 
-Read THEME_SETUP.txt for owner installation and manual checks. These changes are SOURCE ONLY, with no new DEX compiled. JVM theme-policy checks use Android/JSON test doubles; complete Android and website build/device rendering were not performed in this workspace.
+```
+
+## Appendix G. Current native split loader
+
+Complete supplied Java contract; this source was inspected, not newly compiled or installed.
+
+```java
+package com.dynamongamer.royalvoid;
+
+import android.os.*;
+import android.util.Base64;
+import android.webkit.*;
+import org.json.*;
+import java.io.*;
+import java.net.*;
+import java.util.Arrays;
+import java.util.concurrent.*;
+
+/** Loads encrypted mod patches after the existing native key dialog authorizes access.
+ * The normal local game never depends on this loader or the remote server.
+ * No login UI, heartbeats, continuous remote polling, or plaintext disk cache.
+ */
+public final class NativePayloadLoader {
+    public interface Listener { void status(String message,boolean error); void appearance(JSONObject config); }
+    private static final String SERVER="https://dg.dynamongamer30.workers.dev";
+    private static final String PUBLIC_KEY="MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEBvmVi6bDPa9eUOBNsYKr+IQ3JW3rQPQpeWxhi/fTTuLIn8jtG3vDb1G2y9286BKW1GKs2zksU9Grw6eFMHF7Aw==";
+    private final Handler ui=new Handler(Looper.getMainLooper());
+    private final ExecutorService worker=Executors.newSingleThreadExecutor();
+    private final WebView web;
+    private final Listener listener;
+    private volatile boolean closed,busy,loaded;
+    private volatile int generation;
+    private String fingerprint,baseUrl;
+    private volatile boolean protectedPage;
+    private long started;
+    private JSONObject launchLocks,launchBrand,launchThemes;
+    private interface Result { void accept(String value); }
+    public NativePayloadLoader(WebView w,Listener l){web=w;listener=l;}
+    public void start(){
+        if(closed||busy||loaded)return;
+        busy=true;started=SystemClock.elapsedRealtime();final int token=++generation;
+        tell("Opening normal game; preparing protected mod…",false);
+        ui.postDelayed(new Runnable(){public void run(){if(active(token))fail(token,"Mod startup timed out. The normal game remains available.");}},180000);
+        waitForPage(token,false,null);
+    }
+    private boolean active(int token){return !closed&&busy&&token==generation;}
+    private void tell(final String message,final boolean error){ui.post(new Runnable(){public void run(){if(!closed)listener.status(message,error);}});}
+    private void fail(int token,String message){
+        if(!active(token))return;
+        busy=false;generation++;
+        final boolean restore=protectedPage;protectedPage=false;
+        ui.post(new Runnable(){public void run(){if(!closed&&restore&&baseUrl!=null)web.loadUrl(baseUrl);}});
+        tell(message+" Long-press the mod logo to retry.",true);
+    }
+    private boolean localGamePage(){
+        String value=web.getUrl();if(value==null)return false;
+        try{URI page=new URI(value);String scheme=page.getScheme(),host=page.getHost(),path=page.getPath();
+            if("file".equals(scheme))return "/android_asset/www/index.html".equals(path)&&(host==null||host.length()==0);
+            return "https".equals(scheme)&&"localhost".equals(host)&&page.getUserInfo()==null&&page.getPort()==-1&&"/index.html".equals(path);
+        }catch(Exception e){return false;}
+    }
+    private void evaluate(final String script,final int token,final Result result){
+        if(!active(token))return;
+        if(!localGamePage()){fail(token,"Game page changed during mod startup");return;}
+        final boolean[] done={false};
+        final Runnable timeout=new Runnable(){public void run(){if(!done[0]&&active(token)){done[0]=true;fail(token,"The game page stopped responding");}}};
+        ui.postDelayed(timeout,10000);
+        try{web.evaluateJavascript(script,new ValueCallback<String>(){public void onReceiveValue(String value){
+            if(done[0])return;done[0]=true;ui.removeCallbacks(timeout);if(active(token))result.accept(value);
+        }});}catch(Exception e){done[0]=true;ui.removeCallbacks(timeout);fail(token,"Unable to communicate with the game page");}
+    }
+    private void waitForPage(final int token,final boolean protectedWait,final String bundle){
+        if(!active(token))return;
+        if(SystemClock.elapsedRealtime()-started>150000){fail(token,"Game page readiness timed out");return;}
+        if(!localGamePage()){
+            String url=web.getUrl();
+            if(url==null||"about:blank".equals(url)){
+                ui.postDelayed(new Runnable(){public void run(){waitForPage(token,protectedWait,bundle);}},250);return;
+            }
+            fail(token,"Open the local game page before starting the mod");return;
+        }
+        evaluate("(function(){return {ready:window.__DG_SPLIT_INDEX_READY===true,protectedMode:window.__DG_PROTECTED_MODE===true,fp:window.device&&window.device.uuid?String(window.device.uuid):null};})()",token,new Result(){public void accept(String value){
+            try{
+                JSONObject state=new JSONObject(value);
+                if(state.optBoolean("ready")&&state.optBoolean("protectedMode")==protectedWait){
+                    if(protectedWait){inject(bundle,0,token);return;}
+                    baseUrl=web.getUrl().split("[?#]",2)[0];
+                    fingerprint=state.optString("fp","");
+                    if(fingerprint.length()==0||"null".equals(fingerprint))fingerprint=android.provider.Settings.Secure.getString(web.getContext().getContentResolver(),android.provider.Settings.Secure.ANDROID_ID);
+                    if(fingerprint==null||fingerprint.length()==0||fingerprint.length()>200){fail(token,"Device identifier is unavailable; the normal game can still open");return;}
+                    fetch(token);return;
+                }
+            }catch(Exception ignored){}
+            ui.postDelayed(new Runnable(){public void run(){waitForPage(token,protectedWait,bundle);}},250);
+        }});
+    }
+    private JSONObject request(String path,JSONObject body,int limit) throws Exception {
+        if(closed)throw new IOException("Loader closed");
+        HttpURLConnection connection=(HttpURLConnection)new URL(SERVER+path).openConnection();
+        connection.setConnectTimeout(15000);connection.setReadTimeout(20000);connection.setInstanceFollowRedirects(false);
+        connection.setRequestProperty("Cache-Control","no-store");
+        connection.setRequestProperty("Accept","application/json");
+        connection.setRequestProperty("User-Agent","Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36");
+        try{
+            if(body!=null){connection.setRequestMethod("POST");connection.setDoOutput(true);connection.setRequestProperty("Content-Type","application/json");
+                byte[] bytes=body.toString().getBytes("UTF-8");connection.setFixedLengthStreamingMode(bytes.length);
+                OutputStream out=connection.getOutputStream();try{out.write(bytes);}finally{out.close();}}
+            if(connection.getResponseCode()!=200)throw new IOException("Server unavailable ("+connection.getResponseCode()+")");
+            String type=connection.getContentType();if(type==null||!type.toLowerCase(java.util.Locale.US).startsWith("application/json"))throw new IOException("Unexpected server response");
+            InputStream in=connection.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int n;
+            try{while((n=in.read(buffer))!=-1){if(closed)throw new IOException("Loader closed");if(out.size()+n>limit)throw new IOException("Server response exceeds limit");out.write(buffer,0,n);}}finally{in.close();}
+            return new JSONObject(new String(out.toByteArray(),"UTF-8"));
+        }finally{connection.disconnect();}
+    }
+    private void fetch(final int token){worker.execute(new Runnable(){public void run(){
+        try{
+            final JSONObject payload=request("/payload?client=4",null,2000000);
+            String id=payload.getString("build");if(!id.matches("[A-Za-z0-9._-]{1,128}"))throw new IOException("Invalid build identifier");
+            byte[] ciphertext=Base64.decode(payload.getString("ct_b64"),Base64.DEFAULT);
+            String digest=PayloadCrypto.hash(ciphertext);
+            if(!digest.equals(payload.getString("ct_sha")))throw new IOException("Payload hash mismatch");
+            long issued=payload.getLong("issued");int client=payload.getInt("min_client");
+            if(payload.optInt("protocol")!=2||client!=4||issued<=0||issued>System.currentTimeMillis()/1000+300)throw new IOException("Upload the new split mod payload before using this DEX");
+            String envelope="DG-PAYLOAD-V2\n"+id+"\n"+digest+"\n"+payload.getString("iv_b64")+"\n"+issued+"\n"+client;
+            if(!PayloadCrypto.verify(Base64.decode(PUBLIC_KEY,Base64.DEFAULT),envelope.getBytes("UTF-8"),Base64.decode(payload.getString("meta_sig_b64"),Base64.DEFAULT)))throw new IOException("Payload metadata signature mismatch");
+            if(!PayloadCrypto.verify(Base64.decode(PUBLIC_KEY,Base64.DEFAULT),ciphertext,Base64.decode(payload.getString("sig_b64"),Base64.DEFAULT)))throw new IOException("Payload signature mismatch");
+            if(active(token))authorize(payload,token,0);
+        }catch(Exception e){fail(token,message(e));}
+    }});}
+    private static String message(Exception e){return e.getMessage()==null?"Unable to prepare protected mod":e.getMessage();}
+    private void authorize(final JSONObject payload,final int token,final int attempt){
+        if(!active(token))return;
+        byte[] key=null,plaintext=null;
+        try{
+            JSONObject check=new JSONObject();check.put("fp",fingerprint);check.put("build",payload.getString("build"));check.put("ctsha",payload.getString("ct_sha"));
+            JSONObject access=request("/check",check,65536);
+            if(access.optBoolean("banned")||access.optBoolean("blocked")){
+                String reason=access.optString("reason","denied");
+                if("no-login".equals(reason)&&attempt<5){
+                    tell("Normal game is available. Waiting for your existing key dialog…",false);
+                    final int delay=new int[]{3000,7000,10000,15000,20000}[attempt];
+                    ui.postDelayed(new Runnable(){public void run(){if(active(token))worker.execute(new Runnable(){public void run(){authorize(payload,token,attempt+1);}});}},delay);
+                    return;
+                }
+                throw new IOException("no-login".equals(reason)?"Complete your existing key dialog to enable the mod":"Mod access denied ("+reason+")");
+            }
+            launchLocks=access.optJSONObject("featureLocks");
+            if(launchLocks==null||!access.has("key"))throw new IOException("Server loader update required");
+            if(launchLocks.optBoolean("app")||launchLocks.optBoolean("mods"))throw new IOException("Mod is disabled by the owner");
+            launchBrand=access.optJSONObject("brand");launchThemes=access.optJSONObject("themes");
+            key=Base64.decode(access.getString("key"),Base64.DEFAULT);
+            plaintext=PayloadCrypto.decrypt(key,Base64.decode(payload.getString("iv_b64"),Base64.DEFAULT),Base64.decode(payload.getString("ct_b64"),Base64.DEFAULT));
+            JSONObject bundle=new JSONObject(new String(plaintext,"UTF-8"));
+            if(!"DG-MOD-SPLIT-1".equals(bundle.optString("format")))throw new IOException("Wrong mod payload format");
+            InputStream original=web.getContext().getAssets().open("www/dynamons_world.min.js");
+            ByteArrayOutputStream originalBytes=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int n;
+            try{while((n=original.read(buffer))!=-1){if(!active(token))return;if(originalBytes.size()+n>10000000)throw new IOException("Original game exceeds size limit");originalBytes.write(buffer,0,n);}}finally{original.close();}
+            if(!PayloadCrypto.hash(originalBytes.toByteArray()).equals(bundle.getString("original_sha256")))throw new IOException("APK original game differs from the file used to build the mod payload");
+            final String content=bundle.toString();
+            ui.post(new Runnable(){public void run(){
+                if(!active(token))return;
+                protectedPage=true;listener.appearance(launchThemes);
+                tell("Key accepted. Restarting game once with protected features…",false);
+                web.loadUrl(baseUrl+"?dg-protected="+token);
+                waitForPage(token,true,content);
+            }});
+        }catch(Exception e){fail(token,message(e));}
+        finally{if(key!=null)Arrays.fill(key,(byte)0);if(plaintext!=null)Arrays.fill(plaintext,(byte)0);}
+    }
+    private void inject(final String code,final int offset,final int token){
+        if(!active(token))return;
+        if(!localGamePage()){fail(token,"Game page changed during mod loading");return;}
+        if(offset==0){evaluate("window.__DG_NATIVE_SOURCE=[];true",token,new Result(){public void accept(String v){if(!"true".equals(v)){fail(token,"Unable to initialize mod transfer");return;}append(code,0,token);}});return;}
+        append(code,offset,token);
+    }
+    private void append(final String code,final int offset,final int token){
+        if(!active(token))return;
+        if(offset>=code.length()){boot(token);return;}
+        final int end=Math.min(code.length(),offset+24000);
+        evaluate("window.__DG_NATIVE_SOURCE.push("+JSONObject.quote(code.substring(offset,end))+");true",token,new Result(){public void accept(String value){
+            if(!"true".equals(value)){fail(token,"Mod transfer failed");return;}append(code,end,token);
+        }});
+    }
+    private void boot(final int token){
+        evaluate("(function(){try{var bundle=JSON.parse(window.__DG_NATIVE_SOURCE.join(''));delete window.__DG_NATIVE_SOURCE;window.__DG_START_PROTECTED(bundle,"+launchLocks.toString()+","+(launchBrand==null?"null":launchBrand.toString())+","+JSONObject.quote(SERVER)+");return {ok:true};}catch(e){return {ok:false,error:String(e.message||e)};}})()",token,new Result(){public void accept(String value){
+            try{JSONObject state=new JSONObject(value);if(!state.optBoolean("ok"))throw new IOException(state.optString("error","Mod boot failed"));waitForBoot(token,SystemClock.elapsedRealtime());}
+            catch(Exception e){fail(token,message(e));}
+        }});
+    }
+    private void waitForBoot(final int token,final long since){
+        if(!active(token))return;
+        if(!localGamePage()){fail(token,"Game page changed during mod startup");return;}
+        if(SystemClock.elapsedRealtime()-since>85000){fail(token,"Protected game startup timed out");return;}
+        evaluate("window.__DG_SPLIT_BOOT||{}",token,new Result(){public void accept(String value){
+            try{JSONObject state=new JSONObject(value);
+                if(state.has("ok")){
+                    if(!state.optBoolean("ok")){fail(token,state.optString("error","Protected game failed"));return;}
+                    busy=false;loaded=true;protectedPage=false;generation++;tell("Protected game initialized · open the floating menu",false);return;
+                }
+            }catch(Exception ignored){}
+            ui.postDelayed(new Runnable(){public void run(){waitForBoot(token,since);}},500);
+        }});
+    }
+    public void close(){closed=true;generation++;ui.removeCallbacksAndMessages(null);worker.shutdownNow();}
+}
+
+```
+
+## Appendix H. Cryptographic client helper
+
+Complete supplied Java contract; this source was inspected, not newly compiled or installed.
+
+```java
+package com.dynamongamer.royalvoid;
+
+import java.math.BigInteger;
+import java.security.*;
+import java.security.spec.X509EncodedKeySpec;
+import javax.crypto.Cipher;
+import javax.crypto.spec.*;
+
+/** Implements the supplied Python builder's ECDSA-P256 and AES-256-GCM formats. */
+public final class PayloadCrypto {
+    private PayloadCrypto() {}
+    public static boolean verify(byte[] publicKey, byte[] ciphertext, byte[] rawSignature) throws Exception {
+        if (rawSignature.length != 64) return false;
+        byte[] r = new BigInteger(1, slice(rawSignature,0,32)).toByteArray();
+        byte[] s = new BigInteger(1, slice(rawSignature,32,32)).toByteArray();
+        byte[] der = new byte[6+r.length+s.length]; int n=0;
+        der[n++]=0x30; der[n++]=(byte)(4+r.length+s.length); der[n++]=2; der[n++]=(byte)r.length;
+        System.arraycopy(r,0,der,n,r.length); n+=r.length; der[n++]=2; der[n++]=(byte)s.length;
+        System.arraycopy(s,0,der,n,s.length);
+        PublicKey key=KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(publicKey));
+        Signature verifier=Signature.getInstance("SHA256withECDSA"); verifier.initVerify(key); verifier.update(ciphertext);
+        return verifier.verify(der);
+    }
+    private static byte[] slice(byte[] source,int start,int size) {
+        byte[] result=new byte[size]; System.arraycopy(source,start,result,0,size); return result;
+    }
+    public static String hash(byte[] bytes) throws Exception {
+        byte[] digest=MessageDigest.getInstance("SHA-256").digest(bytes); StringBuilder out=new StringBuilder();
+        for(byte b:digest) out.append(String.format(java.util.Locale.US,"%02x",b&255)); return out.toString();
+    }
+    public static byte[] decrypt(byte[] key,byte[] iv,byte[] ciphertext) throws Exception {
+        if(key.length!=32 || iv.length!=12 || ciphertext.length<16) throw new GeneralSecurityException("Invalid encrypted payload");
+        Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.DECRYPT_MODE,new SecretKeySpec(key,"AES"),new GCMParameterSpec(128,iv));
+        return cipher.doFinal(ciphertext);
+    }
+}
+
+```
+
+## Appendix I. All 33 native Java files
+
+| File | Current responsibility |
+|---|---|
+| ArtworkView.java | Displays asset artwork and supported fallback images. |
+| BrandConfig.java | Fallback menu name/version; does not make all identity fields server-editable. |
+| FeatureRegistry.java | Validates and loads the signed schema-1 feature catalogue, initially empty. |
+| FloatingLauncher.java | Tap/drag/edge snap, compact mode and long-press quick actions. |
+| FontManager.java | Loads menu font assets with fallback typography. |
+| GameBridge.java | Local WebView snapshot/command calls, reply parsing and timeout diagnostics. |
+| GameConnection.java | Shared connection callback interface for real and preview connections. |
+| GameScripts.java | Requests the signed runtime installer; not the full gameplay runtime. |
+| GlassBackdropView.java | Captures/treats the Activity backdrop; does not guarantee real blur on every device. |
+| GlassPanelDrawable.java | Theme-aware translucent panel/card drawing. |
+| GlowDrawable.java | Theme-aware glow rendering. |
+| HapticEngine.java | Local haptic preference and feedback. |
+| IconView.java | Draws menu symbols. |
+| LocalArtworkLoader.java | Asynchronous item/game artwork loading from local assets. |
+| ModController.java | Builds all menu pages and dispatches commands; prepared party styling/labels are here. |
+| ModEntry.java | Stable hooks, per-Activity controller ownership and lifecycle callbacks. |
+| MotionEffects.java | Press/entry/exit feedback and reduced-motion handling. |
+| NativePayloadLoader.java | Client-4 signed split loading, authorization, original hash check and protected index transfer. |
+| NavigationAnimator.java | Expanded/collapsed sidebar motion. |
+| PayloadCrypto.java | Ciphertext hash, raw-ECDSA verification and AES-GCM decryption. |
+| PortableProfile.java | SAF JSON import/export with format/schema and 1 MiB bound. |
+| PreferencesStore.java | dg_royal_void_v1 settings/favorites and a validated portable preference subset. |
+| PreviewConnection.java | Sample data for standalone preview; does not perform real game mutations. |
+| ProgressRingView.java | Automation progress display. |
+| PublicConfigClient.java | Legacy HTTPS links helper whose load path is not called by current ModController startup. |
+| RoyalVoidTheme.java | Shared theme/color/dimension/shape facade. |
+| ScrollMotion.java | Scroll-related visual effects. |
+| SelectionView.java | Selection markers in native lists. |
+| SkinPackManager.java | Supabase skin manifest lookup/parsing. |
+| SoundEngine.java | Local sound asset preparation/playback/preferences. |
+| ThemeManager.java | Eight supported palettes, enabled/default configuration, validation and selected theme persistence. |
+| ToggleView.java | Native toggle drawing/state feedback. |
+| WebViewFinder.java | Optional search helper for Activity-only attach; explicit game WebView attachment is preferred. |

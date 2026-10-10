@@ -1,15 +1,17 @@
-# Royal Void downloads
+# Start here: current Royal Void / Thunder files
 
-The latest supplied Java source is in [raw-project/src](raw-project/src) and [Royal-Void-Supplied-SRC.zip](Royal-Void-Supplied-SRC.zip). The ZIP contains all 33 supplied Java files under src/ with their original folder structure. No source lines have been shortened or omitted. This is a source-only archive, not an APK or rebuilt DEX.
+Read [MOD_SYSTEM_GUIDE.md](MOD_SYSTEM_GUIDE.md), the authoritative detailed guide. [raw-project/MOD_SYSTEM_GUIDE.md](raw-project/MOD_SYSTEM_GUIDE.md) points to the same guide rather than maintaining a conflicting copy.
 
-Read [CURRENT_MENU_CONTROLS.md](CURRENT_MENU_CONTROLS.md) for the control map, evidence limits and current architecture, and [DELIVERY_RULES.md](DELIVERY_RULES.md) for delivery preferences.
+## Current repair package
 
-Existing versioned Java-And-Assets, AIDE-Build-Project and DEX-And-Assets ZIPs are older reference packages. They have not been rebuilt from the newly supplied split-loader source. Do not treat their loader/integration instructions as current. The remaining raw-project integration/server/tool files are historical reference too; live Worker and supplied split loader differ. The build workflow still uses the older Java-And-Assets ZIP.
+[Royal-Void-Unlock-Party-Fixes.zip](Royal-Void-Unlock-Party-Fixes.zip) preserves the complete source folder and contains 39 files including the current guide, supplied build files and corrected dual-client updater. [FIXES_README.md](FIXES_README.md) explains payload-first publication and the classes7 build/install steps. Do not use the reviewed old website upload form for the dual-client JSON; use the corrected updater's --upload command. No production publication or new DEX build has been performed here.
 
-This update does not change main, upload a payload, deploy Workers, modify Supabase, or build/install an APK. The user-supplied original MainActivity does not show installed mod hooks.
+The updater requires the original game file from the current APK, SHA-256 044e46362e4a286ea279be3762c02d1934afdc682f539cb68dd194e74ec4b9cb. The earlier uploaded engine differs and is deliberately rejected before upload.
 
-Source ZIP SHA-256: a8f28357b89b901a38b04e34202a50ad51f16e774eacee31202e070aa243552d
+[Royal-Void-Supplied-SRC.zip](Royal-Void-Supplied-SRC.zip) contains only all 33 Java source files under src/. Browse them in [raw-project/src](raw-project/src). Verify archives using [SHA256SUMS.txt](SHA256SUMS.txt).
 
-## Unlock/shop/party repairs
+## Standing task completion rules
 
-[Royal-Void-Unlock-Party-Fixes.zip](Royal-Void-Unlock-Party-Fixes.zip) contains all 33 Java files, the supplied build files and a corrected complete dual-client updater. Follow [FIXES_README.md](FIXES_README.md) for payload-first installation and verification limits. These source fixes are not yet published to the live Worker payload or installed in an APK. Use raw-project/tools/update_payload_once.py for this repair rather than the historical update_payload.py.
+After every mod task, update the guide, complete changed files, links/archives/checksums and clean superseded downloads, following [AGENTS.md](AGENTS.md) and [DELIVERY_RULES.md](DELIVERY_RULES.md). Main remains unchanged unless the owner authorizes it. This is the assistant's post-task workflow, not a background sync daemon.
+
+Older versioned ZIPs and the workflow that rebuilt an old ZIP have been removed. Historical raw-project integration/server/tool files are reference only unless explicitly synchronized against the active system. Do not deploy them as though they were the live Worker. The canonical new repair updater is raw-project/tools/update_payload_once.py.

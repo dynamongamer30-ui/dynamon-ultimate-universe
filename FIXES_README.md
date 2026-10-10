@@ -29,7 +29,7 @@ With Python and the `cryptography` package available, run from the extracted pac
 python update_payload_once.py --original /path/to/current-apk/dynamons_world.min.js --signing-key /path/to/signing_key.pem --bundle-out /path/to/private-fixed-payload.json
 ```
 
-Upload that private JSON through the existing owner admin payload uploader. It contains AES keys: keep it off GitHub and out of the APK. Alternatively, publish directly with the existing ADMIN_KEY prompt:
+The private JSON contains AES keys: keep it off GitHub and out of the APK. The reviewed website upload form still expects the older flat client-3 format, so do not use it for this dual-client bundle. Publish directly through the corrected updater and existing ADMIN_KEY prompt:
 
 ```bash
 python update_payload_once.py --original /path/to/current-apk/dynamons_world.min.js --signing-key /path/to/signing_key.pem --upload
@@ -56,3 +56,5 @@ It requires your existing `ANDROID_JAR` and `R8_JAR` settings. Its output is `di
 - Java source parsed; runtime/updater syntax checks passed. Both client encryption round trips and pinned ECDSA ciphertext/metadata signatures passed; wrong-original rejection passed.
 
 Android type checking/DEX compilation and in-device gameplay were not performed here. After installation, check: add owned monsters, repeat without duplicates, buy an unowned one-time reward, change party size both upward and downward, close/reopen and confirm saved ownership. These are code-level fixes with the stated checks, not a claim of live Android verification.
+
+The current authoritative system guide is MOD_SYSTEM_GUIDE.md on the download branch and is included in this package. Follow that guide for deployed/prepared status and future sync rules.

@@ -1,9 +1,9 @@
 # Royal Void download branch
 
-[Unlock, shop and party fixes ZIP](Royal-Void-Unlock-Party-Fixes.zip) · [Installation and validation](FIXES_README.md)
+[Complete current system guide](MOD_SYSTEM_GUIDE.md) · [Task/sync rules](AGENTS.md) · [Delivery rules](DELIVERY_RULES.md)
 
-The fixes ZIP contains the complete source folder (33 Java files), supplied build files and corrected dual-client updater. Source and payload checks passed; the live payload and installed APK have not been changed.
+[Unlock/shop/party fixes ZIP](Royal-Void-Unlock-Party-Fixes.zip) contains 39 complete files: the full 33-file source tree, supplied build files, corrected dual-client updater, targeted runtime repair, instructions and the current guide. Read [FIXES_README.md](FIXES_README.md) before publishing/building. Source checks passed; the live payload and installed APK remain unchanged.
 
-[All source files](raw-project/src) · [Source-only ZIP](Royal-Void-Supplied-SRC.zip) · [Menu controls](CURRENT_MENU_CONTROLS.md) · [Delivery rules](DELIVERY_RULES.md) · [Start here](START_HERE.md)
+[All Java source files](raw-project/src) · [Source-only ZIP](Royal-Void-Supplied-SRC.zip) · [Menu control inventory](CURRENT_MENU_CONTROLS.md) · [Start here](START_HERE.md) · [Archive checksums](SHA256SUMS.txt)
 
-Older versioned build/assets ZIPs are historical reference and have not been rebuilt from this source. Main remains unchanged.
+Superseded versioned build/archive packages and their old archive-based build workflow were removed. Necessary source, assets and build tools remain. Main remains unchanged. Other branch deletion is not completed because the connector has no branch-delete operation.

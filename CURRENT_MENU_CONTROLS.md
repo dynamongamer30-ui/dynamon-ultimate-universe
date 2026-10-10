@@ -1,6 +1,6 @@
 # Current Royal Void / Thunder menu: control map
 
-Reviewed 2026-10-10. This describes the supplied Java source and supporting DEX/build material. Source inspection establishes intended behavior; it does not establish that every action works in the installed APK. The actual patched host activity and decrypted active signed runtime were not supplied. The old Mod.zip is historical reference, not today's loader.
+Reviewed 10 October 2026. This describes the supplied Java source, supporting DEX/build material and the decrypted active signed runtime. The installed patched host activity was not supplied and Android gameplay was not independently tested. Prepared repairs are distinguished from unchanged live behavior. The old Mod.zip is historical reference, not today's loader.
 
 ## Launcher and shared controls
 
@@ -23,7 +23,7 @@ Reviewed 2026-10-10. This describes the supplied Java source and supporting DEX/
 
 ## Battle, Arena and Advanced feature switches
 
-FeatureRegistry starts empty and validates a schema-1 catalogue from the signed payload (up to 128 unique feature keys). Labels/descriptions/categories can change without recompiling the Java menu. The repository reference catalogue has 19 switches below; this is not proof of the currently decrypted active catalogue or hooks.
+FeatureRegistry starts empty and validates a schema-1 catalogue from the signed payload (up to 128 unique feature keys). Labels/descriptions/categories can change without recompiling the Java menu. The decrypted current payload contains these 19 switches. The catalogue is verified; actual gameplay effects are not independently device-tested.
 
 | Page | Key | Reference label | Intended catalogue meaning |
 |---|---|---|---|
@@ -58,9 +58,9 @@ Arena also has Auto Grind: Start sets `autoGrind=true`, Pause/Resume sends `paus
 
 ## Unlock
 
-- Unlock all supported categories confirms, then sends `unlockAll`.
+- Unlock all supported categories confirms, then sends `unlockAll`. Prepared Java now confirms adding missing playable Dynamons; the unchanged live runtime still has the collection-only failure described in the repair notes.
 - Separate Mons, Skins, Emotes and Avatars buttons confirm, then send `unlock(kind)`.
-- These are collection entries; the UI explicitly says this does not add playable monsters or validate purchases. Refresh the relevant game screen after changes. Actual supported entries and lock enforcement depend on payload/game version.
+- Before the repair, Mons changed collection entries and did not add playable monsters. Prepared Java labels this All playable Dynamons; its matching prepared payload adds missing owned monsters at level 1. This is not deployed yet and does not validate purchases. Refresh the relevant game screen after changes.
 
 ## Team
 
@@ -97,12 +97,8 @@ Arena also has Auto Grind: Start sets `autoGrind=true`, Pause/Resume sends `paus
 
 ## Limits and architecture
 
-The reference configuration sets speed 0.1–8 in 0.1 steps; currency 0–999999999; item quantities 0–999999; party size 3–5; stats 0–1000000. These are reference values, not independently verified active signed-payload values.
+The reference configuration sets speed 0.1–8 in 0.1 steps; currency 0–999999999; item quantities 0–999999; party size 3–5; stats 0–1000000. These values are also present in the decrypted active signed menu configuration. Runtime command ceilings must be updated together with UI limits for a future range change.
 
 classes6 is the AIDE-built key/login dialog. classes7 is the Termux/R8-built native menu plus signed split loader. Login writes Worker/Supabase verification state; loader validates payload signature/metadata, checks device/license state, decrypts, and starts the protected index/game runtime. Original Firebase game UID/account operations remain separate. No Shopify is involved.
 
-The supplied MainActivity is the original baseline and has no mod attach calls. Intended integration uses DGDialog(Activity) and ModEntry.attachWithLoader(Activity, initialized WebView). Installed hook placement, AndroidManifest wiring, actual active runtime hooks and gameplay effects remain unverified. No gameplay fixes, payload uploads, database changes or production deployments were performed for this review.
-
-## Prepared repair, 2026-10-10
-
-The source now labels Mons as All playable Dynamons and confirms adding missing owned monsters. The repair payload creates missing owned Dynamons at level 1 with the game's own constructor/add/save methods, preserves existing levels, and changes the two one-time reward checks to actual ownership. Party-size buttons update from confirmation and snapshots. See FIXES_README.md for the exact changes and validation. These prepared source changes have not been activated in the live payload or an installed APK; preceding descriptions record the reviewed earlier behavior.
+The supplied MainActivity is the original baseline and has no mod attach calls. Intended integration uses DGDialog(Activity) and ModEntry.attachWithLoader(Activity, initialized WebView). Installed hook placement, AndroidManifest wiring, gameplay effects remain unverified on Android; the active signed runtime itself has now been inspected. Gameplay fixes have been prepared and code-tested, but no payload upload, database change, production deployment or Android installation has been performed.
