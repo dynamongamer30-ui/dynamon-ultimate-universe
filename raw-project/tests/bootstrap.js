@@ -48,9 +48,37 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
 
   /* ===================== GAME SPEED ===================== */
   function __dgReadSpeed(){ try{ var n=parseFloat(localStorage.getItem("__DG_SPEED")); return isFinite(n)&&n>=0.1&&n<=8?Math.round(n*10)/10:1; }catch(e){return 1;} }
-  function __dgSpeed(){ try{ window.$DG=window.$DG||{}; var n=+window.$DG.speed; if(!isFinite(n)||n<0.1||n>8)n=__dgReadSpeed(); window.$DG.speed=Math.round(n*10)/10; return window.$DG.speed; }catch(e){return 1;} }
-  function __dgSetSpeed(value,out,announce){ var n=parseFloat(value); if(!isFinite(n))n=1; n=Math.max(0.1,Math.min(8,Math.round(n*10)/10)); try{ window.$DG=window.$DG||{}; window.$DG.speed=n; if(window.$DG.applySpeed)window.$DG.applySpeed(); localStorage.setItem("__DG_SPEED",n.toFixed(1)); }catch(e){} if(out)out.textContent=n.toFixed(1)+"×"; if(announce){try{toast("Speed "+n.toFixed(1)+"×","ok");buzz(8);}catch(e){}} }
-  try{window.$DG=window.$DG||{};window.$DG.speed=__dgSpeed();}catch(e){}
+  var __dgPreferredSpeed=__dgReadSpeed(),__dgArenaSpeedWasLocked=false;
+  function __dgArenaSpeedLocked(){
+    var b=window.__curBattle;
+    return !!(b && !b._battleOver && !b._hasEscaped && (!("parent" in b)||b.parent!=null) && __dgRealPvP(b));
+  }
+  function __dgSpeed(){return __dgArenaSpeedLocked()?1:__dgPreferredSpeed;}
+  function __dgSyncArenaSpeed(){
+    var locked=__dgArenaSpeedLocked();
+    // Effective speed never overwrites the saved preference, including across app restarts.
+    if(locked!==__dgArenaSpeedWasLocked){
+      __dgArenaSpeedWasLocked=locked;
+      if(window.$DG&&window.$DG.applySpeed)window.$DG.applySpeed();
+    }
+    return locked;
+  }
+  function __dgSetSpeed(value,out,announce){
+    if(__dgSyncArenaSpeed())throw Error("Real-player Arena: speed locked to 1x until this match ends");
+    var n=parseFloat(value);if(!isFinite(n))n=1;n=Math.max(0.1,Math.min(8,Math.round(n*10)/10));
+    __dgPreferredSpeed=n;
+    if(window.$DG&&window.$DG.applySpeed)window.$DG.applySpeed();
+    try{localStorage.setItem("__DG_SPEED",n.toFixed(1));}catch(e){}
+    if(out)out.textContent=n.toFixed(1)+"×";
+    if(announce){try{toast("Speed "+n.toFixed(1)+"×","ok");buzz(8);}catch(e){}}
+  }
+  window.$DG=window.$DG||{};
+  Object.defineProperty(window.$DG,"speed",{configurable:true,enumerable:true,
+    get:__dgSpeed,set:function(value){__dgSetSpeed(value,null,false);}});
+  window.__DG_arenaSpeedLocked=__dgArenaSpeedLocked;
+  window.__DG_syncArenaSpeed=__dgSyncArenaSpeed;
+  window.__DG_selectedSpeed=function(){return __dgPreferredSpeed;};
+
 
   /* ===================== FEATURE STATE ===================== */
   var F={ autoGrind:false, autoWorld:false, god:false, oneHit:false, crit:false, statusImmune:false, noCD:false, alwaysCatch:false, botMatch:false, winToss:false, winTrophy:false, noTrophyLoss:false, statcap:false, maxdef:false, fullheal:false, pvpcd:false, itemtimer:false, turnreset:false, items5:false, nicklen:false, nickval:false, shopfix:true, saveSettings:true, haptics:true };
@@ -196,8 +224,8 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
   function hookAll(){ try{
     var B=BattleC(); if(B&&B.prototype&&!B.__dwHook){
       Object.getOwnPropertyNames(B.prototype).forEach(function(k){ var o=B.prototype[k]; if(typeof o!=="function")return; __dgWrapMethod(B.prototype,k,function(orig){ return function(){ var keep=(k==="fadeToMenu"||k==="onBattleEnd"||k==="cleanup"||k==="destroy"||k==="dispose"); if(!keep)window.__curBattle=this;
-        /* Speed remains the user choice; see the Arena timing note. */
-        try{return orig.apply(this,arguments);} finally{if(keep){window.__curBattle=null;try{window.$DG&&window.$DG.applySpeed&&window.$DG.applySpeed();}catch(e){}}} }; }); });
+        __dgSyncArenaSpeed();
+        try{return orig.apply(this,arguments);} finally{if(keep && window.__curBattle===this)window.__curBattle=null;__dgSyncArenaSpeed();} }; }); });
       B.__dwHook=true; __DG_HOOK_STATUS.battle=true;
     }
     var TC=K("co.doubleduck.utils.TweenChain");
@@ -217,7 +245,7 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
     try{ var HM=K("co.doubleduck.dynamons3.meta.HubMap"); if(HM&&HM.prototype&&!HM.__dwWheel){ HM.__dwWheel=true; if(typeof HM.prototype.openFortuneWheel==="function")__dgWrapMethod(HM.prototype,"openFortuneWheel",function(orig){return function(){try{return this.handleCloseWheel&&this.handleCloseWheel();}catch(e){return __dgSafeOriginal(orig,this,arguments);}};}); } }catch(e){}
   }catch(e){} }
   /* keep-alive: re-apply invuln + status immunity to current team (handles switches) */
-  setInterval(function(){ try{ var cb=window.__curBattle; if(cb && (cb._hasEscaped===true || cb._battleOver===true || (("parent" in cb) && cb.parent==null))){ window.__curBattle=null; cb=null; } if(cb){if(!__dgRealPvP(cb))neuterValidator(cb); enforcePvP(cb);} var team=partyMons(); if(cb&&cb._selfMon&&team.indexOf(cb._selfMon)===-1)team.push(cb._selfMon); if(!team.length)return;
+  setInterval(function(){ try{ var cb=window.__curBattle; if(cb && (cb._hasEscaped===true || cb._battleOver===true || (("parent" in cb) && cb.parent==null))){ window.__curBattle=null; cb=null; } __dgSyncArenaSpeed(); if(cb){if(!__dgRealPvP(cb))neuterValidator(cb); enforcePvP(cb);} var team=partyMons(); if(cb&&cb._selfMon&&team.indexOf(cb._selfMon)===-1)team.push(cb._selfMon); if(!team.length)return;
     team.forEach(function(m){ if(!m)return; if(m.setInvulnerable){try{m.setInvulnerable(F.god?true:false);}catch(e){}}
       if(m.setImmuneToSick||m.setImmuneToHypno){ try{m.setImmuneToSick&&m.setImmuneToSick(F.statusImmune?true:false); m.setImmuneToHypno&&m.setImmuneToHypno(F.statusImmune?true:false);}catch(e){} } }); }catch(e){} }, 600);
 
@@ -932,9 +960,9 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
   function db(){return cls('data.GameplayDB');}
   function api(){return window.__DG_API;}
   function flag(k){return !!api().F[k];}
-  function locks(){return window.__DG_LOCKS||{};}
+  function locks(){var l={},source=window.__DG_LOCKS||{};Object.keys(source).forEach(function(k){l[k]=source[k];});if(window.__DG_syncArenaSpeed&&window.__DG_syncArenaSpeed())l.speed=true;return l;}
   function locked(k){var l=locks();return l.app===true||l.mods===true||l[k]===true||(k.indexOf('unlock')===0&&l.unlock===true);}
-  function requireOpen(k){if(locked(k))throw Error('This feature is currently unavailable.');}
+  function requireOpen(k){if(k==='speed'&&window.__DG_arenaSpeedLocked&&window.__DG_arenaSpeedLocked())throw Error('Real-player Arena: speed locked to 1x until this match ends');if(locked(k))throw Error('This feature is currently unavailable.');}
   function number(n,min,max){n=Number(n);if(!isFinite(n)||n<min||n>max)throw Error('Enter a value from '+min+' to '+max);return n;}
   function invoke(o,k,a){if(!o||typeof o[k]!=='function')throw Error('This game version does not support '+k);return o[k].apply(o,a||[]);}
   function save(){var I=window.__DG_NATIVE_INTERNAL;if(I){I.sync();I.save();}else{
@@ -985,7 +1013,7 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
   function exportControls(){
     var g=gs(),values={};Object.keys(api().F).forEach(function(k){values[k]=!!api().F[k];});
     var skin={};try{skin=JSON.parse(localStorage.getItem('__DG_SKIN')||'{}');}catch(e){}
-    return {flags:values,speed:api().getSpeed(),coins:invoke(g,'getPlayerCoins'),dust:invoke(g,'getPlayerDust'),party:invoke(g,'getParty').filter(Boolean).length,
+    return {flags:values,speed:window.__DG_selectedSpeed?window.__DG_selectedSpeed():api().getSpeed(),coins:invoke(g,'getPlayerCoins'),dust:invoke(g,'getPlayerDust'),party:invoke(g,'getParty').filter(Boolean).length,
       items:items().map(function(x){return {id:x.id,amount:invoke(g,'getItemAmount',[x.id])||0};}),skin:skin};
   }
   function restoreControls(c){
@@ -1029,7 +1057,7 @@ window.__DG_INSTALL_NATIVE=function(){if(window.__DG_NATIVE)return;var r=window.
   }
   window.__DG_NATIVE={snapshot:function(){try{
     enforceLocks();var g=gs(),A=api(),F={},skin={};try{skin=JSON.parse(localStorage.getItem('__DG_SKIN')||'{}');}catch(e){};Object.keys(A.F).forEach(function(k){F[k]=!!A.F[k];});
-    return {ok:true,ready:!!g,coins:invoke(g,'getPlayerCoins'),dust:invoke(g,'getPlayerDust'),speed:A.getSpeed(),scanToken:validScanToken(),flags:F,locks:locks(),party:invoke(g,'getParty').filter(Boolean).length,
+    return {ok:true,ready:!!g,coins:invoke(g,'getPlayerCoins'),dust:invoke(g,'getPlayerDust'),speed:A.getSpeed(),selectedSpeed:window.__DG_selectedSpeed?window.__DG_selectedSpeed():A.getSpeed(),arenaSpeedLocked:!!(window.__DG_arenaSpeedLocked&&window.__DG_arenaSpeedLocked()),scanToken:validScanToken(),flags:F,locks:locks(),party:invoke(g,'getParty').filter(Boolean).length,
       world:window.__DG_autoWorldStatus?window.__DG_autoWorldStatus():{},grind:{on:!!window.__DG_GRIND,paused:!!window.__DG_GRIND_PAUSED},skin:skin,notice:window.__DG_LAST_NOTICE||null,brand:window.__DG_BRAND||null,menuConfig:window.__DG_MENU_CONFIG||null};
   }catch(e){return {ok:false,ready:false,error:String(e.message||e)};}},command:function(name,a){try{
     if(!gs())throw Error('Game is not ready');a=a||{};var g=gs(),r={ok:true,message:'Applied'};

@@ -8,4 +8,4 @@
 
 Superseded versioned build/archive packages and their old archive-based build workflow were removed. Necessary source, assets and build tools remain. Main remains unchanged. Other branch deletion is not completed because the connector has no branch-delete operation.
 
-Latest update: page entries reset to the top; valid Scan Team cards and position are retained. Real-Arena wait durations are separated from visual animation speed. Use both the updated payload and rebuilt classes7.dex. Local timer tests passed; Android/live-opponent validation remains pending.
+Latest update: real-player Arena automatically forces 1x and restores your saved speed after completion or leaving. The native slider displays the lock. Bot Arena and world modes keep your selected speed. Page-entry and valid Scan Team behavior remain. Apply both the updated payload and rebuilt classes7.dex. Local checks passed; Android/live-opponent validation remains pending.

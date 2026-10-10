@@ -13,7 +13,7 @@ These are complete source files, reviewed against the active Cloudflare build `r
 
 The ZIP keeps the complete `src/com/dynamongamer/royalvoid` tree (33 Java files). `ModController.java` is the changed Java file. The included `build_dex.sh` and `proguard-rules.pro` are your supplied build files, unchanged.
 
-`update_payload_once.py` includes the complete current split template/runtime and all 36 patches: the original 34 plus the two reward fixes. It generates BOTH client-3 legacy and client-4 split variants, with the same build ID, AES-GCM encryption, ciphertext signatures and signed metadata. `menu_fixes.js` is included separately for review; it is already embedded in the updater, so do not append it a second time.
+`update_payload_once.py` includes the complete current split template/runtime and 40 final edits: 35 base edits plus five checked potion sites. It generates BOTH client-3 legacy and client-4 split variants, with the same build ID, AES-GCM encryption, ciphertext signatures and signed metadata. `menu_fixes.js` is included separately for review; it is already embedded in the updater, so do not append it a second time.
 
 ## Generate and publish the corrected payload first
 
@@ -81,7 +81,7 @@ Maximum-level correction: Mons unlock adds missing playable Dynamons at Mon.getM
 - Unlock All includes supported worlds and active variants, using map persistence and the existing world-unlock item. Story completion is unchanged. A separate Worlds button is included.
 - All 19 feature cards and the speed slider are discoverable from startup. Scan results still require Scan. Enemy cards use coral with a subtle outline/glow; your team uses cyan.
 - Shop compatibility is permanently ON, including saved-profile/reset paths; the UI labels it Always enabled.
-- Speed remains your choice. The current speed card explains that visual playback accelerates while real-Arena tween wait timers are protected: at 4x a 60-second wait stays 60 seconds. The opponent/network is not accelerated. Use 1x if swaps/disconnects/freezes occur. Zero side effects and live stability are not promised.
+- Real-player Arena automatically forces 1x and restores your saved speed when the match ends or is removed. The native slider is disabled with an Arena status note. Bot Arena/world/local speed remains selected; higher speed may cause visual/state mismatches. Live stability is not yet phone-tested.
 
 Both the new payload and a rebuilt classes7.dex are required for the full delivery. The updater alone does not change the native colors/initial panels/speed note. No live upload, DEX build or phone installation was performed by the assistant. Confirmed conflicts were corrected, but invisible enemies and every real-player freeze cannot be declared resolved without live testing.
 
@@ -89,4 +89,8 @@ Both the new payload and a rebuilt classes7.dex are required for the full delive
 
 Every page opens at the top when selected, including Dashboard after visiting Battle. Valid Scan Team results are the exception: cards and their scroll position survive returning to Team. A fresh scan starts at the results area; roster/battle changes clear stale scans. Same-page polling/render does not reset scrolling.
 
-Real Arena wait timers now retain normal wall duration. Movement/effect interpolation and sprite playback still follow selected speed; at 4x a 400ms movement tween is 100ms while a 60-second wait remains 60 seconds. World/bot waits keep their existing behavior. Network/turn order is not sped up. Both payload publication and rebuilding/installing classes7.dex are necessary. Android UI and live multiplayer still need phone testing.
+Real-player Arena now runs both movement/sprite clocks at 1x while active; its wait clocks retain normal wall duration. The prior 4x visual experiment is superseded. Saved selected speed is restored automatically after the match. World/bot waits keep their existing behavior. Network/turn order is not sped up. Both payload publication and rebuilding/installing classes7.dex are necessary. Android UI and live multiplayer still need phone testing.
+
+## Latest real-player Arena speed update
+
+The runtime enforces 1x from actual real-opponent match identity, not just the bot matchmaking toggle. It preserves your selected speed/storage and restores that value after completion, escape or removal. Direct speed writes and backup restore are blocked during the match. Backup export retains your selected speed. The native slider shows the lock and saved restoration value. Both updated payload and rebuilt/installed classes7.dex are required. Local runtime/bridge/syntax/crypto checks passed; live Android Arena testing remains pending.

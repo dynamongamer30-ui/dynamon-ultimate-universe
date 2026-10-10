@@ -49,6 +49,9 @@ public final class ModController {
     private String teamScanToken = "";
     private int teamScanScrollY;
     private LinearLayout teamScanResults;
+    private SeekBar speedSlider;
+    private TextView speedValue, speedStatus;
+    private double speedMinimum=0.1, speedStep=0.1;
     private int pendingScrollY = 0;
     private int renderGeneration;
     private final HashMap<String, ToggleView> switches = new HashMap<String, ToggleView>();
@@ -410,6 +413,7 @@ public final class ModController {
         JSONObject f = state.optJSONObject("flags");
         JSONObject l = state.optJSONObject("locks");
         updatePartyButtons();
+        updateSpeedControl();
         for (String k : switches.keySet()) {
             ToggleView t = switches.get(k);
             boolean on = k.equals("shopfix") || (f != null && f.optBoolean(k));
@@ -745,6 +749,7 @@ public final class ModController {
         pendingScrollY=-1;
         final int generation=++renderGeneration;
         teamScanResults=null;
+        speedSlider=null;speedValue=null;speedStatus=null;
         body.removeAllViews();
         switches.clear();
         partyButtons.clear();
@@ -832,13 +837,31 @@ public final class ModController {
         }
     }
     
+    private void updateSpeedControl() {
+        if(speedSlider==null)return;
+        JSONObject locks=state.optJSONObject("locks");
+        JSONObject flags=state.optJSONObject("flags");
+        boolean arena=state.optBoolean("arenaSpeedLocked");
+        boolean blocked=arena || !state.optBoolean("ready") || (locks!=null && (locks.optBoolean("speed")||locks.optBoolean("app")||locks.optBoolean("mods"))) || (flags!=null && flags.optBoolean("autoWorld"));
+        speedSlider.setEnabled(!blocked);
+        speedSlider.setAlpha(blocked?0.45F:1F);
+        if(!speedSlider.isPressed() || blocked){
+            double effective=state.optDouble("speed",1);
+            speedSlider.setProgress((int)Math.round((effective-speedMinimum)/speedStep));
+            speedValue.setText(String.format(java.util.Locale.US,"%.1f×",effective));
+        }
+        speedStatus.setText(arena?"Real-player Arena: speed locked to 1×. After this match, restore "+String.format(java.util.Locale.US,"%.1f×",state.optDouble("selectedSpeed",1)):"Real-player Arena automatically uses 1× and restores your selected speed afterward. Bot Arena and other modes use your selected speed. Higher speed can cause visual or state mismatches; it cannot speed up the opponent or network.");
+    }
+
     private void speedCard() {
         LinearLayout c = card();
         c.addView(text("GAME SPEED", 11, RoyalVoidTheme.colors(activity).LAVENDER, true));
-        TextView speedNote = text("Speed changes movement, effects and sprite playback. Real Arena wait timers stay at normal duration, so 4x animation does not shorten a 60-second response wait. It cannot speed up the opponent or network. Visual or state mismatches may still occur; choose 1x if unstable.", 11, RoyalVoidTheme.colors(activity).MUTED, false);
+        TextView speedNote = text("Real-player Arena uses 1× and restores your selected speed after the match. Bot Arena and other modes keep your selected speed. Higher speed can cause visual or state mismatches; it cannot speed up the opponent or network.", 11, RoyalVoidTheme.colors(activity).MUTED, false);
+        speedStatus=speedNote;
         speedNote.setPadding(0,dp(6),0,dp(10));
         c.addView(speedNote);
         final TextView value = text(String.format(java.util.Locale.US, "%.1f\u00d7", state.optDouble("speed", 1)), 24, RoyalVoidTheme.colors(activity).TEXT, true);
+        speedValue=value;
         c.addView(value);
         SeekBar slider = new SeekBar(activity);
         JSONObject config=state.optJSONObject("menuConfig");
@@ -847,6 +870,7 @@ public final class ModController {
         if(range==null)range=args("min",0.1,"max",8.0,"step",0.1);
         final double minimum=range.optDouble("min"),maximum=range.optDouble("max"),step=range.optDouble("step");
         if(Double.isNaN(minimum)||Double.isInfinite(minimum)||Double.isNaN(maximum)||Double.isInfinite(maximum)||Double.isNaN(step)||Double.isInfinite(step)||minimum<0||maximum<=minimum||step<=0||(maximum-minimum)/step>10000)return;
+        speedSlider=slider;speedMinimum=minimum;speedStep=step;
         slider.setMax((int)Math.round((maximum-minimum)/step));
         slider.setProgress((int)Math.round((state.optDouble("speed",minimum)-minimum)/step));
         slider.setContentDescription("Game speed");
@@ -866,9 +890,11 @@ public final class ModController {
             }
             
             public void onStopTrackingTouch(SeekBar b) {
+                if(state.optBoolean("arenaSpeedLocked")){updateSpeedControl();toast("Real-player Arena: speed locked to 1×",false);return;}
                 command("speed", args("value", minimum+b.getProgress()*step), null);
             }
         });
+        updateSpeedControl();
     }
     
     private void automation(final boolean world) {
@@ -1083,6 +1109,7 @@ public final class ModController {
                             if (!result.optBoolean("ok")) return;
                             try { state.put("party", result.optInt("value", n)); } catch (JSONException ignored) {}
                             updatePartyButtons();
+        updateSpeedControl();
                         }
                     });
                 }
@@ -1093,6 +1120,7 @@ public final class ModController {
             size.addView(option, optionParams);
         }
         updatePartyButtons();
+        updateSpeedControl();
         final LinearLayout results = column();
         teamScanResults=results;
         renderTeamScan(results);
