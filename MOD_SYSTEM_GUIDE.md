@@ -1309,3 +1309,15 @@ public final class PayloadCrypto {
 | ThemeManager.java | Eight supported palettes, enabled/default configuration, validation and selected theme persistence. |
 | ToggleView.java | Native toggle drawing/state feedback. |
 | WebViewFinder.java | Optional search helper for Activity-only attach; explicit game WebView attachment is preferred. |
+
+## Termux command correction: explicit publication mode
+
+The owner ran the updater from `/storage/emulated/0/Dynamons/Mod` with original/signing-key arguments but no publication/export mode. The resulting `Choose exactly one of --bundle-out or --upload` is argument validation, before payload generation or any upload. It does not indicate a signing-key failure.
+
+To publish using the existing files in that folder, run:
+
+```bash
+cd /storage/emulated/0/Dynamons/Mod && python update_payload_once.py --original dynamons_world.min.js --signing-key signing_key.pem --upload
+```
+
+It prompts for ADMIN_KEY unless DG_ADMIN_KEY is set. --upload publishes both corrected variants through the Worker; --bundle-out exports privately instead. The current screenshot proves the earlier invocation stopped at argument validation, not that the payload was published. No replacement Python file is needed for this error. Original-file hash validation still runs next and can reject an incompatible game engine.

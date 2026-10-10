@@ -58,3 +58,11 @@ It requires your existing `ANDROID_JAR` and `R8_JAR` settings. Its output is `di
 Android type checking/DEX compilation and in-device gameplay were not performed here. After installation, check: add owned monsters, repeat without duplicates, buy an unowned one-time reward, change party size both upward and downward, close/reopen and confirm saved ownership. These are code-level fixes with the stated checks, not a claim of live Android verification.
 
 The current authoritative system guide is MOD_SYSTEM_GUIDE.md on the download branch and is included in this package. Follow that guide for deployed/prepared status and future sync rules.
+
+## Exact command for the owner’s current Termux folder
+
+```bash
+cd /storage/emulated/0/Dynamons/Mod && python update_payload_once.py --original dynamons_world.min.js --signing-key signing_key.pem --upload
+```
+
+Without --upload or --bundle-out, argument validation stops before generating/uploading anything. No script replacement is needed for that error.
