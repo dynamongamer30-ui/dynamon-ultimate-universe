@@ -125,7 +125,7 @@ After extracting the complete fixes ZIP and using Python with cryptography avail
 python update_payload_once.py --original /path/to/current-apk/dynamons_world.min.js --signing-key /path/to/signing_key.pem --upload
 ```
 
-The updater prompts for ADMIN_KEY or reads DG_ADMIN_KEY from the environment. A private export instead of publication is:
+The updater reads DG_ADMIN_KEY from the environment, then OWNER_ADMIN_KEY embedded in the private phone copy, then prompts if neither is set. A private export instead of publication is:
 
 ```bash
 python update_payload_once.py --original /path/to/current-apk/dynamons_world.min.js --signing-key /path/to/signing_key.pem --bundle-out /path/to/private-fixed-payload.json
@@ -1320,7 +1320,7 @@ To publish using the existing files in that folder, run:
 cd /storage/emulated/0/Dynamons/Mod && python update_payload_once.py --original dynamons_world.min.js --signing-key signing_key.pem --upload
 ```
 
-It prompts for ADMIN_KEY unless DG_ADMIN_KEY is set. --upload publishes both corrected variants through the Worker; --bundle-out exports privately instead. The current screenshot proves the earlier invocation stopped at argument validation, not that the payload was published. No replacement Python file is needed for this error. Original-file hash validation still runs next and rejects unknown engines; the refreshed updater supports the two explicitly reviewed hashes above.
+It prompts for ADMIN_KEY unless DG_ADMIN_KEY or the private OWNER_ADMIN_KEY constant is set. --upload publishes both corrected variants through the Worker; --bundle-out exports privately instead. The current screenshot proves the earlier invocation stopped at argument validation, not that the payload was published. No replacement Python file is needed for this error. Original-file hash validation still runs next and rejects unknown engines; the refreshed updater supports the two explicitly reviewed hashes above.
 
 ## Supported-original repair after the hash rejection
 
@@ -1331,3 +1331,8 @@ For the supplied hash b6f5470f21360435bc98c868bad208d79ab03493d045598a8f3924b099
 Validation completed: generated the complete patched legacy source from the supplied original and checked its JavaScript syntax; generated both actual client payloads and verified their AES-GCM round trips and pinned ciphertext/metadata signatures; verified the selected split original hash and 36 edits; reran the gameplay bridge tests; unknown-engine rejection remains. The active original’s existing edit table is retained. Production remains unchanged; neither Android installation nor in-device gameplay verification has been performed.
 
 Replace update_payload_once.py with the complete latest GitHub file, then rerun the same --upload command. The original game JS and private signing key do not need modification for either supported hash. If another file is rejected, the updater reports its found hash; inspect that exact file rather than editing the expected SHA or skipping patches. The APK local original must match the newly generated signed original_sha256.
+
+
+## Private owner key convenience — 2026-10-10
+
+The owner requested restoring an embedded administrator key for command-only uploads. The complete public updater now includes an empty OWNER_ADMIN_KEY constant. Populate it only in the private phone copy. Resolution order is DG_ADMIN_KEY environment override, private OWNER_ADMIN_KEY, hidden prompt. After setting the private constant once, the normal --upload command needs no additional input. Replacing the updater later resets the public empty constant; reapply the private setting. The supplied secret is deliberately absent from repository files, public ZIPs and this guide. No key was rotated, no signing behavior or original-engine validation changed, and no live upload was performed for this convenience change. Local validation checks embedded-key fallback and environment override without network publication.

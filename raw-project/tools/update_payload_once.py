@@ -100,6 +100,8 @@ def upload(bundle, admin_key):
     if result.get('ok') is not True or result.get('build') != bundle['build']:
         raise ValueError('Worker did not confirm this build; check current_build before retrying.')
 
+OWNER_ADMIN_KEY = ""  # Set only in your private phone copy; keep GitHub copy empty.
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--original', required=True, type=Path)
@@ -117,7 +119,7 @@ def main():
             args.bundle_out.chmod(0o600)
             print('Private dual-client bundle exported. Contains AES keys: keep it off GitHub and out of the APK.')
         else:
-            admin = os.environ.get('DG_ADMIN_KEY') or getpass.getpass('Cloudflare ADMIN_KEY (hidden): ')
+            admin = os.environ.get('DG_ADMIN_KEY') or OWNER_ADMIN_KEY or getpass.getpass('Cloudflare ADMIN_KEY (hidden): ')
             if not admin:
                 raise ValueError('Empty ADMIN_KEY; nothing uploaded')
             upload(bundle, admin)
