@@ -1,20 +1,20 @@
 # Royal Void / Thunder: current mod system and owner handover
 
-Updated 10 October 2026, using the owner's Asia/Kolkata date. This is the authoritative guide on the download branch. It describes reviewed deployed services, the supplied client, and prepared repairs separately. It contains no admin key, private signing key, AES key, service-role credential or user key records.
+Updated 11 October 2026, using the owner's Asia/Kolkata date. This is the authoritative guide on the download branch. It describes reviewed deployed services, the supplied client, and prepared repairs separately. It contains no admin key, private signing key, AES key, service-role credential or user key records.
 
 ## 1. Current state: deployed, observed and prepared
 
 | Layer | Evidence and current state | What is not established |
 |---|---|---|
-| Installed game | Owner screenshots show Royal Void 0.3.0, GAME CONNECTED, 353/353 Dynadex, an unlock setString error, and stale party selection styling | Full installed APK, patched MainActivity and AndroidManifest were not supplied |
-| Host activity | Supplied original `com.funtomic.dynamons3.MainActivity` extends CordovaActivity and stores the game WebView in `z` | This original baseline contains no mod attach call; it is not the patched installed host |
+| Installed game | Owner screenshots show Royal Void 0.3.0 and current menu controls; 11 October supplied extracted mod manifest and classes.dex–classes4.dex for static auth review | Full APK, signer/certificate, resources.arsc and phone auth/server logs were not supplied |
+| Host activity | Original snippet and newly supplied mod classes.dex identify MainActivity; the supplied mod has DGDialog and ModEntry.attachWithLoader calls, with game WebView stored in z | Actual on-device lifecycle/callback execution is not verified; original baseline and modded DEX are different evidence |
 | Login DEX | Supplied classes6.dex and android-dialog-fixed source describe the AIDE key dialog and periodic verification | Device behavior beyond the source/DEX evidence was not independently exercised |
 | Menu DEX | Supplied classes7.dex and all 33 Java source files describe the native menu and split loader | The latest changed ModController has not been compiled into a replacement DEX here |
 | Live payload | Read from Cloudflare R2 `active_payload`: build `royalvoid-unified-20261009-161600-427662`, both legacy client 3 and split client 4 | Neither variant has been replaced by this repair |
 | Active split runtime | Decrypted and inspected for this review. Format DG-MOD-SPLIT-1, 34 edits, 118066 runtime characters, 19 feature catalogue entries | No actual Android gameplay session was run here |
 | Prepared repair | Download branch contains the complete changed Java source, menu_fixes.js and corrected update_payload_once.py. The current template has 35 base edits plus five verified potion-site edits (40 final edits), with the complete repaired runtime | Prepared code is not proof that the owner's installed app or server payload was updated |
 | Website | GitHub main has owner/admin controls and a loader-upload page. Reviewed loader form serializes the older flat client-3 bundle | That form is not a verified upload path for a dual-variant bundle |
-| Backend records | Worker integrates Supabase keys, activation, bans, app configuration and skin storage | Client Firebase account/cloud game saves are a different subsystem |
+| Backend records | Worker integrates Supabase keys, activation, bans, app configuration and skin storage | Original-game Firebase/Arena ranking and Google Play Games account/cloud saves are separate from the mod key backend |
 
 The retained GitHub branches are main and royal-void-downloads-20261009. A third branch, free-tier-presence, remains because the connected GitHub tools expose no branch deletion operation. The owner authorized deleting other branches; do not claim that authorization alone completed deletion. Main has not been changed by the reviews or repairs described here.
 
@@ -1436,3 +1436,51 @@ The speed command rejects changes during a real match. Complete backup export ke
 Executed isolated tests run the exact runtime accessor/synchronizer and actual Battle wrapper. They verify 1x tween/sprite clocks before actions, persistence of a 4x selection while locked, rejected API/direct-property speed writes, cached real-match identity, unchanged bot/world speeds, restoration after battle-over/escape/parent removal/cleanup, original exception propagation and protection against stale cleanup callbacks. Restored values include 0.1x, 1x, 2.3x and 8x. Adapter tests verify native snapshot locks/status, preferred-speed export, rejected backup restoration before speed writes and normal speed commands after match completion. Existing unlock/max-level/worlds/shop/party/trophy/potion/scan tests remain passing. Generated full supplied-engine JavaScript passes syntax checking. Both client-3/client-4 signed/encrypted payloads are verified locally. Java source parses; Android type checking, DEX compilation, UI/phone installation and real-player matches are not performed here. The unavailable 044e original is supported by the existing template but was not regenerated in this task.
 
 The download branch contains the complete updater/runtime/adapter and Java controller plus refreshed guide, 39-file package, 33-file source-only archive and checksums. No additional superseded ZIP is created. Apply both the updated signed payload and rebuilt classes7.dex; the payload enforces the lock, while native Java supplies the disabled-slider/live-status behavior. Existing original engine and signing key are retained; restore OWNER_ADMIN_KEY only in the private phone updater after replacing it. Public source/archives keep that constant empty. No live Worker upload, Supabase change, APK/DEX installation or main-branch mutation is performed by the assistant.
+
+
+## Google sign-in static audit — 2026-10-11, current evidence
+
+
+This is a static review of the owner's extracted modded APK files, not a reproduced phone login or server test. No APK source, mod runtime, signing setup or live service was changed.
+
+## Supplied evidence
+
+The owner supplied Android binary XML and four valid DEX files: classes.dex (DEX 037), classes2.dex, classes3.dex and classes4.dex. The manifest decodes to package com.funtomic.dynamons, versionName 1.13.37 and versionCode 11337. The current split-index-1 index.html was supplied as chat text. The previously supplied game JavaScript (SHA-256 b6f5470f21360435bc98c868bad208d79ab03493d045598a8f3924b099f818eb) and the latest prepared runtime were reviewed alongside it. This does not prove the phone's current JavaScript/payload bytes equal those reviewed copies.
+
+The APK's complete archive, signing block/certificate, resources.arsc, current Cordova plugin registration files, device login logs and original same-version APK were not supplied. classes5/classes6 dialog code was excluded at the owner's request. No APK signing fingerprint can be recovered from these four DEX files or the manifest.
+
+## Verified sign-in path
+
+The in-game SIGN IN action calls GoogleGamesProxy.auth(false), then window.plugins.playGamesServices.auth({silent:false}). The native class com.berriart.cordova.plugins.PlayGamesServices initializes GoogleSignInOptions.DEFAULT_SIGN_IN with Games.SCOPE_GAMES and Games.SCOPE_GAMES_SNAPSHOTS. The interactive branch gets GoogleSignInClient.getSignInIntent(), registers the Cordova activity-result callback, and opens request 9001. The silent branch uses silentSignIn(). These findings identify Google Play Games sign-in and cloud saves, rather than a direct Firebase Google credential exchange at that button.
+
+PlayGamesServices.onActivityResult invokes GoogleSignIn.getSignedInAccountFromIntent(intent) and tests Task.isSuccessful(). On success it calls the helper's success path. On failure it obtains the exception and accesses ApiException Status message/code, but those underlying values are not forwarded as the detailed Cordova failure; helper h40.c(0) reduces the outcome to SIGN IN FAILED BY ERROR. Cancellation and missing callback contexts have separate generic handling. A visible account chooser or Google overlay therefore is not evidence that this task completed successfully. The DEX contains both success/error strings because it includes both branches; their presence is not a recorded device error.
+
+The subsequent showPlayer action calls Games.getPlayersClient(...).getCurrentPlayer(). JavaScript sets signedIn=true after the auth callback, but the player query is separate: its failure clears lastPlayerInfo, so the account panel can show ACCOUNT NOT FOUND even after the auth callback succeeded. The settings sign-in handler proceeds toward cloud-load handling after a failed player query rather than displaying that player's underlying API failure as a specific login diagnosis. Thus initial sign-in success, player-profile retrieval and cloud-save retrieval must be checked separately.
+
+The supplied patched MainActivity contains DGDialog(Activity) and ModEntry.attachWithLoader(Activity,WebView). It does not define its own onActivityResult override. The supplied CordovaActivity superclass has onActivityResult and delegates to the Cordova callback router after invoking its Android superclass. The native PlayGamesServices callback method is present. There is no evidence here that the host simply deleted activity-result forwarding; this does not prove the callback is delivered correctly in the running app.
+
+## Signing certificate: strong possibility, not confirmed
+
+The owner uses MT Manager to rebuild/sign the modified APK. A different APK signer from the official registered certificate commonly prevents Google Play Games authorization. Android app identity involves package name and signing certificate, while Play Games also needs the correct linked game configuration. The manifest retains the expected package and Games APP_ID metadata, but APP_ID is a compiled resource reference @0x7f110020 whose value cannot be resolved without resources.arsc. Neither the actual signer nor the publisher's OAuth/Play Games registration is available in the extracted material. A certificate/configuration rejection is therefore a leading hypothesis, not a proven device result.
+
+Several permission names in the supplied manifest have an unusual package prefix, for example com.funtomic.dynamons_com.google.android.providers.gsf.permission.READ_GSERVICES and com.funtomic.dynamons_com.google.android.gms.permission.AD_ID. This is a concrete manifest anomaly that should be compared with the original, but these names do not establish the sign-in failure and must not be described as its confirmed cause. INTERNET and the expected MainActivity/Google sign-in components are present.
+
+Changing index.html, setting signedIn=true, showing an account name or forcing a success callback does not create an authorized Google Play Games session. Changing an embedded app/client ID cannot independently authorize an unregistered APK certificate. Correct registration requires the legitimate publisher's Google configuration or an APK signed with their registered key; the owner's private payload signing key and MT Manager's APK signer are separate concepts.
+
+## Leaderboard is a separate path
+
+The reviewed game engine initializes Firebase auth separately using onAuthStateChanged and signInAnonymously; window.userUid receives that Firebase UID. Its MultiplayerRankingEvent instance instead takes GameState.getD3ID(), a generated/persisted 16-character game ID, as its player record ID. The Arena ranking code updates ranking/event/.../scores/players/... through Firebase database operations and emits arena_event_set_score_success/failed. Google Play Games identity is used for account profile/cloud saves; the reviewed Arena ranking write is not gated directly by GoogleGamesProxy.signedIn.
+
+This corrects the earlier tentative implication that a failed Google sign-in necessarily explains absent Arena leaderboard credit. Anonymous Firebase auth, game ID, season/ranking writes, database rule/server acceptance, and client score presentation need their own evidence. The live game backend's access rules and actual failed write responses were not available; no leaderboard restriction or anti-cheat verdict is inferred from the files alone.
+
+## Reviewed mod and index boundaries
+
+The current prepared Royal Void runtime contains no GoogleGamesProxy, playGamesServices, signedIn, signIn, firebase.auth or userUid references, and the template's replacement edits do not contain sign-in/Firebase-auth modifications. This provides no direct evidence that the prepared speed/menu changes intentionally override Google sign-in. It does not clear all possible lifecycle interactions or prove which payload is active on the phone. The supplied index loads Cordova and Firebase libraries and boots the original/patched engine; it does not itself provide the Google Play Games JavaScript plugin implementation or registration. Those are supplied by Cordova assets/config.
+
+## Minimum next evidence
+
+1. A screenshot of the installed mod APK's signing-certificate SHA-1 (and SHA-256 if shown) in MT Manager. The original same-version APK's certificate screenshot is useful for comparison. Do not send private keys.
+2. resources.arsc from the mod APK, to resolve APP_ID and application resource configuration; assets/www/cordova_plugins.js and res/xml/config.xml to verify actual plugin registration. These are smaller than the entire APK. The Play Games plugin JavaScript named by cordova_plugins.js may then be needed.
+3. If available, a phone log captured during one sign-in, including GoogleSignIn/GoogleSignInCommon/GoogleApiManager/GameHelper/CordovaPlayGamesService and ApiException messages. Tokens, email addresses and account identifiers should be removed before sharing. An observed status 10/DEVELOPER_ERROR would support configuration/certificate failure, but that code was not observed in this review.
+
+No further DEX files are requested for this stage. Static review supports narrowing the failure but cannot confirm the installed certificate, actual Google rejection, or leaderboard write result without this evidence. The authoritative guide and existing complete package are refreshed with these findings; gameplay code, source-only ZIP and live services remain unchanged by this diagnostic task.

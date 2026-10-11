@@ -9,3 +9,5 @@
 Superseded versioned build/archive packages and their old archive-based build workflow were removed. Necessary source, assets and build tools remain. Main remains unchanged. Other branch deletion is not completed because the connector has no branch-delete operation.
 
 Latest update: real-player Arena automatically forces 1x and restores your saved speed after completion or leaving. The native slider displays the lock. Bot Arena and world modes keep your selected speed. Page-entry and valid Scan Team behavior remain. Apply both the updated payload and rebuilt classes7.dex. Local checks passed; Android/live-opponent validation remains pending.
+
+Google sign-in diagnostic update (11 October 2026): [static APK/auth review](AUTH_SIGNIN_REVIEW.md) distinguishes Play Games account/cloud saves from anonymous Firebase Arena ranking. APK certificate/configuration failure is a leading hypothesis, not confirmed without the signer/resources/logs. This task changes documentation only; gameplay code and live services are unchanged. The complete package embeds the refreshed guide.
