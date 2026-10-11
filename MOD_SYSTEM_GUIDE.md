@@ -1662,3 +1662,81 @@ A screenshot of the first setup/runtime download screen can identify which bundl
 The owner supplied a Play Store Carrom download at 7%, a microG Services initial sign-in consent screen and AimAi Engine 2.1.0/ARM64 settings reporting Google services Installed. These observations support the earlier microG/container setup interpretation. They do not show completed Google authentication, linked player profile, cloud-save retrieval or leaderboard acceptance. This updates the earlier report's evidence boundary without claiming that login was tested successfully.
 
 The authoritative system guide and existing complete ZIP embed these findings. This task changes diagnostic documentation only; main, gameplay sources, source-only ZIP and live services remain unchanged.
+
+
+## Launcher baseline milestone — 2026-10-11
+
+## Completed
+
+An independent native Android baseline launcher was authored and compiled. Its separate package is com.dynamongamer.launcher, version 0.1.0-baseline. It queries the expected original com.funtomic.dynamons3 and supplied mod com.funtomic.dynamons packages, lists versions/splits, reports current Android signer SHA-1/SHA-256 and checks presence of Google services/Play Games packages. It opens only the original package using Android's normal launch intent. A shared text report contains no account credentials or private game data. It cannot observe whether login or saved-progress loading succeeded.
+
+The APK was built using SDK platform 35, build-tools 35.0.0, D8/AAPT2 and ECJ 3.40.0 with Java 21. AAPT2 package/activity/minimum/target metadata, ZIP alignment and apksigner V2/V3 verification passed. Source is delivered complete with no build outputs or signing private key included. Development APK signing is unrelated to the official game or Royal Void payload signer.
+
+## Not completed
+
+There is no container implementation, virtual game launch, WebView attachment, menu integration, runtime injection or Google-login fix in this milestone. No phone test was performed. Fine Engine/Shinigami compiled files are not sufficient to claim a maintainable working port. The owner confirmed that only APKs are available. The public FBlackBox/BlackBox repository has removed its source; its current README is a removal notice. A suitable maintained/licensed engine source or independently implemented container is still needed before a genuine container prototype can be built. No engine access/signature restrictions were disabled.
+
+## Correction to earlier proposal
+
+Launching an unmodified official game in a container was the proposed first architecture milestone. The artifact produced here launches outside a container to establish the official-login baseline and collect the missing installed certificate details. These are different milestones. The host must not be described as a working container or mod loader. Earlier conceptual attachment sequences are unimplemented design ideas, not capabilities proved by the APKs inspected.
+
+## Phone test requested
+
+Install the official game and the separate launcher. Refresh details, open the original game, attempt Google login and check the actual profile/cloud save. Return and share the text diagnostic report plus the observed result. Keep the current mod's installation/save separate. No game APK rebuild is needed for this test.
+
+## Remaining work
+
+1. Obtain phone baseline results, particularly original package signer and exact login failure if any.
+2. Select and assess a buildable container implementation and split/ABI/Android compatibility.
+3. Test unmodified official game startup and genuine profile retrieval within that container.
+4. Design the menu/WebView bridge only once those prerequisites pass.
+5. Validate saved-progress persistence and Arena ranking separately.
+
+Documentation, complete source/archive, development APK and checksums are synchronized to the download branch. Existing game/menu source, live payloads, services and main are unchanged by this milestone.
+
+
+This is the first independently built launcher for the Royal Void container investigation. It opens the installed original game through Android's normal launch intent. It is not a container, and it does not attach the mod menu.
+
+## Install and test on your phone
+
+1. Install Dynamons World from its official Play Store listing, package com.funtomic.dynamons3. Preserve your saves using the game's supported backup before changing game installations. Do not replace the game with a rebuilt APK for this baseline.
+2. Install Dynamons-Launcher-Baseline.apk. This is a separate package com.dynamongamer.launcher and does not replace either game package.
+3. Open the launcher and tap Refresh installed app details. It reports the original and previously supplied mod packages independently.
+4. Tap Open original Dynamons. Test Google sign-in, then verify the game's player profile and saved progress. A visible account chooser is not enough to prove success.
+5. Return to the launcher and tap Share diagnostic report. Send that report plus the observed login/profile result. The report does not collect email, account tokens, saves or a stable device identifier.
+
+The original package's Android-reported SHA-1 and SHA-256 fingerprints are included. No trusted publisher fingerprint has been supplied, so the launcher reports the signer without declaring it genuine. The same applies to the Google-services package: its presence does not identify it as official Google software or prove login works.
+
+Expected results include an enabled game-launch button when the expected package and launch activity are visible. If the expected package is absent, the button is disabled. The different com.funtomic.dynamons mod is listed for diagnosis but is not launched by this button. The original game can run at its normal speed; the launcher contains no speed or gameplay controls.
+
+## Complete source
+
+The source ZIP preserves this project folder, including MainActivity.java, Gradle files, manifest, standalone build script, this README and the current system guide. All code is included. No downloaded container code, official game APK, microG binaries, private keys or Android SDK binaries are included.
+
+Open the project in Android Studio with Android SDK platform 35 and Java 17 or newer. The Gradle project uses Android Gradle Plugin 8.7.3; use compatible Gradle 8.9. No Gradle wrapper is bundled, so use the IDE/configured Gradle installation. Run `gradle :app:assembleDebug` with Gradle 8.9. The conventional Gradle build has not been run in this environment; the supplied APK was built through the verified standalone route below.
+
+## Standalone SDK build
+
+Requires Bash, Python 3, a JDK (java, javac, keytool), SDK platform 35 and build-tools 35.0.0 suitable for your build computer. This is a host build script, not a promise that desktop SDK binaries run on Android/Termux.
+
+```sh
+export ANDROID_BUILD_TOOLS=/your/android-sdk/build-tools/35.0.0
+export ANDROID_PLATFORM_JAR=/your/android-sdk/platforms/android-35/android.jar
+bash build_local.sh
+```
+
+If only a Java runtime is available, set JAVA_COMPILER_JAR to an Eclipse ECJ compiler JAR; compilation then uses that JAR. The supplied build used ECJ 3.40.0 and Java 21, Android SDK platform 35/build-tools 35.0.0.
+
+The script compiles the complete source, creates DEX using D8, packages using AAPT2, aligns and signs the development APK, then verifies it. It generates a separate local development keystore under build/local; do not publish that file. Rebuilding with a different keystore can require uninstalling a previous launcher build, but does not require changing the game. The launcher signer is unrelated to the game signer and to the Royal Void payload signing key.
+
+Output: build/local/Dynamons-Launcher-Baseline.apk. Build folders and keystores are excluded from the source ZIP. The separately delivered APK is signed as a development build, not as a publisher-signed game.
+
+## Validation and limitations
+
+Java compilation and D8 processing passed. AAPT2 reports the expected package/activity, minSdk 24 and targetSdk 35. ZIP structure/alignment and APK V2/V3 signature verification passed. Java compilation reports two deprecation warnings for system-bar color methods; there were no compilation errors in the final build. No emulator/phone install, login or save test was performed here. Android 7+ is the intended minimum; the complete device/version matrix is untested.
+
+No INTERNET, account, accessibility, overlay, storage or package-install permission is requested. Report sharing uses ACTION_SEND with text. The app never reads another app's private files. It obtains public installed-package metadata through PackageManager and launches the original package normally.
+
+No container engine or menu attachment is implemented. The public FBlackBox/BlackBox repository currently has only a removal notice; the owner has APKs but no container source. The available old VirtualApp source has not been adopted or tested for this project. Fine Engine and Shinigami binaries are analysis references, not build dependencies. Container startup remains a separate engineering milestone requiring a suitable maintained implementation and runtime compatibility testing.
+
+The next decision follows the phone baseline: if official login fails, diagnose the original account/service flow; if it succeeds, we have a reference result against which a future unmodified-game container launch can be compared. Menu attachment comes after that comparison. Successful official login alone does not prove a future container will work or Arena ranking writes will be accepted.

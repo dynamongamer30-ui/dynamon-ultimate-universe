@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <package android:name="com.funtomic.dynamons3" />
+        <package android:name="com.funtomic.dynamons" />
+        <package android:name="com.google.android.gms" />
+        <package android:name="com.google.android.play.games" />
+    </queries>
+    <application android:label="Dynamons Launcher Baseline"
+        android:theme="@android:style/Theme.Material.NoActionBar"
+        android:allowBackup="false" android:supportsRtl="true">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
