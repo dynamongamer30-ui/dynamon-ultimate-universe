@@ -1,0 +1,19 @@
+# Container prototype milestone — 11 October 2026
+
+An experimental ARM64 host is now authored and compiled using the unchanged SpaceCore SDK v3 public binary. SDK documentation explicitly permits free/commercial use; its implementation is closed-source. The integration uses public FCore APIs. This replaces the earlier statement that no buildable foundation had been selected; it does not establish maintainable SDK source availability or Android 16 compatibility.
+
+Package com.dynamongamer.containerprobe, version 0.1.0-experimental, minSdk 24, compileSdk 35, targetSdk 28. The app initializes the SDK, imports installed original com.funtomic.dynamons3 into virtual user 0, reuses an existing import, checks versionCode/split-name sets/split path counts and can request launch through the container. Its bounded startup journal persists in host preferences and is shareable as text. Java failures are reported where possible; native crashes can still prevent UI recovery. No phone/emulator container run was performed.
+
+The original FBlackBox source repository remains removed. ALEX5402/NewBlackbox commit 89b59836c66f173756a4ae258cf379a957649820 was inspected as an Apache-licensed candidate; empty splitNames in relevant package-manager code are a concern for Dynamons' three splits. It was not incorporated or declared working on Android 16. The public SpaceCore v3 artifact is dated July 2023 and documented for Android 6–14/future versions; Android 16 support remains unknown. The published SDK was not modified.
+
+Gradle 8.9/AGP 8.7.3 built the complete host with SDK 35/build-tools 35.0.0 and Java 21. Final build succeeded. APK package/activity/minimum/target/ARM64/native library layout, six requested permissions and ZIP alignment were checked. APK V2 signature verification passed; V3 is absent in this debug build. The source contains the unchanged SDK AAR and normal pinned Maven dependency declarations. Private development signing keys, build caches and local SDK paths are excluded from delivery.
+
+The six host permissions are INTERNET, ACCESS_NETWORK_STATE, ACCESS_WIFI_STATE, WAKE_LOCK, FOREGROUND_SERVICE and VIBRATE. Unused broad SDK permission declarations were removed by the host manifest, without modifying the SDK binary. This can limit SDK features, which must be assessed from actual startup results. The prototype does not request account/SMS/contact/camera/storage/accessibility/overlay/install permissions.
+
+This milestone is a real SDK-integrated startup probe, distinct from the previous outside-container baseline launcher. It does not establish successful split import, actual game startup, data isolation, Google profile/cloud save, Arena ranking or Royal Void attachment. Original-game private data/account sessions are not copied by host code. The first phone test should stop at reaching the game screen and send the startup report. No account login or save restoration is claimed.
+
+The current original install is already Google-signed-in per the owner. Its package and signer differ from the mod, as recorded in PHONE_BASELINE.md. The baseline APK remains useful for that comparison; it is not superseded by a container that has not yet run on the phone.
+
+No menu runtime, key verification or payload injection is included in this probe. Existing mod/game source, payloads and live services are unchanged. The authoring does not implement publisher-signer impersonation or remove container licensing/signature controls. A container does not independently authorize official backend access.
+
+Deliverables: Dynamons-Container-Probe.apk, Dynamons-Container-Probe-SRC.zip and container-prototype/ source on the download branch. The complete source includes all authored files, SDK AAR, provenance notice and current system guide. No intermediate builds/source checkout/cache is delivered. Guide, entrypoints, relevant existing archives and checksums are synchronized; main remains unchanged.
