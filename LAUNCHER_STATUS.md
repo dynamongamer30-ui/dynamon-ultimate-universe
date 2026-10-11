@@ -27,3 +27,8 @@ Install the official game and the separate launcher. Refresh details, open the o
 5. Validate saved-progress persistence and Arena ranking separately.
 
 Documentation, complete source/archive, development APK and checksums are synchronized to the download branch. Existing game/menu source, live payloads, services and main are unchanged by this milestone.
+
+
+## First phone report received
+
+The owner ran the launcher on Android 16/API 36 and supplied installed signer/split diagnostics. See PHONE_BASELINE.md. Original and mod signers differ; the mod matches the prior test certificate. The owner subsequently reports that the original game is already signed in to their Google account. Fresh sign-in, explicit player-profile retrieval and cloud-save restoration were not separately demonstrated. This satisfies the installed signer evidence request, not the container or menu milestones.

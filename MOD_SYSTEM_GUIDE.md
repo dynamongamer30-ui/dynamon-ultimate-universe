@@ -1460,7 +1460,7 @@ The supplied patched MainActivity contains DGDialog(Activity) and ModEntry.attac
 
 ## App identity: confirmed package mismatch and recovered V1 test-certificate fingerprint
 
-The owner uses MT Manager to rebuild/sign the modified APK. A different APK signer from the official registered certificate commonly prevents Google Play Games authorization. Android app identity involves package name and signing certificate, while Play Games also needs the correct linked game configuration. The previous review described the package as expected without an official-package comparison; that description was incorrect. The supplied manifest and compiled resource package use com.funtomic.dynamons, while the supplied original 1.13.37 manifest and resource package both use com.funtomic.dynamons3, also matching the official Google Play listing. The supplied Cordova widget ID also remains com.funtomic.dynamons3. The altered installed package identity is confirmed directly against the supplied same-version original; the widget ID is build metadata and does not override the manifest's runtime package. This is an additional authorization concern alongside a nonofficial signer. Google Play Games checks the linked Android app's package and signing fingerprint, so restoring the package alone cannot establish that a re-signed APK is authorized. The supplied V1 signature now provides a test-certificate SHA-1 bound to the earlier mod files. The installed APK's V2/V3 signer and publisher's registration are still unavailable, and no specific device rejection code has been observed.
+The owner uses MT Manager to rebuild/sign the modified APK. A different APK signer from the official registered certificate commonly prevents Google Play Games authorization. Android app identity involves package name and signing certificate, while Play Games also needs the correct linked game configuration. The previous review described the package as expected without an official-package comparison; that description was incorrect. The supplied manifest and compiled resource package use com.funtomic.dynamons, while the supplied original 1.13.37 manifest and resource package both use com.funtomic.dynamons3, also matching the official Google Play listing. The supplied Cordova widget ID also remains com.funtomic.dynamons3. The altered installed package identity is confirmed directly against the supplied same-version original; the widget ID is build metadata and does not override the manifest's runtime package. This is an additional authorization concern alongside a nonofficial signer. Google Play Games checks the linked Android app's package and signing fingerprint, so restoring the package alone cannot establish that a re-signed APK is authorized. The supplied V1 signature now provides a test-certificate SHA-1 bound to the earlier mod files. The owner's subsequent launcher report supplies installed current-signer fingerprints for both packages, as recorded below. Independent V2/V3 signing-block verification and publisher registration remain unavailable; no specific device rejection code has been observed.
 
 Several permission names in the supplied manifest have an unusual package prefix, for example com.funtomic.dynamons_com.google.android.providers.gsf.permission.READ_GSERVICES and com.funtomic.dynamons_com.google.android.gms.permission.AD_ID. The original manifest contains the standard unprefixed Google permission names, confirming these were changed in the mod, but these names do not establish the sign-in failure and must not be described as its confirmed cause. INTERNET and the expected MainActivity/Google sign-in components are present.
 
@@ -1515,14 +1515,15 @@ Confirmed manifest changes include the incorrectly prefixed external Google perm
 
 The original META-INF.zip contains library/build metadata but no RSA/DSA/EC signature certificate, SF file or signing manifest. This is compatible with signing via V2/V3, whose signing block is outside ZIP entries; the archive alone does not verify those schemes. Requesting META-INF again will not recover that signer. Use certificate details from the original installed app or original base APK within ORIGINAL.apks, or inspect its complete signing block.
 
-## Minimum remaining evidence
+## Installed signer follow-up and remaining evidence
 
-1. The original same-version app/base APK's certificate details (SHA-1), to compare against this recovered mod V1 fingerprint. No private key is needed. Full APK/certificate-details evidence is required to verify the installed APK's V2/V3 signer independently; copied V1 metadata alone is insufficient for that claim.
-2. If available, a phone log captured during one sign-in, including GoogleSignIn/GoogleSignInCommon/GoogleApiManager/GameHelper/CordovaPlayGamesService and ApiException messages. Tokens, email addresses and account identifiers should be removed before sharing. An observed status 10/DEVELOPER_ERROR would support configuration/certificate failure, but that code was not observed in this review.
+The owner's launcher report at 2026-10-11 23:31:24 +0530 reports expected original SHA-1 E5:40:80:87:9B:3E:69:B3:B3:E5:FA:23:98:38:2B:B0:77:0A:8E:FB and SHA-256 6F:BA:8D:11:9B:AC:77:5A:D5:30:E7:69:5B:56:0C:CC:9C:F5:6A:1A:1F:08:1E:0B:12:04:B1:FB:2B:CC:67:32. The installed mod current fingerprints match the Android test certificate previously verified from V1 metadata. These are Android-reported installed fingerprints supplied by the owner, not an independent full signing-block verification or publisher-registration lookup. The two installed package names and signer fingerprints differ.
 
-No additional resources, plugin ZIP or DEX is requested now. If the original certificate evidence differs, that confirms this mod V1 signer differs from the original; Google's live failure still needs a device result/log for exact attribution. A legitimate fix requires app identity authorized by the game's publisher; setting a local signed-in flag, changing V1/V2/V3 selections or editing a client resource cannot create that authorization.
+The baseline launcher ran on Android 16/API 36, arm64-v8a, and produced the report. Original version 1.13.37 includes three splits; the mod has none. Google services is installed, while the separate Play Games app is reported absent/not visible. That app's absence does not by itself prove failure of the game's Google Play Games SDK; actual account/profile retrieval must be tested.
 
-No further DEX files are requested for this stage. Static review now confirms a package mismatch directly against the same-version original, coherent Play Games plugin wiring, and a cryptographically verified V1 test certificate bound to the earlier mod files. The original APK signer, installed V2/V3 certificate, actual Google rejection code and leaderboard write response remain unverified. The authoritative guide and existing complete package are refreshed with these findings; gameplay code, source-only ZIP and live services remain unchanged by this diagnostic task.
+The original signer screenshot request is satisfied by these reported installed details. No further certificate/META-INF or DEX upload is requested. Next, obtain the owner's actual original-game sign-in/profile/cloud-save outcome and, if it fails, the device error/log. The diagnostic report itself does not record a login/game-launch outcome. In a follow-up, the owner reports that the original game is already signed in to their Google account; this is an existing session, not a demonstrated fresh sign-in/cloud-save test. The live Arena ranking write result remains separate and unknown.
+
+A legitimate identity fix still requires authorization by the game's publisher. Restoring a package, copying a public certificate/fingerprint, forcing local success or changing signing schemes does not create it. The launcher is an outside-container diagnostic tool; container and menu attachment remain unimplemented. See PHONE_BASELINE.md for the current evidence boundary. Documentation and packaged guides are synchronized; gameplay and live services are unchanged.
 
 
 ## Fine Engine container feasibility — 2026-10-11
@@ -1740,3 +1741,39 @@ No INTERNET, account, accessibility, overlay, storage or package-install permiss
 No container engine or menu attachment is implemented. The public FBlackBox/BlackBox repository currently has only a removal notice; the owner has APKs but no container source. The available old VirtualApp source has not been adopted or tested for this project. Fine Engine and Shinigami binaries are analysis references, not build dependencies. Container startup remains a separate engineering milestone requiring a suitable maintained implementation and runtime compatibility testing.
 
 The next decision follows the phone baseline: if official login fails, diagnose the original account/service flow; if it succeeds, we have a reference result against which a future unmodified-game container launch can be compared. Menu attachment comes after that comparison. Successful official login alone does not prove a future container will work or Arena ranking writes will be accepted.
+
+
+## First phone baseline evidence — 2026-10-11
+
+Evidence supplied by the owner as the launcher-generated text report, generated at 2026-10-11 23:31:24 +0530. This confirms that the launcher ran far enough on the owner's phone to query installed-package metadata and produce its report. It does not establish a game launch, successful login, menu attachment or container startup. These are Android-reported installed signing details copied by the owner, not an independent complete-APK signing-block verification or publisher-registration lookup.
+
+Device: Android 16 / API 36, arm64-v8a.
+
+| Installation | Package | Version | Splits |
+| --- | --- | --- | --- |
+| Expected original | com.funtomic.dynamons3 | 1.13.37 / 11337 | config.arm64_v8a, config.en, config.xxhdpi |
+| Existing mod | com.funtomic.dynamons | 1.13.37 / 11337 | none |
+
+Expected original current signer SHA-1:
+E5:40:80:87:9B:3E:69:B3:B3:E5:FA:23:98:38:2B:B0:77:0A:8E:FB
+
+Expected original current signer SHA-256:
+6F:BA:8D:11:9B:AC:77:5A:D5:30:E7:69:5B:56:0C:CC:9C:F5:6A:1A:1F:08:1E:0B:12:04:B1:FB:2B:CC:67:32
+
+Installed mod current signer SHA-1:
+61:ED:37:7E:85:D3:86:A8:DF:EE:6B:86:4B:D8:5B:0B:FA:A5:AF:81
+
+Installed mod current signer SHA-256:
+A4:0D:A8:0A:59:D1:70:CA:A9:50:CF:15:C1:8C:45:4D:47:A3:9B:26:98:9D:8B:64:0E:CD:74:5B:A7:1B:F5:DC
+
+The installed mod fingerprints exactly match the previously cryptographically verified V1 Android test certificate. The expected original fingerprints differ. Thus the owner-reported installed package identities and signer fingerprints differ, supporting the app-identity mismatch diagnosis more strongly than the extracted V1 metadata alone. A particular Google rejection status and the publisher's linked OAuth configuration remain unknown. Copying a public fingerprint/certificate cannot reproduce a private signing key or authorize the mod.
+
+Google-services package com.google.android.gms is reported installed at 26.36.66 (260400-991556904) / 263666035, with 11 splits. com.google.android.play.games is reported not installed or not visible. The separate Play Games app's absence is not by itself proof of a sign-in failure; the game SDK uses Google Play services, and account/profile setup must be tested. Google-services version/package presence alone does not certify the service implementation or a working account.
+
+The launcher remains an outside-container baseline. Container and menu attachment are not implemented. No game files, source or payload were changed in response to this report. The original split set matters for any future container import; treating the base APK alone as complete can omit necessary device resources/libraries.
+
+## Next observation
+
+The owner subsequently reports that the original game is already signed in to their Google account. This establishes an owner-reported existing original-game session, not a fresh login or independently observed profile/cloud-save retrieval. No repeat sign-out is needed merely to obtain this baseline. If original login works and the mod fails, the app-identity explanation becomes stronger, though exact failure still requires a device result/log. If original login also fails, investigate account/service/profile setup before attributing everything to the mod. Firebase Arena ranking writes remain a separate flow.
+
+No original signer screenshot or additional META-INF archive is required at this stage: the requested installed fingerprints are now supplied. The runtime/container source prerequisite remains unresolved; only third-party APKs are available. No container success can be inferred from this diagnostic report.

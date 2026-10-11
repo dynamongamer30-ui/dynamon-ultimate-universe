@@ -45,3 +45,8 @@ No INTERNET, account, accessibility, overlay, storage or package-install permiss
 No container engine or menu attachment is implemented. The public FBlackBox/BlackBox repository currently has only a removal notice; the owner has APKs but no container source. The available old VirtualApp source has not been adopted or tested for this project. Fine Engine and Shinigami binaries are analysis references, not build dependencies. Container startup remains a separate engineering milestone requiring a suitable maintained implementation and runtime compatibility testing.
 
 The next decision follows the phone baseline: if official login fails, diagnose the original account/service flow; if it succeeds, we have a reference result against which a future unmodified-game container launch can be compared. Menu attachment comes after that comparison. Successful official login alone does not prove a future container will work or Arena ranking writes will be accepted.
+
+
+## First phone report received
+
+The owner ran the launcher on Android 16/API 36 and supplied installed signer/split diagnostics. See PHONE_BASELINE.md. Original and mod signers differ; the mod matches the prior test certificate. The owner subsequently reports that the original game is already signed in to their Google account. Fresh sign-in, explicit player-profile retrieval and cloud-save restoration were not separately demonstrated. This satisfies the installed signer evidence request, not the container or menu milestones.
