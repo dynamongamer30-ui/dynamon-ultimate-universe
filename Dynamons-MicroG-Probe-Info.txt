@@ -1,4 +1,4 @@
-Dynamons microG Probe 0.3.1 - experimental, ARM64 / Android API 26+
+Dynamons microG Probe 0.3.2 - experimental, ARM64 / Android API 26+
 
 Separate host: com.dynamongamer.microgprobe
 Existing BlackBox probe: com.dynamongamer.blackboxprobe remains separate and untouched.
@@ -7,7 +7,26 @@ Engine: https://github.com/ALEX5402/NewBlackbox
 Engine pinned commit: 89b59836c66f173756a4ae258cf379a957649820
 Engine license: Apache-2.0; LICENSE and third-party licenses/ included.
 
-New in 0.3.1:
+New in 0.3.2:
+The user reached microG's splash then a blank screen; its SettingsContract.getSettings
+threw IllegalArgumentException. The pinned upstream source uses require(cursor != null)
+at that site. This is a null provider result, not proof of an account rejection.
+- Replaced the provider wrapper's broad string rewrites with caller-slot-only handling.
+  Provider URI, authority, projection, selection, sort order, method, args and Bundle
+  payloads are preserved; Android AttributionSourceState uses the physical host UID.
+- Provider exceptions are unwrapped and propagated instead of becoming null cursors,
+  empty Bundles or fabricated success values.
+- Android ContentProvider transport and AttributionSource validation use the real
+  Binder caller UID; guest identities remain virtual outside those framework boundaries.
+  Removed inherited stack-based conversion to privileged SYSTEM_UID.
+- Settings launches stop only prior container microG processes, retaining runtime files,
+  game data and account storage, to avoid reusing a stalled/frozen microG process.
+- Six regression scenarios cover payload/reference preservation, exception propagation,
+  real nullable results and the bounded physical/guest identity distinction.
+These changes address observed provider handling problems. On-device settings and
+Google login must be verified; no successful authentication is claimed.
+
+Retained 0.3.1 launch fix:
 Fixed a settings-launch defect: the explicit component Intent lacked Intent.package,
 while the engine splash launcher required that package field and finished early.
 The host now supplies the microG package, and the launcher also derives the package
