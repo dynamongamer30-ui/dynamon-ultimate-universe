@@ -1,0 +1,70 @@
+Dynamons microG Launcher 0.5.0 - page-first account runtime
+
+Install this APK over the existing microG probe. Do not uninstall or clear data.
+Host: com.dynamongamer.microgprobe; version code 8; ARM64; min SDK 26.
+Original game: com.funtomic.dynamons3, publisher-signed installed base and splits.
+The original game is never rebuilt, re-signed or replaced. Existing container
+account/game data directories are retained by in-place runtime import.
+
+One APK now contains the modified account-services runtime. Tap Prepare & sign in,
+then tap Sign in on its consent screen. Google login opens through the runtime's
+real Google HTTPS WebView. The official microG Companion is reused if its verified
+file is cached, otherwise a 4.2 MB official Companion download is needed.
+After completing actual Google authentication, use Run full startup test and the
+game's own sign-in button. Adding an account is not Play Games authentication.
+
+Runtime changes from MorpheApp/MicroG-RE tag 7.2.1:
+- Uses com.google.android.gms and account type com.google so the original game
+  and installed account data need no package-name modifications.
+- Loads Google's genuine EmbeddedSetup page BEFORE initial device check-in.
+- Reveals a completed secure accounts.google.com page without relying solely
+  on Google's page-specific JavaScript visibility callback.
+- Cookie clearing: 10-second deadline. Initial-page load: 45-second deadline.
+  Main-frame network/HTTP errors show an error; failed pages are not revealed.
+- Authentication, registration and profile requests have 15-second connect and
+  20-second read deadlines. Optional profile lookup/registration run after the
+  authenticated account-token response and do not hold the success screen.
+- Empty master/account-token responses are rejected. No fabricated successful
+  account, token, network or Play Games result is returned.
+- Full authentication request/response and navigation URL debug logging removed
+  from the changed paths. Host diagnostics never read credentials or cookies.
+- Upstream automatic/manual installer update paths disabled: upstream app.revanced
+  APKs cannot update this standard-namespace custom runtime. Host pins exact bytes.
+- Custom label/icon/version; upstream licenses/attribution included in source.
+
+This runtime is OUR modified source-built fork, not an official Morphe/Google APK.
+Source: https://github.com/MorpheApp/MicroG-RE/tree/7.2.1 (Apache-2.0).
+Runtime version: 7.2.1-dynamons1 / 255070218; ARM64-only; non-debuggable release.
+Runtime size: 44666034 bytes.
+Runtime SHA-256: 5e7bed9c17b9fb27a23902b685ef44968019c31287fb1203ac6d41e0205d02bb
+Companion: official microG com.android.vending 84022634 / 0.3.17.40226.
+Companion SHA-256: 9b8616011cc8f026bcbbe094df850794abb9d6d9f23214d7a8f8c4d1033ea012
+Guest service compatibility is limited to exact pinned runtime/Companion APKs.
+It does not change the game's certificate or grant OS privileged permissions.
+Phone Google APKs, outside-phone account sessions, tokens and passwords are not copied.
+
+Verification performed in this workspace:
+- Modified runtime ARM64 release build and launcher build succeeded.
+- 99 host regression scenarios and 20 login URL/timeout policy checks passed.
+- Actual packaged runtime DEX inspected: real Google URL, page-before-checkin,
+  bounded transport/cookie/page waits, error handling, standard account type and
+  background post-login registration are present in 23 inspected classes.
+- All host DEX files checked; bundled runtime hash and new installation path present.
+- APK signatures, ZIP CRC, package/version, ABI and alignment verified.
+- Bundled runtime bytes match the exact pinned hash/size.
+- Launcher signing certificate matches the previous update; engine native library
+  bytes are unchanged from the game-working 0.4.0 host.
+- Anonymous network check of Google's EmbeddedSetup endpoint returned HTTP 200
+  with sign-in form content and no browser-rejection marker. No account was used.
+
+Not verified: Android installation, visible login-page rendering on the phone,
+actual Google authentication, Play Games sign-in or cloud-save restoration.
+No Android device/emulator was attached here. An HTTP response/code inspection is
+not an Android runtime test. This is an experimental APK, not guaranteed login.
+
+Complete source ZIP contains launcher/ and account-runtime/ source trees,
+licenses, tests and the signed bundled runtime asset. Private signing keys,
+build caches, local SDK paths and generated build outputs are excluded.
+Engine: ALEX5402/NewBlackbox, pinned 89b59836c66f173756a4ae258cf379a957649820.
+Engine license: Apache-2.0. Existing account/provider/service fixes retained.
+Main, Markdown files, older artifacts and branch cleanup remain unchanged.

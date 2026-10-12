@@ -1,0 +1,157 @@
+{
+  "files": [
+    {
+      "name": "Dynamons-MicroG-Probe.apk",
+      "size": 43473254,
+      "sha256": "d5c8a53b9d5278e944f0969713e055a58d3d28bca8943b22f4d9b504ac50b123",
+      "parts": [
+        {
+          "name": "0-000.bin",
+          "size": 4194304,
+          "sha256": "91df228d7ff9f1311d387d6ba84792894f12e4e0039a4c64b206c7fac87d62ee"
+        },
+        {
+          "name": "0-001.bin",
+          "size": 4194304,
+          "sha256": "4ff0649c2ae1a75e69cfb0eae752f5eedb413f6a552023bea5b7e711d27bb5c1"
+        },
+        {
+          "name": "0-002.bin",
+          "size": 4194304,
+          "sha256": "3ee1d071c4fa7bf0d8688dce4f6b57be82997da5fc5f9afb37db7bb1d9b39ae3"
+        },
+        {
+          "name": "0-003.bin",
+          "size": 4194304,
+          "sha256": "96fa2f4dccd7a5cd4eac4ce92fad23db5ee229b2a6c7edee186d03c1a15dd47e"
+        },
+        {
+          "name": "0-004.bin",
+          "size": 4194304,
+          "sha256": "9e1c717432affe069ebfd9bcd137c806bc9cd1be9bfc0be6d5f1355ea7b28c86"
+        },
+        {
+          "name": "0-005.bin",
+          "size": 4194304,
+          "sha256": "866374bc91a55d8205c07f83de88eb73f5ed2db3ec574576556cad2e4c2fdad2"
+        },
+        {
+          "name": "0-006.bin",
+          "size": 4194304,
+          "sha256": "ff5034daac8f94f82f9c9704573fde2890bb03b0945b06efc8b47f21c4e66a86"
+        },
+        {
+          "name": "0-007.bin",
+          "size": 4194304,
+          "sha256": "df772266af739a3d786032d634ec83d2a01650478bc71b44718bc60f7944c55d"
+        },
+        {
+          "name": "0-008.bin",
+          "size": 4194304,
+          "sha256": "8ec1c97a9803224691a204fe3ddfb6fcc261d9b0f90b93eb41353db7a8cddb54"
+        },
+        {
+          "name": "0-009.bin",
+          "size": 4194304,
+          "sha256": "641cea242c31c726eca515e91be526b2f9139983c4a8e55953202fcd5583d006"
+        },
+        {
+          "name": "0-010.bin",
+          "size": 1530214,
+          "sha256": "b1adf96b08bca7621a1581ab23fa6c98e2e2ef366fda61aece1ac8213fad1735"
+        }
+      ]
+    },
+    {
+      "name": "Dynamons-MicroG-Probe-SRC.zip",
+      "size": 47829331,
+      "sha256": "0a8c1f968054cda7469fb3a31856e3908baf0df7a83f57733b2d46b9f6bad890",
+      "parts": [
+        {
+          "name": "1-000.bin",
+          "size": 4194304,
+          "sha256": "e440aab491d22ead1c35a5275f20333618140a8ab4187b14f8987b65cdafaa9e"
+        },
+        {
+          "name": "1-001.bin",
+          "size": 4194304,
+          "sha256": "37772bc7144602ed8ef6c2b5b27d54732ad89a5c8fc9259aece1ed267144d3d7"
+        },
+        {
+          "name": "1-002.bin",
+          "size": 4194304,
+          "sha256": "3e714e9a6b9f49675e337df914a2570ef26f5abe9dcc41622dc5aab2b81fbb4e"
+        },
+        {
+          "name": "1-003.bin",
+          "size": 4194304,
+          "sha256": "bc1efca01d8d42fca07810790d58d69dc7b91c617d93af5fce0b90847d608483"
+        },
+        {
+          "name": "1-004.bin",
+          "size": 4194304,
+          "sha256": "ccc91f53f6c97ef7c4a955e7f5626a679073f9af25944aa701f985019f2114bb"
+        },
+        {
+          "name": "1-005.bin",
+          "size": 4194304,
+          "sha256": "88b60332631bd9c1547022965b109d7ff1f802e5250241105b0fb8dffb9eb307"
+        },
+        {
+          "name": "1-006.bin",
+          "size": 4194304,
+          "sha256": "0fb99fc644a0771f0fc557d9507a6023d282ae4964b7bf4f0a644d56c45f147c"
+        },
+        {
+          "name": "1-007.bin",
+          "size": 4194304,
+          "sha256": "b7f6fc278a890079c1897c447f45a8d797b71530081624dc02b95ff4f67422e9"
+        },
+        {
+          "name": "1-008.bin",
+          "size": 4194304,
+          "sha256": "aaf2f7d60e276cc48e7de4f093ba152af2933a49f03522ce13fee63d8f1fed8a"
+        },
+        {
+          "name": "1-009.bin",
+          "size": 4194304,
+          "sha256": "b07e01e0333597087d04c7840e578fde9af984baa9f498ffefa728f560d01154"
+        },
+        {
+          "name": "1-010.bin",
+          "size": 4194304,
+          "sha256": "7124ffd84de6ae70516d10fea967d5f6c82ea9510ef211247bce05e4a865d9e3"
+        },
+        {
+          "name": "1-011.bin",
+          "size": 1691987,
+          "sha256": "1f39fc107b1095b92bb12bcbfbd7e03aeaf8bc69f77ead635d2a81eb0c93123e"
+        }
+      ]
+    },
+    {
+      "name": "Dynamons-MicroG-Probe-Info.txt",
+      "size": 4732,
+      "sha256": "e88911673161764357eda3c8f6d52c694da433d9121d5498edebc67fb2d2ac6e",
+      "parts": [
+        {
+          "name": "2-000.bin",
+          "size": 4732,
+          "sha256": "e88911673161764357eda3c8f6d52c694da433d9121d5498edebc67fb2d2ac6e"
+        }
+      ]
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "size": 966,
+      "sha256": "85732aa7dbfc641797a94b6de312875ca8e8d3809c66b39fb92feb85109274e8",
+      "parts": [
+        {
+          "name": "3-000.bin",
+          "size": 966,
+          "sha256": "85732aa7dbfc641797a94b6de312875ca8e8d3809c66b39fb92feb85109274e8"
+        }
+      ]
+    }
+  ]
+}
