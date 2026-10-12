@@ -1,4 +1,4 @@
-Dynamons microG Probe 0.3.4 - experimental, ARM64 / Android API 26+
+Dynamons microG Probe 0.3.5 - experimental, ARM64 / Android API 26+
 
 Separate host: com.dynamongamer.microgprobe
 Existing BlackBox probe: com.dynamongamer.blackboxprobe remains separate and untouched.
@@ -7,7 +7,23 @@ Engine: https://github.com/ALEX5402/NewBlackbox
 Engine pinned commit: 89b59836c66f173756a4ae258cf379a957649820
 Engine license: Apache-2.0; LICENSE and third-party licenses/ included.
 
-New in 0.3.4 - official login activity and nested-launch ABI:
+New in 0.3.5 - remaining launch route and loading evidence:
+- Intercepts startActivityWithFeature as well as startActivity in both activity-manager
+  and task-manager proxies. The prior hook allowed the feature route to bypass guest resolution.
+- Official microG LoginActivity now has read-only timed observations at 2/10/25/45 seconds:
+  fixed endpoint category, WebView progress/visibility/JavaScript flag, main-thread responsiveness,
+  and bounded main/login/check-in worker stack frames. No page content, URLs, cookies, account
+  names, tokens or passwords are read into the report. WebView clients are not replaced.
+- Own-app historical ANR trace streams are filtered into class/method frames only.
+- Uncaught failures include bounded cause-chain frames without exception message payloads.
+- Existing dual-layout launch/status/error and crash-redaction regression checks passed.
+- APK builds successfully; native engine libraries remain byte-identical to 0.3.4.
+This is a launch-routing correction and diagnostic update, NOT verified Google login success.
+Phone test: update existing probe without uninstalling; use Open microG Google login,
+then Sign in in the official microG screen. Wait 45 seconds in that screen and share the
+startup report. No runtime redownload required when the existing files remain verified.
+
+Retained 0.3.4 - official login activity and nested-launch ABI:
 Pinned microG preferences_accounts.xml opens org.microg.gms.auth.login.LoginActivity
 DIRECTLY. No account-manager ADD_REQUEST is expected before that activity opens;
 the previous inference from missing account-request stages was insufficient.
