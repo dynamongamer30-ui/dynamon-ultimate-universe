@@ -1,4 +1,4 @@
-Dynamons BlackBox Probe 0.2.0 - experimental ARM64 replacement
+Dynamons BlackBox Probe 0.2.1 - experimental ARM64 replacement
 
 Host app package: com.dynamongamer.blackboxprobe
 Engine source: https://github.com/ALEX5402/NewBlackbox
@@ -7,10 +7,19 @@ Engine license: Apache-2.0 (LICENSE included). Third-party notices are in licens
 
 The engine is built from source using Dobby/xDL. No SpaceCore SDK, Pine library,
 Google services install, save transfer, or mod-menu attachment is included.
-Android 16 startup and Google login have not been verified on a device.
+The previous 0.2.0 reached game Application, MainActivity and WebView on Android 16,
+then crashed with AbstractMethodError in IServiceConnection. This 0.2.1 fixes the
+callback contract; game rendering and Google login remain unverified.
 The native engine was compiled for ARM64 with 16 KB ELF load alignment.
 
 Host/core changes:
+- Matched the modern three-argument, one-way IServiceConnection AIDL contract.
+- Relays the callback Binder payload, preserving service binder, dead flag, extra
+  platform fields and original transaction flags; maps only ComponentName.
+- Runs a local on-device relay smoke check before game launch (no real service bound).
+- Adds a 45-second launch cooldown and brief metadata readiness retries.
+- Reports host version/current attempt separately from earlier crash history.
+- Host minimum Android API is 26 for the modern service callback ABI.
 - Imports only the installed original com.funtomic.dynamons3 for user 0.
 - Requires matching version, split names, readable APKs and original SHA-256 bytes.
 - Exposes PackageInfo split names copied from actual ApplicationInfo metadata.
@@ -30,7 +39,7 @@ Share startup report. Accepted launch/engine initialization is not proof of rend
 This creates a new game-data area; the existing outside login/save is not copied.
 
 Build prerequisites:
-JDK 17+; Gradle 8.9; Android platform 35; Build Tools 35.0.0;
+Android 8/API 26+ host; JDK 17+; Gradle 8.9; Android platform 35; Build Tools 35.0.0;
 NDK 29.0.13846066-beta3 (upstream selected r29 beta3).
 Create local.properties with sdk.dir pointing to your SDK, then run build_debug.sh.
 The script creates a development signing key locally; no private key is delivered.
