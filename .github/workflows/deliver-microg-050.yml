@@ -1,0 +1,56 @@
+name: Assemble validated microG 0.5.0 delivery
+on:
+  push:
+    branches: [royal-void-downloads-20261009]
+    paths: [.delivery/microg-050/request.json]
+permissions:
+  contents: write
+concurrency:
+  group: microg-050-delivery
+  cancel-in-progress: false
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+      - name: Verify and assemble existing signed files
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,hashlib,zipfile
+          root=Path('.delivery/microg-050')
+          request=json.loads((root/'request.json').read_text())
+          allowed={'Dynamons-MicroG-Probe.apk','Dynamons-MicroG-Probe-SRC.zip','Dynamons-MicroG-Probe-Info.txt','SHA256SUMS.txt'}
+          assert {f['name'] for f in request['files']}==allowed
+          for item in request['files']:
+              destination=Path(item['name'])
+              partial=destination.with_name(destination.name+'.assembled')
+              digest=hashlib.sha256();total=0
+              with partial.open('wb') as output:
+                  for part in item['parts']:
+                      source=root/part['name']
+                      assert source.parent==root and source.is_file()
+                      data=source.read_bytes()
+                      assert len(data)==part['size'] and hashlib.sha256(data).hexdigest()==part['sha256']
+                      output.write(data);digest.update(data);total+=len(data)
+              assert total==item['size'] and digest.hexdigest()==item['sha256']
+              partial.replace(destination)
+              if destination.suffix in {'.apk','.zip'}:
+                  with zipfile.ZipFile(destination) as archive:assert archive.testzip() is None
+          with zipfile.ZipFile('Dynamons-MicroG-Probe.apk') as archive:
+              runtime=archive.read('assets/account-services.apk')
+              assert len(runtime)==44666034
+              assert hashlib.sha256(runtime).hexdigest()=='5e7bed9c17b9fb27a23902b685ef44968019c31287fb1203ac6d41e0205d02bb'
+          print('All signed deliverable and bundled-runtime bytes verified.')
+          PY
+      - name: Publish only verified deliverables to download branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- Dynamons-MicroG-Probe.apk Dynamons-MicroG-Probe-SRC.zip Dynamons-MicroG-Probe-Info.txt SHA256SUMS.txt
+          git diff --cached --quiet && exit 0
+          git commit -m 'Publish byte-verified page-first microG launcher 0.5.0 and complete source'
+          git push origin HEAD:royal-void-downloads-20261009
