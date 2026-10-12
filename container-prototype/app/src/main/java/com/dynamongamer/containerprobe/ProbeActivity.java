@@ -38,7 +38,7 @@ public final class ProbeActivity extends Activity {
         panel.setPadding(padding, padding, padding, padding);
         scroll.addView(panel);
         TextView heading = new TextView(this);
-        heading.setText("Dynamons Container Probe\nExperimental 0.1.2");
+        heading.setText("Dynamons Container Probe\nCompatibility candidate 0.1.3");
         heading.setTextSize(24);
         panel.addView(heading);
         TextView note = new TextView(this);
@@ -47,7 +47,7 @@ public final class ProbeActivity extends Activity {
             + "your original save/account session is not copied. Menu attachment is not implemented.");
         panel.addView(note);
         prepare = addButton(panel, "Import installed original game");
-        launch = addButton(panel, "Launch inside container");
+        launch = addButton(panel, "Run full startup test");
         launch.setEnabled(false);
         prepare.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) { importOriginal(); }
@@ -56,10 +56,10 @@ public final class ProbeActivity extends Activity {
             @Override public void onClick(View view) { launchInside(); }
         });
         addButton(panel, "Refresh startup diagnostics").setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) { renderReport(); }
+            @Override public void onClick(View view) { captureReport(false); }
         });
         addButton(panel, "Share startup report").setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) { share(); }
+            @Override public void onClick(View view) { captureReport(true); }
         });
         log = new TextView(this);
         log.setTextIsSelectable(true);
@@ -158,22 +158,84 @@ public final class ProbeActivity extends Activity {
 
     private void launchInside() {
         if (!compatible || busy) return;
-        try {
-            StartupDiagnostics.event("--- New launch attempt; original game user 0 ---");
-            android.content.Intent target = FCore.get().getLaunchIntentForPackage(GAME, USER);
-            record("Container launch intent: " + (target == null ? "missing" : target.getComponent()));
-            if (target == null) { StartupDiagnostics.event("Launch intent unavailable"); return; }
-            FCore.get().launchApk(GAME, USER);
-            StartupDiagnostics.event("SDK launchApk returned; this is not a rendering confirmation");
-            record("Container launch requested. Confirm actual game screen separately; no automatic login claim.");
-        } catch (Throwable failure) {
-            StartupDiagnostics.failure("Launch failed", failure);
-            record("Launch error: " + failure.getClass().getSimpleName() + ": " + failure.getMessage());
-        }
+        busy = true; launch.setEnabled(false); prepare.setEnabled(false);
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override public void run() {
+                if (!isDestroyed() && busy) record("Startup dispatch is still pending after 20 seconds. Share startup report remains available.");
+            }
+        }, 20000);
+        final long attempt = System.currentTimeMillis();
+        StartupDiagnostics.event("--- Full startup test attempt=" + attempt + " ---");
+        record("Testing the SDK's early native ART calls in a separate host test process first.");
+        worker.execute(new Runnable() {
+            @Override public void run() {
+                try {
+                    CrashEvidence.write("native-probe.result", attempt + " PENDING");
+                    Intent intent = new Intent(ProbeActivity.this, NativeCompatibilityService.class);
+                    intent.putExtra("attempt", attempt);
+                    startService(intent);
+                    String result = "";
+                    long deadline = android.os.SystemClock.elapsedRealtime() + 10000;
+                    while (android.os.SystemClock.elapsedRealtime() < deadline) {
+                        result = CrashEvidence.read("native-probe.result");
+                        if (result.startsWith(attempt + " ") && !result.endsWith("PENDING")) break;
+                        Thread.sleep(200);
+                    }
+                    record("Native compatibility result: " + result);
+                    CrashEvidence.capture(ProbeActivity.this);
+                    if (!result.equals(attempt + " PASSED")) {
+                        record("Launch blocked: native preflight failed, crashed or timed out. Share the combined report.");
+                        return;
+                    }
+                    StartupDiagnostics.event("SDK stopPackage entered");
+                    FCore.get().stopPackage(GAME, USER);
+                    StartupDiagnostics.event("SDK stopPackage returned");
+                    record("Stopped only the previous container game process; game data retained.");
+                    StartupDiagnostics.event("SDK launch-intent resolution entered");
+                    final Intent target = FCore.get().getLaunchIntentForPackage(GAME, USER);
+                    StartupDiagnostics.event("SDK launch-intent resolution returned");
+                    record("Container launch intent: " + (target == null ? "missing" : target.getComponent()));
+                    if (target == null) { record("Launch blocked: game activity could not be resolved."); return; }
+                    StartupDiagnostics.event("--- New game launch attempt=" + attempt + " ---");
+                    // SDK uses its application Context/explicit main Handler; blocking IPC stays off our UI thread.
+                    FCore.get().launchApk(GAME, USER);
+                    StartupDiagnostics.event("SDK launchApk returned; rendering is unverified");
+                    record("Launch requested. Wait 45 seconds, then return and Share startup report.");
+                } catch (Throwable failure) {
+                    StartupDiagnostics.failure("Full startup test failed", failure);
+                    record("Startup test error: " + failure.getClass().getSimpleName());
+                    CrashEvidence.capture(ProbeActivity.this);
+                } finally {
+                    runOnUiThread(new Runnable() {
+                        @Override public void run() {
+                            if (isDestroyed()) return;
+                            busy = false; prepare.setEnabled(ProbeApplication.ready); launch.setEnabled(compatible);
+                            renderReport();
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private void captureReport(final boolean shareWhenReady) {
+        record("Collecting own-app exits and filtered crash evidence…");
+        new Thread(new Runnable() {
+            @Override public void run() {
+                CrashEvidence.capture(ProbeActivity.this);
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        if (isDestroyed()) return;
+                        renderReport();
+                        if (shareWhenReady) share();
+                    }
+                });
+            }
+        }, "capture-crash-evidence").start();
     }
 
     private String combinedReport() {
-        return journal.toString() + "\n--- Local startup diagnostics ---\n" + StartupDiagnostics.read();
+        return journal.toString() + "\n--- Local startup diagnostics ---\n" + StartupDiagnostics.read() + "\n--- Consolidated crash evidence ---\n" + CrashEvidence.read("crash-evidence.txt");
     }
 
     private void renderReport() {

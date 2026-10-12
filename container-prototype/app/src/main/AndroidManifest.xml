@@ -5,6 +5,7 @@
         <package android:name="com.google.android.gms" />
     </queries>
     <application android:name=".ProbeApplication" android:label="Dynamons Container Probe" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false" android:debuggable="false" tools:replace="android:debuggable,android:allowBackup">
+        <service android:name=".NativeCompatibilityService" android:exported="false" android:process=":nativecheck" />
         <activity android:name=".ProbeActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -46,6 +46,10 @@ final class StartupDiagnostics implements ApplicationCallback {
         }
     }
 
+    static synchronized File file(String name) {
+        return events == null ? null : new File(events.getParentFile(), name);
+    }
+
     static synchronized String read() {
         if (events == null) return "Local event file is unavailable.\n";
         try (RandomAccessFile file = new RandomAccessFile(events, "rw");
