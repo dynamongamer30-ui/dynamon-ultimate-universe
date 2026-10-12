@@ -1,4 +1,4 @@
-Dynamons microG Probe 0.3.3 - experimental, ARM64 / Android API 26+
+Dynamons microG Probe 0.3.4 - experimental, ARM64 / Android API 26+
 
 Separate host: com.dynamongamer.microgprobe
 Existing BlackBox probe: com.dynamongamer.blackboxprobe remains separate and untouched.
@@ -7,7 +7,28 @@ Engine: https://github.com/ALEX5402/NewBlackbox
 Engine pinned commit: 89b59836c66f173756a4ae258cf379a957649820
 Engine license: Apache-2.0; LICENSE and third-party licenses/ included.
 
-New in 0.3.3 - reviewed settings/account flow:
+New in 0.3.4 - official login activity and nested-launch ABI:
+Pinned microG preferences_accounts.xml opens org.microg.gms.auth.login.LoginActivity
+DIRECTLY. No account-manager ADD_REQUEST is expected before that activity opens;
+the previous inference from missing account-request stages was insufficient.
+Android 16 retains ten-argument IActivityManager.startActivity and also exposes an
+eleven-argument feature/task-manager layout. The container's decoder assumed the
+eleven-argument layout by OS version even for ten-argument calls. The nested launcher
+also caught errors and returned success, and the caller discarded its result.
+- Decodes launch arguments from the actual Intent position, supporting both valid layouts.
+- Selects modern or legacy launch method signatures, inserting a feature slot only when declared.
+- Preserves actual launch result codes; missing targets/errors no longer become success.
+- Adds Open microG Google login to the host probe. Opens the SAME official LoginActivity
+  as the upstream preference, through an explicit new-task container launch.
+- Does not collect credentials, modify the microG APK or add email/token Intent extras.
+- Logs LOGIN_ACTIVITY_CREATED only after the official activity's onCreate completed.
+- Four ABI/status/error scenarios and five dual-layout/invalid-argument scenarios passed.
+Phone test for this update: update existing probe, tap Open microG Google login.
+If microG's sign-in introduction appears, continue using its Sign in button.
+No runtime reinstall or download is required while prior verified files remain present.
+Actual browser login/account creation/game profile persistence remain unverified.
+
+Retained 0.3.3 - reviewed settings/account flow:
 - Authenticator discovery enumerates installed services in the requested container
   user, even when no accounts exist. Refreshes on discovery and before binding.
 - Rebuilds the complete authenticator catalog across actual container users instead
