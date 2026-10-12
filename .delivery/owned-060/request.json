@@ -1,0 +1,167 @@
+{
+  "files": [
+    {
+      "name": "Owned-Account-Audit.txt",
+      "size": 17051,
+      "sha256": "d68a765ab6b09d32020c990613eadbe4481fff2722128c30767d5cdf2d0c48da",
+      "parts": [
+        {
+          "path": ".delivery/owned-060/Owned-Account-Audit.txt.000",
+          "size": 17051,
+          "sha256": "d68a765ab6b09d32020c990613eadbe4481fff2722128c30767d5cdf2d0c48da"
+        }
+      ]
+    },
+    {
+      "name": "Owned-Account-Probe-SRC.zip",
+      "size": 52960391,
+      "sha256": "b48eaaf5868f5c68996c8baf1463011ff4b66469f646b89bbb3c94502a3c92d7",
+      "parts": [
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.000",
+          "size": 4194304,
+          "sha256": "0d5889e445b454a70735c6e9251de26ba59971512e06eab403fcb264df7dd75b"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.001",
+          "size": 4194304,
+          "sha256": "1ae511f93bc54a0427a3db4735562f280139ada2a2fa2c4ed6bbf81d1be44b89"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.002",
+          "size": 4194304,
+          "sha256": "e9d0f6e10f4d85fbb6391eb0107e738726bd4c73c4334b7abdf7bd1ee0c24def"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.003",
+          "size": 4194304,
+          "sha256": "dcc90d9cc64422b67c0132726f84ff5507550d8a58dfe098eaa3e33c92cf5cba"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.004",
+          "size": 4194304,
+          "sha256": "2ec2b412aad798b14aa9cb81a4a94e700aedda0e9f211deeecb343445a9fac9a"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.005",
+          "size": 4194304,
+          "sha256": "dad24204cbeb5e55e95d7d05dc5f5e0382994a374d4030b910ede6d1691f5711"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.006",
+          "size": 4194304,
+          "sha256": "31422f849814e85baecc7ee8cbda79bbeae92665258236717389af184fbabeed"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.007",
+          "size": 4194304,
+          "sha256": "4cf89e0436d63dbc83494a179bf1c7ddff89a6b9085612bc7b65e01941b71edb"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.008",
+          "size": 4194304,
+          "sha256": "ea333c5bad7d4702702b9135643a81ea7727072763e2391433d600f2f4171331"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.009",
+          "size": 4194304,
+          "sha256": "413b4981f31ba180fdb1d04914c98d7fef20d362f36360046ed4b0e51bdd251a"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.010",
+          "size": 4194304,
+          "sha256": "818b19fa792c5c62b6b3ceb258b0683e3c4bf184a52ee2fd5c47f33b38fe4595"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.011",
+          "size": 4194304,
+          "sha256": "aa9b8396f7eba1e2354e39e7cc768749d6c2c57d1eac9f64822f64dda349290f"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe-SRC.zip.012",
+          "size": 2628743,
+          "sha256": "cb4034606eb27fb974a0cf70e74b023b32c525eb118de1a37dd1825bd5acd868"
+        }
+      ]
+    },
+    {
+      "name": "Owned-Account-Probe.apk",
+      "size": 46768568,
+      "sha256": "ca6b4113a2dab12c0b30be0fce8ac98c863f70da0a08186496051224e41fad20",
+      "parts": [
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.000",
+          "size": 4194304,
+          "sha256": "7d0cb8cc381a79508e1ed499e2312673840ca1e782ecec0471afc4780b0ee16a"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.001",
+          "size": 4194304,
+          "sha256": "965be0ba82bd8b1de80424b90927cd67dc4dbf17a5cc7ab4a02704324f371299"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.002",
+          "size": 4194304,
+          "sha256": "624c6d0d2cf289ad5d44668a45636252a032a39eb31fd60fbe891fd202f752ba"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.003",
+          "size": 4194304,
+          "sha256": "9f4bfa3e20c867a86152fe581cbaa76fba69d2f4fb537776688b7efa1bb6c61e"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.004",
+          "size": 4194304,
+          "sha256": "7fe90f8ee1b050066758e7db6355d60d9cae6adc47e3d706b3959ffba72a8906"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.005",
+          "size": 4194304,
+          "sha256": "239bd6a27feccd981f4c41161014d8eb669a1dde5e5193bcab9b62015e8e30b5"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.006",
+          "size": 4194304,
+          "sha256": "6aab0ee26d9900f8bb84d7a3393f39b3d019e0d7180961b7cce1e65b8629caa5"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.007",
+          "size": 4194304,
+          "sha256": "985899bcf9eb50913ead25ca495fcdab6e70c4edd603908a0e77e9da87ba8323"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.008",
+          "size": 4194304,
+          "sha256": "92a5e0e26a12a8d918606b34819caffd148b324dfd474737a9483cf2d8ced146"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.009",
+          "size": 4194304,
+          "sha256": "8e83e81574b42a830f55ccdf7de1f31d85464f8f724027362107e0aeea28a27f"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.010",
+          "size": 4194304,
+          "sha256": "9e0e5ec17f26812fbc2da514a89579db982223b3f83b5ac86b36a9783432abb6"
+        },
+        {
+          "path": ".delivery/owned-060/Owned-Account-Probe.apk.011",
+          "size": 631224,
+          "sha256": "b94f5f1b89aa0648485a2590cfbd29d28fbf355ced54db2c5407644c8df2a6a9"
+        }
+      ]
+    },
+    {
+      "name": "Owned-Account-SHA256SUMS.txt",
+      "size": 274,
+      "sha256": "26c376a6f7806d3d169ff7fcf1097555a288c882e17af953daed1f3c5f6713a1",
+      "parts": [
+        {
+          "path": ".delivery/owned-060/Owned-Account-SHA256SUMS.txt.000",
+          "size": 274,
+          "sha256": "26c376a6f7806d3d169ff7fcf1097555a288c882e17af953daed1f3c5f6713a1"
+        }
+      ]
+    }
+  ]
+}

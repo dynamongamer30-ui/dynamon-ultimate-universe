@@ -1,0 +1,199 @@
+Owned-account container audit
+
+Confirmed source defects fixed
+- Virtual getPackageUid replaced installed guest package names with the host package, returning the physical UID while ApplicationInfo exposed a virtual UID.
+- Unknown virtual UIDs were attributed to the calling package. Unknown UIDs now return no packages.
+- AccountManager forwarded the physical Binder UID and app-op host package to the authenticator. It now derives the virtual UID/package from the engine's process record and retains the real PID.
+- Native Binder identity reused the process-start calling UID. It now resolves each current caller PID in the same virtual profile. Android provider/AttributionSource framework checks retain the physical UID.
+- The SDK can send a physical UID hint. The runtime treats that as a transport alias only; package and PID validation still use the resolved caller and a different virtual UID is rejected.
+- Account persistence failures were reported as successful account creation. The atomic-write result is now propagated and a newly created in-memory account is removed after failure.
+- Account enumeration included an unfiltered path. Visibility rules now apply to it, and cached tokens are not returned by the generic cache path without readable visibility.
+- Runtime metadata/option aliases could change the upstream client's package/certificate. Owned-client tests disable these aliases and reject identity-alias metadata.
+- Authentication logs printed account bundles, OAuth tokens, response objects, key data and exception messages. The audited authentication paths now use fixed stages, enums, numeric HTTP status or redacted objects.
+- Malformed auth response lines indexed a nonexistent field. Parsing now fails with a generic error and never echoes response content.
+- Device check-in ran only after account-token exchange. When the user enabled check-in and ID inclusion and an ID is missing, registration now precedes token exchange with a bounded deadline. Disabled check-in remains disabled.
+
+Not established
+The generic "There was a problem communicating with Google servers" message does not identify the server's rejection. These local source defects are confirmed; their causal contribution to the reported server error has NOT been reproduced on a device. DNS, TLS, check-in, master-token exchange, account-token exchange, server-policy/DroidGuard rejection, registration/certificate mismatch and account visibility remain distinguishable stages rather than an asserted backend diagnosis.
+
+Verification boundary
+No owned test APK/source, its Google OAuth configuration, or verified registered package/certificate was supplied. No usable Android device/emulator was available. Thus no actual Google account authentication, owned-client OAuth/Play Games login, virtual service binding on-device, or successful owned-app rendering has been claimed. The default loader blocks test-app import/launch until explicit owned-client configuration is supplied.
+
+Identity/certificate limitations
+The runtime uses com.google.android.gms and the Companion uses com.android.vending. The actual APK certificates differ between the source-built development runtime and official microG Companion. The existing engine compatibility view applies only to exact hash-pinned replacement-service APKs; it does not change or re-sign the owned test APK, grant OS privileged permissions, provide Google's private key, or guarantee Google accepts the private account protocol. A genuinely registered Android OAuth client requires the owned app's actual package and SHA-1 signing certificate; a compatible server/web client ID may also be required by that app's flow. The loader's SHA-256 pin checks the actual installed client signer. The registration declaration is input, not independent proof of Google Cloud registration. MicroG account login is also not proof of Play Games/cloud-save API support.
+
+Scope
+New host package com.dynamongamer.ownedaccountprobe. UI actions: Set up account, Launch test app, Diagnostics. Both account APKs bundled and verified before import. Virtual enabled services/providers and the com.google authenticator are audited at setup. Only an explicitly configured owned APK is imported unchanged with base/split byte checks and real-certificate validation. No third-party game has been modified, injected into, re-signed, launched, stopped or had its data changed by this new loader. Passwords, cookies, OAuth and refresh tokens are not diagnostic payloads.
+
+Tests and builds
+17 standalone regression suites passed (policyChecks). Gradle :Bcore:testDebugUnitTest and :app:testDebugUnitTest completed as NO-SOURCE. Host :app:assembleDebug and runtime :play-services-core:assembleDefaultRelease succeeded. Host and runtime APK signatures verified. CRC, bundled runtime/Companion bytes and source hash pins matched. ARM64 package. Actual Google login/owned-client launch test: BLOCKED; no owned client configuration/device.
+
+Changed files
+launcher/build.gradle
+launcher/tests/VirtualIdentityPolicyTest.java
+launcher/tests/OwnedTestPolicyTest.java
+launcher/app/build.gradle
+launcher/app/src/main/AndroidManifest.xml
+launcher/app/src/main/assets/account-companion.apk
+launcher/app/src/main/assets/account-services.apk
+launcher/app/src/main/java/com/dynamongamer/containerprobe/RuntimeAudit.java
+launcher/app/src/main/java/com/dynamongamer/containerprobe/MicroGReadiness.java
+launcher/app/src/main/java/com/dynamongamer/containerprobe/ProbeApplication.java
+launcher/app/src/main/java/com/dynamongamer/containerprobe/OwnedTestPolicy.java
+launcher/app/src/main/java/com/dynamongamer/containerprobe/StartupDiagnostics.java
+launcher/app/src/main/java/com/dynamongamer/containerprobe/ProbeActivity.java
+launcher/app/src/main/java/com/dynamongamer/containerprobe/MicroGRuntime.java
+launcher/Bcore/src/main/aidl/top/niunaijun/blackbox/core/system/am/IBActivityManagerService.aidl
+launcher/Bcore/src/main/java/top/niunaijun/blackbox/core/NativeCore.java
+launcher/Bcore/src/main/java/top/niunaijun/blackbox/core/system/pm/MicrogTrustPolicy.java
+launcher/Bcore/src/main/java/top/niunaijun/blackbox/core/system/pm/VirtualIdentityPolicy.java
+launcher/Bcore/src/main/java/top/niunaijun/blackbox/core/system/pm/BPackageManagerService.java
+launcher/Bcore/src/main/java/top/niunaijun/blackbox/core/system/accounts/BAccountManagerService.java
+launcher/Bcore/src/main/java/top/niunaijun/blackbox/core/system/accounts/AccountFlowObserver.java
+launcher/Bcore/src/main/java/top/niunaijun/blackbox/core/system/am/BActivityManagerService.java
+launcher/Bcore/src/main/java/top/niunaijun/blackbox/fake/frameworks/BAccountManager.java
+launcher/Bcore/src/main/java/top/niunaijun/blackbox/fake/frameworks/BActivityManager.java
+launcher/Bcore/src/main/java/top/niunaijun/blackbox/fake/service/IPackageManagerProxy.java
+account-runtime/build.gradle
+account-runtime/owned-tests/AuthPrivacyTest.java
+account-runtime/play-services-base/core/src/main/java/org/microg/gms/common/PackageUtils.java
+account-runtime/play-services-base/core/src/main/java/org/microg/gms/common/CallerHintPolicy.java
+account-runtime/play-services-base/core/src/main/java/org/microg/gms/common/AuthErrorPolicy.java
+account-runtime/play-services-base/core/src/main/java/org/microg/gms/common/AuthStageObserver.java
+account-runtime/play-services-base/core/src/main/java/org/microg/gms/common/HttpFormClient.java
+account-runtime/play-services-base/core/src/main/java/org/microg/gms/auth/AuthResponse.java
+account-runtime/play-services-base/core/src/main/kotlin/org/microg/gms/common/PackageSpoofUtils.kt
+account-runtime/play-services-core/src/main/java/org/microg/gms/checkin/CheckinClient.java
+account-runtime/play-services-core/src/main/java/org/microg/gms/auth/AccountContentProvider.java
+account-runtime/play-services-core/src/main/java/org/microg/gms/auth/AuthManager.java
+account-runtime/play-services-core/src/main/java/org/microg/gms/auth/AskPermissionActivity.java
+account-runtime/play-services-core/src/main/java/org/microg/gms/auth/AuthManagerServiceImpl.java
+account-runtime/play-services-core/src/main/java/org/microg/gms/auth/loginservice/AccountAuthenticator.java
+account-runtime/play-services-core/src/main/java/org/microg/gms/auth/login/LoginActivity.java
+account-runtime/play-services-core/src/main/java/org/microg/gms/auth/login/RegistrationPolicy.java
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/accountaction/ErrorResolver.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/gcm/GcmReceiverService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/appcert/AppCertManager.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/appcert/AppCertService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/credentials/CredentialsService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/credentials/CredentialPickerActivity.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/signin/AssistedSignInActivity.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/signin/AuthSignInActivity.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/signin/AuthSignInService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/signin/extensions.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/signin/AssistedSignInFragment.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/capabilities/AccountStateClient.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/capabilities/HasCapabilitiesHandler.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/proxy/AuthProxyService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/folsom/KeyRetrievalService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/consent/ConsentSignInActivity.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/login/FidoHandler.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/login/DroidGuardHandler.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/credentials/identity/IdentitySignInService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/credentials/identity/IdentityCredentialChooserActivity.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/credentials/identity/AuthorizationService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/credentials/provider/RemoteService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/credentials/provider/GoogleIdService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/credentials/provider/PublicKeyProxyActivity.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/credentials/provider/PasswordAndPasskeyService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/credentials/provider/CredentialProviderActivity.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/credentials/provider/SignInProxyActivity.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/folsom/utils/LocalKeyManager.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/folsom/ui/FolsomWebViewHelper.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/folsom/ui/FolsomWebFragment.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/account/data/GoogleAuthService.kt
+account-runtime/play-services-core/src/main/kotlin/org/microg/gms/auth/account/data/AccountDataService.kt
+run-checks.sh
+OWNED-TEST-CONFIG.txt
+
+APK comparison
+{
+  "bundled_previous_runtime": {
+    "size": 44666034,
+    "sha256": "5e7bed9c17b9fb27a23902b685ef44968019c31287fb1203ac6d41e0205d02bb",
+    "package": "package: name='com.google.android.gms' versionCode='255070218' versionName='7.2.1-dynamons1' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'",
+    "signature_verification_passed": true,
+    "certificates": {
+      "SHA-256": "54fcb7ad4933fe2a9b29d39d687528bed0ad723a16789689f235933828c20127",
+      "SHA-1": "1571e77f654ce408a14314769b4de1896e082d66"
+    },
+    "declared_services": 120,
+    "declared_providers": 15,
+    "declared_activities": 62,
+    "native_abis": [
+      "arm64-v8a"
+    ],
+    "unobfuscated_authenticator_xml_files": []
+  },
+  "official_companion": {
+    "size": 4210169,
+    "sha256": "9b8616011cc8f026bcbbe094df850794abb9d6d9f23214d7a8f8c4d1033ea012",
+    "package": "package: name='com.android.vending' versionCode='84022634' versionName='0.3.17.40226' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'",
+    "signature_verification_passed": true,
+    "certificates": {
+      "SHA-256": "9bd06727e62796c0130eb6dab39b73157451582cbd138e86c468acc395d14165",
+      "SHA-1": "10321bd893f69af97f7573aafe9de1dc0901f3a1"
+    },
+    "declared_services": 13,
+    "declared_providers": 2,
+    "declared_activities": 13,
+    "native_abis": [],
+    "unobfuscated_authenticator_xml_files": []
+  },
+  "official_microg_reference": {
+    "size": 108113833,
+    "sha256": "e5e6cba078bdec812b5450599350e5c1a12c8b7438da5bf77123af170f8c1a35",
+    "package": "package: name='com.google.android.gms' versionCode='252432034' versionName='0.3.17.252432' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'",
+    "signature_verification_passed": true,
+    "certificates": {
+      "SHA-256": "9bd06727e62796c0130eb6dab39b73157451582cbd138e86c468acc395d14165",
+      "SHA-1": "10321bd893f69af97f7573aafe9de1dc0901f3a1"
+    },
+    "declared_services": 119,
+    "declared_providers": 13,
+    "declared_activities": 60,
+    "native_abis": [
+      "arm64-v8a",
+      "armeabi-v7a",
+      "x86",
+      "x86_64"
+    ],
+    "unobfuscated_authenticator_xml_files": []
+  },
+  "rebuilt_account_runtime": {
+    "size": 44661938,
+    "sha256": "08221b5a7ba70dbde4c9cac857588d6c8da1239c9064a5823c80f84179f981d5",
+    "package": "package: name='com.google.android.gms' versionCode='255070219' versionName='7.2.1-owned1' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'",
+    "signature_verification_passed": true,
+    "certificates": {
+      "SHA-256": "54fcb7ad4933fe2a9b29d39d687528bed0ad723a16789689f235933828c20127",
+      "SHA-1": "1571e77f654ce408a14314769b4de1896e082d66"
+    },
+    "declared_services": 120,
+    "declared_providers": 15,
+    "declared_activities": 62,
+    "native_abis": [
+      "arm64-v8a"
+    ],
+    "unobfuscated_authenticator_xml_files": []
+  }
+}
+
+Owned client setup
+Project location: launcher/ and account-runtime/ in this source bundle.
+
+The bundled APK is an unconfigured diagnostic loader. Set up account imports its pinned runtime and offers Sign in or Runtime settings/Self-Check. Launch test app is blocked until the owner supplies a registered test client.
+
+Build the host with JDK 17 and Android SDK 35, the project's existing NDK/toolchain, and an installed owned test APK on the Android device:
+  gradle --no-daemon policyChecks :app:assembleDebug \
+    -PownedTestPackage=YOUR.OWNED.PACKAGE \
+    -PownedTestSha256=ACTUAL_REGISTERED_SIGNER_SHA256 \
+    -PownedTestRegistered=true
+
+The package and certificate must describe your APK, and Google Cloud/Play Games registration must use its actual package and signing SHA-1. The registered flag is a declaration; this project cannot verify Google Cloud registration from that flag. Configure any required server/web OAuth client inside your owned app. Do not substitute a third-party package or certificate.
+
+Configure SDK paths in each project's local.properties. Run ./run-checks.sh with JAVA_HOME set to your JDK. The host signing configuration uses the local development key if present; otherwise Android's standard debug key. Private signing keys are excluded from this source bundle. The prebuilt bundled runtime retains its audited development signer and SHA-256 pin.
+
+Runtime source build: Gradle 8.13, JDK 17, Android SDK 36 and the existing dependencies/toolchain; set GRADLE_MICROG_VERSION_WITHOUT_GIT=1 and run :play-services-core:assembleDefaultRelease -Pabi=arm64-v8a. If rebuilding/signing the runtime, recompute BUNDLED_VERSION, BUNDLED_SIZE and BUNDLED_SHA256 in MicrogTrustPolicy before bundling it. Never re-sign the owned test APK to match this runtime.
+
+Test on a device: inspect Diagnostics, complete genuine Google account login in the runtime, verify persistence after restart, grant account visibility through the runtime's normal user-consent UI if required, launch the registered owned APK, and complete its actual Google OAuth/Play Games flow. A created/resumed activity, account presence, anonymous HEAD response or API availability result is not login success.
