@@ -38,7 +38,7 @@ public final class ProbeActivity extends Activity {
         panel.setPadding(padding, padding, padding, padding);
         scroll.addView(panel);
         TextView heading = new TextView(this);
-        heading.setText("Dynamons Container Probe\nExperimental 0.1.1");
+        heading.setText("Dynamons Container Probe\nExperimental 0.1.2");
         heading.setTextSize(24);
         panel.addView(heading);
         TextView note = new TextView(this);
@@ -54,6 +54,9 @@ public final class ProbeActivity extends Activity {
         });
         launch.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) { launchInside(); }
+        });
+        addButton(panel, "Refresh startup diagnostics").setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { renderReport(); }
         });
         addButton(panel, "Share startup report").setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) { share(); }
@@ -85,7 +88,7 @@ public final class ProbeActivity extends Activity {
                 journal.append(message).append('\n');
                 if (journal.length() > 32768) journal.delete(0, journal.length() - 32768);
                 getPreferences(MODE_PRIVATE).edit().putString("startup_report", journal.toString()).apply();
-                log.setText(journal.toString());
+                renderReport();
             }
         });
     }
@@ -156,17 +159,36 @@ public final class ProbeActivity extends Activity {
     private void launchInside() {
         if (!compatible || busy) return;
         try {
+            StartupDiagnostics.event("--- New launch attempt; original game user 0 ---");
+            android.content.Intent target = FCore.get().getLaunchIntentForPackage(GAME, USER);
+            record("Container launch intent: " + (target == null ? "missing" : target.getComponent()));
+            if (target == null) { StartupDiagnostics.event("Launch intent unavailable"); return; }
             FCore.get().launchApk(GAME, USER);
+            StartupDiagnostics.event("SDK launchApk returned; this is not a rendering confirmation");
             record("Container launch requested. Confirm actual game screen separately; no automatic login claim.");
         } catch (Throwable failure) {
+            StartupDiagnostics.failure("Launch failed", failure);
             record("Launch error: " + failure.getClass().getSimpleName() + ": " + failure.getMessage());
         }
+    }
+
+    private String combinedReport() {
+        return journal.toString() + "\n--- Local startup diagnostics ---\n" + StartupDiagnostics.read();
+    }
+
+    private void renderReport() {
+        if (log != null) log.setText(combinedReport());
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        renderReport();
     }
 
     private void share() {
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("text/plain");
-        intent.putExtra(Intent.EXTRA_TEXT, journal.toString());
+        intent.putExtra(Intent.EXTRA_TEXT, combinedReport());
         try { startActivity(Intent.createChooser(intent, "Share startup report")); }
         catch (RuntimeException unavailable) { record("Sharing unavailable; select and copy the report."); }
     }
