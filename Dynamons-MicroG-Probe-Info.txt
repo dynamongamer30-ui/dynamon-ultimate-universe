@@ -1,4 +1,4 @@
-Dynamons microG Probe 0.3.0 - experimental, ARM64 / Android API 26+
+Dynamons microG Probe 0.3.1 - experimental, ARM64 / Android API 26+
 
 Separate host: com.dynamongamer.microgprobe
 Existing BlackBox probe: com.dynamongamer.blackboxprobe remains separate and untouched.
@@ -6,6 +6,19 @@ Original game: com.funtomic.dynamons3; imported from the installed original base
 Engine: https://github.com/ALEX5402/NewBlackbox
 Engine pinned commit: 89b59836c66f173756a4ae258cf379a957649820
 Engine license: Apache-2.0; LICENSE and third-party licenses/ included.
+
+New in 0.3.1:
+Fixed a settings-launch defect: the explicit component Intent lacked Intent.package,
+while the engine splash launcher required that package field and finished early.
+The host now supplies the microG package, and the launcher also derives the package
+from an explicit component when the package field is absent. Four regression cases
+cover this path, normal game intents, package precedence and missing targets.
+This updates the same com.dynamongamer.microgprobe host and retains its downloaded
+runtime APKs/data. It does not require another 112 MB download or a new installation.
+The game's supplied Cordova bridge uses legacy GoogleSignInClient (including silent
+sign-in and getSignInIntent), plus Play Games PlayersClient for its player profile.
+The pinned microG release declares sign-in and Games services; that declaration does
+not prove successful account/profile authentication in this container.
 
 Reason for this test:
 The prior native-Google setup imported all required APKs, but the report showed a
