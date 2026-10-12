@@ -1,176 +1,82 @@
-Dynamons microG Probe 0.3.5 - experimental, ARM64 / Android API 26+
+Dynamons microG Launcher 0.4.0 - consolidated experimental update
 
-Separate host: com.dynamongamer.microgprobe
-Existing BlackBox probe: com.dynamongamer.blackboxprobe remains separate and untouched.
-Original game: com.funtomic.dynamons3; imported from the installed original base/splits.
+Host package: com.dynamongamer.microgprobe
+Version code: 7; min SDK 26; ARM64. Update the existing microG probe; do not uninstall.
+Original game: com.funtomic.dynamons3, installed publisher-game APK and splits.
 Engine: https://github.com/ALEX5402/NewBlackbox
-Engine pinned commit: 89b59836c66f173756a4ae258cf379a957649820
-Engine license: Apache-2.0; LICENSE and third-party licenses/ included.
+Pinned source: 89b59836c66f173756a4ae258cf379a957649820
+License: Apache-2.0; engine/third-party license notices included in full source ZIP.
 
-New in 0.3.5 - remaining launch route and loading evidence:
-- Intercepts startActivityWithFeature as well as startActivity in both activity-manager
-  and task-manager proxies. The prior hook allowed the feature route to bypass guest resolution.
-- Official microG LoginActivity now has read-only timed observations at 2/10/25/45 seconds:
-  fixed endpoint category, WebView progress/visibility/JavaScript flag, main-thread responsiveness,
-  and bounded main/login/check-in worker stack frames. No page content, URLs, cookies, account
-  names, tokens or passwords are read into the report. WebView clients are not replaced.
-- Own-app historical ANR trace streams are filtered into class/method frames only.
-- Uncaught failures include bounded cause-chain frames without exception message payloads.
-- Existing dual-layout launch/status/error and crash-redaction regression checks passed.
-- APK builds successfully; native engine libraries remain byte-identical to 0.3.4.
-This is a launch-routing correction and diagnostic update, NOT verified Google login success.
-Phone test: update existing probe without uninstalling; use Open microG Google login,
-then Sign in in the official microG screen. Wait 45 seconds in that screen and share the
-startup report. No runtime redownload required when the existing files remain verified.
+Single preparation action:
+1. Install this update over the existing microG probe. Existing virtual game/account data retained.
+2. Tap Prepare & sign in. It validates/imports the installed original game in place,
+   validates/reuses official microG and opens its official LoginActivity.
+3. Continue through microG's Sign in UI. After completing account login, launch the game
+   using Run full startup test and use its Google sign-in/profile flow.
+The original outside-container account session is not copied. No tokens/passwords are
+handled by this launcher. Initial runtime download is required only if verified files are absent.
+The separate old BlackBox probe and phone's Google apps/accounts are not replaced.
 
-Retained 0.3.4 - official login activity and nested-launch ABI:
-Pinned microG preferences_accounts.xml opens org.microg.gms.auth.login.LoginActivity
-DIRECTLY. No account-manager ADD_REQUEST is expected before that activity opens;
-the previous inference from missing account-request stages was insufficient.
-Android 16 retains ten-argument IActivityManager.startActivity and also exposes an
-eleven-argument feature/task-manager layout. The container's decoder assumed the
-eleven-argument layout by OS version even for ten-argument calls. The nested launcher
-also caught errors and returned success, and the caller discarded its result.
-- Decodes launch arguments from the actual Intent position, supporting both valid layouts.
-- Selects modern or legacy launch method signatures, inserting a feature slot only when declared.
-- Preserves actual launch result codes; missing targets/errors no longer become success.
-- Adds Open microG Google login to the host probe. Opens the SAME official LoginActivity
-  as the upstream preference, through an explicit new-task container launch.
-- Does not collect credentials, modify the microG APK or add email/token Intent extras.
-- Logs LOGIN_ACTIVITY_CREATED only after the official activity's onCreate completed.
-- Four ABI/status/error scenarios and five dual-layout/invalid-argument scenarios passed.
-Phone test for this update: update existing probe, tap Open microG Google login.
-If microG's sign-in introduction appears, continue using its Sign in button.
-No runtime reinstall or download is required while prior verified files remain present.
-Actual browser login/account creation/game profile persistence remain unverified.
+Consolidated changes:
+- Connectivity proxy now forwards real platform responses and exceptions. Removes fabricated
+  connected Wi-Fi, synthetic network identifiers/DNS and forced internet-validation flags.
+- AppOps preserves actual method return types, including modern object returns, and genuine
+  permission denials. Translates only the caller identity to the host's real OS identity.
+- Activity-manager failures propagate without a second invocation or fabricated success result.
+- Preserves all content-provider authorities/aliases. Failure to register a required microG
+  provider is reported as a failure rather than silently returning an empty result.
+- Account visibility changes are persisted; authenticator ownership, explicit user decisions
+  and user-managed visibility are recognized. Null account type means all types within
+  the requested profile. All-account queries no longer aggregate unrelated virtual profiles.
+- Existing dual-layout activity launch, service callback, installed-authenticator discovery,
+  provider caller/payload preservation and original split-byte validation remain present.
+- HTTPS endpoint probes are bounded and run off the login-launch path. They use fixed
+  anonymous HEAD requests, reporting only numeric HTTP status or exception class.
+  An HTTP response is transport reachability, never check-in/authentication success.
+- Readiness records separate authenticator/account/check-in presence booleans and the original
+  game's GoogleApiAvailability numeric result. No account name, token or device ID is recorded.
+- Retains bounded login WebView metadata/main-thread/check-in-stack and ANR-frame observations;
+  never reads page content, cookies, passwords or account fields into the report.
 
-Retained 0.3.3 - reviewed settings/account flow:
-- Authenticator discovery enumerates installed services in the requested container
-  user, even when no accounts exist. Refreshes on discovery and before binding.
-- Rebuilds the complete authenticator catalog across actual container users instead
-  of querying USER_ALL as though it were an installed profile. Installing an unrelated
-  package no longer clears all other authenticator registrations. Publishes snapshots.
-- Implements previously empty addAccountAsUser by forwarding to normal addAccount.
-- Pending authenticator requests time out after 60 seconds if no result/login Intent
-  arrives. A returned login Intent cancels this timer so user interaction is not timed out.
-- Binding rejection returns an account-manager error; pending service connections
-  are unbound on timeout/closure even if onServiceConnected never arrived.
-- Provider registration selects the supported six-parameter installProvider overload.
-  A failed mandatory microG settings provider raises a real error rather than being ignored.
-- Stage-only diagnostics cover cache/discovery, account request, bind, service connection,
-  login Intent/result/error/timeout and mandatory provider registration. Kept in a separate
-  report section so later game launches do not hide the prior account-flow stages.
-  No stage record contains account names, passwords, tokens or response Bundle contents.
-- Five installed-authenticator selection scenarios and three provider registration
-  contract checks passed, in addition to the previous validations.
-These are confirmed source-level defects and bounded failure-handling changes. They
-are not a guarantee against every future Google, network, SDK or publisher error.
-Actual account creation, Google authentication, profile/save persistence and Arena
-writes still require on-device testing. No server authentication check is bypassed.
+Official microG service compatibility:
+The prior probes imported replacement services without implementing their documented
+service-signature compatibility requirement. This update implements a guest-only view
+for TWO exact, hash-verified upstream APKs. It uses the public compatibility certificate
+already declared by those upstream APKs. Their actual APK signing bytes are not modified.
+Legacy signatures, modern SigningInfo, certificate queries and the virtual compatibility
+permission are handled for these packages only. Other packages, including Dynamons,
+retain their actual signing metadata. No OS privileged permission or server authorization
+is granted. Host import verification continues reporting real archive identity/bytes.
+Unsupported runtime versions, changed bytes, wrong package names or sizes are rejected.
 
-Retained 0.3.2 provider fixes:
-The user reached microG's splash then a blank screen; its SettingsContract.getSettings
-threw IllegalArgumentException. The pinned upstream source uses require(cursor != null)
-at that site. This is a null provider result, not proof of an account rejection.
-- Replaced the provider wrapper's broad string rewrites with caller-slot-only handling.
-  Provider URI, authority, projection, selection, sort order, method, args and Bundle
-  payloads are preserved; Android AttributionSourceState uses the physical host UID.
-- Provider exceptions are unwrapped and propagated instead of becoming null cursors,
-  empty Bundles or fabricated success values.
-- Android ContentProvider transport and AttributionSource validation use the real
-  Binder caller UID; guest identities remain virtual outside those framework boundaries.
-  Removed inherited stack-based conversion to privileged SYSTEM_UID.
-- Settings launches stop only prior container microG processes, retaining runtime files,
-  game data and account storage, to avoid reusing a stalled/frozen microG process.
-- Six regression scenarios cover payload/reference preservation, exception propagation,
-  real nullable results and the bounded physical/guest identity distinction.
-These changes address observed provider handling problems. On-device settings and
-Google login must be verified; no successful authentication is claimed.
-
-Retained 0.3.1 launch fix:
-Fixed a settings-launch defect: the explicit component Intent lacked Intent.package,
-while the engine splash launcher required that package field and finished early.
-The host now supplies the microG package, and the launcher also derives the package
-from an explicit component when the package field is absent. Four regression cases
-cover this path, normal game intents, package precedence and missing targets.
-This updates the same com.dynamongamer.microgprobe host and retains its downloaded
-runtime APKs/data. It does not require another 112 MB download or a new installation.
-The game's supplied Cordova bridge uses legacy GoogleSignInClient (including silent
-sign-in and getSignInIntent), plus Play Games PlayersClient for its player profile.
-The pinned microG release declares sign-in and Games services; that declaration does
-not prove successful account/profile authentication in this container.
-
-Reason for this test:
-The prior native-Google setup imported all required APKs, but the report showed a
-Google service startup/provider-acquisition failure ending in SecurityException.
-Source inspection found Google provider authorities forced to the phone provider
-path, even when an imported provider existed. This probe routes those authorities
-through guest-provider resolution and keeps OS settings/media/telephony on the OS path.
-That fixes a concrete routing bug; it does not prove all Google login failures resolved.
-
-Runtime:
-Downloads original upstream microG APKs only when the user taps Install official
-microG. Total 112,324,002 bytes, about 112 MB decimal. Not bundled in the host APK
-or source ZIP, not installed over phone Google apps, not rebuilt or re-signed.
-Source release: https://github.com/microg/GmsCore/releases/tag/v0.3.17.252432
-The actual release APK signatures and GitHub-published SHA-256 hashes were verified.
-
-Pinned artifacts:
-com.android.vending-84022634.apk; 4,210,169 bytes
-https://github.com/microg/GmsCore/releases/download/v0.3.17.252432/com.android.vending-84022634.apk
+Pinned official upstream release: microg/GmsCore v0.3.17.252432
+Companion: com.android.vending-84022634.apk; 4,210,169 bytes
 SHA-256: 9b8616011cc8f026bcbbe094df850794abb9d6d9f23214d7a8f8c4d1033ea012
-com.google.android.gms-252432034.apk; 108,113,833 bytes
-https://github.com/microg/GmsCore/releases/download/v0.3.17.252432/com.google.android.gms-252432034.apk
+Services: com.google.android.gms-252432034.apk; 108,113,833 bytes
 SHA-256: e5e6cba078bdec812b5450599350e5c1a12c8b7438da5bf77123af170f8c1a35
-This GmsCore includes com.google.android.gsf.gservices; no phone GSF import is used.
-The org.microg.gms user/Huawei variants are not selected for this probe.
+Files are downloaded from the official release, verified and imported privately without
+rebuilding/re-signing. The microG APKs are not bundled in this host APK or source ZIP.
 
-Setup behavior:
-- HTTPS downloads use only GitHub and its release asset hosts, with bounded redirects.
-- Verifies exact sizes and hashes before any runtime import. Partial failures delete
-  partial files and leave previous verified runtime files and container data intact.
-- Validates guest package metadata and complete APK bytes after import.
-- Opens exported org.microg.gms.ui.MainSettingsActivity explicitly; the selected
-  official release has no default launchable activity.
-- Original game's existing phone session/progress is not copied into this new host.
-- Existing BlackBox and original/mod game applications are not uninstalled or updated.
-- Repeated setup reuses verified files and imports; the guest game is stopped only
-  before an actual runtime change, rather than on every setup click.
+Validation completed:
+- Final Android/DEX/APK build passed.
+- 94 combined regression scenarios passed: launch ABI/status/arguments, real service
+  result/error/payload handling, account visibility/consent, exact runtime trust,
+  authenticator discovery, provider installation/routing/payload identity, split validation,
+  download integrity and crash redaction.
+- Public compatibility certificate matches BOTH exact upstream runtime APKs.
+- Android 16 AOSP SigningDetails/SigningInfo constructor contracts checked against source.
+- Native engine libraries unchanged from the earlier working-game build lineage.
+- APK signature/alignment/update-signer and complete-source consistency checked.
 
-Identity and scope:
-Removed the native-Google import UI, mock auth proxies inherited from prior source,
-and fabricated Play Store PackageInfo in this host. Storage imports report their
-actual APK certificate metadata instead of inheriting a same-named phone app signer.
-Does not grant signature-spoofing or privileged OS permissions, forge account tokens,
-copy outside accounts, override auth results, or bypass publisher/server verification.
-A failed microG Self-Check is a compatibility failure to report, not proof of login.
-Some clients require trusted Google signing certificates or features microG does not
-implement; this probe does not promise those checks will pass or modify them.
-No mod-menu attachment, save transfer, leaderboard-write success or login guarantee.
+Limits:
+Cloud build/test results do not establish Android-device Google login success. No test
+phone is attached here. The previously reported game rendering works; this update's
+microG account creation, persistence and Dynamons player profile/cloud save remain
+unverified on the phone. Games API support is partial upstream. No leaderboard acceptance,
+account token copying, publisher-signature restoration or successful-login result is fabricated.
+Menu attachment is not implemented in this launcher. The upstream check-in HTTP code
+still controls its requests; the launcher does not alter its official APK/network protocol.
 
-Phone test:
-1. Install Dynamons-MicroG-Probe.apk alongside existing apps; do not uninstall them.
-2. Tap Import installed original game.
-3. Tap Install official microG (112 MB download); wait for validated import results.
-4. Tap Open microG settings & Self-Check. Review the actual checks and use microG's
-   own account UI if it is available. Enter credentials only in its own login flow.
-5. Run the game startup test and use the game's Google sign-in button.
-6. Share the probe report and Self-Check results/error codes. Do not send passwords,
-   account tokens, login response bundles or other account secrets.
-If Self-Check/account setup cannot run, share that result before repeated game tests.
-
-Validation:
-Clean Gradle debug build, V2 signature, host package/version, ARM64-only library,
-16 KB ELF load alignment, unchanged eight-permission scope, archive consistency.
-8 download integrity scenarios (including corruption, truncation, oversize, I/O failure,
-and interruption preserving previous files), 14 provider-route checks,
-11 split-import checks, 11 filtered-crash checks including safe permission-denial facts.
-On-device microG startup and genuine Google login remain unverified.
-The working game startup observation was for the earlier BlackBox 0.2.1 host.
-
-Build:
-JDK 17+, Gradle 8.9, platform 35, Build Tools 35.0.0,
-NDK 29.0.13846066-beta3; ARM64 host. Create local.properties with sdk.dir,
-then run build_debug.sh. No private signing key is delivered.
-No Pine/SpaceCore dependency. Original engine/third-party notices remain included.
-Markdown updates and cleanup remain paused as requested.
+Source ZIP contains complete current code and build configuration, including tests and
+license notices. Generated build directories, local SDK paths and signing/private keys are
+excluded. Markdown updates and branch cleanup remain paused at the owner's request.
