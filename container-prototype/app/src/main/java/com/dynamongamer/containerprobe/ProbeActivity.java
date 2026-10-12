@@ -14,8 +14,6 @@ import android.widget.TextView;
 import com.fvbox.lib.FCore;
 import com.fvbox.lib.common.pm.InstallResult;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -40,7 +38,7 @@ public final class ProbeActivity extends Activity {
         panel.setPadding(padding, padding, padding, padding);
         scroll.addView(panel);
         TextView heading = new TextView(this);
-        heading.setText("Dynamons Container Probe\nExperimental 0.1.0");
+        heading.setText("Dynamons Container Probe\nExperimental 0.1.1");
         heading.setTextSize(24);
         panel.addView(heading);
         TextView note = new TextView(this);
@@ -119,21 +117,24 @@ public final class ProbeActivity extends Activity {
                         record("Launch blocked: original and container game versions differ.");
                         return;
                     }
-                    Set<String> expected = splitSet(original);
-                    Set<String> actual = splitSet(guest);
-                    record("Container splits: " + actual);
-                    if (!expected.equals(actual)) {
-                        record("Launch blocked: container split metadata differs. Expected " + expected);
-                        return;
+                    record("Container PackageInfo split names: " + Arrays.toString(guest.splitNames));
+                    if (guest.applicationInfo == null || original.applicationInfo == null) {
+                        record("Launch blocked: application information is unavailable."); return;
                     }
-                    int expectedPaths = original.applicationInfo.splitSourceDirs == null ? 0 : original.applicationInfo.splitSourceDirs.length;
-                    int actualPaths = guest.applicationInfo.splitSourceDirs == null ? 0 : guest.applicationInfo.splitSourceDirs.length;
-                    if (actualPaths != expectedPaths) {
-                        record("Launch blocked: container has " + actualPaths + " split paths; expected " + expectedPaths);
-                        return;
+                    record("Container ApplicationInfo split names: " + Arrays.toString(guest.applicationInfo.splitNames));
+                    record("Original split paths: " + Arrays.toString(original.applicationInfo.splitSourceDirs));
+                    record("Container split paths: " + Arrays.toString(guest.applicationInfo.splitSourceDirs));
+                    record("Container native library directory: " + guest.applicationInfo.nativeLibraryDir);
+                    String blocked = SplitImportCheck.check(original.splitNames, guest.splitNames,
+                        guest.applicationInfo.splitNames, original.applicationInfo.sourceDir,
+                        guest.applicationInfo.sourceDir, original.applicationInfo.splitSourceDirs,
+                        guest.applicationInfo.splitSourceDirs);
+                    if (blocked != null) { record("Launch blocked: " + blocked); return; }
+                    if (guest.splitNames == null || guest.splitNames.length == 0) {
+                        record("PackageInfo omitted split names; ApplicationInfo names and actual APK bytes validated.");
                     }
                     compatible = true;
-                    record("Import and split-metadata checks passed. This does not prove game startup or login.");
+                    record("Import, split names, APK readability and SHA-256 checks passed. This does not prove game startup or login.");
                 } catch (PackageManager.NameNotFoundException missing) {
                     record("Original game is not installed/visible. Install it from its official listing.");
                 } catch (Throwable failure) {
@@ -150,11 +151,6 @@ public final class ProbeActivity extends Activity {
                 }
             }
         });
-    }
-
-    private Set<String> splitSet(PackageInfo info) {
-        return new HashSet<String>(info.splitNames == null
-            ? java.util.Collections.<String>emptyList() : Arrays.asList(info.splitNames));
     }
 
     private void launchInside() {
