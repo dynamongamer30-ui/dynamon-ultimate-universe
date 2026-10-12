@@ -1,0 +1,42 @@
+name: Deliver owned-account diagnostic build 0.6.0
+on:
+  push:
+    branches: [royal-void-downloads-20261009]
+    paths: [.delivery/owned-060/request.json]
+permissions:
+  contents: write
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify and assemble authorized owned-test artifacts
+        run: |
+          python3 - <<'PY'
+          import json, hashlib, zipfile, io
+          from pathlib import Path
+          request = json.loads(Path('.delivery/owned-060/request.json').read_text())
+          allowed = {'Owned-Account-Probe.apk', 'Owned-Account-Probe-SRC.zip', 'Owned-Account-Audit.txt', 'Owned-Account-SHA256SUMS.txt'}
+          assert {entry['name'] for entry in request['files']} == allowed
+          for entry in request['files']:
+              data = bytearray()
+              for part in entry['parts']:
+                  path = Path(part['path'])
+                  assert path.parts[:2] == ('.delivery', 'owned-060') and '..' not in path.parts
+                  content = path.read_bytes()
+                  assert len(content) == part['size'] and hashlib.sha256(content).hexdigest() == part['sha256']
+                  data.extend(content)
+              assert len(data) == entry['size'] and hashlib.sha256(data).hexdigest() == entry['sha256']
+              if entry['name'].endswith(('.apk', '.zip')):
+                  with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                      assert archive.testzip() is None
+                      runtime = 'assets/account-services.apk' if entry['name'].endswith('.apk') else 'launcher/app/src/main/assets/account-services.apk'
+                      assert hashlib.sha256(archive.read(runtime)).hexdigest() == '08221b5a7ba70dbde4c9cac857588d6c8da1239c9064a5823c80f84179f981d5'
+              Path(entry['name']).write_bytes(data)
+              print(entry['name'], len(data), entry['sha256'])
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- Owned-Account-Probe.apk Owned-Account-Probe-SRC.zip Owned-Account-Audit.txt Owned-Account-SHA256SUMS.txt
+          git commit -m 'Publish owned-account diagnostic build and audit; Google authentication unverified'
+          git push origin HEAD:royal-void-downloads-20261009
