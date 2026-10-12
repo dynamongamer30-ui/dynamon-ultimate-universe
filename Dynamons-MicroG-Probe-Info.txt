@@ -1,4 +1,4 @@
-Dynamons microG Probe 0.3.2 - experimental, ARM64 / Android API 26+
+Dynamons microG Probe 0.3.3 - experimental, ARM64 / Android API 26+
 
 Separate host: com.dynamongamer.microgprobe
 Existing BlackBox probe: com.dynamongamer.blackboxprobe remains separate and untouched.
@@ -7,7 +7,31 @@ Engine: https://github.com/ALEX5402/NewBlackbox
 Engine pinned commit: 89b59836c66f173756a4ae258cf379a957649820
 Engine license: Apache-2.0; LICENSE and third-party licenses/ included.
 
-New in 0.3.2:
+New in 0.3.3 - reviewed settings/account flow:
+- Authenticator discovery enumerates installed services in the requested container
+  user, even when no accounts exist. Refreshes on discovery and before binding.
+- Rebuilds the complete authenticator catalog across actual container users instead
+  of querying USER_ALL as though it were an installed profile. Installing an unrelated
+  package no longer clears all other authenticator registrations. Publishes snapshots.
+- Implements previously empty addAccountAsUser by forwarding to normal addAccount.
+- Pending authenticator requests time out after 60 seconds if no result/login Intent
+  arrives. A returned login Intent cancels this timer so user interaction is not timed out.
+- Binding rejection returns an account-manager error; pending service connections
+  are unbound on timeout/closure even if onServiceConnected never arrived.
+- Provider registration selects the supported six-parameter installProvider overload.
+  A failed mandatory microG settings provider raises a real error rather than being ignored.
+- Stage-only diagnostics cover cache/discovery, account request, bind, service connection,
+  login Intent/result/error/timeout and mandatory provider registration. Kept in a separate
+  report section so later game launches do not hide the prior account-flow stages.
+  No stage record contains account names, passwords, tokens or response Bundle contents.
+- Five installed-authenticator selection scenarios and three provider registration
+  contract checks passed, in addition to the previous validations.
+These are confirmed source-level defects and bounded failure-handling changes. They
+are not a guarantee against every future Google, network, SDK or publisher error.
+Actual account creation, Google authentication, profile/save persistence and Arena
+writes still require on-device testing. No server authentication check is bypassed.
+
+Retained 0.3.2 provider fixes:
 The user reached microG's splash then a blank screen; its SettingsContract.getSettings
 threw IllegalArgumentException. The pinned upstream source uses require(cursor != null)
 at that site. This is a null provider result, not proof of an account rejection.
