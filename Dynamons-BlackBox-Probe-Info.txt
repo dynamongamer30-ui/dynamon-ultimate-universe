@@ -1,51 +1,58 @@
-Dynamons BlackBox Probe 0.2.1 - experimental ARM64 replacement
+Dynamons BlackBox Probe 0.2.2 - experimental ARM64 Google dependency setup
 
 Host app package: com.dynamongamer.blackboxprobe
 Engine source: https://github.com/ALEX5402/NewBlackbox
 Pinned upstream commit: 89b59836c66f173756a4ae258cf379a957649820
 Engine license: Apache-2.0 (LICENSE included). Third-party notices are in licenses/.
 
-The engine is built from source using Dobby/xDL. No SpaceCore SDK, Pine library,
-Google services install, save transfer, or mod-menu attachment is included.
-The previous 0.2.0 reached game Application, MainActivity and WebView on Android 16,
-then crashed with AbstractMethodError in IServiceConnection. This 0.2.1 fixes the
-callback contract; game rendering and Google login remain unverified.
-The native engine was compiled for ARM64 with 16 KB ELF load alignment.
+The user confirmed that probe 0.2.1 loaded the game and gameplay worked without
+crashing on Android 16 / ARM64. Its report showed a complete WebView document,
+Lime, Cordova and a render canvas. This observation does not verify Google login,
+other devices or this updated build. Google authentication remains untested.
 
-Host/core changes:
-- Matched the modern three-argument, one-way IServiceConnection AIDL contract.
-- Relays the callback Binder payload, preserving service binder, dead flag, extra
-  platform fields and original transaction flags; maps only ComponentName.
-- Runs a local on-device relay smoke check before game launch (no real service bound).
-- Adds a 45-second launch cooldown and brief metadata readiness retries.
-- Reports host version/current attempt separately from earlier crash history.
-- Host minimum Android API is 26 for the modern service callback ABI.
-- Imports only the installed original com.funtomic.dynamons3 for user 0.
-- Requires matching version, split names, readable APKs and original SHA-256 bytes.
-- Exposes PackageInfo split names copied from actual ApplicationInfo metadata.
-- Disabled LogSender transport, sendLogs harvesting and startLogcat harvesting.
-- Disabled default external log destination; no automatic report upload.
-- Excluded native VirtualSpoof.cpp and AntiDetection.cpp constructor units.
-- Retained only network, wake-lock, audio-settings, vibrate and foreground-service
-  permissions. No all-files, overlay, camera, microphone or account permission request.
-- Added local application/activity/WebView milestones and user-requested filtered
-  crash evidence. Does not modify game JavaScript, credentials or original APK files.
-- Uses a separate host package/data area from the older SpaceCore probe.
+New in 0.2.2:
+- Adds Set up installed Google services, importing installed phone APKs for user 0.
+- Required dependency set: Google Services Framework, Google Play services, Play Store.
+- Optional dependencies: legacy Google login package and Google Play Games, if installed.
+- Validates actual package/version metadata, base APK and all split APK SHA-256 bytes.
+- Reuses matching imports; refreshes mismatched imports in place without uninstalling.
+- Reports missing packages and partial failures, retaining existing imports and data.
+- Stops only the guest game before setup so its next launch resolves new dependencies.
+- Removed GmsProxy, GoogleAccountManagerProxy and AuthenticationProxy, including their
+  mock accounts/tokens and fabricated login-success fallbacks, and their registrations.
+- No microG bundle, external downloads, Google account/session transfer, or token copying.
+- No certificate impersonation, server authentication bypass or successful-login claim.
 
-Test:
-Install the APK alongside the original game. Import installed original game.
-Tap Run full startup test once. Wait 45 seconds, return to this probe and use
-Share startup report. Accepted launch/engine initialization is not proof of rendering.
-This creates a new game-data area; the existing outside login/save is not copied.
+Retained:
+- Modern three-argument, one-way IServiceConnection callback and raw Binder relay.
+- Local on-device relay check before launch, 45-second launch cooldown.
+- Original game imports without rebuilding/re-signing the original base or splits.
+- ARM64 Dobby/xDL native engine with 16 KB ELF load alignment; no Pine/SpaceCore.
+- Disabled external log transport and logcat harvesting; reports shared only by user action.
+- Separate container game/account data. No mod-menu attachment or save transfer yet.
+- Host permissions remain network, audio settings, vibrate, wake lock and foreground service.
+  No additional account, overlay, all-files, camera or microphone permission request.
+
+Test on phone:
+1. Update the existing BlackBox probe with this APK; do not uninstall it or the game.
+2. Tap Import installed original game.
+3. Tap Set up installed Google services and read each package result.
+4. Tap Run full startup test, then use the game's own Google sign-in button.
+5. Confirm your actual profile/progress, then reopen the game to check persistence.
+6. If sign-in fails, return to the probe and Share startup report; include any visible
+   sign-in error code. Do not share passwords, account tokens or login response bundles.
+If Play Games is requested, install the official app on the phone, then repeat setup.
+Dependency imports alone cannot establish server authentication or leaderboard writes.
+Modern system Google packages may require OS integration that a container cannot supply;
+that compatibility remains to be tested on this device.
 
 Build prerequisites:
-Android 8/API 26+ host; JDK 17+; Gradle 8.9; Android platform 35; Build Tools 35.0.0;
-NDK 29.0.13846066-beta3 (upstream selected r29 beta3).
+JDK 17+, Gradle 8.9, Android platform 35, Build Tools 35.0.0,
+NDK 29.0.13846066-beta3. Host Android 8/API 26+.
 Create local.properties with sdk.dir pointing to your SDK, then run build_debug.sh.
-The script creates a development signing key locally; no private key is delivered.
+The script generates a development signing key locally; no private key is delivered.
 
-Validation performed:
-Gradle debug build, APK V2 signature, ARM64 library inventory, 16 KB ELF alignment,
-absence of Pine/SpaceCore and excluded spoof strings, unchanged permission scope,
-source-archive consistency, 11 split validation and 8 crash-frame filter checks.
-No Android 16 game-startup, Google-login or Arena server test is claimed.
+Validation:
+Gradle debug build, APK signature/version/permission/ARM64 checks, ZIP consistency,
+11 split-import validation checks and 8 crash-frame filtering checks.
+Actual Google login and Arena server writes are not verified.
