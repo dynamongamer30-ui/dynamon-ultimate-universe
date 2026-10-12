@@ -1,0 +1,42 @@
+Dynamons BlackBox Probe 0.2.0 - experimental ARM64 replacement
+
+Host app package: com.dynamongamer.blackboxprobe
+Engine source: https://github.com/ALEX5402/NewBlackbox
+Pinned upstream commit: 89b59836c66f173756a4ae258cf379a957649820
+Engine license: Apache-2.0 (LICENSE included). Third-party notices are in licenses/.
+
+The engine is built from source using Dobby/xDL. No SpaceCore SDK, Pine library,
+Google services install, save transfer, or mod-menu attachment is included.
+Android 16 startup and Google login have not been verified on a device.
+The native engine was compiled for ARM64 with 16 KB ELF load alignment.
+
+Host/core changes:
+- Imports only the installed original com.funtomic.dynamons3 for user 0.
+- Requires matching version, split names, readable APKs and original SHA-256 bytes.
+- Exposes PackageInfo split names copied from actual ApplicationInfo metadata.
+- Disabled LogSender transport, sendLogs harvesting and startLogcat harvesting.
+- Disabled default external log destination; no automatic report upload.
+- Excluded native VirtualSpoof.cpp and AntiDetection.cpp constructor units.
+- Retained only network, wake-lock, audio-settings, vibrate and foreground-service
+  permissions. No all-files, overlay, camera, microphone or account permission request.
+- Added local application/activity/WebView milestones and user-requested filtered
+  crash evidence. Does not modify game JavaScript, credentials or original APK files.
+- Uses a separate host package/data area from the older SpaceCore probe.
+
+Test:
+Install the APK alongside the original game. Import installed original game.
+Tap Run full startup test once. Wait 45 seconds, return to this probe and use
+Share startup report. Accepted launch/engine initialization is not proof of rendering.
+This creates a new game-data area; the existing outside login/save is not copied.
+
+Build prerequisites:
+JDK 17+; Gradle 8.9; Android platform 35; Build Tools 35.0.0;
+NDK 29.0.13846066-beta3 (upstream selected r29 beta3).
+Create local.properties with sdk.dir pointing to your SDK, then run build_debug.sh.
+The script creates a development signing key locally; no private key is delivered.
+
+Validation performed:
+Gradle debug build, APK V2 signature, ARM64 library inventory, 16 KB ELF alignment,
+absence of Pine/SpaceCore and excluded spoof strings, unchanged permission scope,
+source-archive consistency, 11 split validation and 8 crash-frame filter checks.
+No Android 16 game-startup, Google-login or Arena server test is claimed.
