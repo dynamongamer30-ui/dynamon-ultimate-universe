@@ -1,0 +1,83 @@
+Dynamons microG Probe 0.3.0 - experimental, ARM64 / Android API 26+
+
+Separate host: com.dynamongamer.microgprobe
+Existing BlackBox probe: com.dynamongamer.blackboxprobe remains separate and untouched.
+Original game: com.funtomic.dynamons3; imported from the installed original base/splits.
+Engine: https://github.com/ALEX5402/NewBlackbox
+Engine pinned commit: 89b59836c66f173756a4ae258cf379a957649820
+Engine license: Apache-2.0; LICENSE and third-party licenses/ included.
+
+Reason for this test:
+The prior native-Google setup imported all required APKs, but the report showed a
+Google service startup/provider-acquisition failure ending in SecurityException.
+Source inspection found Google provider authorities forced to the phone provider
+path, even when an imported provider existed. This probe routes those authorities
+through guest-provider resolution and keeps OS settings/media/telephony on the OS path.
+That fixes a concrete routing bug; it does not prove all Google login failures resolved.
+
+Runtime:
+Downloads original upstream microG APKs only when the user taps Install official
+microG. Total 112,324,002 bytes, about 112 MB decimal. Not bundled in the host APK
+or source ZIP, not installed over phone Google apps, not rebuilt or re-signed.
+Source release: https://github.com/microg/GmsCore/releases/tag/v0.3.17.252432
+The actual release APK signatures and GitHub-published SHA-256 hashes were verified.
+
+Pinned artifacts:
+com.android.vending-84022634.apk; 4,210,169 bytes
+https://github.com/microg/GmsCore/releases/download/v0.3.17.252432/com.android.vending-84022634.apk
+SHA-256: 9b8616011cc8f026bcbbe094df850794abb9d6d9f23214d7a8f8c4d1033ea012
+com.google.android.gms-252432034.apk; 108,113,833 bytes
+https://github.com/microg/GmsCore/releases/download/v0.3.17.252432/com.google.android.gms-252432034.apk
+SHA-256: e5e6cba078bdec812b5450599350e5c1a12c8b7438da5bf77123af170f8c1a35
+This GmsCore includes com.google.android.gsf.gservices; no phone GSF import is used.
+The org.microg.gms user/Huawei variants are not selected for this probe.
+
+Setup behavior:
+- HTTPS downloads use only GitHub and its release asset hosts, with bounded redirects.
+- Verifies exact sizes and hashes before any runtime import. Partial failures delete
+  partial files and leave previous verified runtime files and container data intact.
+- Validates guest package metadata and complete APK bytes after import.
+- Opens exported org.microg.gms.ui.MainSettingsActivity explicitly; the selected
+  official release has no default launchable activity.
+- Original game's existing phone session/progress is not copied into this new host.
+- Existing BlackBox and original/mod game applications are not uninstalled or updated.
+- Repeated setup reuses verified files and imports; the guest game is stopped only
+  before an actual runtime change, rather than on every setup click.
+
+Identity and scope:
+Removed the native-Google import UI, mock auth proxies inherited from prior source,
+and fabricated Play Store PackageInfo in this host. Storage imports report their
+actual APK certificate metadata instead of inheriting a same-named phone app signer.
+Does not grant signature-spoofing or privileged OS permissions, forge account tokens,
+copy outside accounts, override auth results, or bypass publisher/server verification.
+A failed microG Self-Check is a compatibility failure to report, not proof of login.
+Some clients require trusted Google signing certificates or features microG does not
+implement; this probe does not promise those checks will pass or modify them.
+No mod-menu attachment, save transfer, leaderboard-write success or login guarantee.
+
+Phone test:
+1. Install Dynamons-MicroG-Probe.apk alongside existing apps; do not uninstall them.
+2. Tap Import installed original game.
+3. Tap Install official microG (112 MB download); wait for validated import results.
+4. Tap Open microG settings & Self-Check. Review the actual checks and use microG's
+   own account UI if it is available. Enter credentials only in its own login flow.
+5. Run the game startup test and use the game's Google sign-in button.
+6. Share the probe report and Self-Check results/error codes. Do not send passwords,
+   account tokens, login response bundles or other account secrets.
+If Self-Check/account setup cannot run, share that result before repeated game tests.
+
+Validation:
+Clean Gradle debug build, V2 signature, host package/version, ARM64-only library,
+16 KB ELF load alignment, unchanged eight-permission scope, archive consistency.
+8 download integrity scenarios (including corruption, truncation, oversize, I/O failure,
+and interruption preserving previous files), 14 provider-route checks,
+11 split-import checks, 11 filtered-crash checks including safe permission-denial facts.
+On-device microG startup and genuine Google login remain unverified.
+The working game startup observation was for the earlier BlackBox 0.2.1 host.
+
+Build:
+JDK 17+, Gradle 8.9, platform 35, Build Tools 35.0.0,
+NDK 29.0.13846066-beta3; ARM64 host. Create local.properties with sdk.dir,
+then run build_debug.sh. No private signing key is delivered.
+No Pine/SpaceCore dependency. Original engine/third-party notices remain included.
+Markdown updates and cleanup remain paused as requested.
