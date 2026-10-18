@@ -70,6 +70,8 @@ function parseDurationToSeconds(mode) {
 }
 
 const APPROVED_PUBLIC_HOSTS = new Set([
+  "dynamongamer.com",
+  "www.dynamongamer.com",
   "dynamongamer.space",
   "www.dynamongamer.space",
   "generator.dynamongamer30.workers.dev",
