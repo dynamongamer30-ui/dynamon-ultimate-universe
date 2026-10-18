@@ -12,4 +12,4 @@ Disallow: /notifications
 Disallow: /claim
 Disallow: /unlock
 
-Sitemap: https://dynamongamer.space/sitemap.xml
+Sitemap: https://dynamongamer.com/sitemap.xml
