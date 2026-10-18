@@ -20,8 +20,10 @@
 
 const EARNLINKS_BASE = "https://earnlinks.in/api";
 const DEST_BASE = "https://itiexamshala.com/geio.php?grey=";
-const GENERATOR_PAGE = "https://dynamongamer.space/generator";
+const GENERATOR_PAGE = "https://dynamongamer.com/generator";
 const ALLOWED_ORIGINS = [
+  "https://dynamongamer.com",
+  "https://www.dynamongamer.com",
   "https://dynamongamer.space",
   "https://project--c17e7d12-bb63-4ccb-a821-5b86fff3a795.lovable.app",
   "https://id-preview--c17e7d12-bb63-4ccb-a821-5b86fff3a795.lovable.app",

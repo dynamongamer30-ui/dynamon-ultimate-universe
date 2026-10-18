@@ -1,4 +1,4 @@
-export const SITE_URL = "https://dynamongamer.space";
+export const SITE_URL = "https://dynamongamer.com";
 export const SITE_NAME = "Dynamon Universe";
 export const DEFAULT_SOCIAL_IMAGE = `${SITE_URL}/dynamon-gamer-avatar.png`;
 

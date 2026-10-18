@@ -101,10 +101,10 @@ function Privacy() {
           <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">8. Changes and contact</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             We may update this policy when the website, providers, or legal requirements change. The latest version is
-            always posted at <Link to="/privacy" className="text-primary hover:underline">dynamongamer.space/privacy</Link>.
+            always posted at <Link to="/privacy" className="text-primary hover:underline">dynamongamer.com/privacy</Link>.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            For privacy questions or deletion requests, visit <Link to="/contact" className="text-primary hover:underline">dynamongamer.space/contact</Link>.
+            For privacy questions or deletion requests, visit <Link to="/contact" className="text-primary hover:underline">dynamongamer.com/contact</Link>.
           </p>
         </section>
 
