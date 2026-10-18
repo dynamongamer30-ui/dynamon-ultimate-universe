@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
-const SITE_URL = "https://dynamongamer.space";
+const SITE_URL = "https://dynamongamer.com";
 
 const modsSource = readFileSync(join(root, "src/lib/mods.ts"), "utf-8");
 const slugs = [...modsSource.matchAll(/slug:\s*"([^"]+)"/g)].map((m) => m[1]);
