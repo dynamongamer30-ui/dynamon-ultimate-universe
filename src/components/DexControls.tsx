@@ -12,10 +12,10 @@ const DEFAULT_BRAND: Brand = {
     {title:"WhatsApp",url:"https://whatsapp.com/channel/0029VbBdAcZ05MUmgk8cQP05",icon:"chat"},
     {title:"Instagram",url:"https://www.instagram.com/stoicist_zayen",icon:"camera"},
     {title:"Telegram",url:"https://t.me/dynamonsworld07",icon:"send"},
-    {title:"Website",url:"https://dynamongamer.space/",icon:"globe"},
+    {title:"Website",url:"https://dynamongamer.com/",icon:"globe"},
   ],
 };
-const HOSTS = new Set(["dynamongamer.space","www.dynamongamer.space","generator.dynamongamer30.workers.dev","youtube.com","www.youtube.com","youtu.be","t.me","telegram.me","whatsapp.com","www.whatsapp.com","instagram.com","www.instagram.com","mega.nz","www.mega.nz"]);
+const HOSTS = new Set(["dynamongamer.com","www.dynamongamer.com","dynamongamer.space","www.dynamongamer.space","generator.dynamongamer30.workers.dev","youtube.com","www.youtube.com","youtu.be","t.me","telegram.me","whatsapp.com","www.whatsapp.com","instagram.com","www.instagram.com","mega.nz","www.mega.nz"]);
 const CONTROLS: [string,string][] = [
   ["app","Block game payload loading"],["mods","Block all mod access"],
   ["god","God mode"],["oneHit","One-hit damage"],["crit","Critical hits"],["statusImmune","Status immunity"],["noCD","No cooldowns"],["alwaysCatch","Always catch"],
