@@ -113,7 +113,10 @@ export function AuroraCursor() {
       <div
         ref={dotRef}
         className="pointer-events-none fixed left-0 top-0 z-[62] hidden h-1.5 w-1.5 rounded-full opacity-0 transition-opacity duration-300 md:block"
-        style={{ background: "oklch(0.76 0.18 320)", boxShadow: "0 0 10px oklch(0.62 0.23 300 / 0.88)" }}
+        style={{
+          background: "oklch(0.76 0.18 320)",
+          boxShadow: "0 0 10px oklch(0.62 0.23 300 / 0.88)",
+        }}
         aria-hidden
       />
     </>

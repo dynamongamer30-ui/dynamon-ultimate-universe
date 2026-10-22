@@ -118,9 +118,7 @@ function applyOverride(
 ): Mod {
   if (!o) {
     // No admin override row at all — still fold in real likes/ratings.
-    const combinedRating = realRatingCount > 0
-      ? realRatingSum / realRatingCount
-      : mod.baseRating;
+    const combinedRating = realRatingCount > 0 ? realRatingSum / realRatingCount : mod.baseRating;
     return {
       ...mod,
       baseLikes: Math.max(0, mod.baseLikes + realLikes),
@@ -144,7 +142,8 @@ function applyOverride(
   // reviews. Set seed to 1000 points / 200 votes (avg 5.0), then every real
   // review adds its stars to the points and 1 to the count — the seed never
   // gets dropped or overwritten, it just keeps getting diluted by real data.
-  const seedPoints = o.seed_rating_points ?? (o.rating != null ? o.rating * 200 : mod.baseRating * 200);
+  const seedPoints =
+    o.seed_rating_points ?? (o.rating != null ? o.rating * 200 : mod.baseRating * 200);
   const seedCount = o.seed_rating_count ?? 200;
   const totalPoints = seedPoints + realRatingSum;
   const totalCount = seedCount + realRatingCount;
@@ -177,24 +176,35 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   const [overrides, setOverrides] = useState<Record<string, ModOverride>>({});
   const [featuredSlug, setFeaturedSlug] = useState<string | null>(null);
   const [realLikes, setRealLikes] = useState<Record<string, number>>({});
-  const [realRatings, setRealRatings] = useState<Record<string, { sum: number; count: number }>>({});
+  const [realRatings, setRealRatings] = useState<Record<string, { sum: number; count: number }>>(
+    {},
+  );
 
   const refresh = async () => {
-    const [{ data: settings }, { data: ov }, { data: likeRows }, { data: ratingRows }] = await Promise.all([
-      supabase.from("site_settings").select("key, value"),
-      supabase.from("mod_overrides").select("*"),
-      supabase.from("mod_likes").select("mod_slug"),
-      supabase.from("mod_ratings").select("mod_slug, rating"),
-    ]);
+    const [{ data: settings }, { data: ov }, { data: likeRows }, { data: ratingRows }] =
+      await Promise.all([
+        supabase.from("site_settings").select("key, value"),
+        supabase.from("mod_overrides").select("*"),
+        supabase.from("mod_likes").select("mod_slug"),
+        supabase.from("mod_ratings").select("mod_slug, rating"),
+      ]);
     const map = new Map<string, unknown>();
     (settings ?? []).forEach((r: { key: string; value: unknown }) => map.set(r.key, r.value));
-    setBranding({ ...DEFAULT_BRANDING, ...(map.get("branding") as Partial<SiteBranding> | undefined) });
-    setAnnouncement({ ...DEFAULT_ANNOUNCEMENT, ...(map.get("announcement") as Partial<Announcement> | undefined) });
+    setBranding({
+      ...DEFAULT_BRANDING,
+      ...(map.get("branding") as Partial<SiteBranding> | undefined),
+    });
+    setAnnouncement({
+      ...DEFAULT_ANNOUNCEMENT,
+      ...(map.get("announcement") as Partial<Announcement> | undefined),
+    });
     setSocials({ ...DEFAULT_SOCIALS, ...(map.get("socials") as Partial<Socials> | undefined) });
     const f = map.get("featured") as { slug?: string } | undefined;
     setFeaturedSlug(f?.slug ?? null);
     const overrideMap: Record<string, ModOverride> = {};
-    (ov ?? []).forEach((r) => { overrideMap[r.slug as string] = r as unknown as ModOverride; });
+    (ov ?? []).forEach((r) => {
+      overrideMap[r.slug as string] = r as unknown as ModOverride;
+    });
     setOverrides(overrideMap);
 
     // Real per-mod like counts — one row per user per mod in mod_likes.
@@ -218,7 +228,9 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+  }, []);
 
   const { mods, allMods } = useMemo(() => {
     const merged = baseMods.map((m) => {
@@ -236,7 +248,9 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   }, [overrides, featuredSlug, realLikes, realRatings]);
 
   return (
-    <C.Provider value={{ loading, branding, announcement, socials, overrides, mods, allMods, refresh }}>
+    <C.Provider
+      value={{ loading, branding, announcement, socials, overrides, mods, allMods, refresh }}
+    >
       {children}
     </C.Provider>
   );

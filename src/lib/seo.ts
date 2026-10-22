@@ -22,7 +22,14 @@ export function absoluteUrl(value: string): string {
 }
 
 /** Canonical, social, and index-control metadata for a public or utility route. */
-export function pageSeoHead({ path, title, description, image = DEFAULT_SOCIAL_IMAGE, type = "website", noIndex = false }: SeoPage) {
+export function pageSeoHead({
+  path,
+  title,
+  description,
+  image = DEFAULT_SOCIAL_IMAGE,
+  type = "website",
+  noIndex = false,
+}: SeoPage) {
   const url = canonicalUrl(path);
   const socialImage = absoluteUrl(image);
   return {
@@ -30,7 +37,12 @@ export function pageSeoHead({ path, title, description, image = DEFAULT_SOCIAL_I
     meta: [
       { title },
       { name: "description", content: description },
-      { name: "robots", content: noIndex ? "noindex, nofollow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
+      {
+        name: "robots",
+        content: noIndex
+          ? "noindex, nofollow"
+          : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      },
       { property: "og:type", content: type },
       { property: "og:site_name", content: SITE_NAME },
       { property: "og:title", content: title },
@@ -129,8 +141,14 @@ export function itemListJsonLd(items: Array<{ name: string; path: string; image?
 
 /** SoftwareApplication schema for an individual build detail page. */
 export function softwareAppJsonLd(mod: {
-  name: string; slug: string; tagline: string; image: string;
-  rating?: number; ratingCount?: number; version?: string; updated?: string;
+  name: string;
+  slug: string;
+  tagline: string;
+  image: string;
+  rating?: number;
+  ratingCount?: number;
+  version?: string;
+  updated?: string;
 }) {
   const data: Record<string, unknown> = {
     "@context": "https://schema.org",

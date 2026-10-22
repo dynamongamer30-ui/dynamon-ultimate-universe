@@ -22,7 +22,9 @@ export function useNotifications() {
   const [sender, setSender] = useState<SenderProfile | null>(null);
 
   useEffect(() => {
-    getSenderProfile().then(setSender).catch(() => setSender(null));
+    getSenderProfile()
+      .then(setSender)
+      .catch(() => setSender(null));
   }, []);
 
   const refresh = useCallback(async () => {
@@ -51,10 +53,7 @@ export function useNotifications() {
     refresh();
   }, [refresh]);
 
-  const unread = useMemo(
-    () => items.filter((n) => !readIds.has(n.id)),
-    [items, readIds],
-  );
+  const unread = useMemo(() => items.filter((n) => !readIds.has(n.id)), [items, readIds]);
 
   const markAllRead = useCallback(async () => {
     if (!user) return;

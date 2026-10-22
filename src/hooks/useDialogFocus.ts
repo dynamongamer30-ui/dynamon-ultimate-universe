@@ -7,12 +7,15 @@ const FOCUSABLE_SELECTOR = [
   "input:not([disabled])",
   "select:not([disabled])",
   "textarea:not([disabled])",
-  "[contenteditable=\"true\"]",
-  "[tabindex]:not([tabindex=\"-1\"])",
+  '[contenteditable="true"]',
+  '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
 /** Keeps keyboard focus inside a custom modal and restores it after close. */
-export function useDialogFocus<T extends HTMLElement = HTMLDivElement>(open: boolean, onClose: () => void): RefObject<T | null> {
+export function useDialogFocus<T extends HTMLElement = HTMLDivElement>(
+  open: boolean,
+  onClose: () => void,
+): RefObject<T | null> {
   const dialogRef = useRef<T>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -26,8 +29,10 @@ export function useDialogFocus<T extends HTMLElement = HTMLDivElement>(open: boo
     const previousOverscroll = document.body.style.overscrollBehavior;
     document.body.style.overflow = "hidden";
     document.body.style.overscrollBehavior = "none";
-    const focusable = () => [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)]
-      .filter((element) => element.getClientRects().length > 0);
+    const focusable = () =>
+      [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)].filter(
+        (element) => element.getClientRects().length > 0,
+      );
 
     const focusFrame = window.requestAnimationFrame(() => {
       const first = focusable()[0];

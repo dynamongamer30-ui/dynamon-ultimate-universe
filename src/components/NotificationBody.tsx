@@ -31,8 +31,15 @@ export function NotificationBody({ text, className }: { text: string; className?
           {keys[i] && (
             <button
               type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onDoubleClick={(e) => { e.preventDefault(); e.stopPropagation(); copyKey(keys[i]); }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDoubleClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                copyKey(keys[i]);
+              }}
               title="Double-tap to copy"
               className="mx-0.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-mono font-bold text-amber-300"
             >

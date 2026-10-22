@@ -50,7 +50,12 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   return (
     <ConfirmContext.Provider value={confirm}>
       {children}
-      <AlertDialog open={open} onOpenChange={(o) => { if (!o) settle(false); }}>
+      <AlertDialog
+        open={open}
+        onOpenChange={(o) => {
+          if (!o) settle(false);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{opts.title ?? "Are you sure?"}</AlertDialogTitle>

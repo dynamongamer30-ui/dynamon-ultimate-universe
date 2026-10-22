@@ -51,7 +51,9 @@
   line-gap-override: 0%;
 }
 
-#lovable-badge { display: none !important; }
+#lovable-badge {
+  display: none !important;
+}
 
 @custom-variant dark (&:is(.dark *));
 
@@ -165,7 +167,8 @@
   --ring: oklch(0.54 0.22 296);
 
   /* Global surfaces — every page consumes these */
-  --gradient-hero: radial-gradient(110% 82% at 52% -12%, oklch(0.36 0.16 300 / 0.48), transparent 52%),
+  --gradient-hero:
+    radial-gradient(110% 82% at 52% -12%, oklch(0.36 0.16 300 / 0.48), transparent 52%),
     radial-gradient(54% 42% at 84% 10%, oklch(0.42 0.18 328 / 0.16), transparent 70%),
     linear-gradient(180deg, oklch(0.105 0.022 295), oklch(0.135 0.026 295));
   --gradient-primary: linear-gradient(135deg, oklch(0.57 0.23 296), oklch(0.66 0.21 318));
@@ -188,7 +191,11 @@
   --material-l2-shadow: 0 18px 42px -22px oklch(0 0 0 / 0.78);
   --material-l3-shadow: 0 24px 70px -24px oklch(0 0 0 / 0.9);
   --overlay-scrim: color-mix(in srgb, oklch(0.08 0.04 295) 76%, transparent);
-  --artwork-overlay: linear-gradient(180deg, transparent 32%, color-mix(in srgb, var(--background) 92%, transparent) 100%);
+  --artwork-overlay: linear-gradient(
+    180deg,
+    transparent 32%,
+    color-mix(in srgb, var(--background) 92%, transparent) 100%
+  );
   --skeleton-base: color-mix(in srgb, var(--card) 88%, var(--background));
   --skeleton-highlight: color-mix(in srgb, var(--primary) 18%, var(--card));
   --focus-ring: 0 0 0 3px oklch(0.54 0.22 296 / 0.3);
@@ -222,9 +229,13 @@
   --glass-l3-bg: var(--material-l3-bg);
 }
 
-.dark { color-scheme: dark; }
+.dark {
+  color-scheme: dark;
+}
 
-* { border-color: var(--border); }
+* {
+  border-color: var(--border);
+}
 html {
   background: var(--background);
   color: var(--foreground);
@@ -244,7 +255,10 @@ body {
   background-image: var(--gradient-hero);
   background-attachment: scroll;
 }
-body:has(.modal-frame), body:has(.overlay-scrim) { overscroll-behavior: none; }
+body:has(.modal-frame),
+body:has(.overlay-scrim) {
+  overscroll-behavior: none;
+}
 /* Keep Sonner above sticky chrome and outside the animated route stacking
    context. The mobile rules also respect browser safe areas. */
 [data-sonner-toaster] {
@@ -267,7 +281,9 @@ body:has(.modal-frame), body:has(.overlay-scrim) { overscroll-behavior: none; }
     bottom: max(0.75rem, var(--safe-area-bottom)) !important;
     width: auto !important;
   }
-  .site-toast { width: 100% !important; }
+  .site-toast {
+    width: 100% !important;
+  }
 }
 
 /* Keeps glass readable on every route, including pages with sparse content. */
@@ -297,29 +313,59 @@ body:has(.modal-frame), body:has(.overlay-scrim) { overscroll-behavior: none; }
   background-image: var(--glass-noise);
   background-size: 128px 128px;
 }
-.material-l0 { background: var(--background); }
-.material-l1 { background: var(--material-l1-bg); border: 1px solid var(--material-l1-border); box-shadow: var(--material-l1-shadow); }
-.material-l2 { background: var(--material-l2-bg); border: 1px solid var(--material-l2-border); box-shadow: var(--material-l2-shadow); }
-.material-l3 { background: var(--material-l3-bg); border: 1px solid var(--material-l3-border); box-shadow: var(--material-l3-shadow); }
-@media (min-width: 1024px) {
-  body { background-attachment: fixed; }
+.material-l0 {
+  background: var(--background);
 }
-h1, h2, h3, h4, .font-display {
+.material-l1 {
+  background: var(--material-l1-bg);
+  border: 1px solid var(--material-l1-border);
+  box-shadow: var(--material-l1-shadow);
+}
+.material-l2 {
+  background: var(--material-l2-bg);
+  border: 1px solid var(--material-l2-border);
+  box-shadow: var(--material-l2-shadow);
+}
+.material-l3 {
+  background: var(--material-l3-bg);
+  border: 1px solid var(--material-l3-border);
+  box-shadow: var(--material-l3-shadow);
+}
+@media (min-width: 1024px) {
+  body {
+    background-attachment: fixed;
+  }
+}
+h1,
+h2,
+h3,
+h4,
+.font-display {
   font-family: var(--font-display);
   letter-spacing: -0.03em;
 }
 
-::selection { background: oklch(0.62 0.22 302 / 0.46); color: var(--foreground); }
+::selection {
+  background: oklch(0.62 0.22 302 / 0.46);
+  color: var(--foreground);
+}
 
 /* Premium scrollbar */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 ::-webkit-scrollbar-thumb {
   background: oklch(0.3 0.02 295);
   border-radius: 6px;
   border: 2px solid var(--background);
 }
-::-webkit-scrollbar-thumb:hover { background: oklch(0.5 0.15 296); }
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.15 296);
+}
 
 /* Focus visibility — accessibility */
 :focus-visible {
@@ -350,14 +396,20 @@ h1, h2, h3, h4, .font-display {
   position: relative;
   isolation: isolate;
   background-color: var(--material-l1-bg);
-  background-image: var(--glass-noise), linear-gradient(135deg, rgba(255,255,255,0.035), rgba(0,0,0,0.035));
-  background-size: 128px 128px, auto;
+  background-image:
+    var(--glass-noise), linear-gradient(135deg, rgba(255, 255, 255, 0.035), rgba(0, 0, 0, 0.035));
+  background-size:
+    128px 128px,
+    auto;
   background-blend-mode: soft-light, normal;
   border: 1px solid var(--material-l1-border);
   box-shadow: var(--material-l1-shadow);
   -webkit-backdrop-filter: blur(var(--material-l1-blur)) saturate(120%);
   backdrop-filter: blur(var(--material-l1-blur)) saturate(120%);
-  transition: box-shadow var(--motion-duration-standard) var(--motion-ease-out), border-color var(--motion-duration-standard) var(--motion-ease-out), background-color var(--motion-duration-standard) var(--motion-ease-out);
+  transition:
+    box-shadow var(--motion-duration-standard) var(--motion-ease-out),
+    border-color var(--motion-duration-standard) var(--motion-ease-out),
+    background-color var(--motion-duration-standard) var(--motion-ease-out);
 }
 .glass-l2 {
   background-color: var(--material-l2-bg);
@@ -376,7 +428,9 @@ h1, h2, h3, h4, .font-display {
   backdrop-filter: blur(var(--material-l3-blur)) saturate(125%);
 }
 .glass,
-.glass-l1 { border-radius: 12px; }
+.glass-l1 {
+  border-radius: 12px;
+}
 .glass::after,
 .glass-l1::after,
 .glass-l2::after,
@@ -388,20 +442,35 @@ h1, h2, h3, h4, .font-display {
   pointer-events: none;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, var(--glass-border-top), transparent 38%, transparent 62%, var(--glass-border-bottom));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  background: linear-gradient(
+    135deg,
+    var(--glass-border-top),
+    transparent 38%,
+    transparent 62%,
+    var(--glass-border-bottom)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
 .glass-interactive:hover {
   border-color: color-mix(in srgb, var(--primary) 52%, var(--glass-border-top));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), var(--interactive-glow);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    var(--interactive-glow);
 }
 
 /* Phase 5 route grammar: content-led pages use L0 by default and opt into
    these quiet groupings only where a boundary improves scanning. */
-.page-content { isolation: isolate; }
-.route-hero { position: relative; max-width: 78ch; }
+.page-content {
+  isolation: isolate;
+}
+.route-hero {
+  position: relative;
+  max-width: 78ch;
+}
 .route-hero::after {
   content: "";
   display: block;
@@ -433,26 +502,53 @@ h1, h2, h3, h4, .font-display {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-.safe-area-top { padding-top: var(--safe-area-top); }
-.safe-area-right { padding-right: var(--safe-area-right); }
-.safe-area-bottom { padding-bottom: var(--safe-area-bottom); }
-.safe-area-left { padding-left: var(--safe-area-left); }
-.state-success { color: var(--success); }
-.state-warning { color: var(--warning); }
-.state-info { color: var(--info); }
-.route-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.safe-area-top {
+  padding-top: var(--safe-area-top);
+}
+.safe-area-right {
+  padding-right: var(--safe-area-right);
+}
+.safe-area-bottom {
+  padding-bottom: var(--safe-area-bottom);
+}
+.safe-area-left {
+  padding-left: var(--safe-area-left);
+}
+.state-success {
+  color: var(--success);
+}
+.state-warning {
+  color: var(--warning);
+}
+.state-info {
+  color: var(--info);
+}
+.route-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
 
 /* Shared stacking contract: do not introduce ad hoc z-index values for these layers. */
-.site-chrome { z-index: var(--z-chrome); }
-.overlay-popover { z-index: var(--z-popover); }
-.overlay-toast { z-index: var(--z-toast); }
+.site-chrome {
+  z-index: var(--z-chrome);
+}
+.overlay-popover {
+  z-index: var(--z-popover);
+}
+.overlay-toast {
+  z-index: var(--z-toast);
+}
 .overlay-scrim {
   z-index: var(--z-scrim);
   background: var(--overlay-scrim) !important;
   -webkit-backdrop-filter: blur(12px) saturate(90%);
   backdrop-filter: blur(12px) saturate(90%);
 }
-.overlay-surface { z-index: var(--z-modal); }
+.overlay-surface {
+  z-index: var(--z-modal);
+}
 .modal-frame {
   min-height: 100svh;
   padding-top: max(1rem, var(--safe-area-top));
@@ -532,19 +628,25 @@ h1, h2, h3, h4, .font-display {
    must keep their semantic opaque surfaces. */
 
 @supports not ((backdrop-filter: blur(1px))) {
-  .glass, .glass-l1 {
+  .glass,
+  .glass-l1 {
     background: rgba(19, 14, 31, 0.92) !important;
     background-image: none !important;
   }
-  .glass-l2 { background: rgba(24, 18, 39, 0.94) !important; }
-  .glass-l3 { background: rgba(30, 22, 48, 0.96) !important; }
+  .glass-l2 {
+    background: rgba(24, 18, 39, 0.94) !important;
+  }
+  .glass-l3 {
+    background: rgba(30, 22, 48, 0.96) !important;
+  }
 }
 
 /* Report is the reference Level 3 command surface: readable first, glassy
    second, with the scrim carrying most of the background blur. */
 .report-dialog {
   background-color: color-mix(in srgb, var(--card) 91%, transparent) !important;
-  background-image: var(--glass-noise), linear-gradient(135deg, rgba(255,255,255,0.045), rgba(0,0,0,0.045)) !important;
+  background-image:
+    var(--glass-noise), linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(0, 0, 0, 0.045)) !important;
   background-blend-mode: soft-light, normal;
   border: 1px solid var(--material-l3-border);
   -webkit-backdrop-filter: blur(var(--material-l3-blur)) saturate(120%);
@@ -552,28 +654,57 @@ h1, h2, h3, h4, .font-display {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .glass, .glass-l1, .glass-l2, .glass-l3, .glass-interactive { transition: none !important; }
+  .glass,
+  .glass-l1,
+  .glass-l2,
+  .glass-l3,
+  .glass-interactive {
+    transition: none !important;
+  }
 }
 
 @media (max-width: 640px) {
-  .page-content { padding-bottom: calc(3rem + var(--safe-area-bottom)); }
-  .route-hero { max-width: none; }
-  .route-actions > * { min-height: 2.75rem; }
-  .modal-panel { width: 100%; border-radius: 1.25rem; }
+  .page-content {
+    padding-bottom: calc(3rem + var(--safe-area-bottom));
+  }
+  .route-hero {
+    max-width: none;
+  }
+  .route-actions > * {
+    min-height: 2.75rem;
+  }
+  .modal-panel {
+    width: 100%;
+    border-radius: 1.25rem;
+  }
 }
-@utility glow-primary { box-shadow: var(--shadow-glow); }
-@utility glow-violet { box-shadow: var(--shadow-violet); }
-@utility shadow-elev { box-shadow: var(--shadow-card); }
+@utility glow-primary {
+  box-shadow: var(--shadow-glow);
+}
+@utility glow-violet {
+  box-shadow: var(--shadow-violet);
+}
+@utility shadow-elev {
+  box-shadow: var(--shadow-card);
+}
 
 /* Interactive press physics — used on all buttons/cards */
 @utility press {
   transform: translateZ(0);
-  transition: transform var(--motion-duration-fast) var(--motion-ease-out), filter var(--motion-duration-fast) ease, box-shadow var(--motion-duration-fast) ease;
+  transition:
+    transform var(--motion-duration-fast) var(--motion-ease-out),
+    filter var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .press:hover { transform: translateY(-1px); will-change: transform; }
+  .press:hover {
+    transform: translateY(-1px);
+    will-change: transform;
+  }
 }
-.press:active { transform: translateY(0) scale(0.965); }
+.press:active {
+  transform: translateY(0) scale(0.965);
+}
 
 /* Edge highlight: hairline top light on cards for machined feel,
    now also blooms with a soft purple glow on hover */
@@ -596,34 +727,70 @@ h1, h2, h3, h4, .font-display {
 
 /* Soft glow ring on focus for every text input/textarea/select site-wide —
    replaces the plain hard border-only focus state. */
-input:focus-visible, textarea:focus-visible, select:focus-visible {
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
   box-shadow: var(--focus-ring);
   border-color: color-mix(in srgb, var(--ring) 70%, transparent);
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(0.6 0.23 300 / 0.38); }
-  50% { box-shadow: 0 0 30px 7px oklch(0.66 0.21 318 / 0.2); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.6 0.23 300 / 0.38);
+  }
+  50% {
+    box-shadow: 0 0 30px 7px oklch(0.66 0.21 318 / 0.2);
+  }
 }
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 @keyframes ticker {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
-.animate-float { animation: float 7s ease-in-out infinite; }
-.animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
-.animate-ticker { animation: ticker 34s linear infinite; }
-.animate-ticker:hover { animation-play-state: paused; }
+.animate-float {
+  animation: float 7s ease-in-out infinite;
+}
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+.animate-ticker {
+  animation: ticker 34s linear infinite;
+}
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
 @media (max-width: 767px), (prefers-reduced-data: reduce) {
-  .animate-ticker { animation-play-state: paused; transform: none; width: 100%; white-space: normal; justify-content: center; }
-  .animate-ticker span:nth-child(n + 5) { display: none; }
+  .animate-ticker {
+    animation-play-state: paused;
+    transform: none;
+    width: 100%;
+    white-space: normal;
+    justify-content: center;
+  }
+  .animate-ticker span:nth-child(n + 5) {
+    display: none;
+  }
 }
 .shimmer {
   background: linear-gradient(90deg, transparent, var(--skeleton-highlight), transparent);
@@ -631,7 +798,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   animation: shimmer 2.5s linear infinite;
 }
 .skeleton-surface {
-  background: linear-gradient(90deg, var(--skeleton-base), var(--skeleton-highlight), var(--skeleton-base));
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base),
+    var(--skeleton-highlight),
+    var(--skeleton-base)
+  );
   background-size: 200% 100%;
   animation: shimmer 1.8s var(--motion-ease-standard) infinite;
 }
@@ -639,7 +811,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* Subtle machined grain */
 .noise::before {
   content: "";
-  position: absolute; inset: 0;
+  position: absolute;
+  inset: 0;
   background-image: radial-gradient(oklch(1 0 0 / 0.03) 1px, transparent 1px);
   background-size: 4px 4px;
   pointer-events: none;
@@ -647,9 +820,24 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  .animate-float, .animate-pulse-glow, .animate-ticker, .shimmer, .skeleton-surface { animation: none; }
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-float,
+  .animate-pulse-glow,
+  .animate-ticker,
+  .shimmer,
+  .skeleton-surface {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* AuroraCursor ring — border-color/box-shadow toggle only on hover-state
@@ -657,7 +845,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .aurora-ring {
   border-color: oklch(0.66 0.21 318 / 0.58);
   box-shadow: 0 0 16px 0px oklch(0.6 0.23 300 / 0.2);
-  transition: opacity 300ms, border-color 150ms, box-shadow 150ms;
+  transition:
+    opacity 300ms,
+    border-color 150ms,
+    box-shadow 150ms;
 }
 .aurora-ring.aurora-ring-hover {
   border-color: oklch(0.76 0.17 322 / 0.94);
@@ -674,18 +865,29 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   padding: clamp(1.25rem, 3vw, 2.5rem);
   background: var(--material-l1-bg);
   backdrop-filter: blur(var(--material-l1-blur));
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.07), var(--shadow-card);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.07),
+    var(--shadow-card);
 }
-.hero-field > * { position: relative; z-index: 1; }
+.hero-field > * {
+  position: relative;
+  z-index: 1;
+}
 
 @media (max-width: 767px) {
-  .hero-field { border-radius: 1.25rem; }
+  .hero-field {
+    border-radius: 1.25rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .press, .press:hover, .press:active { transform: none; transition: none; }
+  .press,
+  .press:hover,
+  .press:active {
+    transform: none;
+    transition: none;
+  }
 }
-
 
 /* Typography contract: the scale above is the single source of truth for
    headings, body copy, controls, labels, and prose measure. */
@@ -764,9 +966,12 @@ h4 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  h1, h2, h3 { text-wrap: initial; }
+  h1,
+  h2,
+  h3 {
+    text-wrap: initial;
+  }
 }
-
 
 .feature-tilt {
   transform: perspective(900px) rotateX(var(--card-tilt-x, 0deg)) rotateY(var(--card-tilt-y, 0deg));

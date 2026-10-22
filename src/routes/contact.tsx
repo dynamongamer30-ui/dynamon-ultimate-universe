@@ -8,11 +8,13 @@ import { toast } from "sonner";
 import { pageSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/contact")({
-  head: () => pageSeoHead({
-    path: "/contact",
-    title: "Contact Dynamon Universe — Build Feedback & Community Support",
-    description: "Contact Dynamon Universe with build feedback, technical issues, requests, or community questions about Dynamons World editions.",
-  }),
+  head: () =>
+    pageSeoHead({
+      path: "/contact",
+      title: "Contact Dynamon Universe — Build Feedback & Community Support",
+      description:
+        "Contact Dynamon Universe with build feedback, technical issues, requests, or community questions about Dynamons World editions.",
+    }),
   component: Contact,
 });
 
@@ -33,12 +35,14 @@ function Contact() {
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Get in touch
           </p>
-          <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl">{"Say hello."}</h1>
+          <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl">
+            {"Say hello."}
+          </h1>
           <p className="mt-4 leading-relaxed text-muted-foreground text-pretty">
-            Found a bug? Want a mod we haven&apos;t made yet? Making videos and want to work together?
-            The same people who test the mods read these messages &mdash; not a robot. To help us fix things fast,
-            tell us three things: which mod, which phone you use, and what went wrong. Want a quicker reply?
-            Message us on WhatsApp or Telegram instead.
+            Found a bug? Want a mod we haven&apos;t made yet? Making videos and want to work
+            together? The same people who test the mods read these messages &mdash; not a robot. To
+            help us fix things fast, tell us three things: which mod, which phone you use, and what
+            went wrong. Want a quicker reply? Message us on WhatsApp or Telegram instead.
           </p>
           <div className="mt-6">
             <SocialStrip variant="compact" />
@@ -48,30 +52,53 @@ function Contact() {
         <form onSubmit={submit} className="edge-light rounded-2xl glass p-6 sm:p-8">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="contact-name" className="sr-only">Your name</label>
+              <label htmlFor="contact-name" className="sr-only">
+                Your name
+              </label>
               <input
-                id="contact-name" name="name" autoComplete="name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                id="contact-name"
+                name="name"
+                autoComplete="name"
+                required
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Your name"
                 className="control-input w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-primary"
               />
             </div>
             <div>
-              <label htmlFor="contact-email" className="sr-only">Your email</label>
+              <label htmlFor="contact-email" className="sr-only">
+                Your email
+              </label>
               <input
-                id="contact-email" name="email" autoComplete="email" required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                id="contact-email"
+                name="email"
+                autoComplete="email"
+                required
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="Your email (so we can reply)"
                 className="control-input w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-primary"
               />
             </div>
           </div>
-          <label htmlFor="contact-message" className="sr-only">Message</label>
+          <label htmlFor="contact-message" className="sr-only">
+            Message
+          </label>
           <textarea
-            id="contact-message" name="message" required rows={6} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
+            id="contact-message"
+            name="message"
+            required
+            rows={6}
+            value={form.message}
+            onChange={(e) => setForm({ ...form, message: e.target.value })}
             placeholder="Which mod, which phone, and what happened?"
             className="control-input mt-4 w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none focus:border-primary"
           />
           <button
-            type="submit" onMouseDown={playClick}
+            type="submit"
+            onMouseDown={playClick}
             className="press mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110"
           >
             <Send className="h-4 w-4" /> Send message

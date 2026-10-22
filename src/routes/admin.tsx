@@ -12,18 +12,38 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Owner Dashboard — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({
+    meta: [
+      { title: "Owner Dashboard — Dynamon Universe" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: AdminRoute,
 });
 
 function AdminRoute() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   if (!mounted) return null;
-  return <OwnerGate><AdminPage /></OwnerGate>;
+  return (
+    <OwnerGate>
+      <AdminPage />
+    </OwnerGate>
+  );
 }
 
-type Report = { id: string; reporter_id: string; target_type: string; target_id: string; reason: string; details: string | null; status: string; created_at: string };
+type Report = {
+  id: string;
+  reporter_id: string;
+  target_type: string;
+  target_id: string;
+  reason: string;
+  details: string | null;
+  status: string;
+  created_at: string;
+};
 type Subscriber = { user_id: string; email: string };
 
 function AdminPage() {
@@ -39,7 +59,13 @@ function AdminPage() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: rep, error: reportsError }, { count: usersCount }, { count: commentsCount }, { count: favCount }, { data: subsData }] = await Promise.all([
+      const [
+        { data: rep, error: reportsError },
+        { count: usersCount },
+        { count: commentsCount },
+        { count: favCount },
+        { data: subsData },
+      ] = await Promise.all([
         supabase.from("reports").select("*").order("created_at", { ascending: false }).limit(50),
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("comments").select("*", { count: "exact", head: true }),
@@ -62,26 +88,38 @@ function AdminPage() {
 
   const resolve = async (id: string, status: "resolved" | "dismissed") => {
     const { error } = await supabase.from("reports").update({ status }).eq("id", id);
-    if (error) { toast.error(`Could not update report: ${error.message}`); return; }
-    const { error: logError } = await (supabase.from as any)("moderation_log").insert({
-      actor_id: user!.id, action: `report_${status}`, target_type: "report", target_id: id,
+    if (error) {
+      toast.error(`Could not update report: ${error.message}`);
+      return;
+    }
+    const { error: logError } = await supabase.from("moderation_log").insert({
+      actor_id: user!.id,
+      action: `report_${status}`,
+      target_type: "report",
+      target_id: id,
     });
     if (logError) toast.error(`Report updated, but moderation log failed: ${logError.message}`);
-    setReports((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
+    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
   };
 
   const deleteTarget = async (r: Report) => {
-    if (!(await confirm({
-      title: "Delete content",
-      description: `Delete this ${r.target_type}? This cannot be undone.`,
-      confirmText: "Delete",
-      danger: true,
-    }))) return;
+    if (
+      !(await confirm({
+        title: "Delete content",
+        description: `Delete this ${r.target_type}? This cannot be undone.`,
+        confirmText: "Delete",
+        danger: true,
+      }))
+    )
+      return;
     if (r.target_type === "comment") {
       await supabase.from("comments").delete().eq("id", r.target_id);
     }
-    await (supabase.from as any)("moderation_log").insert({
-      actor_id: user!.id, action: "content_removed", target_type: r.target_type, target_id: r.target_id,
+    await supabase.from("moderation_log").insert({
+      actor_id: user!.id,
+      action: "content_removed",
+      target_type: r.target_type,
+      target_id: r.target_id,
       details: `via report ${r.id}`,
     });
     await resolve(r.id, "resolved");
@@ -91,26 +129,46 @@ function AdminPage() {
   const sendBlast = async () => {
     const subject = blastSubject.trim();
     const body = blastBody.trim();
-    if (!subject || !body) { toast.error("Subject and body required"); return; }
-    if (subject.length > 120) { toast.error("Subject too long (max 120)"); return; }
-    if (body.length > 5000) { toast.error("Body too long (max 5000)"); return; }
+    if (!subject || !body) {
+      toast.error("Subject and body required");
+      return;
+    }
+    if (subject.length > 120) {
+      toast.error("Subject too long (max 120)");
+      return;
+    }
+    if (body.length > 5000) {
+      toast.error("Body too long (max 5000)");
+      return;
+    }
     setSending(true);
     const recipients = subs.length;
-    const { error } = await (supabase.from as any)("broadcasts").insert({
-      author_id: user!.id, mod_slug: blastMod, subject, body, recipients,
+    const { error } = await supabase.from("broadcasts").insert({
+      author_id: user!.id,
+      mod_slug: blastMod,
+      subject,
+      body,
+      recipient_count: recipients,
     });
-    if (error) { toast.error(error.message); setSending(false); return; }
-    await (supabase.from as any)("moderation_log").insert({
-      actor_id: user!.id, action: "broadcast_queued", target_type: "mod", target_id: blastMod,
+    if (error) {
+      toast.error(error.message);
+      setSending(false);
+      return;
+    }
+    await supabase.from("moderation_log").insert({
+      actor_id: user!.id,
+      action: "broadcast_queued",
+      target_type: "mod",
+      target_id: blastMod,
       details: `${recipients} recipients · ${subject}`,
     });
     setSending(false);
-    setBlastSubject(""); setBlastBody("");
+    setBlastSubject("");
+    setBlastBody("");
     toast.success(`Broadcast queued for ${recipients} subscriber${recipients === 1 ? "" : "s"}`, {
       description: "Configure Resend in an edge function to deliver real emails.",
     });
   };
-
 
   const totalSubs = subs.length;
 
@@ -120,16 +178,30 @@ function AdminPage() {
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-300">
           <Shield className="h-3.5 w-3.5" /> Owner Console
         </p>
-        <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">Dashboard</h1>
-        <p className="mt-3 max-w-2xl text-muted-foreground">Moderate the community and notify trainers about new builds.</p>
+        <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">
+          Dashboard
+        </h1>
+        <p className="mt-3 max-w-2xl text-muted-foreground">
+          Moderate the community and notify trainers about new builds.
+        </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <Link to="/admin-keys" className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-5 py-2.5 text-sm font-semibold text-amber-200 hover:bg-amber-400/20">
+          <Link
+            to="/admin-keys"
+            className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-5 py-2.5 text-sm font-semibold text-amber-200 hover:bg-amber-400/20"
+          >
             <KeyRound className="h-4 w-4" /> Key system &amp; DEX
           </Link>
-          <Link to="/admin-control" className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-primary-foreground glow-primary" style={{ background: "var(--gradient-primary)" }}>
+          <Link
+            to="/admin-control"
+            className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-primary-foreground glow-primary"
+            style={{ background: "var(--gradient-primary)" }}
+          >
             <Shield className="h-4 w-4" /> Open Control Panel
           </Link>
-          <Link to="/admin-notifications" className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold transition-colors hover:border-primary/40 hover:text-primary">
+          <Link
+            to="/admin-notifications"
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold transition-colors hover:border-primary/40 hover:text-primary"
+          >
             <Bell className="h-4 w-4" /> Send Notifications
           </Link>
         </div>
@@ -144,9 +216,15 @@ function AdminPage() {
 
       <section className="mt-8 grid gap-6 lg:grid-cols-2">
         <div className="edge-light rounded-2xl glass p-6">
-          <h3 className="font-display text-xl font-bold flex items-center gap-2"><Mail className="h-5 w-5" /> Broadcast new release</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Notify all {totalSubs} email-opted-in trainers about a new mod build.</p>
-          <label className="mt-4 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Mod</label>
+          <h3 className="font-display text-xl font-bold flex items-center gap-2">
+            <Mail className="h-5 w-5" /> Broadcast new release
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Notify all {totalSubs} email-opted-in trainers about a new mod build.
+          </p>
+          <label className="mt-4 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Mod
+          </label>
           <ThemedSelect
             value={blastMod}
             onValueChange={setBlastMod}
@@ -154,39 +232,77 @@ function AdminPage() {
             className="mt-1 h-auto w-full rounded-xl py-2.5 text-sm"
             options={mods.map((m) => ({ value: m.slug, label: `${m.name} — v${m.version}` }))}
           />
-          <input value={blastSubject} onChange={(e) => setBlastSubject(e.target.value)} placeholder="Subject"
-            className="mt-3 w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary" />
-          <textarea value={blastBody} onChange={(e) => setBlastBody(e.target.value)} placeholder="Message body…" rows={6} maxLength={2000}
-            className="mt-3 w-full resize-none rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary" />
-          <button onClick={sendBlast} disabled={sending}
+          <input
+            value={blastSubject}
+            onChange={(e) => setBlastSubject(e.target.value)}
+            placeholder="Subject"
+            className="mt-3 w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary"
+          />
+          <textarea
+            value={blastBody}
+            onChange={(e) => setBlastBody(e.target.value)}
+            placeholder="Message body…"
+            rows={6}
+            maxLength={2000}
+            className="mt-3 w-full resize-none rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary"
+          />
+          <button
+            onClick={sendBlast}
+            disabled={sending}
             className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-60"
-            style={{ background: "var(--gradient-primary)" }}>
+            style={{ background: "var(--gradient-primary)" }}
+          >
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Queue broadcast
           </button>
         </div>
 
         <div className="edge-light rounded-2xl glass p-6">
-          <h3 className="font-display text-xl font-bold flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-400" /> Reports queue</h3>
+          <h3 className="font-display text-xl font-bold flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-400" /> Reports queue
+          </h3>
           <div className="mt-4 space-y-3 max-h-[520px] overflow-auto">
-            {reports.length === 0 && <p className="text-sm text-muted-foreground">No reports yet.</p>}
+            {reports.length === 0 && (
+              <p className="text-sm text-muted-foreground">No reports yet.</p>
+            )}
             {reports.map((r) => (
-              <div key={r.id} className={`rounded-2xl border p-4 ${r.status === "open" ? "border-amber-400/30 bg-amber-500/5" : "border-border bg-background/40 opacity-70"}`}>
+              <div
+                key={r.id}
+                className={`rounded-2xl border p-4 ${r.status === "open" ? "border-amber-400/30 bg-amber-500/5" : "border-border bg-background/40 opacity-70"}`}
+              >
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold uppercase tracking-widest text-amber-300">{r.reason}</span>
-                  <span className="text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
+                  <span className="font-bold uppercase tracking-widest text-amber-300">
+                    {r.reason}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {new Date(r.created_at).toLocaleString()}
+                  </span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{r.target_type} · <code className="text-xs">{r.target_id.slice(0, 8)}</code></p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {r.target_type} · <code className="text-xs">{r.target_id.slice(0, 8)}</code>
+                </p>
                 {r.details && <p className="mt-2 whitespace-pre-line text-sm">{r.details}</p>}
                 {r.status === "open" && (
                   <div className="mt-3 flex gap-2">
-                    <button onClick={() => deleteTarget(r)} className="inline-flex items-center gap-1 rounded-full border border-rose-400/40 px-3 py-1 text-xs font-semibold text-rose-300 hover:bg-rose-500/10">
+                    <button
+                      onClick={() => deleteTarget(r)}
+                      className="inline-flex items-center gap-1 rounded-full border border-rose-400/40 px-3 py-1 text-xs font-semibold text-rose-300 hover:bg-rose-500/10"
+                    >
                       <Trash2 className="h-3 w-3" /> Remove content
                     </button>
-                    <button onClick={() => resolve(r.id, "dismissed")} className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground">Dismiss</button>
+                    <button
+                      onClick={() => resolve(r.id, "dismissed")}
+                      className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 )}
-                {r.status !== "open" && <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">· {r.status}</p>}
+                {r.status !== "open" && (
+                  <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">
+                    · {r.status}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -198,10 +314,13 @@ function AdminPage() {
 
 function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
-    <div className={`edge-light rounded-2xl glass p-6 text-center ${accent ? "ring-2 ring-amber-400/50" : ""}`}>
+    <div
+      className={`edge-light rounded-2xl glass p-6 text-center ${accent ? "ring-2 ring-amber-400/50" : ""}`}
+    >
       <p className="text-xs uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="mt-2 font-display text-4xl font-black uppercase tracking-tight text-gradient">{value}</p>
+      <p className="mt-2 font-display text-4xl font-black uppercase tracking-tight text-gradient">
+        {value}
+      </p>
     </div>
   );
 }
-

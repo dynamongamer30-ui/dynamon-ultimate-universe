@@ -15,18 +15,48 @@ export function NotificationClaim({ notification }: { notification: AppNotificat
   const { reward_kind, reward_ref } = notification;
   if (!reward_kind) return null;
 
-  let to: { kind: "granted_key" | "phoenix_pass" | "daily_key"; ref: string; label: string; icon: ReactElement; text: string } | null = null;
+  let to: {
+    kind: "granted_key" | "phoenix_pass" | "daily_key";
+    ref: string;
+    label: string;
+    icon: ReactElement;
+    text: string;
+  } | null = null;
 
   if (reward_kind === "trainer_dg_key" && reward_ref) {
-    to = { kind: "granted_key", ref: reward_ref, label: "DG Key", icon: <KeyRound className="h-3.5 w-3.5" />, text: "View your key" };
+    to = {
+      kind: "granted_key",
+      ref: reward_ref,
+      label: "DG Key",
+      icon: <KeyRound className="h-3.5 w-3.5" />,
+      text: "View your key",
+    };
   } else if (reward_kind === "trainer_vip_key" && reward_ref) {
-    to = { kind: "granted_key", ref: reward_ref, label: "VIP Key", icon: <KeyRound className="h-3.5 w-3.5" />, text: "View your key" };
+    to = {
+      kind: "granted_key",
+      ref: reward_ref,
+      label: "VIP Key",
+      icon: <KeyRound className="h-3.5 w-3.5" />,
+      text: "View your key",
+    };
   } else if (reward_kind === "phoenix_pass" && reward_ref) {
     // Has a ref: an unclaimed daily-giveaway pass still waiting to be claimed.
-    to = { kind: "phoenix_pass", ref: reward_ref, label: "", icon: <Feather className="h-3.5 w-3.5" />, text: "Claim your pass" };
+    to = {
+      kind: "phoenix_pass",
+      ref: reward_ref,
+      label: "",
+      icon: <Feather className="h-3.5 w-3.5" />,
+      text: "Claim your pass",
+    };
   } else if (reward_kind === "vip_key" && reward_ref) {
     // Legacy label for the Daily Key giveaway (unclaimed until acted on).
-    to = { kind: "daily_key", ref: reward_ref, label: "", icon: <Gift className="h-3.5 w-3.5" />, text: "Claim your key" };
+    to = {
+      kind: "daily_key",
+      ref: reward_ref,
+      label: "",
+      icon: <Gift className="h-3.5 w-3.5" />,
+      text: "Claim your key",
+    };
   }
 
   if (!to) return null;

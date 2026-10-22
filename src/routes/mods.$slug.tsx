@@ -1,7 +1,24 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, Check, Download, Shield, PlayCircle, Sparkles, Lock, ExternalLink, Loader2, X, Feather, Copy, CalendarDays, FileArchive, Gauge, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Download,
+  Shield,
+  PlayCircle,
+  Sparkles,
+  Lock,
+  ExternalLink,
+  Loader2,
+  X,
+  Feather,
+  Copy,
+  CalendarDays,
+  FileArchive,
+  Gauge,
+  ShieldCheck,
+} from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommentsPanel } from "@/components/CommentsPanel";
@@ -45,9 +62,14 @@ export const Route = createFileRoute("/mods/$slug")({
           { name: mod.name, path: `/mods/${mod.slug}` },
         ]),
         softwareAppJsonLd({
-          name: mod.name, slug: mod.slug, tagline: mod.tagline,
-          image: mod.image, rating: mod.baseRating,
-          ratingCount: mod.ratingCount, version: mod.version, updated: mod.updated,
+          name: mod.name,
+          slug: mod.slug,
+          tagline: mod.tagline,
+          image: mod.image,
+          rating: mod.baseRating,
+          ratingCount: mod.ratingCount,
+          version: mod.version,
+          updated: mod.updated,
         }),
       ],
     };
@@ -57,19 +79,29 @@ export const Route = createFileRoute("/mods/$slug")({
       <div className="py-20 text-center">
         <h1 className="font-display text-3xl font-bold">Mod not found</h1>
         <p className="mt-2 text-muted-foreground">It might have been renamed or removed.</p>
-        <Link to="/mods" className="mt-6 inline-block text-primary hover:underline">Back to all mods</Link>
+        <Link to="/mods" className="mt-6 inline-block text-primary hover:underline">
+          Back to all mods
+        </Link>
       </div>
     </PageShell>
   ),
   errorComponent: ({ error }) => (
-    <PageShell><div className="py-20 text-center text-sm text-muted-foreground">{error instanceof Error ? error.message : "Could not load this mod."}</div></PageShell>
+    <PageShell>
+      <div className="py-20 text-center text-sm text-muted-foreground">
+        {error instanceof Error ? error.message : "Could not load this mod."}
+      </div>
+    </PageShell>
   ),
   component: ModDetail,
 });
 
 function safeDecrypt(ct?: string | null): string {
   if (!ct) return "";
-  try { return Cipher.decrypt(ct) || ""; } catch { return ""; }
+  try {
+    return Cipher.decrypt(ct) || "";
+  } catch {
+    return "";
+  }
 }
 
 function ModDetail() {
@@ -101,7 +133,10 @@ function ModDetail() {
   const followUrl = safeDecrypt(ov?.follow_enc);
 
   const handleGet = () => {
-    if (!user) { navigate({ to: "/auth" }); return; }
+    if (!user) {
+      navigate({ to: "/auth" });
+      return;
+    }
     playClick();
     if (!hasDownload) {
       toast.error("No download ready for this mod yet", {
@@ -116,49 +151,103 @@ function ModDetail() {
 
   return (
     <PageShell>
-      <Link to="/mods" onMouseDown={playClick} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/mods"
+        onMouseDown={playClick}
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-4 w-4" /> Back to mods
       </Link>
 
       <article className="mt-6 grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:items-start">
         {/* Hero image with element halo */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           className="surface-l1 edge-light relative overflow-hidden rounded-2xl border"
           style={{ boxShadow: theme.glow }}
         >
-          <div className="absolute inset-0 z-10 opacity-40 mix-blend-overlay" style={{ background: theme.gradient }} />
-          <img src={mod.image} alt={`${blendedMod.name} Dynamons World build artwork`} width={1024} height={1024} decoding="async" sizes="(min-width: 1024px) 44vw, 100vw" className="relative aspect-square w-full object-cover" />
+          <div
+            className="absolute inset-0 z-10 opacity-40 mix-blend-overlay"
+            style={{ background: theme.gradient }}
+          />
+          <img
+            src={mod.image}
+            alt={`${blendedMod.name} Dynamons World build artwork`}
+            width={1024}
+            height={1024}
+            decoding="async"
+            sizes="(min-width: 1024px) 44vw, 100vw"
+            className="relative aspect-square w-full object-cover"
+          />
           <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-card to-transparent p-6">
-            <span className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-xs font-black uppercase tracking-[0.2em] ${theme.chip}`}>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-xs font-black uppercase tracking-[0.2em] ${theme.chip}`}
+            >
               <Sparkles className="h-3 w-3" /> {theme.label} element
             </span>
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
           <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Dynamons World · Mod APK
           </p>
-          <h1 className="mt-4 font-display text-4xl font-black uppercase leading-tight tracking-tight text-balance sm:text-5xl">{blendedMod.name}</h1>
-            <p className="mt-4 text-lg leading-relaxed text-muted-foreground text-pretty">{blendedMod.tagline} Review the feature list, latest version, and changelog before unlocking this edition.</p>
+          <h1 className="mt-4 font-display text-4xl font-black uppercase leading-tight tracking-tight text-balance sm:text-5xl">
+            {blendedMod.name}
+          </h1>
+          <p className="mt-4 text-lg leading-relaxed text-muted-foreground text-pretty">
+            {blendedMod.tagline} Review the feature list, latest version, and changelog before
+            unlocking this edition.
+          </p>
 
           {/* Tabs */}
-          <Tabs value={tab} onValueChange={(value) => { setTab(value as "overview" | "changelog"); playClick(); }}>
-            <TabsList aria-label="Build details" className="mt-6 border border-border bg-card text-xs font-bold">
-              <TabsTrigger value="overview" className="px-4 py-1.5 capitalize data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Overview</TabsTrigger>
-              <TabsTrigger value="changelog" className="px-4 py-1.5 capitalize data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Changelog</TabsTrigger>
+          <Tabs
+            value={tab}
+            onValueChange={(value) => {
+              setTab(value as "overview" | "changelog");
+              playClick();
+            }}
+          >
+            <TabsList
+              aria-label="Build details"
+              className="mt-6 border border-border bg-card text-xs font-bold"
+            >
+              <TabsTrigger
+                value="overview"
+                className="px-4 py-1.5 capitalize data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger
+                value="changelog"
+                className="px-4 py-1.5 capitalize data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                Changelog
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview">
               <div className="mt-5 rounded-2xl glass p-5">
-                <p className="text-sm leading-relaxed text-muted-foreground">{blendedMod.description}</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {blendedMod.description}
+                </p>
               </div>
               <ul className="mt-5 grid gap-2 sm:grid-cols-2">
                 {blendedMod.features.map((f) => (
-                  <li key={f} className="surface-l1 flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm">
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-primary/15 text-primary" aria-hidden="true">
+                  <li
+                    key={f}
+                    className="surface-l1 flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm"
+                  >
+                    <span
+                      className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-primary/15 text-primary"
+                      aria-hidden="true"
+                    >
                       <Check className="h-3.5 w-3.5" />
                     </span>
                     {f}
@@ -183,7 +272,8 @@ function ModDetail() {
             <LikeButton slug={mod.slug} />
             <FavoriteButton slug={mod.slug} />
             <Link
-              to="/disclaimer" onMouseDown={playClick}
+              to="/disclaimer"
+              onMouseDown={playClick}
               className="press inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-3 text-sm font-semibold transition-colors hover:border-primary/40"
             >
               <Shield className="h-4 w-4" /> Safety notes
@@ -194,43 +284,96 @@ function ModDetail() {
             <Stat label="Downloads" value={`${formatCount(blendedMod.downloads)}+`} />
             <Stat label="Version" value={blendedMod.version} />
             <Stat label="Size" value={blendedMod.size} />
-            <Stat label="Updated" value={new Date(blendedMod.updated).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} />
+            <Stat
+              label="Updated"
+              value={new Date(blendedMod.updated).toLocaleDateString(undefined, {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            />
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Build trust metadata">
-            <TrustSignal icon={<Gauge className="h-4 w-4" />} label="Build type" value="Fan-made edition" />
-            <TrustSignal icon={<CalendarDays className="h-4 w-4" />} label="Release" value={`Updated ${new Date(blendedMod.updated).toLocaleDateString(undefined, { month: "short", year: "numeric" })}`} />
-            <TrustSignal icon={<FileArchive className="h-4 w-4" />} label="Package" value={blendedMod.size} />
+            <TrustSignal
+              icon={<Gauge className="h-4 w-4" />}
+              label="Build type"
+              value="Fan-made edition"
+            />
+            <TrustSignal
+              icon={<CalendarDays className="h-4 w-4" />}
+              label="Release"
+              value={`Updated ${new Date(blendedMod.updated).toLocaleDateString(undefined, { month: "short", year: "numeric" })}`}
+            />
+            <TrustSignal
+              icon={<FileArchive className="h-4 w-4" />}
+              label="Package"
+              value={blendedMod.size}
+            />
           </div>
         </motion.div>
       </article>
 
-      <section aria-labelledby="safety-title" className="mt-12 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+      <section
+        aria-labelledby="safety-title"
+        className="mt-12 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]"
+      >
         <div className="material-l1 rounded-[var(--radius-surface)] p-5 sm:p-6">
           <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary" aria-hidden="true">
+            <span
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary"
+              aria-hidden="true"
+            >
               <ShieldCheck className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Decision notes</p>
-              <h2 id="safety-title" className="mt-1 font-display text-xl font-bold">Know what you are choosing</h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Review the feature list, version, package size, and changelog before starting the secure unlock flow. The page keeps the action clear without hiding the context around it.</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                Decision notes
+              </p>
+              <h2 id="safety-title" className="mt-1 font-display text-xl font-bold">
+                Know what you are choosing
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Review the feature list, version, package size, and changelog before starting the
+                secure unlock flow. The page keeps the action clear without hiding the context
+                around it.
+              </p>
             </div>
           </div>
           <ul className="mt-5 grid gap-2 sm:grid-cols-2">
-            <li className="flex items-start gap-2 rounded-xl border border-border bg-background/35 p-3 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" /> Confirm the version matches your intended release.</li>
-            <li className="flex items-start gap-2 rounded-xl border border-border bg-background/35 p-3 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" /> Read the changelog for the latest update notes.</li>
+            <li className="flex items-start gap-2 rounded-xl border border-border bg-background/35 p-3 text-sm text-muted-foreground">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" /> Confirm the version
+              matches your intended release.
+            </li>
+            <li className="flex items-start gap-2 rounded-xl border border-border bg-background/35 p-3 text-sm text-muted-foreground">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" /> Read the changelog for
+              the latest update notes.
+            </li>
           </ul>
         </div>
         <div className="material-l1 rounded-[var(--radius-surface)] p-5 sm:p-6">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Compatibility</p>
           <h2 className="mt-1 font-display text-xl font-bold">Release context</h2>
           <dl className="mt-5 space-y-3 text-sm">
-            <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-3"><dt className="text-muted-foreground">Game</dt><dd className="font-semibold">Dynamons World</dd></div>
-            <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-3"><dt className="text-muted-foreground">Element</dt><dd className={theme.text}>{theme.label}</dd></div>
-            <div className="flex items-center justify-between gap-4"><dt className="text-muted-foreground">Features</dt><dd className="font-semibold">{blendedMod.features.length} listed</dd></div>
+            <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-3">
+              <dt className="text-muted-foreground">Game</dt>
+              <dd className="font-semibold">Dynamons World</dd>
+            </div>
+            <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-3">
+              <dt className="text-muted-foreground">Element</dt>
+              <dd className={theme.text}>{theme.label}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-muted-foreground">Features</dt>
+              <dd className="font-semibold">{blendedMod.features.length} listed</dd>
+            </div>
           </dl>
-          <Link to="/disclaimer" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline"><Shield className="h-4 w-4" /> Read safety notes</Link>
+          <Link
+            to="/disclaimer"
+            className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline"
+          >
+            <Shield className="h-4 w-4" /> Read safety notes
+          </Link>
         </div>
       </section>
 
@@ -239,10 +382,15 @@ function ModDetail() {
         <div className="flex items-end justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-primary">Gameplay</p>
-            <h2 className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight">Watch the {theme.label} build in action</h2>
+            <h2 className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight">
+              Watch the {theme.label} build in action
+            </h2>
           </div>
         </div>
-        <div className="mt-5 overflow-hidden edge-light rounded-2xl glass" style={{ boxShadow: theme.glow }}>
+        <div
+          className="mt-5 overflow-hidden edge-light rounded-2xl glass"
+          style={{ boxShadow: theme.glow }}
+        >
           {blendedMod.youtubeId ? (
             <div className="relative aspect-video w-full">
               <iframe
@@ -256,14 +404,25 @@ function ModDetail() {
             </div>
           ) : (
             <div className="relative aspect-video w-full">
-              <img src={mod.image} alt="" decoding="async" sizes="(min-width: 1024px) 70vw, 100vw" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+              <img
+                src={mod.image}
+                alt=""
+                decoding="async"
+                sizes="(min-width: 1024px) 70vw, 100vw"
+                className="absolute inset-0 h-full w-full object-cover opacity-60"
+              />
               <div className="absolute inset-0 grid place-items-center bg-gradient-to-t from-background/90 to-background/30">
                 <div className="text-center">
-                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+                  <div
+                    className="mx-auto grid h-16 w-16 place-items-center rounded-full text-primary-foreground"
+                    style={{ background: "var(--gradient-primary)" }}
+                  >
                     <PlayCircle className="h-8 w-8" />
                   </div>
                   <p className="mt-4 font-display text-lg font-bold">Trailer dropping soon</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Subscribe on YouTube to be the first to watch.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Subscribe on YouTube to be the first to watch.
+                  </p>
                 </div>
               </div>
             </div>
@@ -271,35 +430,65 @@ function ModDetail() {
         </div>
       </section>
 
-      <CommentsPanel slug={mod.slug} combinedRating={blendedMod.baseRating} combinedCount={blendedMod.ratingCount} combinedLikes={ov?.seed_review_likes ?? 0} />
+      <CommentsPanel
+        slug={mod.slug}
+        combinedRating={blendedMod.baseRating}
+        combinedCount={blendedMod.ratingCount}
+        combinedLikes={ov?.seed_review_likes ?? 0}
+      />
 
       <section className="mt-16">
-        <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">More from the vault</h2>
+        <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">
+          More from the vault
+        </h2>
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {mods.filter((m) => m.slug !== mod.slug).slice(0, 3).map((m) => {
-            const t = elementTheme[m.element];
-            return (
-              <Link
-                key={m.slug} to="/mods/$slug" params={{ slug: m.slug }} onMouseDown={playClick}
-                className="group relative overflow-hidden rounded-2xl glass"
-                style={{ boxShadow: t.glow }}
-              >
-                <img src={m.image} alt={`${m.name} Dynamons World build artwork`} width={1024} height={1024} loading="lazy" decoding="async" sizes="(min-width: 1024px) 30vw, 100vw" className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-105" />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card to-transparent p-4">
-                  <p className="font-display text-sm font-bold">{m.name}</p>
-                  <p className="text-xs text-muted-foreground">v{m.version} · {t.label}</p>
-                </div>
-              </Link>
-            );
-          })}
+          {mods
+            .filter((m) => m.slug !== mod.slug)
+            .slice(0, 3)
+            .map((m) => {
+              const t = elementTheme[m.element];
+              return (
+                <Link
+                  key={m.slug}
+                  to="/mods/$slug"
+                  params={{ slug: m.slug }}
+                  onMouseDown={playClick}
+                  className="group relative overflow-hidden rounded-2xl glass"
+                  style={{ boxShadow: t.glow }}
+                >
+                  <img
+                    src={m.image}
+                    alt={`${m.name} Dynamons World build artwork`}
+                    width={1024}
+                    height={1024}
+                    loading="lazy"
+                    decoding="async"
+                    sizes="(min-width: 1024px) 30vw, 100vw"
+                    className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-105"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card to-transparent p-4">
+                    <p className="font-display text-sm font-bold">{m.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      v{m.version} · {t.label}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
         </div>
       </section>
 
       {chooseOpen && (
         <DownloadChoice
           modName={blendedMod.name}
-          onCompleteStep={() => { setChooseOpen(false); setGateOpen(true); }}
-          onUsePass={() => { setChooseOpen(false); setPassOpen(true); }}
+          onCompleteStep={() => {
+            setChooseOpen(false);
+            setGateOpen(true);
+          }}
+          onUsePass={() => {
+            setChooseOpen(false);
+            setPassOpen(true);
+          }}
           onClose={() => setChooseOpen(false)}
         />
       )}
@@ -308,7 +497,10 @@ function ModDetail() {
         <PhoenixPassModal
           modName={blendedMod.name}
           slug={mod.slug}
-          onNoPass={() => { setPassOpen(false); navigate({ to: "/rewards" }); }}
+          onNoPass={() => {
+            setPassOpen(false);
+            navigate({ to: "/rewards" });
+          }}
           onClose={() => setPassOpen(false)}
         />
       )}
@@ -326,11 +518,21 @@ function ModDetail() {
 }
 
 function FollowGate({
-  modName, slug, followUrl, onClose,
-}: { modName: string; slug: string; followUrl: string; onClose: () => void }) {
+  modName,
+  slug,
+  followUrl,
+  onClose,
+}: {
+  modName: string;
+  slug: string;
+  followUrl: string;
+  onClose: () => void;
+}) {
   const navigate = useNavigate();
   // If there's no follow link configured, skip straight to verifying.
-  const [step, setStep] = useState<"gate" | "verifying" | "error">(followUrl ? "gate" : "verifying");
+  const [step, setStep] = useState<"gate" | "verifying" | "error">(
+    followUrl ? "gate" : "verifying",
+  );
   const [waiting, setWaiting] = useState(false);
   const [errMsg, setErrMsg] = useState("");
   const started = useRef(false);
@@ -349,14 +551,17 @@ function FollowGate({
         p_slug: slug,
         p_fingerprint: fingerprint,
       });
-      if (error) throw new Error("We couldn’t reach the server. Check your internet and try again.");
+      if (error)
+        throw new Error("We couldn’t reach the server. Check your internet and try again.");
       const res = data as { ok: boolean; token?: string; error?: string } | null;
       if (!res || !res.ok || !res.token) {
         const map: Record<string, string> = {
           rate_limited: "You’ve tried a few times in a row. Please wait a minute, then try again.",
           no_link: "This mod doesn’t have a download ready yet. Please check back soon.",
         };
-        throw new Error(map[res?.error || ""] || "We couldn’t start the download. Please try again.");
+        throw new Error(
+          map[res?.error || ""] || "We couldn’t start the download. Please try again.",
+        );
       }
 
       try {
@@ -377,7 +582,10 @@ function FollowGate({
     window.open(followUrl, "_blank", "noopener,noreferrer");
     // Short delay so the follow feels earned, then verify server-side.
     setWaiting(true);
-    setTimeout(() => { setWaiting(false); void goToUnlock(); }, 4000);
+    setTimeout(() => {
+      setWaiting(false);
+      void goToUnlock();
+    }, 4000);
   };
 
   useEffect(() => {
@@ -391,17 +599,22 @@ function FollowGate({
   return (
     <div
       ref={dialogRef}
-      role="dialog" aria-modal="true" aria-label={`Download ${modName}`} tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Download ${modName}`}
+      tabIndex={-1}
       className="modal-frame overlay-scrim fixed inset-0 flex items-center justify-center"
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
         className="modal-panel overlay-surface relative w-full max-w-md rounded-[var(--radius-command)] border p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={onClose} aria-label="Close"
+          onClick={onClose}
+          aria-label="Close"
           className="absolute right-4 top-4 rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <X className="h-4 w-4" />
@@ -416,26 +629,42 @@ function FollowGate({
               One quick step first
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
-              Tap the button below and finish the short step that opens. Come back here when you’re done and your download for <span className="font-semibold text-foreground">{modName}</span> will unlock automatically.
+              Tap the button below and finish the short step that opens. Come back here when you’re
+              done and your download for{" "}
+              <span className="font-semibold text-foreground">{modName}</span> will unlock
+              automatically.
             </p>
             <button
-              onClick={handleFollow} disabled={waiting}
+              onClick={handleFollow}
+              disabled={waiting}
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
             >
-              {waiting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Checking…</>) : (<><ExternalLink className="h-4 w-4" /> Start the step</>)}
+              {waiting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Checking…
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="h-4 w-4" /> Start the step
+                </>
+              )}
             </button>
           </div>
         ) : step === "verifying" ? (
           <div className="text-center py-4">
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-            <p className="mt-4 text-sm text-muted-foreground">Starting your secure download session…</p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Starting your secure download session…
+            </p>
           </div>
         ) : (
           <div className="text-center">
             <h3 className="mt-1 font-display text-xl font-extrabold uppercase tracking-tight text-balance text-destructive">
               Couldn&apos;t start download
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">{errMsg}</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
+              {errMsg}
+            </p>
             <button
               onClick={() => setStep(followUrl ? "gate" : "verifying")}
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold transition hover:border-primary/40"
@@ -450,23 +679,34 @@ function FollowGate({
 }
 
 function ModalShell({
-  label, onClose, children,
-}: { label: string; onClose: () => void; children: ReactNode }) {
+  label,
+  onClose,
+  children,
+}: {
+  label: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
   const dialogRef = useDialogFocus(true, onClose);
   return (
     <div
       ref={dialogRef}
-      role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
+      tabIndex={-1}
       className="modal-frame fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
         className="modal-panel overlay-surface relative w-full max-w-md rounded-[var(--radius-command)] border p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={onClose} aria-label="Close"
+          onClick={onClose}
+          aria-label="Close"
           className="absolute right-4 top-4 rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <X className="h-4 w-4" />
@@ -478,8 +718,16 @@ function ModalShell({
 }
 
 function DownloadChoice({
-  modName, onCompleteStep, onUsePass, onClose,
-}: { modName: string; onCompleteStep: () => void; onUsePass: () => void; onClose: () => void }) {
+  modName,
+  onCompleteStep,
+  onUsePass,
+  onClose,
+}: {
+  modName: string;
+  onCompleteStep: () => void;
+  onUsePass: () => void;
+  onClose: () => void;
+}) {
   return (
     <ModalShell label={`Download ${modName}`} onClose={onClose}>
       <div className="text-center">
@@ -490,14 +738,17 @@ function DownloadChoice({
           Choose how to unlock
         </h3>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
-          Grab <span className="font-semibold text-foreground">{modName}</span> the free way, or skip
-          the line with a Phoenix Pass if you&apos;ve won one.
+          Grab <span className="font-semibold text-foreground">{modName}</span> the free way, or
+          skip the line with a Phoenix Pass if you&apos;ve won one.
         </p>
       </div>
 
       <div className="mt-6 grid gap-3">
         <button
-          onClick={() => { playClick(); onCompleteStep(); }}
+          onClick={() => {
+            playClick();
+            onCompleteStep();
+          }}
           className="press flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition hover:border-primary/40"
         >
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-muted text-foreground">
@@ -505,12 +756,17 @@ function DownloadChoice({
           </span>
           <span className="min-w-0">
             <span className="block text-sm font-bold">Complete this step</span>
-            <span className="block text-xs text-muted-foreground">Finish one quick step, then download. Always free.</span>
+            <span className="block text-xs text-muted-foreground">
+              Finish one quick step, then download. Always free.
+            </span>
           </span>
         </button>
 
         <button
-          onClick={() => { playClick(); onUsePass(); }}
+          onClick={() => {
+            playClick();
+            onUsePass();
+          }}
           className="press flex items-center gap-3 rounded-xl border border-amber-400/40 bg-gradient-to-br from-amber-500/10 to-orange-500/5 px-4 py-3.5 text-left transition hover:border-amber-400/70"
         >
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-amber-400/15 text-amber-300">
@@ -520,13 +776,16 @@ function DownloadChoice({
             <span className="flex items-center gap-1.5 text-sm font-bold">
               Use a Phoenix Pass <Sparkles className="h-3.5 w-3.5 text-amber-300" />
             </span>
-            <span className="block text-xs text-muted-foreground">Skip the step and go straight to the link.</span>
+            <span className="block text-xs text-muted-foreground">
+              Skip the step and go straight to the link.
+            </span>
           </span>
         </button>
       </div>
 
       <Link
-        to="/rewards" onMouseDown={playClick}
+        to="/rewards"
+        onMouseDown={playClick}
         className="mt-4 block text-center text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
       >
         What&apos;s a Phoenix Pass?
@@ -538,8 +797,16 @@ function DownloadChoice({
 type PassStep = "checking" | "confirm" | "redeeming" | "done" | "error";
 
 function PhoenixPassModal({
-  modName, slug, onNoPass, onClose,
-}: { modName: string; slug: string; onNoPass: () => void; onClose: () => void }) {
+  modName,
+  slug,
+  onNoPass,
+  onClose,
+}: {
+  modName: string;
+  slug: string;
+  onNoPass: () => void;
+  onClose: () => void;
+}) {
   const [step, setStep] = useState<PassStep>("checking");
   const [passId, setPassId] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
@@ -565,7 +832,10 @@ function PhoenixPassModal({
         if (error) throw new Error("check_failed");
         const rows = (data as Array<{ id: string; expires_at: string }> | null) || [];
         const pass = rows[0];
-        if (!pass) { onNoPass(); return; }
+        if (!pass) {
+          onNoPass();
+          return;
+        }
         setPassId(pass.id);
         setExpiresAt(pass.expires_at);
         setStep("confirm");
@@ -583,18 +853,28 @@ function PhoenixPassModal({
     try {
       const { data, error } = await rpc("redeem_phoenix_pass", { p_pass_id: passId, p_slug: slug });
       if (error) throw new Error("redeem_failed");
-      const res = data as { ok?: boolean; error?: string; link?: string; encrypted?: boolean } | null;
+      const res = data as {
+        ok?: boolean;
+        error?: string;
+        link?: string;
+        encrypted?: boolean;
+      } | null;
       if (!res || !res.ok || !res.link) {
         const map: Record<string, string> = {
           invalid_slug: "This mod can’t be unlocked with a pass right now.",
           no_link: "This mod doesn’t have a download ready yet.",
-          invalid_or_used_pass: "That pass is no longer valid — it may have expired or already been used.",
+          invalid_or_used_pass:
+            "That pass is no longer valid — it may have expired or already been used.",
         };
         throw new Error(map[res?.error || ""] || "We couldn’t redeem your pass. Please try again.");
       }
       let out = res.link;
       if (res.encrypted) {
-        try { out = Cipher.decrypt(res.link); } catch { throw new Error("We couldn’t read the download link. Please try again."); }
+        try {
+          out = Cipher.decrypt(res.link);
+        } catch {
+          throw new Error("We couldn’t read the download link. Please try again.");
+        }
       }
       if (!out) throw new Error("No download link available.");
       setLink(out);
@@ -607,7 +887,12 @@ function PhoenixPassModal({
   };
 
   const expiryLabel = expiresAt
-    ? new Date(expiresAt).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+    ? new Date(expiresAt).toLocaleString(undefined, {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
     : "";
 
   return (
@@ -626,12 +911,10 @@ function PhoenixPassModal({
             Spend your Phoenix Pass?
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
-            This unlocks <span className="font-semibold text-foreground">{modName}</span> instantly — no steps.
-            A pass is single-use and can only be spent once.
+            This unlocks <span className="font-semibold text-foreground">{modName}</span> instantly
+            — no steps. A pass is single-use and can only be spent once.
           </p>
-          {expiryLabel && (
-            <p className="mt-3 text-xs text-amber-300/90">Expires {expiryLabel}</p>
-          )}
+          {expiryLabel && <p className="mt-3 text-xs text-amber-300/90">Expires {expiryLabel}</p>}
           <button
             onClick={redeem}
             className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-amber-950 transition hover:brightness-110"
@@ -659,17 +942,25 @@ function PhoenixPassModal({
             Pass redeemed 🎉
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
-            Your download for <span className="font-semibold text-foreground">{modName}</span> is ready.
+            Your download for <span className="font-semibold text-foreground">{modName}</span> is
+            ready.
           </p>
           <a
-            href={link} target="_blank" rel="noopener noreferrer"
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
             onClick={playClick}
             className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground glow-primary transition hover:brightness-110"
           >
             <ExternalLink className="h-4 w-4" /> Open download link
           </a>
           <button
-            onClick={() => { navigator.clipboard?.writeText(link).then(() => toast.success("Link copied")).catch(() => {}); }}
+            onClick={() => {
+              navigator.clipboard
+                ?.writeText(link)
+                .then(() => toast.success("Link copied"))
+                .catch(() => {});
+            }}
             className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold transition hover:border-primary/40"
           >
             <Copy className="h-4 w-4" /> Copy link
@@ -696,9 +987,16 @@ function PhoenixPassModal({
 function TrustSignal({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="material-l1 flex min-w-0 items-center gap-3 rounded-xl p-3">
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary" aria-hidden="true">{icon}</span>
+      <span
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"
+        aria-hidden="true"
+      >
+        {icon}
+      </span>
       <div className="min-w-0">
-        <p className="truncate text-[0.65rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+        <p className="truncate text-[0.65rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+          {label}
+        </p>
         <p className="mt-0.5 truncate text-sm font-semibold">{value}</p>
       </div>
     </div>

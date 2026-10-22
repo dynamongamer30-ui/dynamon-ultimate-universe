@@ -20,7 +20,12 @@ type Ctx = {
   streak: StreakState;
   achievements: string[];
   refresh: () => Promise<void>;
-  award: (amount: number, label?: string, eventKey?: "rating" | "mod_like" | "favorite", targetKey?: string) => Promise<void>;
+  award: (
+    amount: number,
+    label?: string,
+    eventKey?: "rating" | "mod_like" | "favorite",
+    targetKey?: string,
+  ) => Promise<void>;
   checkIn: () => Promise<void>;
 };
 
@@ -41,7 +46,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     }
     const [{ data: x }, { data: s }, { data: a }] = await Promise.all([
       supabase.from("user_xp").select("xp, level").eq("user_id", user.id).maybeSingle(),
-      supabase.from("user_streaks").select("current_streak, longest_streak").eq("user_id", user.id).maybeSingle(),
+      supabase
+        .from("user_streaks")
+        .select("current_streak, longest_streak")
+        .eq("user_id", user.id)
+        .maybeSingle(),
       supabase.from("user_achievements").select("achievement_key").eq("user_id", user.id),
     ]);
     if (x) setXP({ xp: x.xp, level: x.level });
@@ -50,25 +59,40 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   // Fetch once per user change, not once per component mount.
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-  const award = useCallback(async (amount: number, label?: string, eventKey?: "rating" | "mod_like" | "favorite", targetKey?: string) => {
-    if (!user || !eventKey || !targetKey) return;
-    const { data, error } = await supabase.rpc("record_engagement", { _event_key: eventKey, _target_key: targetKey });
-    if (error) {
-      console.error("Failed to award XP:", error);
-      return;
-    }
-    const row = (data as { xp: number; level: number; leveled_up: boolean; awarded: boolean }[] | null)?.[0];
-    if (row) {
-      setXP({ xp: row.xp, level: row.level });
-      if (row.awarded && row.leveled_up) {
-        toast.success(`⚡ Level up — you're now Level ${row.level}!`);
-      } else if (row.awarded && label) {
-        toast(`+${amount} XP · ${label}`, { duration: 1500 });
+  const award = useCallback(
+    async (
+      amount: number,
+      label?: string,
+      eventKey?: "rating" | "mod_like" | "favorite",
+      targetKey?: string,
+    ) => {
+      if (!user || !eventKey || !targetKey) return;
+      const { data, error } = await supabase.rpc("record_engagement", {
+        _event_key: eventKey,
+        _target_key: targetKey,
+      });
+      if (error) {
+        console.error("Failed to award XP:", error);
+        return;
       }
-    }
-  }, [user]);
+      const row = (
+        data as { xp: number; level: number; leveled_up: boolean; awarded: boolean }[] | null
+      )?.[0];
+      if (row) {
+        setXP({ xp: row.xp, level: row.level });
+        if (row.awarded && row.leveled_up) {
+          toast.success(`⚡ Level up — you're now Level ${row.level}!`);
+        } else if (row.awarded && label) {
+          toast(`+${amount} XP · ${label}`, { duration: 1500 });
+        }
+      }
+    },
+    [user],
+  );
 
   const checkIn = useCallback(async () => {
     if (!user) return;
@@ -77,7 +101,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       console.error("Failed to update streak:", error);
       return;
     }
-    const row = (data as { current_streak: number; longest_streak: number; incremented: boolean }[] | null)?.[0];
+    const row = (
+      data as { current_streak: number; longest_streak: number; incremented: boolean }[] | null
+    )?.[0];
     if (row) {
       setStreak({ current: row.current_streak, longest: row.longest_streak });
     }

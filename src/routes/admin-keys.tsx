@@ -5,9 +5,27 @@ import { supabase } from "@/integrations/supabase/client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  KeyRound, Loader2, Sparkles, Trash2, Copy, Plus, RefreshCw, Search, Clock,
-  Ban, AlertTriangle, X, ShieldCheck, Smartphone, Lock, Unlock, ArrowUpCircle,
-  Settings2, UploadCloud, Save, Link2,
+  KeyRound,
+  Loader2,
+  Sparkles,
+  Trash2,
+  Copy,
+  Plus,
+  RefreshCw,
+  Search,
+  Clock,
+  Ban,
+  AlertTriangle,
+  X,
+  ShieldCheck,
+  Smartphone,
+  Lock,
+  Unlock,
+  ArrowUpCircle,
+  Settings2,
+  UploadCloud,
+  Save,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
@@ -17,18 +35,43 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  listKeys, revokeKey, unrevokeKey, deleteKey, extendKey,
-  getConfig, getConfigNode, setConfigNode, setMaintenance, setRateLimitEnabled, setKeyDurationHours, setIPWhitelist,
-  listGenerationLogs, createManualKey,
-  listActivatedUsers, listBannedDevices, banDevice, unbanDevice,
-  nowSeconds, getAppUpdate, setAppUpdate,
-  type ValidKey, type DgConfig, type GenerationLog,
-  type ActivatedUser, type BannedDevice, type AppUpdate,
+  listKeys,
+  revokeKey,
+  unrevokeKey,
+  deleteKey,
+  extendKey,
+  getConfig,
+  getConfigNode,
+  setConfigNode,
+  setMaintenance,
+  setRateLimitEnabled,
+  setKeyDurationHours,
+  setIPWhitelist,
+  listGenerationLogs,
+  createManualKey,
+  listActivatedUsers,
+  listBannedDevices,
+  banDevice,
+  unbanDevice,
+  nowSeconds,
+  getAppUpdate,
+  setAppUpdate,
+  type ValidKey,
+  type DgConfig,
+  type GenerationLog,
+  type ActivatedUser,
+  type BannedDevice,
+  type AppUpdate,
 } from "@/lib/dgData";
 
 export const Route = createFileRoute("/admin-keys")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Key System — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({
+    meta: [
+      { title: "Key System — Dynamon Universe" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: KeysAdminGate,
 });
 
@@ -55,7 +98,9 @@ function KeysAdmin() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold">Key System</h1>
-          <p className="text-sm text-muted-foreground">Keys, devices, DEX locks, themes and branding. Game changes apply on the next launch.</p>
+          <p className="text-sm text-muted-foreground">
+            Keys, devices, DEX locks, themes and branding. Game changes apply on the next launch.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="hidden text-xs text-muted-foreground sm:inline">{user?.email}</span>
@@ -64,10 +109,13 @@ function KeysAdmin() {
 
       <div className="mb-6 -mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="inline-flex min-w-full gap-1 rounded-full border border-border bg-card/60 p-1 text-xs font-semibold sm:min-w-0">
-          {(["keys","devices","dex","config","app"] as Tab[]).map((t) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`flex-1 whitespace-nowrap rounded-full px-3 py-2 capitalize transition-colors sm:flex-none sm:px-4 sm:py-1.5 ${tab===t ? "text-primary-foreground" : "text-muted-foreground"}`}
-              style={tab===t ? { background: "var(--gradient-primary)" } : undefined}>
+          {(["keys", "devices", "dex", "config", "app"] as Tab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 whitespace-nowrap rounded-full px-3 py-2 capitalize transition-colors sm:flex-none sm:px-4 sm:py-1.5 ${tab === t ? "text-primary-foreground" : "text-muted-foreground"}`}
+              style={tab === t ? { background: "var(--gradient-primary)" } : undefined}
+            >
               {t === "dex" ? "Royal Void DEX" : t}
             </button>
           ))}
@@ -90,19 +138,30 @@ function KeysPanel() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [clock, setClock] = useState(nowSeconds());
-  useEffect(() => {const timer = window.setInterval(() => setClock(nowSeconds()), 1000);return () => window.clearInterval(timer);}, []);
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(nowSeconds()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all"|"active"|"expired"|"revoked"|"activated">("all");
+  const [filter, setFilter] = useState<"all" | "active" | "expired" | "revoked" | "activated">(
+    "all",
+  );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const confirm = useConfirm();
 
   useEffect(() => {
-    const unsub = listKeys((list) => {
-      setLoadError("");
-      setKeys(list.sort((a, b) => b.date - a.date));
-      setLoading(false);
-    }, error => {setLoadError(error.message);setLoading(false);});
+    const unsub = listKeys(
+      (list) => {
+        setLoadError("");
+        setKeys(list.sort((a, b) => b.date - a.date));
+        setLoading(false);
+      },
+      (error) => {
+        setLoadError(error.message);
+        setLoading(false);
+      },
+    );
     return unsub;
   }, []);
 
@@ -110,24 +169,38 @@ function KeysPanel() {
     const now = clock;
     return {
       total: keys.length,
-      active: keys.filter(k => k.status === "active" && !isKeyExpired(k, now)).length,
-      expired: keys.filter(k => isKeyExpired(k, now)).length,
-      activated: keys.filter(k => k.activated).length,
-      revoked: keys.filter(k => k.status === "revoked").length,
+      active: keys.filter((k) => k.status === "active" && !isKeyExpired(k, now)).length,
+      expired: keys.filter((k) => isKeyExpired(k, now)).length,
+      activated: keys.filter((k) => k.activated).length,
+      revoked: keys.filter((k) => k.status === "revoked").length,
     };
   }, [keys, clock]);
 
   const filtered = useMemo(() => {
     const now = clock;
     const q = search.trim().toLowerCase();
-    return keys.filter(k => {
-      if (q && !(k.key.toLowerCase().includes(q) || k.fingerprint.toLowerCase().includes(q) || (k.device || "").toLowerCase().includes(q) || k.sourceIP.toLowerCase().includes(q))) return false;
+    return keys.filter((k) => {
+      if (
+        q &&
+        !(
+          k.key.toLowerCase().includes(q) ||
+          k.fingerprint.toLowerCase().includes(q) ||
+          (k.device || "").toLowerCase().includes(q) ||
+          k.sourceIP.toLowerCase().includes(q)
+        )
+      )
+        return false;
       switch (filter) {
-        case "active": return k.status === "active" && !isKeyExpired(k, now);
-        case "expired": return isKeyExpired(k, now);
-        case "revoked": return k.status === "revoked";
-        case "activated": return k.activated;
-        default: return true;
+        case "active":
+          return k.status === "active" && !isKeyExpired(k, now);
+        case "expired":
+          return isKeyExpired(k, now);
+        case "revoked":
+          return k.status === "revoked";
+        case "activated":
+          return k.activated;
+        default:
+          return true;
       }
     });
   }, [keys, search, filter, clock]);
@@ -135,7 +208,8 @@ function KeysPanel() {
   const toggle = (key: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
@@ -160,16 +234,24 @@ function KeysPanel() {
   const bulkRevoke = async () => {
     const targets = [...selected];
     if (!targets.length) return;
-    if (!(await confirm({
-      title: "Revoke selected keys",
-      description: `Revoke ${targets.length} selected key${targets.length > 1 ? "s" : ""}? Users on these keys lose access on their next check.`,
-      confirmText: "Revoke all",
-      danger: true,
-    }))) return;
+    if (
+      !(await confirm({
+        title: "Revoke selected keys",
+        description: `Revoke ${targets.length} selected key${targets.length > 1 ? "s" : ""}? Users on these keys lose access on their next check.`,
+        confirmText: "Revoke all",
+        danger: true,
+      }))
+    )
+      return;
     setBulkBusy(true);
     let ok = 0;
     for (const key of targets) {
-      try { await revokeKey(key); ok++; } catch { /* skip */ }
+      try {
+        await revokeKey(key);
+        ok++;
+      } catch {
+        /* skip */
+      }
     }
     setBulkBusy(false);
     clearSelection();
@@ -186,27 +268,43 @@ function KeysPanel() {
     setBulkBusy(true);
     let ok = 0;
     for (const key of targets) {
-      try { await extendKey(key, h); ok++; } catch { /* skip */ }
+      try {
+        await extendKey(key, h);
+        ok++;
+      } catch {
+        /* skip */
+      }
     }
     setBulkBusy(false);
     clearSelection();
     if (ok === targets.length) toast.success(`Extended ${ok} keys by +${h}h`);
-    else toast.error(`Extended ${ok}/${targets.length} keys. Lifetime keys need no extension; reload before retrying other keys.`);
+    else
+      toast.error(
+        `Extended ${ok}/${targets.length} keys. Lifetime keys need no extension; reload before retrying other keys.`,
+      );
   };
 
   const bulkDelete = async () => {
     const targets = [...selected];
     if (!targets.length) return;
-    if (!(await confirm({
-      title: "Delete selected keys",
-      description: `Permanently delete ${targets.length} selected key${targets.length > 1 ? "s" : ""}? This cannot be undone.`,
-      confirmText: "Delete all",
-      danger: true,
-    }))) return;
+    if (
+      !(await confirm({
+        title: "Delete selected keys",
+        description: `Permanently delete ${targets.length} selected key${targets.length > 1 ? "s" : ""}? This cannot be undone.`,
+        confirmText: "Delete all",
+        danger: true,
+      }))
+    )
+      return;
     setBulkBusy(true);
     let ok = 0;
     for (const key of targets) {
-      try { await deleteKey(key); ok++; } catch { /* skip */ }
+      try {
+        await deleteKey(key);
+        ok++;
+      } catch {
+        /* skip */
+      }
     }
     setBulkBusy(false);
     clearSelection();
@@ -216,13 +314,36 @@ function KeysPanel() {
 
   return (
     <div>
-      {loadError && <p role="alert" className="mb-4 rounded-xl border border-red-400/40 p-3 text-sm text-red-300">Could not refresh keys: {loadError}. Reload to retry; displayed data may be stale.</p>}
+      {loadError && (
+        <p
+          role="alert"
+          className="mb-4 rounded-xl border border-red-400/40 p-3 text-sm text-red-300"
+        >
+          Could not refresh keys: {loadError}. Reload to retry; displayed data may be stale.
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <StatTile label="Total" value={stats.total} icon={<KeyRound className="h-4 w-4" />} />
-        <StatTile label="Active" value={stats.active} icon={<ShieldCheck className="h-4 w-4 text-green-400" />} />
-        <StatTile label="Expired" value={stats.expired} icon={<Clock className="h-4 w-4 text-amber-400" />} />
-        <StatTile label="Activated" value={stats.activated} icon={<Sparkles className="h-4 w-4 text-primary" />} />
-        <StatTile label="Revoked" value={stats.revoked} icon={<Ban className="h-4 w-4 text-red-400" />} />
+        <StatTile
+          label="Active"
+          value={stats.active}
+          icon={<ShieldCheck className="h-4 w-4 text-green-400" />}
+        />
+        <StatTile
+          label="Expired"
+          value={stats.expired}
+          icon={<Clock className="h-4 w-4 text-amber-400" />}
+        />
+        <StatTile
+          label="Activated"
+          value={stats.activated}
+          icon={<Sparkles className="h-4 w-4 text-primary" />}
+        />
+        <StatTile
+          label="Revoked"
+          value={stats.revoked}
+          icon={<Ban className="h-4 w-4 text-red-400" />}
+        />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_320px]">
@@ -230,13 +351,21 @@ function KeysPanel() {
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search by key, fingerprint, IP" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+              <Input
+                placeholder="Search by key, fingerprint, IP"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
             </div>
             <div className="inline-flex rounded-full border border-border p-1 text-xs">
-              {(["all","active","expired","revoked","activated"] as const).map(f => (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={`rounded-full px-3 py-1 capitalize ${filter===f ? "text-primary-foreground" : "text-muted-foreground"}`}
-                  style={filter===f ? { background: "var(--gradient-primary)" } : undefined}>
+              {(["all", "active", "expired", "revoked", "activated"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`rounded-full px-3 py-1 capitalize ${filter === f ? "text-primary-foreground" : "text-muted-foreground"}`}
+                  style={filter === f ? { background: "var(--gradient-primary)" } : undefined}
+                >
                   {f}
                 </button>
               ))}
@@ -245,28 +374,45 @@ function KeysPanel() {
 
           {selected.size > 0 && (
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-2.5">
-              <span className="text-sm font-semibold text-foreground">{selected.size} selected</span>
+              <span className="text-sm font-semibold text-foreground">
+                {selected.size} selected
+              </span>
               <div className="flex-1" />
               <button
                 onClick={bulkExtend}
                 disabled={bulkBusy}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
               >
-                {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Clock className="h-3.5 w-3.5" />} Extend
+                {bulkBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Clock className="h-3.5 w-3.5" />
+                )}{" "}
+                Extend
               </button>
               <button
                 onClick={bulkRevoke}
                 disabled={bulkBusy}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-400/10 disabled:opacity-50"
               >
-                {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-3.5 w-3.5" />} Revoke
+                {bulkBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Ban className="h-3.5 w-3.5" />
+                )}{" "}
+                Revoke
               </button>
               <button
                 onClick={bulkDelete}
                 disabled={bulkBusy}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-400/10 disabled:opacity-50"
               >
-                {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Delete
+                {bulkBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}{" "}
+                Delete
               </button>
               <button
                 onClick={clearSelection}
@@ -279,54 +425,62 @@ function KeysPanel() {
           )}
 
           {loading ? (
-            <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
           ) : filtered.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted-foreground">No keys found.</p>
           ) : (
             <>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[600px] text-left text-sm">
-                <thead className="text-xs uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="py-2 pr-3">
-                      <input
-                        type="checkbox"
-                        checked={allFilteredSelected}
-                        onChange={toggleAll}
-                        className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
-                        aria-label="Select all"
-                      />
-                    </th>
-                    <th className="py-2 pr-3">Key</th>
-                    <th className="py-2 pr-3">Status</th>
-                    <th className="py-2 pr-3">Device</th>
-                    <th className="py-2 pr-3">Created</th>
-                    <th className="py-2 pr-3">Expires</th>
-                    <th className="py-2 pr-3">Source</th>
-                    <th className="py-2 pr-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(k => <KeyRow key={k.key} k={k} selected={selected.has(k.key)} onToggle={toggle} />)}
-                </tbody>
-              </table>
-            </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[600px] text-left text-sm">
+                  <thead className="text-xs uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="py-2 pr-3">
+                        <input
+                          type="checkbox"
+                          checked={allFilteredSelected}
+                          onChange={toggleAll}
+                          className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+                          aria-label="Select all"
+                        />
+                      </th>
+                      <th className="py-2 pr-3">Key</th>
+                      <th className="py-2 pr-3">Status</th>
+                      <th className="py-2 pr-3">Device</th>
+                      <th className="py-2 pr-3">Created</th>
+                      <th className="py-2 pr-3">Expires</th>
+                      <th className="py-2 pr-3">Source</th>
+                      <th className="py-2 pr-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((k) => (
+                      <KeyRow key={k.key} k={k} selected={selected.has(k.key)} onToggle={toggle} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-            <div className="space-y-2.5 md:hidden">
-              <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-background/40 px-3 py-2.5">
-                <input
-                  type="checkbox"
-                  checked={allFilteredSelected}
-                  onChange={toggleAll}
-                  className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
-                />
-                <span className="text-sm font-semibold text-foreground">
-                  {allFilteredSelected ? "Deselect all" : "Select all"}
-                  <span className="ml-1 font-normal text-muted-foreground">({filtered.length})</span>
-                </span>
-              </label>
-              {filtered.map(k => <KeyCard key={k.key} k={k} selected={selected.has(k.key)} onToggle={toggle} />)}
-            </div>
+              <div className="space-y-2.5 md:hidden">
+                <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-background/40 px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    onChange={toggleAll}
+                    className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+                  />
+                  <span className="text-sm font-semibold text-foreground">
+                    {allFilteredSelected ? "Deselect all" : "Select all"}
+                    <span className="ml-1 font-normal text-muted-foreground">
+                      ({filtered.length})
+                    </span>
+                  </span>
+                </label>
+                {filtered.map((k) => (
+                  <KeyCard key={k.key} k={k} selected={selected.has(k.key)} onToggle={toggle} />
+                ))}
+              </div>
             </>
           )}
         </div>
@@ -347,9 +501,14 @@ function useKeyActions(k: ValidKey) {
   };
   const doExtend = async (hours: number) => {
     setBusy(true);
-    try { await extendKey(k.key, hours); toast.success(`Extended +${hours}h`); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(false); }
+    try {
+      await extendKey(k.key, hours);
+      toast.success(`Extended +${hours}h`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
   const doExtendCustom = async () => {
     const v = window.prompt("Extend by how many hours?", "24");
@@ -360,31 +519,50 @@ function useKeyActions(k: ValidKey) {
   const doRevoke = async () => {
     setBusy(true);
     try {
-      if (k.status === "revoked") { await unrevokeKey(k.key); toast.success("Unrevoked"); }
-      else { await revokeKey(k.key); toast.success("Revoked"); }
-    } catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(false); }
+      if (k.status === "revoked") {
+        await unrevokeKey(k.key);
+        toast.success("Unrevoked");
+      } else {
+        await revokeKey(k.key);
+        toast.success("Revoked");
+      }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
   const doDelete = async () => {
-    if (!(await confirm({
-      title: "Delete key",
-      description: `Delete ${k.key}? This cannot be undone.`,
-      confirmText: "Delete",
-      danger: true,
-    }))) return;
+    if (
+      !(await confirm({
+        title: "Delete key",
+        description: `Delete ${k.key}? This cannot be undone.`,
+        confirmText: "Delete",
+        danger: true,
+      }))
+    )
+      return;
     setBusy(true);
-    try { await deleteKey(k.key); toast.success("Deleted"); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(false); }
+    try {
+      await deleteKey(k.key);
+      toast.success("Deleted");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const now = nowSeconds();
   const isExpired = isKeyExpired(k, now);
   const status: { label: string; cls: string } =
-    k.status === "revoked" ? { label: "Revoked", cls: "border-red-400/40 text-red-300" } :
-    isExpired ? { label: "Expired", cls: "border-amber-400/40 text-amber-300" } :
-    k.activated ? { label: "Activated", cls: "border-primary/40 text-primary" } :
-    { label: "Active", cls: "border-green-400/40 text-green-300" };
+    k.status === "revoked"
+      ? { label: "Revoked", cls: "border-red-400/40 text-red-300" }
+      : isExpired
+        ? { label: "Expired", cls: "border-amber-400/40 text-amber-300" }
+        : k.activated
+          ? { label: "Activated", cls: "border-primary/40 text-primary" }
+          : { label: "Active", cls: "border-green-400/40 text-green-300" };
 
   return { busy, copy, doExtend, doExtendCustom, doRevoke, doDelete, status };
 }
@@ -393,22 +571,50 @@ function KeyActionButtons({ k }: { k: ValidKey }) {
   const { busy, copy, doExtend, doExtendCustom, doRevoke, doDelete } = useKeyActions(k);
   return (
     <div className="flex flex-wrap justify-end gap-1">
-      <IconBtn title="Copy" onClick={copy}><Copy className="h-3.5 w-3.5" /></IconBtn>
-      <IconBtn title="+24h" disabled={busy} onClick={() => doExtend(24)}>+1d</IconBtn>
-      <IconBtn title="+7d" disabled={busy} onClick={() => doExtend(24*7)}>+7d</IconBtn>
-      <IconBtn title="Custom" disabled={busy} onClick={doExtendCustom}><Clock className="h-3.5 w-3.5" /></IconBtn>
-      <IconBtn title={k.status==="revoked"?"Unrevoke":"Revoke"} disabled={busy} onClick={doRevoke}>
-        {k.status==="revoked" ? <RefreshCw className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
+      <IconBtn title="Copy" onClick={copy}>
+        <Copy className="h-3.5 w-3.5" />
       </IconBtn>
-      <IconBtn title="Delete" disabled={busy} onClick={doDelete} danger><Trash2 className="h-3.5 w-3.5" /></IconBtn>
+      <IconBtn title="+24h" disabled={busy} onClick={() => doExtend(24)}>
+        +1d
+      </IconBtn>
+      <IconBtn title="+7d" disabled={busy} onClick={() => doExtend(24 * 7)}>
+        +7d
+      </IconBtn>
+      <IconBtn title="Custom" disabled={busy} onClick={doExtendCustom}>
+        <Clock className="h-3.5 w-3.5" />
+      </IconBtn>
+      <IconBtn
+        title={k.status === "revoked" ? "Unrevoke" : "Revoke"}
+        disabled={busy}
+        onClick={doRevoke}
+      >
+        {k.status === "revoked" ? (
+          <RefreshCw className="h-3.5 w-3.5" />
+        ) : (
+          <Ban className="h-3.5 w-3.5" />
+        )}
+      </IconBtn>
+      <IconBtn title="Delete" disabled={busy} onClick={doDelete} danger>
+        <Trash2 className="h-3.5 w-3.5" />
+      </IconBtn>
     </div>
   );
 }
 
-function KeyCard({ k, selected, onToggle }: { k: ValidKey; selected: boolean; onToggle: (key: string) => void }) {
+function KeyCard({
+  k,
+  selected,
+  onToggle,
+}: {
+  k: ValidKey;
+  selected: boolean;
+  onToggle: (key: string) => void;
+}) {
   const { copy, status } = useKeyActions(k);
   return (
-    <div className={`rounded-xl border p-3 ${selected ? "border-primary/40 bg-primary/5" : "border-border bg-background/40"}`}>
+    <div
+      className={`rounded-xl border p-3 ${selected ? "border-primary/40 bg-primary/5" : "border-border bg-background/40"}`}
+    >
       <div className="flex items-start gap-3">
         <input
           type="checkbox"
@@ -419,14 +625,24 @@ function KeyCard({ k, selected, onToggle }: { k: ValidKey; selected: boolean; on
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <button onDoubleClick={copy} className="truncate font-mono text-sm font-semibold text-primary" title="Double-click to copy">{k.key}</button>
-            <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${status.cls}`}>{status.label}</span>
+            <button
+              onDoubleClick={copy}
+              className="truncate font-mono text-sm font-semibold text-primary"
+              title="Double-click to copy"
+            >
+              {k.key}
+            </button>
+            <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${status.cls}`}>
+              {status.label}
+            </span>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span>Device: {k.device ? k.device.slice(0, 10) + "…" : "—"}</span>
             <span>Source: {k.source || "—"}</span>
             <span>Created: {k.date ? new Date(k.date * 1000).toLocaleDateString() : "—"}</span>
-            <span className="flex gap-1">Expires: <Countdown unixSec={k.expiry} pending={!isKeyBound(k)} /></span>
+            <span className="flex gap-1">
+              Expires: <Countdown unixSec={k.expiry} pending={!isKeyBound(k)} />
+            </span>
           </div>
           <div className="mt-3">
             <KeyActionButtons k={k} />
@@ -437,7 +653,15 @@ function KeyCard({ k, selected, onToggle }: { k: ValidKey; selected: boolean; on
   );
 }
 
-function KeyRow({ k, selected, onToggle }: { k: ValidKey; selected: boolean; onToggle: (key: string) => void }) {
+function KeyRow({
+  k,
+  selected,
+  onToggle,
+}: {
+  k: ValidKey;
+  selected: boolean;
+  onToggle: (key: string) => void;
+}) {
   const { copy, status } = useKeyActions(k);
   return (
     <tr className={`border-t border-border/40 ${selected ? "bg-primary/5" : ""}`}>
@@ -451,14 +675,28 @@ function KeyRow({ k, selected, onToggle }: { k: ValidKey; selected: boolean; onT
         />
       </td>
       <td className="py-3 pr-3">
-        <button onDoubleClick={copy} className="font-mono text-sm text-primary hover:underline" title="Double-click to copy">
+        <button
+          onDoubleClick={copy}
+          className="font-mono text-sm text-primary hover:underline"
+          title="Double-click to copy"
+        >
           {k.key}
         </button>
       </td>
-      <td className="py-3 pr-3"><span className={`rounded-full border px-2 py-0.5 text-xs ${status.cls}`}>{status.label}</span></td>
-      <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">{k.device ? k.device.slice(0, 12) + "…" : "—"}</td>
-      <td className="py-3 pr-3 text-xs text-muted-foreground">{k.date ? new Date(k.date * 1000).toLocaleString() : "—"}</td>
-      <td className="py-3 pr-3 text-xs"><Countdown unixSec={k.expiry} pending={!isKeyBound(k)} /></td>
+      <td className="py-3 pr-3">
+        <span className={`rounded-full border px-2 py-0.5 text-xs ${status.cls}`}>
+          {status.label}
+        </span>
+      </td>
+      <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">
+        {k.device ? k.device.slice(0, 12) + "…" : "—"}
+      </td>
+      <td className="py-3 pr-3 text-xs text-muted-foreground">
+        {k.date ? new Date(k.date * 1000).toLocaleString() : "—"}
+      </td>
+      <td className="py-3 pr-3 text-xs">
+        <Countdown unixSec={k.expiry} pending={!isKeyBound(k)} />
+      </td>
       <td className="py-3 pr-3 text-xs text-muted-foreground">{k.source || "—"}</td>
       <td className="py-3 pr-3">
         <KeyActionButtons k={k} />
@@ -467,12 +705,30 @@ function KeyRow({ k, selected, onToggle }: { k: ValidKey; selected: boolean; onT
   );
 }
 
-function IconBtn({ children, onClick, title, disabled, danger }: { children: React.ReactNode; onClick: () => void; title: string; disabled?: boolean; danger?: boolean }) {
+function IconBtn({
+  children,
+  onClick,
+  title,
+  disabled,
+  danger,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  title: string;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
   return (
-    <button onClick={onClick} disabled={disabled} title={title}
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
       className={`inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition disabled:opacity-50 ${
-        danger ? "border-red-400/30 text-red-300 hover:bg-red-400/10" : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary"
-      }`}>
+        danger
+          ? "border-red-400/30 text-red-300 hover:bg-red-400/10"
+          : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary"
+      }`}
+    >
       {children}
     </button>
   );
@@ -480,7 +736,10 @@ function IconBtn({ children, onClick, title, disabled, danger }: { children: Rea
 
 function Countdown({ unixSec, pending = false }: { unixSec: number; pending?: boolean }) {
   const [now, setNow] = useState(nowSeconds());
-  useEffect(() => { const i = setInterval(() => setNow(nowSeconds()), 1000); return () => clearInterval(i); }, []);
+  useEffect(() => {
+    const i = setInterval(() => setNow(nowSeconds()), 1000);
+    return () => clearInterval(i);
+  }, []);
   if (pending) return <span className="text-muted-foreground">Starts at first login</span>;
   if (unixSec === 0) return <span className="text-primary">Lifetime</span>;
   const diff = unixSec - now;
@@ -488,14 +747,23 @@ function Countdown({ unixSec, pending = false }: { unixSec: number; pending?: bo
   const h = Math.floor(diff / 3600);
   const m = Math.floor((diff % 3600) / 60);
   const s = diff % 60;
-  return <span className="font-mono text-xs text-foreground">{h}h {m}m {s}s</span>;
+  return (
+    <span className="font-mono text-xs text-foreground">
+      {h}h {m}m {s}s
+    </span>
+  );
 }
 
 function StatTile({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-border bg-card/60 p-3">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">{icon}{label}</div>
-      <div className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight">{value}</div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight">
+        {value}
+      </div>
     </div>
   );
 }
@@ -510,7 +778,10 @@ function ManualKeyForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const h = Number(hours);
-    if (!hours.trim() || !Number.isFinite(h) || h < 0 || h > 87600) { toast.error("Enter 0–87600 hours (0 = lifetime)"); return; }
+    if (!hours.trim() || !Number.isFinite(h) || h < 0 || h > 87600) {
+      toast.error("Enter 0–87600 hours (0 = lifetime)");
+      return;
+    }
     setBusy(true);
     try {
       const key = await createManualKey(prefix, h);
@@ -524,34 +795,71 @@ function ManualKeyForm() {
   };
 
   return (
-    <form onSubmit={submit} className="h-fit rounded-2xl border border-primary/20 bg-card/60 p-4 glow-primary">
+    <form
+      onSubmit={submit}
+      className="h-fit rounded-2xl border border-primary/20 bg-card/60 p-4 glow-primary"
+    >
       <h3 className="mb-3 flex items-center gap-2 font-display text-base font-bold">
         <Plus className="h-4 w-4 text-primary" /> Add manual key
       </h3>
-      <p className="mb-3 text-xs text-muted-foreground">Writes one ValidKeys entry. Users normally generate keys through the worker gate.</p>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Writes one ValidKeys entry. Users normally generate keys through the worker gate.
+      </p>
 
       <label className="text-xs text-muted-foreground">Prefix</label>
       <div className="mt-1 mb-3 inline-flex rounded-full border border-border p-1 text-xs">
-        {["DG","VIP"].map(p => (
-          <button type="button" key={p} onClick={() => setPrefix(p)}
-            className={`rounded-full px-3 py-1 ${prefix===p ? "text-primary-foreground" : "text-muted-foreground"}`}
-            style={prefix===p ? { background: "var(--gradient-primary)" } : undefined}>
+        {["DG", "VIP"].map((p) => (
+          <button
+            type="button"
+            key={p}
+            onClick={() => setPrefix(p)}
+            className={`rounded-full px-3 py-1 ${prefix === p ? "text-primary-foreground" : "text-muted-foreground"}`}
+            style={prefix === p ? { background: "var(--gradient-primary)" } : undefined}
+          >
             {p}
           </button>
         ))}
       </div>
 
       <label className="text-xs text-muted-foreground">Duration (hours; 0 = lifetime)</label>
-      <Input type="number" min="0" max="87600" value={hours} onChange={(e) => setHours(e.target.value)} className="mt-1 mb-3" />
+      <Input
+        type="number"
+        min="0"
+        max="87600"
+        value={hours}
+        onChange={(e) => setHours(e.target.value)}
+        className="mt-1 mb-3"
+      />
 
       <div className="mb-3 flex gap-1 text-xs">
-        {[{l:"1d",h:"24"},{l:"7d",h:"168"},{l:"30d",h:"720"},{l:"Lifetime",h:"0"}].map(p => (
-          <button type="button" key={p.l} onClick={() => setHours(p.h)} className="rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-primary">{p.l}</button>
+        {[
+          { l: "1d", h: "24" },
+          { l: "7d", h: "168" },
+          { l: "30d", h: "720" },
+          { l: "Lifetime", h: "0" },
+        ].map((p) => (
+          <button
+            type="button"
+            key={p.l}
+            onClick={() => setHours(p.h)}
+            className="rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-primary"
+          >
+            {p.l}
+          </button>
         ))}
       </div>
 
-      <Button type="submit" disabled={busy} className="w-full" style={{ background: "var(--gradient-primary)" }}>
-        {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+      <Button
+        type="submit"
+        disabled={busy}
+        className="w-full"
+        style={{ background: "var(--gradient-primary)" }}
+      >
+        {busy ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Sparkles className="mr-2 h-4 w-4" />
+        )}
         Generate & copy
       </Button>
     </form>
@@ -575,37 +883,62 @@ function DevicesPanel() {
       const [users, bans] = await Promise.all([listActivatedUsers(), listBannedDevices()]);
       setRows(users.sort((a, b) => Number(b.lastLogin ?? 0) - Number(a.lastLogin ?? 0)));
       setBanned(new Set(bans.map((b) => b.fingerprint)));
-    } catch (e) { toast.error((e as Error).message); }
-    finally { setLoading(false); }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
-  useEffect(() => { void reload(); }, []);
+  useEffect(() => {
+    void reload();
+  }, []);
 
   const doLock = async (fp: string) => {
     setBusy(fp);
-    try { await banDevice(fp, "locked from devices panel"); toast.success("Device banned"); await reload(); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(""); }
+    try {
+      await banDevice(fp, "locked from devices panel");
+      toast.success("Device banned");
+      await reload();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy("");
+    }
   };
   const doUnlock = async (fp: string) => {
     setBusy(fp);
-    try { await unbanDevice(fp); toast.success("Device unbanned"); await reload(); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(""); }
+    try {
+      await unbanDevice(fp);
+      toast.success("Device unbanned");
+      await reload();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy("");
+    }
   };
 
   const q = search.trim().toLowerCase();
   const filtered = q
-    ? rows.filter((r) => r.fingerprint.toLowerCase().includes(q) || String(r.Key ?? r.key ?? "").toLowerCase().includes(q))
+    ? rows.filter(
+        (r) =>
+          r.fingerprint.toLowerCase().includes(q) ||
+          String(r.Key ?? r.key ?? "")
+            .toLowerCase()
+            .includes(q),
+      )
     : rows;
 
   const toggle = (fp: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(fp)) next.delete(fp); else next.add(fp);
+      if (next.has(fp)) next.delete(fp);
+      else next.add(fp);
       return next;
     });
   };
-  const allFilteredSelected = filtered.length > 0 && filtered.every((r) => selected.has(r.fingerprint));
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((r) => selected.has(r.fingerprint));
   const toggleAll = () => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -619,16 +952,24 @@ function DevicesPanel() {
   const bulkBan = async () => {
     const targets = [...selected];
     if (!targets.length) return;
-    if (!(await confirm({
-      title: "Ban selected devices",
-      description: `Ban ${targets.length} device${targets.length > 1 ? "s" : ""}? They lose access immediately.`,
-      confirmText: "Ban all",
-      danger: true,
-    }))) return;
+    if (
+      !(await confirm({
+        title: "Ban selected devices",
+        description: `Ban ${targets.length} device${targets.length > 1 ? "s" : ""}? They lose access immediately.`,
+        confirmText: "Ban all",
+        danger: true,
+      }))
+    )
+      return;
     setBulkBusy(true);
     let ok = 0;
     for (const fp of targets) {
-      try { await banDevice(fp, "bulk ban from devices panel"); ok++; } catch { /* skip */ }
+      try {
+        await banDevice(fp, "bulk ban from devices panel");
+        ok++;
+      } catch {
+        /* skip */
+      }
     }
     setBulkBusy(false);
     clearSelection();
@@ -639,15 +980,23 @@ function DevicesPanel() {
   const bulkUnban = async () => {
     const targets = [...selected];
     if (!targets.length) return;
-    if (!(await confirm({
-      title: "Unban selected devices",
-      description: `Unban ${targets.length} device${targets.length > 1 ? "s" : ""}?`,
-      confirmText: "Unban all",
-    }))) return;
+    if (
+      !(await confirm({
+        title: "Unban selected devices",
+        description: `Unban ${targets.length} device${targets.length > 1 ? "s" : ""}?`,
+        confirmText: "Unban all",
+      }))
+    )
+      return;
     setBulkBusy(true);
     let ok = 0;
     for (const fp of targets) {
-      try { await unbanDevice(fp); ok++; } catch { /* skip */ }
+      try {
+        await unbanDevice(fp);
+        ok++;
+      } catch {
+        /* skip */
+      }
     }
     setBulkBusy(false);
     clearSelection();
@@ -661,16 +1010,33 @@ function DevicesPanel() {
   return (
     <div>
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-3">
-        <StatTile label="Total devices" value={rows.length} icon={<Smartphone className="h-4 w-4 text-primary" />} />
-        <StatTile label="Banned" value={bannedCount} icon={<Lock className="h-4 w-4 text-red-400" />} />
-        <StatTile label="Unbanned" value={unbannedCount} icon={<Unlock className="h-4 w-4 text-green-400" />} />
+        <StatTile
+          label="Total devices"
+          value={rows.length}
+          icon={<Smartphone className="h-4 w-4 text-primary" />}
+        />
+        <StatTile
+          label="Banned"
+          value={bannedCount}
+          icon={<Lock className="h-4 w-4 text-red-400" />}
+        />
+        <StatTile
+          label="Unbanned"
+          value={unbannedCount}
+          icon={<Unlock className="h-4 w-4 text-green-400" />}
+        />
       </div>
 
       <div className="mt-6 rounded-2xl border border-border bg-card/60 p-4">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search by device or key" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Input
+              placeholder="Search by device or key"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
           <Button variant="outline" size="sm" onClick={reload} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -681,122 +1047,208 @@ function DevicesPanel() {
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-2.5">
             <span className="text-sm font-semibold text-foreground">{selected.size} selected</span>
             <div className="flex-1" />
-            <button onClick={bulkBan} disabled={bulkBusy}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-400/10 disabled:opacity-50">
-              {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />} Ban
+            <button
+              onClick={bulkBan}
+              disabled={bulkBusy}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-400/10 disabled:opacity-50"
+            >
+              {bulkBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Lock className="h-3.5 w-3.5" />
+              )}{" "}
+              Ban
             </button>
-            <button onClick={bulkUnban} disabled={bulkBusy}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-green-400/40 px-3 py-1.5 text-xs font-semibold text-green-300 hover:bg-green-400/10 disabled:opacity-50">
-              {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlock className="h-3.5 w-3.5" />} Unban
+            <button
+              onClick={bulkUnban}
+              disabled={bulkBusy}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-green-400/40 px-3 py-1.5 text-xs font-semibold text-green-300 hover:bg-green-400/10 disabled:opacity-50"
+            >
+              {bulkBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Unlock className="h-3.5 w-3.5" />
+              )}{" "}
+              Unban
             </button>
-            <button onClick={clearSelection} disabled={bulkBusy}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-white/5 disabled:opacity-50">
+            <button
+              onClick={clearSelection}
+              disabled={bulkBusy}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-white/5 disabled:opacity-50"
+            >
               Clear
             </button>
           </div>
         )}
 
         {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
         ) : filtered.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">No activated devices yet.</p>
+          <p className="py-12 text-center text-sm text-muted-foreground">
+            No activated devices yet.
+          </p>
         ) : (
           <>
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[600px] text-left text-sm">
-              <thead className="text-xs uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="py-2 pr-3">
-                    <input type="checkbox" checked={allFilteredSelected} onChange={toggleAll}
-                      className="h-4 w-4 cursor-pointer accent-[var(--primary)]" aria-label="Select all devices" />
-                  </th>
-                  <th className="py-2 pr-3">Device</th>
-                  <th className="py-2 pr-3">Key</th>
-                  <th className="py-2 pr-3">Last login</th>
-                  <th className="py-2 pr-3">State</th>
-                  <th className="py-2 pr-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => {
-                  const isLocked = banned.has(r.fingerprint);
-                  const last = Number(r.lastLogin ?? 0);
-                  return (
-                    <tr key={r.fingerprint} className={`border-t border-border/40 ${selected.has(r.fingerprint) ? "bg-primary/5" : ""}`}>
-                      <td className="py-3 pr-3">
-                        <input type="checkbox" checked={selected.has(r.fingerprint)} onChange={() => toggle(r.fingerprint)}
-                          className="h-4 w-4 cursor-pointer accent-[var(--primary)]" aria-label={`Select ${r.fingerprint}`} />
-                      </td>
-                      <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">{r.fingerprint.slice(0, 16)}…</td>
-                      <td className="py-3 pr-3 font-mono text-xs text-primary">{String(r.Key ?? r.key ?? "—")}</td>
-                      <td className="py-3 pr-3 text-xs text-muted-foreground">{last ? new Date(last).toLocaleString() : "—"}</td>
-                      <td className="py-3 pr-3">
-                        <span className={`rounded-full border px-2 py-0.5 text-xs ${isLocked ? "border-red-400/40 text-red-300" : "border-green-400/40 text-green-300"}`}>
-                          {isLocked ? "Banned" : "Active"}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-3">
-                        <div className="flex justify-end gap-1">
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[600px] text-left text-sm">
+                <thead className="text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="py-2 pr-3">
+                      <input
+                        type="checkbox"
+                        checked={allFilteredSelected}
+                        onChange={toggleAll}
+                        className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+                        aria-label="Select all devices"
+                      />
+                    </th>
+                    <th className="py-2 pr-3">Device</th>
+                    <th className="py-2 pr-3">Key</th>
+                    <th className="py-2 pr-3">Last login</th>
+                    <th className="py-2 pr-3">State</th>
+                    <th className="py-2 pr-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r) => {
+                    const isLocked = banned.has(r.fingerprint);
+                    const last = Number(r.lastLogin ?? 0);
+                    return (
+                      <tr
+                        key={r.fingerprint}
+                        className={`border-t border-border/40 ${selected.has(r.fingerprint) ? "bg-primary/5" : ""}`}
+                      >
+                        <td className="py-3 pr-3">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(r.fingerprint)}
+                            onChange={() => toggle(r.fingerprint)}
+                            className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+                            aria-label={`Select ${r.fingerprint}`}
+                          />
+                        </td>
+                        <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">
+                          {r.fingerprint.slice(0, 16)}…
+                        </td>
+                        <td className="py-3 pr-3 font-mono text-xs text-primary">
+                          {String(r.Key ?? r.key ?? "—")}
+                        </td>
+                        <td className="py-3 pr-3 text-xs text-muted-foreground">
+                          {last ? new Date(last).toLocaleString() : "—"}
+                        </td>
+                        <td className="py-3 pr-3">
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-xs ${isLocked ? "border-red-400/40 text-red-300" : "border-green-400/40 text-green-300"}`}
+                          >
+                            {isLocked ? "Banned" : "Active"}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-3">
+                          <div className="flex justify-end gap-1">
+                            {isLocked ? (
+                              <IconBtn
+                                title="Unban"
+                                disabled={busy === r.fingerprint}
+                                onClick={() => doUnlock(r.fingerprint)}
+                              >
+                                <Unlock className="h-3.5 w-3.5" />
+                              </IconBtn>
+                            ) : (
+                              <IconBtn
+                                title="Ban"
+                                disabled={busy === r.fingerprint}
+                                onClick={() => doLock(r.fingerprint)}
+                                danger
+                              >
+                                <Lock className="h-3.5 w-3.5" />
+                              </IconBtn>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-2.5 md:hidden">
+              <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-background/40 px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={toggleAll}
+                  className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+                />
+                <span className="text-sm font-semibold text-foreground">
+                  {allFilteredSelected ? "Deselect all" : "Select all"}
+                  <span className="ml-1 font-normal text-muted-foreground">
+                    ({filtered.length})
+                  </span>
+                </span>
+              </label>
+              {filtered.map((r) => {
+                const isLocked = banned.has(r.fingerprint);
+                const last = Number(r.lastLogin ?? 0);
+                const isSel = selected.has(r.fingerprint);
+                return (
+                  <div
+                    key={r.fingerprint}
+                    className={`rounded-xl border p-3 ${isSel ? "border-primary/40 bg-primary/5" : "border-border bg-background/40"}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSel}
+                        onChange={() => toggle(r.fingerprint)}
+                        className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-[var(--primary)]"
+                        aria-label={`Select ${r.fingerprint}`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate font-mono text-xs text-primary">
+                            {String(r.Key ?? r.key ?? "—")}
+                          </span>
+                          <span
+                            className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${isLocked ? "border-red-400/40 text-red-300" : "border-green-400/40 text-green-300"}`}
+                          >
+                            {isLocked ? "Banned" : "Active"}
+                          </span>
+                        </div>
+                        <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                          <div className="truncate font-mono">
+                            Device: {r.fingerprint.slice(0, 20)}…
+                          </div>
+                          <div>Last login: {last ? new Date(last).toLocaleString() : "—"}</div>
+                        </div>
+                        <div className="mt-3 flex justify-end">
                           {isLocked ? (
-                            <IconBtn title="Unban" disabled={busy === r.fingerprint} onClick={() => doUnlock(r.fingerprint)}><Unlock className="h-3.5 w-3.5" /></IconBtn>
+                            <IconBtn
+                              title="Unban"
+                              disabled={busy === r.fingerprint}
+                              onClick={() => doUnlock(r.fingerprint)}
+                            >
+                              <Unlock className="h-3.5 w-3.5" /> Unban
+                            </IconBtn>
                           ) : (
-                            <IconBtn title="Ban" disabled={busy === r.fingerprint} onClick={() => doLock(r.fingerprint)} danger><Lock className="h-3.5 w-3.5" /></IconBtn>
+                            <IconBtn
+                              title="Ban"
+                              disabled={busy === r.fingerprint}
+                              onClick={() => doLock(r.fingerprint)}
+                              danger
+                            >
+                              <Lock className="h-3.5 w-3.5" /> Ban
+                            </IconBtn>
                           )}
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="space-y-2.5 md:hidden">
-            <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-background/40 px-3 py-2.5">
-              <input
-                type="checkbox"
-                checked={allFilteredSelected}
-                onChange={toggleAll}
-                className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
-              />
-              <span className="text-sm font-semibold text-foreground">
-                {allFilteredSelected ? "Deselect all" : "Select all"}
-                <span className="ml-1 font-normal text-muted-foreground">({filtered.length})</span>
-              </span>
-            </label>
-            {filtered.map((r) => {
-              const isLocked = banned.has(r.fingerprint);
-              const last = Number(r.lastLogin ?? 0);
-              const isSel = selected.has(r.fingerprint);
-              return (
-                <div key={r.fingerprint} className={`rounded-xl border p-3 ${isSel ? "border-primary/40 bg-primary/5" : "border-border bg-background/40"}`}>
-                  <div className="flex items-start gap-3">
-                    <input type="checkbox" checked={isSel} onChange={() => toggle(r.fingerprint)}
-                      className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-[var(--primary)]" aria-label={`Select ${r.fingerprint}`} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate font-mono text-xs text-primary">{String(r.Key ?? r.key ?? "—")}</span>
-                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${isLocked ? "border-red-400/40 text-red-300" : "border-green-400/40 text-green-300"}`}>
-                          {isLocked ? "Banned" : "Active"}
-                        </span>
-                      </div>
-                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                        <div className="truncate font-mono">Device: {r.fingerprint.slice(0, 20)}…</div>
-                        <div>Last login: {last ? new Date(last).toLocaleString() : "—"}</div>
-                      </div>
-                      <div className="mt-3 flex justify-end">
-                        {isLocked ? (
-                          <IconBtn title="Unban" disabled={busy === r.fingerprint} onClick={() => doUnlock(r.fingerprint)}><Unlock className="h-3.5 w-3.5" /> Unban</IconBtn>
-                        ) : (
-                          <IconBtn title="Ban" disabled={busy === r.fingerprint} onClick={() => doLock(r.fingerprint)} danger><Lock className="h-3.5 w-3.5" /> Ban</IconBtn>
-                        )}
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           </>
         )}
       </div>
@@ -815,29 +1267,53 @@ function LocksPanel() {
 
   const reload = async () => {
     setLoading(true);
-    try { setRows((await listBannedDevices()).sort((a, b) => b.time - a.time)); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setLoading(false); }
+    try {
+      setRows((await listBannedDevices()).sort((a, b) => b.time - a.time));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
-  useEffect(() => { void reload(); }, []);
+  useEffect(() => {
+    void reload();
+  }, []);
 
   const doAdd = async () => {
     const fp = newFp.trim();
     if (!fp) return toast.error("Enter a device fingerprint");
     setBusy("add");
-    try { await banDevice(fp, reason.trim() || "manual lock"); toast.success("Device locked"); setNewFp(""); setReason(""); await reload(); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(""); }
+    try {
+      await banDevice(fp, reason.trim() || "manual lock");
+      toast.success("Device locked");
+      setNewFp("");
+      setReason("");
+      await reload();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy("");
+    }
   };
   const doUnlock = async (fp: string) => {
     setBusy(fp);
-    try { await unbanDevice(fp); toast.success("Device unlocked"); await reload(); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(""); }
+    try {
+      await unbanDevice(fp);
+      toast.success("Device unlocked");
+      await reload();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy("");
+    }
   };
 
   const q = search.trim().toLowerCase();
-  const filtered = q ? rows.filter((r) => r.fingerprint.toLowerCase().includes(q) || r.reason.toLowerCase().includes(q)) : rows;
+  const filtered = q
+    ? rows.filter(
+        (r) => r.fingerprint.toLowerCase().includes(q) || r.reason.toLowerCase().includes(q),
+      )
+    : rows;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
@@ -845,7 +1321,12 @@ function LocksPanel() {
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search locked devices" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Input
+              placeholder="Search locked devices"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
           <Button variant="outline" size="sm" onClick={reload} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -853,7 +1334,9 @@ function LocksPanel() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
         ) : filtered.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">No locked devices.</p>
         ) : (
@@ -870,12 +1353,22 @@ function LocksPanel() {
               <tbody>
                 {filtered.map((r) => (
                   <tr key={r.fingerprint} className="border-t border-border/40">
-                    <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">{r.fingerprint.slice(0, 16)}…</td>
+                    <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">
+                      {r.fingerprint.slice(0, 16)}…
+                    </td>
                     <td className="py-3 pr-3 text-xs">{r.reason || "—"}</td>
-                    <td className="py-3 pr-3 text-xs text-muted-foreground">{r.time ? new Date(r.time * 1000).toLocaleString() : "—"}</td>
+                    <td className="py-3 pr-3 text-xs text-muted-foreground">
+                      {r.time ? new Date(r.time * 1000).toLocaleString() : "—"}
+                    </td>
                     <td className="py-3 pr-3">
                       <div className="flex justify-end gap-1">
-                        <IconBtn title="Unlock" disabled={busy === r.fingerprint} onClick={() => doUnlock(r.fingerprint)}><Unlock className="h-3.5 w-3.5" /></IconBtn>
+                        <IconBtn
+                          title="Unlock"
+                          disabled={busy === r.fingerprint}
+                          onClick={() => doUnlock(r.fingerprint)}
+                        >
+                          <Unlock className="h-3.5 w-3.5" />
+                        </IconBtn>
                       </div>
                     </td>
                   </tr>
@@ -890,13 +1383,35 @@ function LocksPanel() {
         <h3 className="mb-3 flex items-center gap-2 font-display text-base font-bold">
           <Lock className="h-4 w-4 text-red-400" /> Lock a device
         </h3>
-        <p className="mb-3 text-xs text-muted-foreground">Manually block a device fingerprint. The license worker rejects locked devices at its next server access (ban checks may be cached for 60 seconds).</p>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Manually block a device fingerprint. The license worker rejects locked devices at its next
+          server access (ban checks may be cached for 60 seconds).
+        </p>
         <label className="text-xs text-muted-foreground">Device fingerprint</label>
-        <Input value={newFp} onChange={(e) => setNewFp(e.target.value)} placeholder="paste fingerprint" className="mt-1 mb-3 font-mono text-xs" />
+        <Input
+          value={newFp}
+          onChange={(e) => setNewFp(e.target.value)}
+          placeholder="paste fingerprint"
+          className="mt-1 mb-3 font-mono text-xs"
+        />
         <label className="text-xs text-muted-foreground">Reason (optional)</label>
-        <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="abuse / sharing / …" className="mt-1 mb-3" />
-        <Button onClick={doAdd} disabled={busy === "add"} className="w-full" style={{ background: "var(--gradient-primary)" }}>
-          {busy === "add" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
+        <Input
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="abuse / sharing / …"
+          className="mt-1 mb-3"
+        />
+        <Button
+          onClick={doAdd}
+          disabled={busy === "add"}
+          className="w-full"
+          style={{ background: "var(--gradient-primary)" }}
+        >
+          {busy === "add" ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Lock className="mr-2 h-4 w-4" />
+          )}
           Lock device
         </Button>
       </div>
@@ -918,56 +1433,96 @@ function ConfigPanel() {
     setLoading(true);
     try {
       const [c, u] = await Promise.all([getConfig(), getAppUpdate()]);
-      setCfg(c); setHours(String(c.KeyDurationHours)); setUpd(u);
+      setCfg(c);
+      setHours(String(c.KeyDurationHours));
+      setUpd(u);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setLoading(false);
     }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setLoading(false); }
   };
-  useEffect(() => { reload(); }, []);
+  useEffect(() => {
+    reload();
+  }, []);
 
   const saveUpdate = async () => {
     if (!upd) return;
     setBusy(true);
-    try { await setAppUpdate(upd); toast.success("Update settings saved"); await reload(); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(false); }
+    try {
+      await setAppUpdate(upd);
+      toast.success("Update settings saved");
+      await reload();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
   const setU = <K extends keyof AppUpdate>(k: K, v: AppUpdate[K]) =>
     setUpd((p) => (p ? { ...p, [k]: v } : p));
 
   if (loading || !cfg) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>;
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+      </div>
+    );
   }
 
   const toggleMaintenance = async () => {
     setBusy(true);
-    try { await setMaintenance(!cfg.Maintenance); toast.success(cfg.Maintenance ? "Maintenance OFF" : "Maintenance ON"); await reload(); }
-    finally { setBusy(false); }
+    try {
+      await setMaintenance(!cfg.Maintenance);
+      toast.success(cfg.Maintenance ? "Maintenance OFF" : "Maintenance ON");
+      await reload();
+    } finally {
+      setBusy(false);
+    }
   };
   const toggleRate = async () => {
     setBusy(true);
-    try { await setRateLimitEnabled(!cfg.RateLimit.enabled); toast.success("Updated"); await reload(); }
-    finally { setBusy(false); }
+    try {
+      await setRateLimitEnabled(!cfg.RateLimit.enabled);
+      toast.success("Updated");
+      await reload();
+    } finally {
+      setBusy(false);
+    }
   };
   const saveHours = async () => {
     const n = Number(hours);
     if (!Number.isFinite(n) || n < 1) return toast.error("Invalid hours");
     setBusy(true);
-    try { await setKeyDurationHours(n); toast.success("Saved"); await reload(); }
-    finally { setBusy(false); }
+    try {
+      await setKeyDurationHours(n);
+      toast.success("Saved");
+      await reload();
+    } finally {
+      setBusy(false);
+    }
   };
   const addIP = async () => {
     const ip = newIP.trim();
     if (!ip) return;
     if (cfg.IPWhitelist.includes(ip)) return toast.error("Already in list");
     setBusy(true);
-    try { await setIPWhitelist([...cfg.IPWhitelist, ip]); setNewIP(""); await reload(); }
-    finally { setBusy(false); }
+    try {
+      await setIPWhitelist([...cfg.IPWhitelist, ip]);
+      setNewIP("");
+      await reload();
+    } finally {
+      setBusy(false);
+    }
   };
   const removeIP = async (ip: string) => {
     setBusy(true);
-    try { await setIPWhitelist(cfg.IPWhitelist.filter(x => x !== ip)); await reload(); }
-    finally { setBusy(false); }
+    try {
+      await setIPWhitelist(cfg.IPWhitelist.filter((x) => x !== ip));
+      await reload();
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -975,33 +1530,73 @@ function ConfigPanel() {
       <div className="rounded-2xl border border-border bg-card/60 p-5">
         <h3 className="mb-4 font-display text-lg font-bold">Switches</h3>
 
-        <Toggle label="Maintenance mode" desc="Blocks /generate-key with 503." on={cfg.Maintenance} onClick={toggleMaintenance} disabled={busy} warn />
+        <Toggle
+          label="Maintenance mode"
+          desc="Blocks /generate-key with 503."
+          on={cfg.Maintenance}
+          onClick={toggleMaintenance}
+          disabled={busy}
+          warn
+        />
         <div className="my-3 h-px bg-border/50" />
-        <Toggle label="Rate limiting" desc="Throttle key generation per IP." on={cfg.RateLimit.enabled} onClick={toggleRate} disabled={busy} />
+        <Toggle
+          label="Rate limiting"
+          desc="Throttle key generation per IP."
+          on={cfg.RateLimit.enabled}
+          onClick={toggleRate}
+          disabled={busy}
+        />
 
         <div className="my-5 h-px bg-border/50" />
 
         <label className="text-sm font-semibold">Key duration (hours)</label>
-        <p className="mb-2 text-xs text-muted-foreground">Default lifetime for newly generated keys.</p>
+        <p className="mb-2 text-xs text-muted-foreground">
+          Default lifetime for newly generated keys.
+        </p>
         <div className="flex gap-2">
           <Input type="number" min="1" value={hours} onChange={(e) => setHours(e.target.value)} />
-          <Button onClick={saveHours} disabled={busy} style={{ background: "var(--gradient-primary)" }}>Save</Button>
+          <Button
+            onClick={saveHours}
+            disabled={busy}
+            style={{ background: "var(--gradient-primary)" }}
+          >
+            Save
+          </Button>
         </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-card/60 p-5">
         <h3 className="mb-1 font-display text-lg font-bold">IP whitelist</h3>
-        <p className="mb-4 text-xs text-muted-foreground">IPs bypass rate limits. Empty = no whitelist.</p>
+        <p className="mb-4 text-xs text-muted-foreground">
+          IPs bypass rate limits. Empty = no whitelist.
+        </p>
         <div className="flex gap-2">
-          <Input placeholder="1.2.3.4" value={newIP} onChange={(e) => setNewIP(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addIP()} />
-          <Button onClick={addIP} disabled={busy}><Plus className="h-4 w-4" /></Button>
+          <Input
+            placeholder="1.2.3.4"
+            value={newIP}
+            onChange={(e) => setNewIP(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addIP()}
+          />
+          <Button onClick={addIP} disabled={busy}>
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
         <ul className="mt-4 space-y-1.5">
-          {cfg.IPWhitelist.length === 0 && <li className="text-xs text-muted-foreground">No IPs whitelisted.</li>}
-          {cfg.IPWhitelist.map(ip => (
-            <li key={ip} className="flex items-center justify-between rounded-md border border-border px-3 py-1.5 text-sm">
+          {cfg.IPWhitelist.length === 0 && (
+            <li className="text-xs text-muted-foreground">No IPs whitelisted.</li>
+          )}
+          {cfg.IPWhitelist.map((ip) => (
+            <li
+              key={ip}
+              className="flex items-center justify-between rounded-md border border-border px-3 py-1.5 text-sm"
+            >
               <span className="font-mono">{ip}</span>
-              <button onClick={() => removeIP(ip)} className="text-muted-foreground hover:text-red-400"><X className="h-4 w-4" /></button>
+              <button
+                onClick={() => removeIP(ip)}
+                className="text-muted-foreground hover:text-red-400"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </li>
           ))}
         </ul>
@@ -1025,17 +1620,33 @@ function ConfigPanel() {
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Labeled label="Target version code">
-              <Input type="number" min="0" value={String(upd.VersionCode)}
-                onChange={(e) => setU("VersionCode", parseInt(e.target.value) || 0)} />
+              <Input
+                type="number"
+                min="0"
+                value={String(upd.VersionCode)}
+                onChange={(e) => setU("VersionCode", parseInt(e.target.value) || 0)}
+              />
             </Labeled>
             <Labeled label="Version name">
-              <Input value={upd.VersionName} onChange={(e) => setU("VersionName", e.target.value)} placeholder="1.12.58" />
+              <Input
+                value={upd.VersionName}
+                onChange={(e) => setU("VersionName", e.target.value)}
+                placeholder="1.12.58"
+              />
             </Labeled>
             <Labeled label="Dialog title">
-              <Input value={upd.Title} onChange={(e) => setU("Title", e.target.value)} placeholder="Update Available" />
+              <Input
+                value={upd.Title}
+                onChange={(e) => setU("Title", e.target.value)}
+                placeholder="Update Available"
+              />
             </Labeled>
             <Labeled label="Dialog subtitle">
-              <Input value={upd.Subtitle} onChange={(e) => setU("Subtitle", e.target.value)} placeholder="v4.5 • Critical Patch" />
+              <Input
+                value={upd.Subtitle}
+                onChange={(e) => setU("Subtitle", e.target.value)}
+                placeholder="v4.5 • Critical Patch"
+              />
             </Labeled>
           </div>
 
@@ -1053,15 +1664,27 @@ function ConfigPanel() {
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Labeled label="Update URL">
-              <Input value={upd.UpdateUrl} onChange={(e) => setU("UpdateUrl", e.target.value)} placeholder="https://..." />
+              <Input
+                value={upd.UpdateUrl}
+                onChange={(e) => setU("UpdateUrl", e.target.value)}
+                placeholder="https://..."
+              />
             </Labeled>
             <Labeled label="Button text">
-              <Input value={upd.BtnText} onChange={(e) => setU("BtnText", e.target.value)} placeholder="UPDATE" />
+              <Input
+                value={upd.BtnText}
+                onChange={(e) => setU("BtnText", e.target.value)}
+                placeholder="UPDATE"
+              />
             </Labeled>
           </div>
 
           <div className="mt-5 flex justify-end">
-            <Button onClick={saveUpdate} disabled={busy} style={{ background: "var(--gradient-primary)" }}>
+            <Button
+              onClick={saveUpdate}
+              disabled={busy}
+              style={{ background: "var(--gradient-primary)" }}
+            >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save update settings"}
             </Button>
           </div>
@@ -1074,13 +1697,29 @@ function ConfigPanel() {
 function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
       {children}
     </label>
   );
 }
 
-function Toggle({ label, desc, on, onClick, disabled, warn }: { label: string; desc: string; on: boolean; onClick: () => void; disabled?: boolean; warn?: boolean }) {
+function Toggle({
+  label,
+  desc,
+  on,
+  onClick,
+  disabled,
+  warn,
+}: {
+  label: string;
+  desc: string;
+  on: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  warn?: boolean;
+}) {
   return (
     <div className="flex items-start justify-between gap-3">
       <div>
@@ -1090,9 +1729,14 @@ function Toggle({ label, desc, on, onClick, disabled, warn }: { label: string; d
         </div>
         <p className="text-xs text-muted-foreground">{desc}</p>
       </div>
-      <button onClick={onClick} disabled={disabled}
-        className={`relative h-6 w-11 rounded-full transition ${on ? "bg-primary" : "bg-muted"} disabled:opacity-50`}>
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${on ? "left-5" : "left-0.5"}`} />
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`relative h-6 w-11 rounded-full transition ${on ? "bg-primary" : "bg-muted"} disabled:opacity-50`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${on ? "left-5" : "left-0.5"}`}
+        />
       </button>
     </div>
   );
@@ -1107,15 +1751,26 @@ function LogsPanel() {
 
   const reload = async () => {
     setLoading(true);
-    try { setLogs(await listGenerationLogs(200)); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setLoading(false); }
+    try {
+      setLogs(await listGenerationLogs(200));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
-  useEffect(() => { reload(); }, []);
+  useEffect(() => {
+    reload();
+  }, []);
 
   const q = search.trim().toLowerCase();
   const filtered = q
-    ? logs.filter(l => l.key.toLowerCase().includes(q) || l.ip.toLowerCase().includes(q) || l.fingerprint.toLowerCase().includes(q))
+    ? logs.filter(
+        (l) =>
+          l.key.toLowerCase().includes(q) ||
+          l.ip.toLowerCase().includes(q) ||
+          l.fingerprint.toLowerCase().includes(q),
+      )
     : logs;
 
   return (
@@ -1123,31 +1778,51 @@ function LogsPanel() {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search key / IP / fingerprint" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input
+            placeholder="Search key / IP / fingerprint"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
         </div>
         <Button variant="outline" size="sm" onClick={reload} disabled={loading}>
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+          {loading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-2 h-4 w-4" />
+          )}
           Refresh
         </Button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        </div>
       ) : filtered.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">No logs.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px] text-left text-sm">
             <thead className="text-xs uppercase tracking-wider text-muted-foreground">
-              <tr><th className="py-2 pr-3">When</th><th className="py-2 pr-3">Key</th><th className="py-2 pr-3">IP</th><th className="py-2 pr-3">Fingerprint</th></tr>
+              <tr>
+                <th className="py-2 pr-3">When</th>
+                <th className="py-2 pr-3">Key</th>
+                <th className="py-2 pr-3">IP</th>
+                <th className="py-2 pr-3">Fingerprint</th>
+              </tr>
             </thead>
             <tbody>
-              {filtered.map(l => (
+              {filtered.map((l) => (
                 <tr key={l.id} className="border-t border-border/40">
-                  <td className="py-2 pr-3 text-xs text-muted-foreground">{l.time ? new Date(l.time * 1000).toLocaleString() : "—"}</td>
+                  <td className="py-2 pr-3 text-xs text-muted-foreground">
+                    {l.time ? new Date(l.time * 1000).toLocaleString() : "—"}
+                  </td>
                   <td className="py-2 pr-3 font-mono text-primary">{l.key}</td>
                   <td className="py-2 pr-3 font-mono text-xs">{l.ip || "—"}</td>
-                  <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">{l.fingerprint ? l.fingerprint.slice(0,16)+"…" : "—"}</td>
+                  <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">
+                    {l.fingerprint ? l.fingerprint.slice(0, 16) + "…" : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1162,17 +1837,30 @@ function LogsPanel() {
 // App tab — legacy login dialog + links + API. DEX controls use the DEX tab.
 // · Payload upload. Supabase-backed via dgData config nodes. Mobile-friendly.
 // ============================================================
-const AX_INPUT = "w-full rounded-lg bg-background/70 border border-border px-3 py-2 text-sm outline-none focus:border-primary";
-const AX_BTN = "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-primary-foreground";
-const AX_GHOST = "inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:border-primary";
+const AX_INPUT =
+  "w-full rounded-lg bg-background/70 border border-border px-3 py-2 text-sm outline-none focus:border-primary";
+const AX_BTN =
+  "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-primary-foreground";
+const AX_GHOST =
+  "inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:border-primary";
 const AX_CARD = "rounded-2xl border border-border bg-card/60 backdrop-blur p-4 sm:p-5 space-y-4";
 const AX_HEAD = "flex items-center gap-2 text-base sm:text-lg font-semibold text-primary";
 
-function AxField(props: { label: string; value: string; onChange: (s: string) => void; placeholder?: string }) {
+function AxField(props: {
+  label: string;
+  value: string;
+  onChange: (s: string) => void;
+  placeholder?: string;
+}) {
   return (
     <label className="block space-y-1">
       <span className="text-xs text-muted-foreground">{props.label}</span>
-      <input className={AX_INPUT} value={props.value || ""} placeholder={props.placeholder} onChange={(e) => props.onChange(e.target.value)} />
+      <input
+        className={AX_INPUT}
+        value={props.value || ""}
+        placeholder={props.placeholder}
+        onChange={(e) => props.onChange(e.target.value)}
+      />
     </label>
   );
 }
@@ -1203,15 +1891,32 @@ function AxAppConfig() {
     (async () => {
       try {
         const [t, s, tu, tx, lk, ap] = await Promise.all([
-          getConfigNode<string>("Title"), getConfigNode<string>("Subtitle"), getConfigNode<string>("TutorialUrl"),
-          getConfigNode<Record<string, string>>("Texts"), getConfigNode<Record<string, string>>("Links"), getConfigNode<Record<string, string>>("Api"),
+          getConfigNode<string>("Title"),
+          getConfigNode<string>("Subtitle"),
+          getConfigNode<string>("TutorialUrl"),
+          getConfigNode<Record<string, string>>("Texts"),
+          getConfigNode<Record<string, string>>("Links"),
+          getConfigNode<Record<string, string>>("Api"),
         ]);
         if (!alive) return;
-        setTitle(t || ""); setSubtitle(s || ""); setTutorial(tu || "");
-        setTexts(tx || {}); setLinks(lk || {}); setApi(ap || {});
-      } catch (err) { if (alive) {setFailed(true);toast.error(String(err));} } finally { if (alive) setLoading(false); }
+        setTitle(t || "");
+        setSubtitle(s || "");
+        setTutorial(tu || "");
+        setTexts(tx || {});
+        setLinks(lk || {});
+        setApi(ap || {});
+      } catch (err) {
+        if (alive) {
+          setFailed(true);
+          toast.error(String(err));
+        }
+      } finally {
+        if (alive) setLoading(false);
+      }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const link = (k: string) => links[k] || "";
@@ -1223,46 +1928,120 @@ function AxAppConfig() {
     setBusy(true);
     try {
       await Promise.all([
-        setConfigNode("Title", title), setConfigNode("Subtitle", subtitle), setConfigNode("TutorialUrl", tutorial),
-        setConfigNode("Texts", texts), setConfigNode("Links", links), setConfigNode("Api", api),
+        setConfigNode("Title", title),
+        setConfigNode("Subtitle", subtitle),
+        setConfigNode("TutorialUrl", tutorial),
+        setConfigNode("Texts", texts),
+        setConfigNode("Links", links),
+        setConfigNode("Api", api),
       ]);
       toast.success("App config saved");
-    } catch (err) { toast.error(String(err)); } finally { setBusy(false); }
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
-  if (loading) return <div className={AX_CARD}><div className={AX_HEAD}><Settings2 className="h-5 w-5" /> App Config</div><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>;
+  if (loading)
+    return (
+      <div className={AX_CARD}>
+        <div className={AX_HEAD}>
+          <Settings2 className="h-5 w-5" /> App Config
+        </div>
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+      </div>
+    );
 
   if (failed) return <p role="alert">Could not load app settings. Reload before editing.</p>;
 
   return (
     <div className={AX_CARD}>
-      <div className={AX_HEAD}><Settings2 className="h-5 w-5" /> App Config <span className="text-xs sm:text-sm text-muted-foreground">(in-app dialog)</span></div>
+      <div className={AX_HEAD}>
+        <Settings2 className="h-5 w-5" /> App Config{" "}
+        <span className="text-xs sm:text-sm text-muted-foreground">(in-app dialog)</span>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <AxField label="Dialog Title" value={title} onChange={setTitle} />
         <AxField label="Dialog Subtitle" value={subtitle} onChange={setSubtitle} />
-        <AxField label="Tutorial URL" value={tutorial} onChange={setTutorial} placeholder="https://..." />
-        <AxField label="Get-Key Button Text" value={texts.BtnKey || ""} onChange={(v) => setText("BtnKey", v)} />
-        <AxField label="Tutorial Button Text" value={texts.BtnTutorial || ""} onChange={(v) => setText("BtnTutorial", v)} />
+        <AxField
+          label="Tutorial URL"
+          value={tutorial}
+          onChange={setTutorial}
+          placeholder="https://..."
+        />
+        <AxField
+          label="Get-Key Button Text"
+          value={texts.BtnKey || ""}
+          onChange={(v) => setText("BtnKey", v)}
+        />
+        <AxField
+          label="Tutorial Button Text"
+          value={texts.BtnTutorial || ""}
+          onChange={(v) => setText("BtnTutorial", v)}
+        />
       </div>
-      <div className="flex items-center gap-2 pt-2 text-xs font-semibold text-primary/80"><Link2 className="h-4 w-4" /> App Links</div>
+      <div className="flex items-center gap-2 pt-2 text-xs font-semibold text-primary/80">
+        <Link2 className="h-4 w-4" /> App Links
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <AxField label="Get Key" value={link("GetKey")} onChange={(v) => setLink("GetKey", v)} placeholder="https://..." />
-        <AxField label="Admin (Telegram)" value={link("Admin")} onChange={(v) => setLink("Admin", v)} />
+        <AxField
+          label="Get Key"
+          value={link("GetKey")}
+          onChange={(v) => setLink("GetKey", v)}
+          placeholder="https://..."
+        />
+        <AxField
+          label="Admin (Telegram)"
+          value={link("Admin")}
+          onChange={(v) => setLink("Admin", v)}
+        />
         <AxField label="Info Link" value={link("Info")} onChange={(v) => setLink("Info", v)} />
-        <AxField label="Info Text" value={link("InfoText")} onChange={(v) => setLink("InfoText", v)} />
-        <AxField label="Instagram" value={link("Instagram")} onChange={(v) => setLink("Instagram", v)} />
-        <AxField label="Telegram" value={link("Telegram")} onChange={(v) => setLink("Telegram", v)} />
+        <AxField
+          label="Info Text"
+          value={link("InfoText")}
+          onChange={(v) => setLink("InfoText", v)}
+        />
+        <AxField
+          label="Instagram"
+          value={link("Instagram")}
+          onChange={(v) => setLink("Instagram", v)}
+        />
+        <AxField
+          label="Telegram"
+          value={link("Telegram")}
+          onChange={(v) => setLink("Telegram", v)}
+        />
         <AxField label="YouTube" value={link("Youtube")} onChange={(v) => setLink("Youtube", v)} />
-        <AxField label="WhatsApp" value={link("Whatsapp")} onChange={(v) => setLink("Whatsapp", v)} />
+        <AxField
+          label="WhatsApp"
+          value={link("Whatsapp")}
+          onChange={(v) => setLink("Whatsapp", v)}
+        />
       </div>
       <div className="pt-2 text-xs font-semibold text-primary/80">Generator API</div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <AxField label="API Base URL" value={api.BaseUrl || ""} onChange={(v) => setApiF("BaseUrl", v)} />
+        <AxField
+          label="API Base URL"
+          value={api.BaseUrl || ""}
+          onChange={(v) => setApiF("BaseUrl", v)}
+        />
         <AxField label="API Token" value={api.Token || ""} onChange={(v) => setApiF("Token", v)} />
-        <AxField label="Dest Base" value={api.DestBase || ""} onChange={(v) => setApiF("DestBase", v)} />
+        <AxField
+          label="Dest Base"
+          value={api.DestBase || ""}
+          onChange={(v) => setApiF("DestBase", v)}
+        />
       </div>
-      <button type="button" className={AX_BTN} style={{ background: "var(--gradient-primary)" }} disabled={busy} onClick={save}>
-        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save App Config
+      <button
+        type="button"
+        className={AX_BTN}
+        style={{ background: "var(--gradient-primary)" }}
+        disabled={busy}
+        onClick={save}
+      >
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save
+        App Config
       </button>
     </div>
   );
@@ -1275,26 +2054,43 @@ function AxPayload() {
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
-    try { setUrl(localStorage.getItem("dg_worker_url") || ""); setKey(localStorage.getItem("dg_admin_key") || ""); } catch (err) { /* no localStorage during SSR */ }
+    try {
+      setUrl(localStorage.getItem("dg_worker_url") || "");
+      setKey(localStorage.getItem("dg_admin_key") || "");
+    } catch (err) {
+      /* no localStorage during SSR */
+    }
   }, []);
   const saveCfg = () => {
-    try { localStorage.setItem("dg_worker_url", url.trim()); localStorage.setItem("dg_admin_key", key.trim()); toast.success("Worker settings saved"); }
-    catch (err) { toast.error(String(err)); }
+    try {
+      localStorage.setItem("dg_worker_url", url.trim());
+      localStorage.setItem("dg_admin_key", key.trim());
+      toast.success("Worker settings saved");
+    } catch (err) {
+      toast.error(String(err));
+    }
   };
   const onFile = async (file: File) => {
     setBusy(true);
     try {
       if (!url || !key) throw new Error("Set Worker URL + Admin key first");
       const payload = JSON.parse(await file.text());
-      const need = ["build","ct_b64","iv_b64","sig_b64","key_b64","ct_sha"];
-      for (const fld of need) if (!(fld in payload)) throw new Error("payload JSON missing field: " + fld);
+      const need = ["build", "ct_b64", "iv_b64", "sig_b64", "key_b64", "ct_sha"];
+      for (const fld of need)
+        if (!(fld in payload)) throw new Error("payload JSON missing field: " + fld);
       const res = await fetch(url.replace(/\/+$/, "") + "/admin/upload-payload", {
-        method: "POST", headers: { "Content-Type": "application/json", "X-Admin": key }, body: JSON.stringify(payload),
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin": key },
+        body: JSON.stringify(payload),
       });
       const txt = await res.text();
       if (!res.ok) throw new Error("upload failed (" + res.status + "): " + txt);
       toast.success("Payload uploaded");
-    } catch (err) { toast.error(String(err)); } finally { setBusy(false); }
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setBusy(false);
+    }
   };
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files && e.target.files[0];
@@ -1303,20 +2099,49 @@ function AxPayload() {
   };
   return (
     <div className={AX_CARD}>
-      <div className={AX_HEAD}><UploadCloud className="h-5 w-5" /> Payload Upload</div>
+      <div className={AX_HEAD}>
+        <UploadCloud className="h-5 w-5" /> Payload Upload
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <AxField label="DG Worker URL" value={url} onChange={setUrl} placeholder="https://dg.xxx.workers.dev" />
+        <AxField
+          label="DG Worker URL"
+          value={url}
+          onChange={setUrl}
+          placeholder="https://dg.xxx.workers.dev"
+        />
         <AxField label="Admin Key (X-Admin)" value={key} onChange={setKey} />
       </div>
       <div className="flex flex-wrap gap-3">
-        <button type="button" className={AX_GHOST} onClick={saveCfg}><Save className="h-4 w-4" /> Save worker settings</button>
-        <button type="button" className={AX_BTN} style={{ background: "var(--gradient-primary)" }} disabled={busy} onClick={() => { if (fileRef.current) fileRef.current.click(); }}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />} Upload payload.json
+        <button type="button" className={AX_GHOST} onClick={saveCfg}>
+          <Save className="h-4 w-4" /> Save worker settings
         </button>
-        <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onChange} />
+        <button
+          type="button"
+          className={AX_BTN}
+          style={{ background: "var(--gradient-primary)" }}
+          disabled={busy}
+          onClick={() => {
+            if (fileRef.current) fileRef.current.click();
+          }}
+        >
+          {busy ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <UploadCloud className="h-4 w-4" />
+          )}{" "}
+          Upload payload.json
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={onChange}
+        />
       </div>
-      <p className="text-xs text-muted-foreground">JSON must contain: build, ct_b64, iv_b64, sig_b64, key_b64, ct_sha</p>
+      <p className="text-xs text-muted-foreground">
+        JSON must contain: build, ct_b64, iv_b64, sig_b64, key_b64, ct_sha
+      </p>
     </div>
   );
 }
-

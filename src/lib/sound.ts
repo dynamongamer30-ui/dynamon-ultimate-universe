@@ -24,7 +24,9 @@ export function getFeedbackPreference(): FeedbackPreference {
 }
 
 function prefersReducedMotion() {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return (
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
 }
 
 function canPlaySound() {
@@ -40,7 +42,8 @@ function getCtx() {
   if (!canPlaySound() || typeof window === "undefined") return null;
   if (!ctx) {
     try {
-      const AudioContextCtor = window.AudioContext ||
+      const AudioContextCtor =
+        window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioContextCtor) return null;
       ctx = new AudioContextCtor();
@@ -53,8 +56,12 @@ function getCtx() {
 }
 
 /** Haptic pulse — silently no-ops on unsupported devices and preference Off. */
-export function haptic(pattern: number | number[] = 8, importance: "standard" | "essential" = "standard") {
-  if (!canUseHaptics(importance) || typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+export function haptic(
+  pattern: number | number[] = 8,
+  importance: "standard" | "essential" = "standard",
+) {
+  if (!canUseHaptics(importance) || typeof navigator === "undefined" || !("vibrate" in navigator))
+    return;
   try {
     navigator.vibrate(pattern);
   } catch {
@@ -120,7 +127,12 @@ export const playSoft = () => {
 
 /** Hover feedback is disabled for reduced motion and coarse-pointer devices. */
 export const playHover = () => {
-  if (prefersReducedMotion() || typeof window === "undefined" || window.matchMedia("(pointer: coarse)").matches) return;
+  if (
+    prefersReducedMotion() ||
+    typeof window === "undefined" ||
+    window.matchMedia("(pointer: coarse)").matches
+  )
+    return;
   const now = typeof performance === "undefined" ? Date.now() : performance.now();
   if (now - lastHoverAt < 110) return;
   lastHoverAt = now;
@@ -129,7 +141,13 @@ export const playHover = () => {
 
 /** Toggle/switch: quick pitch glide up. */
 export const playToggle = (on = true) => {
-  tone({ freq: on ? 500 : 800, glideTo: on ? 800 : 500, duration: 0.07, type: "triangle", gain: 0.035 });
+  tone({
+    freq: on ? 500 : 800,
+    glideTo: on ? 800 : 500,
+    duration: 0.07,
+    type: "triangle",
+    gain: 0.035,
+  });
   haptic(7);
 };
 
@@ -179,7 +197,8 @@ export function subscribeToFeedbackPreference(listener: (preference: FeedbackPre
   if (typeof window === "undefined") return () => {};
   const onChange = (event: Event) => {
     const preference = (event as CustomEvent<FeedbackPreference>).detail;
-    if (preference === "full" || preference === "reduced" || preference === "off") listener(preference);
+    if (preference === "full" || preference === "reduced" || preference === "off")
+      listener(preference);
   };
   window.addEventListener(FEEDBACK_EVENT, onChange);
   return () => window.removeEventListener(FEEDBACK_EVENT, onChange);

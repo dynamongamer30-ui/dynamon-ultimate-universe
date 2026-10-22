@@ -12,35 +12,105 @@ export function Footer() {
         <div className="mt-12 grid gap-10 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1.2fr]">
           <div>
             <div className="flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-lg" style={{ background: "var(--gradient-primary)" }}>
+              <span
+                className="grid h-9 w-9 place-items-center rounded-lg"
+                style={{ background: "var(--gradient-primary)" }}
+              >
                 <Sparkles className="h-4 w-4 text-primary-foreground" />
               </span>
-              <span className="font-display text-lg font-bold">Dynamon <span className="text-gradient">Universe</span></span>
+              <span className="font-display text-lg font-bold">
+                Dynamon <span className="text-gradient">Universe</span>
+              </span>
             </div>
             <p className="mt-3 max-w-sm text-sm text-muted-foreground">
-              A fan-made hub dedicated only to Dynamons World modded builds. Crafted with care by Dynamon Gamer for the
-              community of trainers.
+              A fan-made hub dedicated only to Dynamons World modded builds. Crafted with care by
+              Dynamon Gamer for the community of trainers.
             </p>
           </div>
 
           <div>
             <h2 className="text-sm font-semibold text-foreground">Explore</h2>
             <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
-              <li><Link to="/" className="touch-target inline-flex items-center transition-colors hover:text-primary">Home</Link></li>
-              <li><Link to="/mods" className="touch-target inline-flex items-center transition-colors hover:text-primary">All Mods</Link></li>
-              <li><Link to="/about" className="touch-target inline-flex items-center transition-colors hover:text-primary">About us</Link></li>
-              <li><Link to="/contact" className="touch-target inline-flex items-center transition-colors hover:text-primary">Contact</Link></li>
-              <li><Link to="/auth" className="touch-target inline-flex items-center transition-colors hover:text-primary">Sign in</Link></li>
+              <li>
+                <Link
+                  to="/"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                >
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/mods"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                >
+                  All Mods
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/about"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                >
+                  About us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/contact"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                >
+                  Contact
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/auth"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                >
+                  Sign in
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
             <h2 className="text-sm font-semibold text-foreground">Legal</h2>
             <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
-              <li><Link to="/disclaimer" className="touch-target inline-flex items-center transition-colors hover:text-primary">Disclaimer</Link></li>
-              <li><Link to="/disclaimer" hash="legal" className="touch-target inline-flex items-center transition-colors hover:text-primary">Terms of use</Link></li>
-              <li><Link to="/privacy" className="touch-target inline-flex items-center transition-colors hover:text-primary">Privacy policy</Link></li>
-              <li><Link to="/disclaimer" hash="dmca" className="touch-target inline-flex items-center transition-colors hover:text-primary">DMCA</Link></li>
+              <li>
+                <Link
+                  to="/disclaimer"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                >
+                  Disclaimer
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/disclaimer"
+                  hash="legal"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                >
+                  Terms of use
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/privacy"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                >
+                  Privacy policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/disclaimer"
+                  hash="dmca"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                >
+                  DMCA
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -50,7 +120,9 @@ export function Footer() {
               {SOCIALS.map(({ label, href, Icon }) => (
                 <li key={label}>
                   <a
-                    href={href} target="_blank" rel="noreferrer noopener"
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer noopener"
                     className="group inline-flex items-center gap-2.5 text-muted-foreground transition-colors hover:text-primary"
                   >
                     <span className="grid h-7 w-7 place-items-center rounded-lg border border-border bg-card/60 transition-colors group-hover:border-primary/40 group-hover:text-primary">
@@ -65,7 +137,10 @@ export function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-6 text-xs text-muted-foreground sm:flex-row">
-          <p>© {new Date().getFullYear()} Dynamon Universe. Not affiliated with the official developers of Dynamons World.</p>
+          <p>
+            © {new Date().getFullYear()} Dynamon Universe. Not affiliated with the official
+            developers of Dynamons World.
+          </p>
           <p>All trademarks belong to their respective owners.</p>
         </div>
       </div>

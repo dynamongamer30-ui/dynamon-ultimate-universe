@@ -89,31 +89,56 @@ async function selectAll(table: string): Promise<Row[]> {
 }
 
 async function selectOne(table: string, id: string): Promise<Record<string, unknown> | null> {
-  const { data, error } = await supabase.from(table as never).select("data").eq("id", id).maybeSingle();
+  const { data, error } = await supabase
+    .from(table as never)
+    .select("data")
+    .eq("id", id)
+    .maybeSingle();
   if (error) throw new Error(error.message);
   return (data as { data?: Record<string, unknown> } | null)?.data ?? null;
 }
 
 async function upsertRow(table: string, id: string, data: unknown): Promise<void> {
-  const { error } = await supabase.from(table as never).upsert({ id, data } as never, { onConflict: "id" });
+  const { error } = await supabase
+    .from(table as never)
+    .upsert({ id, data } as never, { onConflict: "id" });
   if (error) throw new Error(error.message);
 }
 
 /** Conditional write prevents an open editor from overwriting newer data. */
-export async function compareConfigNode(id: string, value: unknown, expected: unknown): Promise<void> {
+export async function compareConfigNode(
+  id: string,
+  value: unknown,
+  expected: unknown,
+): Promise<void> {
   await compareRow("app_config", id, value, expected);
 }
 
-async function compareRow(table: string, id: string, value: unknown, expected: unknown): Promise<void> {
+async function compareRow(
+  table: string,
+  id: string,
+  value: unknown,
+  expected: unknown,
+): Promise<void> {
   if (expected === null) {
     const { error } = await supabase.from(table as never).insert({ id, data: value } as never);
-    if (error) throw new Error(error.code === "23505" ? "Settings changed elsewhere. Reload before saving." : error.message);
+    if (error)
+      throw new Error(
+        error.code === "23505"
+          ? "Settings changed elsewhere. Reload before saving."
+          : error.message,
+      );
     return;
   }
-  const { data, error } = await supabase.from(table as never).update({ data: value } as never)
-    .eq("id", id).eq("data", JSON.stringify(expected)).select("id");
+  const { data, error } = await supabase
+    .from(table as never)
+    .update({ data: value } as never)
+    .eq("id", id)
+    .eq("data", JSON.stringify(expected))
+    .select("id");
   if (error) throw new Error(error.message);
-  if (!data?.length) throw new Error("Data changed elsewhere or access was denied. Reload before saving.");
+  if (!data?.length)
+    throw new Error("Data changed elsewhere or access was denied. Reload before saving.");
 }
 
 /** Merge only into an existing, unchanged row; never recreate a deleted key. */
@@ -124,7 +149,10 @@ async function patchRow(table: string, id: string, patch: Record<string, unknown
 }
 
 async function deleteRow(table: string, id: string): Promise<void> {
-  const { error } = await supabase.from(table as never).delete().eq("id", id);
+  const { error } = await supabase
+    .from(table as never)
+    .delete()
+    .eq("id", id);
   if (error) throw new Error(error.message);
 }
 
@@ -149,7 +177,10 @@ function toValidKey(id: string, v: Record<string, unknown>): ValidKey {
  * Subscribe to ValidKeys with an initial fetch + Supabase Realtime updates.
  * Returns an unsubscribe fn (same contract as the old Firebase onValue).
  */
-export function listKeys(cb: (keys: ValidKey[]) => void, onError?: (error: Error) => void): () => void {
+export function listKeys(
+  cb: (keys: ValidKey[]) => void,
+  onError?: (error: Error) => void,
+): () => void {
   let cancelled = false;
 
   const load = async () => {
@@ -199,7 +230,8 @@ export async function keyExists(key: string): Promise<boolean> {
 
 /** Create a manual key (owner-added). Returns the allocated key id. */
 export async function createManualKey(prefix: string, hours: number): Promise<string> {
-  if (!Number.isFinite(hours) || hours < 0 || hours > 87600) throw new Error("Enter 0–87600 hours; 0 means lifetime.");
+  if (!Number.isFinite(hours) || hours < 0 || hours > 87600)
+    throw new Error("Enter 0–87600 hours; 0 means lifetime.");
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const rand = () => {
     let s = "";
@@ -215,10 +247,20 @@ export async function createManualKey(prefix: string, hours: number): Promise<st
   if (!/^[A-Z0-9]{1,12}$/.test(clean)) throw new Error("Invalid key prefix.");
   for (let i = 0; i < 10; i++) {
     const key = `${clean}-${rand()}`;
-    const { error } = await supabase.from("valid_keys" as never).insert({ id: key, data: {
-      status: "active", expiry: 0, durationHours: hours, activated: false,
-      device: null, date: nowSeconds(), fingerprint: "", sourceIP: "", source: "admin",
-    }} as never);
+    const { error } = await supabase.from("valid_keys" as never).insert({
+      id: key,
+      data: {
+        status: "active",
+        expiry: 0,
+        durationHours: hours,
+        activated: false,
+        device: null,
+        date: nowSeconds(),
+        fingerprint: "",
+        sourceIP: "",
+        source: "admin",
+      },
+    } as never);
     if (!error) return key;
     if (error.code !== "23505") throw new Error(error.message);
   }
@@ -353,4 +395,3 @@ export async function unbanDevice(fingerprint: string): Promise<void> {
 // ---------- Misc helpers ----------
 
 export const nowSeconds = () => Math.floor(Date.now() / 1000);
-

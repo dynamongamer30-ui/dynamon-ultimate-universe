@@ -61,16 +61,26 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function mapRedeemError(code?: string): string {
   switch (code) {
-    case "not_found": return "We couldn't find your download pass. Please start the download again.";
-    case "already_used": return "This download link has already been used. Each link works only once — please start again.";
-    case "fingerprint_mismatch": return "This link was started on a different phone. Please finish the download on the same device you started it on.";
-    case "version_mismatch": return "Something changed while you were waiting. Please start the download again.";
-    case "expired": return "This link took too long and has expired. Please start the download again.";
-    case "too_fast": return "That was a bit too quick. Please go back and complete every step.";
-    case "no_link": return "No download link is attached to this page. Please start the download again.";
-    case "invalid_token": return "This download link isn't valid. Please start again from the mod page.";
-    case "invalid_fingerprint": return "We couldn't recognise your device. Please start the download again.";
-    default: return "Something went wrong. Please start the download again.";
+    case "not_found":
+      return "We couldn't find your download pass. Please start the download again.";
+    case "already_used":
+      return "This download link has already been used. Each link works only once — please start again.";
+    case "fingerprint_mismatch":
+      return "This link was started on a different phone. Please finish the download on the same device you started it on.";
+    case "version_mismatch":
+      return "Something changed while you were waiting. Please start the download again.";
+    case "expired":
+      return "This link took too long and has expired. Please start the download again.";
+    case "too_fast":
+      return "That was a bit too quick. Please go back and complete every step.";
+    case "no_link":
+      return "No download link is attached to this page. Please start the download again.";
+    case "invalid_token":
+      return "This download link isn't valid. Please start again from the mod page.";
+    case "invalid_fingerprint":
+      return "We couldn't recognise your device. Please start the download again.";
+    default:
+      return "Something went wrong. Please start the download again.";
   }
 }
 
@@ -90,7 +100,15 @@ function EmberField() {
     let w = (c.width = window.innerWidth);
     let h = (c.height = window.innerHeight);
 
-    type Ember = { x: number; y: number; r: number; vy: number; vx: number; hue: "gold" | "violet"; a: number };
+    type Ember = {
+      x: number;
+      y: number;
+      r: number;
+      vy: number;
+      vx: number;
+      hue: "gold" | "violet";
+      a: number;
+    };
     const count = Math.min(70, Math.floor((w * h) / 18000));
     const embers: Ember[] = Array.from({ length: count }, () => ({
       x: Math.random() * w,
@@ -102,7 +120,10 @@ function EmberField() {
       a: 0.25 + Math.random() * 0.45,
     }));
 
-    const onResize = () => { w = c.width = window.innerWidth; h = c.height = window.innerHeight; };
+    const onResize = () => {
+      w = c.width = window.innerWidth;
+      h = c.height = window.innerHeight;
+    };
     window.addEventListener("resize", onResize);
 
     let raf = 0;
@@ -111,7 +132,10 @@ function EmberField() {
       for (const e of embers) {
         e.y += e.vy;
         e.x += e.vx;
-        if (e.y < -10) { e.y = h + 10; e.x = Math.random() * w; }
+        if (e.y < -10) {
+          e.y = h + 10;
+          e.x = Math.random() * w;
+        }
         const color = e.hue === "gold" ? `rgba(224,180,90,${e.a})` : `rgba(168,110,230,${e.a})`;
         ctx.beginPath();
         ctx.fillStyle = color;
@@ -123,7 +147,10 @@ function EmberField() {
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", onResize); };
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
   return <canvas ref={ref} className="pointer-events-none fixed inset-0 -z-10 opacity-70" />;
 }
@@ -143,7 +170,14 @@ function ProgressRing({ pct }: { pct: number }) {
             <stop offset="100%" stopColor="var(--gold)" />
           </linearGradient>
         </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--border)" strokeWidth={stroke} fill="none" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke="var(--border)"
+          strokeWidth={stroke}
+          fill="none"
+        />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -154,10 +188,16 @@ function ProgressRing({ pct }: { pct: number }) {
           strokeDasharray={c}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          style={{ filter: "drop-shadow(0 0 10px oklch(0.54 0.22 296 / 55%))", transition: "stroke-dashoffset 450ms cubic-bezier(0.4,0,0.2,1)" }}
+          style={{
+            filter: "drop-shadow(0 0 10px oklch(0.54 0.22 296 / 55%))",
+            transition: "stroke-dashoffset 450ms cubic-bezier(0.4,0,0.2,1)",
+          }}
         />
       </svg>
-      <div className="absolute inset-0 grid place-items-center font-display text-base font-bold" style={{ color: "var(--gold)" }}>
+      <div
+        className="absolute inset-0 grid place-items-center font-display text-base font-bold"
+        style={{ color: "var(--gold)" }}
+      >
         {Math.round(pct)}%
       </div>
     </div>
@@ -168,22 +208,40 @@ function StatusIcon({ status }: { status: StageStatus }) {
   return (
     <AnimatePresence mode="wait" initial={false}>
       {status === "running" && (
-        <motion.span key="running" initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.6 }}>
+        <motion.span
+          key="running"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.6 }}
+        >
           <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--gold)" }} />
         </motion.span>
       )}
       {status === "done" && (
-        <motion.span key="done" initial={{ opacity: 0, scale: 0.4, rotate: -30 }} animate={{ opacity: 1, scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 400, damping: 15 }}>
+        <motion.span
+          key="done"
+          initial={{ opacity: 0, scale: 0.4, rotate: -30 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 15 }}
+        >
           <Check className="h-4 w-4" style={{ color: "#4ade80" }} />
         </motion.span>
       )}
       {status === "error" && (
-        <motion.span key="error" initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: 1, scale: 1 }}>
+        <motion.span
+          key="error"
+          initial={{ opacity: 0, scale: 0.4 }}
+          animate={{ opacity: 1, scale: 1 }}
+        >
           <X className="h-4 w-4" style={{ color: "#f87171" }} />
         </motion.span>
       )}
       {status === "pending" && (
-        <motion.span key="pending" className="h-2 w-2 rounded-full" style={{ background: "var(--border)" }} />
+        <motion.span
+          key="pending"
+          className="h-2 w-2 rounded-full"
+          style={{ background: "var(--border)" }}
+        />
       )}
     </AnimatePresence>
   );
@@ -235,7 +293,10 @@ function UnlockPage() {
       // 0. Initialize — read + decode the local session token (obfuscated in storage).
       const token = await runStage(0, async () => {
         const raw = typeof window !== "undefined" ? localStorage.getItem("dg_token") : null;
-        if (!raw) throw new Error("We could not find your download pass. Please start the download again from the mod page.");
+        if (!raw)
+          throw new Error(
+            "We could not find your download pass. Please start the download again from the mod page.",
+          );
         let decoded = "";
         try {
           decoded = Cipher.decrypt(raw);
@@ -243,31 +304,35 @@ function UnlockPage() {
           decoded = raw; // tolerate plain-UUID tokens written by newer clients
         }
         if (!decoded) throw new Error("Failed to read session token.");
-        if (!UUID_RE.test(decoded)) throw new Error("This download link looks broken. Please start again from the mod page.");
+        if (!UUID_RE.test(decoded))
+          throw new Error("This download link looks broken. Please start again from the mod page.");
         return decoded;
       });
 
       // 1. Compute the device fingerprint that the server will verify against.
       const fingerprint = await runStage(1, async () => {
         const fp = await getFingerprint();
-        if (!fp) throw new Error("We could not recognise your device. Try turning off private/incognito mode, then start again.");
+        if (!fp)
+          throw new Error(
+            "We could not recognise your device. Try turning off private/incognito mode, then start again.",
+          );
         return fp;
       });
 
       // 2-4. Server-side verification. A single SECURITY DEFINER RPC checks the
       // session, fingerprint, timing window and ATOMICALLY burns the token — none
       // of this logic or the link is exposed to the browser.
-      let redeemed: { ok: boolean; error?: string; link?: string; encrypted?: boolean } | null = null;
+      let redeemed: { ok: boolean; error?: string; link?: string; encrypted?: boolean } | null =
+        null;
 
       await runStage(2, async () => {
         // redeem_secure_session isn't in the generated types yet; call loosely.
-        const { data, error } = await (supabase.rpc as unknown as (
-          fn: string,
-          args: Record<string, unknown>,
-        ) => Promise<{ data: unknown; error: { message: string } | null }>)(
-          "redeem_secure_session",
-          { p_token: token, p_fingerprint: fingerprint },
-        );
+        const { data, error } = await (
+          supabase.rpc as unknown as (
+            fn: string,
+            args: Record<string, unknown>,
+          ) => Promise<{ data: unknown; error: { message: string } | null }>
+        )("redeem_secure_session", { p_token: token, p_fingerprint: fingerprint });
         if (error) throw new Error("Secure channel error. Please try again.");
         redeemed = data as typeof redeemed;
         if (!redeemed || !redeemed.ok) {
@@ -276,8 +341,12 @@ function UnlockPage() {
       });
 
       // 3-4 are validated inside the RPC; surface them as completed UX steps.
-      await runStage(3, async () => { /* fingerprint verified server-side */ });
-      await runStage(4, async () => { /* timing verified server-side */ });
+      await runStage(3, async () => {
+        /* fingerprint verified server-side */
+      });
+      await runStage(4, async () => {
+        /* timing verified server-side */
+      });
 
       // 5. Resolve the final link. New sessions return plaintext; legacy sessions
       // return an encrypted blob we decrypt locally for backward compatibility.
@@ -324,13 +393,25 @@ function UnlockPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+    <div
+      className="relative min-h-screen overflow-hidden"
+      style={{ background: "var(--background)", color: "var(--foreground)" }}
+    >
       <EmberField />
       {/* royal aurora glow */}
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -top-32 -left-32 h-[420px] w-[420px] rounded-full opacity-25 blur-[120px]" style={{ background: "var(--primary)" }} />
-        <div className="absolute top-1/3 -right-32 h-[460px] w-[460px] rounded-full opacity-20 blur-[140px]" style={{ background: "var(--gold)" }} />
-        <div className="absolute -bottom-32 left-1/4 h-[420px] w-[420px] rounded-full opacity-15 blur-[150px]" style={{ background: "var(--primary)" }} />
+        <div
+          className="absolute -top-32 -left-32 h-[420px] w-[420px] rounded-full opacity-25 blur-[120px]"
+          style={{ background: "var(--primary)" }}
+        />
+        <div
+          className="absolute top-1/3 -right-32 h-[460px] w-[460px] rounded-full opacity-20 blur-[140px]"
+          style={{ background: "var(--gold)" }}
+        />
+        <div
+          className="absolute -bottom-32 left-1/4 h-[420px] w-[420px] rounded-full opacity-15 blur-[150px]"
+          style={{ background: "var(--primary)" }}
+        />
       </div>
 
       <main className="relative mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-5 py-12">
@@ -339,13 +420,22 @@ function UnlockPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           className="w-full rounded-2xl border p-6 shadow-elev backdrop-blur-xl sm:p-8"
-          style={{ borderColor: "var(--border)", background: "color-mix(in oklch, var(--card) 88%, transparent)" }}
+          style={{
+            borderColor: "var(--border)",
+            background: "color-mix(in oklch, var(--card) 88%, transparent)",
+          }}
         >
           {/* Top progress bar */}
-          <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
+          <div
+            className="mb-6 h-1.5 w-full overflow-hidden rounded-full"
+            style={{ background: "var(--border)" }}
+          >
             <motion.div
               className="h-full rounded-full"
-              style={{ background: "linear-gradient(90deg, var(--primary), var(--gold))", boxShadow: "0 0 18px oklch(0.54 0.22 296 / 50%)" }}
+              style={{
+                background: "linear-gradient(90deg, var(--primary), var(--gold))",
+                boxShadow: "0 0 18px oklch(0.54 0.22 296 / 50%)",
+              }}
               animate={{ width: `${pct}%` }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             />
@@ -375,8 +465,12 @@ function UnlockPage() {
                   transition={{ delay: i * 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                   className="flex items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors"
                   style={{
-                    borderColor: active ? "color-mix(in oklch, var(--primary) 45%, var(--border))" : "var(--border)",
-                    background: active ? "color-mix(in oklch, var(--primary) 8%, transparent)" : "color-mix(in oklch, var(--background) 55%, transparent)",
+                    borderColor: active
+                      ? "color-mix(in oklch, var(--primary) 45%, var(--border))"
+                      : "var(--border)",
+                    background: active
+                      ? "color-mix(in oklch, var(--primary) 8%, transparent)"
+                      : "color-mix(in oklch, var(--background) 55%, transparent)",
                   }}
                 >
                   <span
@@ -391,11 +485,18 @@ function UnlockPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{s.title}</span>
+                      <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                        {s.title}
+                      </span>
                       <StatusIcon status={s.status} />
                     </div>
                     {s.status === "error" && s.message && (
-                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-1 text-xs" style={{ color: "#f87171" }}>
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mt-1 text-xs"
+                        style={{ color: "#f87171" }}
+                      >
                         {s.message}
                       </motion.p>
                     )}
@@ -413,12 +514,20 @@ function UnlockPage() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ type: "spring", stiffness: 300, damping: 22 }}
                 className="mt-6 rounded-xl border p-4 text-center"
-                style={{ borderColor: "color-mix(in oklch, var(--gold) 40%, transparent)", background: "color-mix(in oklch, var(--gold) 8%, transparent)" }}
+                style={{
+                  borderColor: "color-mix(in oklch, var(--gold) 40%, transparent)",
+                  background: "color-mix(in oklch, var(--gold) 8%, transparent)",
+                }}
               >
-                <p className="flex items-center justify-center gap-1.5 font-display text-base font-semibold" style={{ color: "var(--gold)" }}>
+                <p
+                  className="flex items-center justify-center gap-1.5 font-display text-base font-semibold"
+                  style={{ color: "var(--gold)" }}
+                >
                   <Sparkles className="h-4 w-4" /> Unsealed — your download is ready
                 </p>
-                <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>Taking you there in a moment…</p>
+                <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  Taking you there in a moment…
+                </p>
                 <a
                   href={downloadUrl}
                   className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02]"
@@ -437,10 +546,17 @@ function UnlockPage() {
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="mt-6 rounded-xl border p-4 text-center"
-                style={{ borderColor: "color-mix(in oklch, #f87171 35%, transparent)", background: "color-mix(in oklch, #f87171 8%, transparent)" }}
+                style={{
+                  borderColor: "color-mix(in oklch, #f87171 35%, transparent)",
+                  background: "color-mix(in oklch, #f87171 8%, transparent)",
+                }}
               >
-                <p className="text-sm font-semibold" style={{ color: "#f87171" }}>The vault didn&apos;t open</p>
-                <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>{fatalError}</p>
+                <p className="text-sm font-semibold" style={{ color: "#f87171" }}>
+                  The vault didn&apos;t open
+                </p>
+                <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  {fatalError}
+                </p>
                 <Link
                   to="/"
                   className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-xs font-medium transition-colors"
@@ -448,7 +564,12 @@ function UnlockPage() {
                 >
                   <ArrowLeft className="h-3.5 w-3.5" /> Return home
                 </Link>
-                <button type="button" onClick={() => window.location.reload()} className="touch-target mt-3 ml-2 inline-flex items-center justify-center rounded-lg border px-4 py-2 text-xs font-medium transition-colors hover:bg-card/60" style={{ borderColor: "var(--border)", color: "var(--foreground)" }}>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="touch-target mt-3 ml-2 inline-flex items-center justify-center rounded-lg border px-4 py-2 text-xs font-medium transition-colors hover:bg-card/60"
+                  style={{ borderColor: "var(--border)", color: "var(--foreground)" }}
+                >
                   Try again
                 </button>
               </motion.div>
@@ -456,7 +577,10 @@ function UnlockPage() {
           </AnimatePresence>
         </motion.div>
 
-        <p className="mt-6 text-center text-xs tracking-wide" style={{ color: "var(--muted-foreground)", opacity: 0.7 }}>
+        <p
+          className="mt-6 text-center text-xs tracking-wide"
+          style={{ color: "var(--muted-foreground)", opacity: 0.7 }}
+        >
           Private link • Works once • Only on this device
         </p>
       </main>

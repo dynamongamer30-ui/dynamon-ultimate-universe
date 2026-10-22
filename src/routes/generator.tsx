@@ -2,16 +2,22 @@ import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { Copy, KeyRound, Loader2, ShieldCheck, Sparkles, ExternalLink, RefreshCw, Timer, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Copy,
+  KeyRound,
+  Loader2,
+  ShieldCheck,
+  Sparkles,
+  ExternalLink,
+  RefreshCw,
+  Timer,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
-import {
-  checkToken,
-  generateKey,
-  startGate,
-  TURNSTILE_SITE_KEY,
-} from "@/lib/dgWorker";
+import { checkToken, generateKey, startGate, TURNSTILE_SITE_KEY } from "@/lib/dgWorker";
 import { getFingerprint } from "@/lib/fingerprint";
 import { supabase } from "@/integrations/supabase/client";
 import { mods } from "@/lib/mods";
@@ -50,7 +56,7 @@ declare global {
           "error-callback"?: () => void;
           "expired-callback"?: () => void;
           theme?: "light" | "dark" | "auto";
-        }
+        },
       ) => string;
       reset: (widgetId?: string) => void;
       remove: (widgetId?: string) => void;
@@ -66,7 +72,9 @@ function loadTurnstile(): Promise<void> {
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${TURNSTILE_SRC}"]`);
     if (existing) {
       existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("turnstile_load_failed")), { once: true });
+      existing.addEventListener("error", () => reject(new Error("turnstile_load_failed")), {
+        once: true,
+      });
       return;
     }
     const s = document.createElement("script");
@@ -84,9 +92,18 @@ function loadTurnstile(): Promise<void> {
 function Particles() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute -top-32 -left-24 h-[480px] w-[480px] rounded-full blur-3xl" style={{ background: "color-mix(in oklch, var(--primary) 22%, transparent)" }} />
-      <div className="absolute top-1/3 right-0 h-[420px] w-[420px] rounded-full blur-3xl" style={{ background: "color-mix(in oklch, var(--gold) 16%, transparent)" }} />
-      <div className="absolute bottom-0 left-1/3 h-[360px] w-[360px] rounded-full blur-3xl" style={{ background: "color-mix(in oklch, var(--primary) 12%, transparent)" }} />
+      <div
+        className="absolute -top-32 -left-24 h-[480px] w-[480px] rounded-full blur-3xl"
+        style={{ background: "color-mix(in oklch, var(--primary) 22%, transparent)" }}
+      />
+      <div
+        className="absolute top-1/3 right-0 h-[420px] w-[420px] rounded-full blur-3xl"
+        style={{ background: "color-mix(in oklch, var(--gold) 16%, transparent)" }}
+      />
+      <div
+        className="absolute bottom-0 left-1/3 h-[360px] w-[360px] rounded-full blur-3xl"
+        style={{ background: "color-mix(in oklch, var(--primary) 12%, transparent)" }}
+      />
     </div>
   );
 }
@@ -100,9 +117,15 @@ function Orb({ pulse }: { pulse: boolean }) {
     >
       <div
         className="absolute inset-0 rounded-full"
-        style={{ background: "linear-gradient(135deg, var(--primary), var(--gold))", boxShadow: "0 0 80px 10px oklch(0.54 0.22 296 / 40%)" }}
+        style={{
+          background: "linear-gradient(135deg, var(--primary), var(--gold))",
+          boxShadow: "0 0 80px 10px oklch(0.54 0.22 296 / 40%)",
+        }}
       />
-      <div className="absolute inset-3 flex items-center justify-center rounded-full backdrop-blur-md" style={{ background: "color-mix(in oklch, var(--background) 75%, transparent)" }}>
+      <div
+        className="absolute inset-3 flex items-center justify-center rounded-full backdrop-blur-md"
+        style={{ background: "color-mix(in oklch, var(--background) 75%, transparent)" }}
+      >
         <KeyRound className="h-10 w-10" style={{ color: "var(--gold)" }} />
       </div>
     </motion.div>
@@ -178,7 +201,11 @@ function GeneratorPage() {
     if (phase.kind !== "ready") return;
     getFingerprint()
       .then(setFingerprint)
-      .catch(() => toast.error("We couldn’t check your device. Turn off private/incognito mode and try again."));
+      .catch(() =>
+        toast.error(
+          "We couldn’t check your device. Turn off private/incognito mode and try again.",
+        ),
+      );
   }, [phase.kind]);
 
   // Step 3 — render Turnstile
@@ -233,7 +260,13 @@ function GeneratorPage() {
 
     if (res.ok) {
       // Default to 24h for the user-visible label; the real expiry is enforced server-side.
-      setPhase({ kind: "success", key: res.key, remaining: res.remaining, hours: 24, generatedAt: Date.now() });
+      setPhase({
+        kind: "success",
+        key: res.key,
+        remaining: res.remaining,
+        hours: 24,
+        generatedAt: Date.now(),
+      });
       toast.success("Your key is ready and copied!");
       resetTurnstile();
       playUnlock();
@@ -259,9 +292,7 @@ function GeneratorPage() {
         resetTurnstile();
         break;
       case "rate_limited":
-        toast.error(
-          `Limit reached. Try again in ${res.resetInMinutes ?? "a few"} minutes`
-        );
+        toast.error(`Limit reached. Try again in ${res.resetInMinutes ?? "a few"} minutes`);
         break;
       case "invalid_token":
       case "token_used":
@@ -294,7 +325,10 @@ function GeneratorPage() {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   useEffect(() => {
-    if (phase.kind !== "success") { setSecondsLeft(null); return; }
+    if (phase.kind !== "success") {
+      setSecondsLeft(null);
+      return;
+    }
     const deadline = phase.generatedAt + KEY_TTL_SECONDS * 1000;
     const tick = () => setSecondsLeft(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
     tick();
@@ -305,7 +339,9 @@ function GeneratorPage() {
   // Auto-copy the key the instant the success screen appears (no tap needed).
   useEffect(() => {
     if (phase.kind === "success") {
-      navigator.clipboard.writeText(phase.key).catch(() => { /* clipboard may be blocked; tap still works */ });
+      navigator.clipboard.writeText(phase.key).catch(() => {
+        /* clipboard may be blocked; tap still works */
+      });
     }
   }, [phase]);
 
@@ -324,7 +360,9 @@ function GeneratorPage() {
         .limit(1)
         .maybeSingle();
       if (data?.slug) return `/mods/${data.slug}`;
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
     // Fallback: newest base mod by its `updated` date.
     const newest = [...mods].sort((a, b) => (a.updated < b.updated ? 1 : -1))[0];
     return newest ? `/mods/${newest.slug}` : "/mods";
@@ -342,10 +380,15 @@ function GeneratorPage() {
       window.location.assign(url);
     };
 
-    if (!isAndroid) { await fallback(); return; }
+    if (!isAndroid) {
+      await fallback();
+      return;
+    }
 
     let hidden = false;
-    const onHide = () => { hidden = true; };
+    const onHide = () => {
+      hidden = true;
+    };
     document.addEventListener("visibilitychange", onHide);
 
     // Must match the APK's intent-filter exactly:
@@ -373,185 +416,251 @@ function GeneratorPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           className="route-hero rounded-2xl border p-8 shadow-elev backdrop-blur-xl"
-          style={{ borderColor: "var(--border)", background: "color-mix(in oklch, var(--card) 88%, transparent)" }}
+          style={{
+            borderColor: "var(--border)",
+            background: "color-mix(in oklch, var(--card) 88%, transparent)",
+          }}
         >
           <div className="mb-6 flex flex-col items-center gap-3 text-center">
             <Orb pulse={phase.kind === "loading" || submitting} />
-            <h1 className="font-display text-3xl font-bold tracking-tight" style={{ background: "linear-gradient(90deg, var(--foreground), var(--gold))", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
+            <h1
+              className="font-display text-3xl font-bold tracking-tight"
+              style={{
+                background: "linear-gradient(90deg, var(--foreground), var(--gold))",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+              }}
+            >
               Claim your key
             </h1>
             <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-              Tick the box below to prove you're not a robot. Then we'll forge a key that unlocks the mod in the app.
+              Tick the box below to prove you're not a robot. Then we'll forge a key that unlocks
+              the mod in the app.
             </p>
           </div>
 
-            {phase.kind === "loading" && (
-              <div role="status" className="flex flex-col items-center gap-3 py-10" style={{ color: "var(--muted-foreground)" }}>
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span>Checking your link…</span>
-              </div>
-            )}
+          {phase.kind === "loading" && (
+            <div
+              role="status"
+              className="flex flex-col items-center gap-3 py-10"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span>Checking your link…</span>
+            </div>
+          )}
 
-            {phase.kind === "invalid" && (
-              <div role="alert" className="flex flex-col items-center gap-4 py-6 text-center">
-                <p className="text-lg" style={{ color: "var(--foreground)" }}>{reasonMessage(phase.reason)}</p>
-                <Button
-                  onClick={() => window.location.assign(startGate())}
-                  className="text-primary-foreground"
-                  style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
-                >
-                  <KeyRound className="mr-2 h-4 w-4" />
-                  Start again
-                </Button>
-              </div>
-            )}
+          {phase.kind === "invalid" && (
+            <div role="alert" className="flex flex-col items-center gap-4 py-6 text-center">
+              <p className="text-lg" style={{ color: "var(--foreground)" }}>
+                {reasonMessage(phase.reason)}
+              </p>
+              <Button
+                onClick={() => window.location.assign(startGate())}
+                className="text-primary-foreground"
+                style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
+              >
+                <KeyRound className="mr-2 h-4 w-4" />
+                Start again
+              </Button>
+            </div>
+          )}
 
-            {phase.kind === "ready" && (
-              <div className="flex flex-col items-center gap-5">
-                <div role="status" className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "color-mix(in oklch, var(--gold) 35%, transparent)", background: "color-mix(in oklch, var(--gold) 8%, transparent)", color: "var(--gold)" }}>
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Link looks good — just tick the box below
+          {phase.kind === "ready" && (
+            <div className="flex flex-col items-center gap-5">
+              <div
+                role="status"
+                className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
+                style={{
+                  borderColor: "color-mix(in oklch, var(--gold) 35%, transparent)",
+                  background: "color-mix(in oklch, var(--gold) 8%, transparent)",
+                  color: "var(--gold)",
+                }}
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Link looks good — just tick the box below
+              </div>
+
+              <div ref={widgetRef} className="min-h-[70px]" />
+
+              <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                Your device ID: {fingerprint ? `${fingerprint.slice(0, 10)}…` : "checking…"}
+              </div>
+
+              <Button
+                onClick={onGenerate}
+                disabled={!turnstileToken || !fingerprint || submitting}
+                className="w-full text-primary-foreground transition-transform hover:scale-[1.01] disabled:opacity-50"
+                style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Forging your key…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Get my key
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {phase.kind === "success" && (
+            <div className="flex flex-col items-center gap-6 py-2">
+              {/* Key reveal card */}
+              <div className="w-full">
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <span
+                    className="text-xs font-semibold uppercase tracking-[0.2em]"
+                    style={{ color: "var(--muted-foreground)" }}
+                  >
+                    Your key
+                  </span>
+                  <span
+                    className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.15em]"
+                    style={{ color: "var(--gold)" }}
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    {phase.remaining} left today
+                  </span>
                 </div>
 
-                <div ref={widgetRef} className="min-h-[70px]" />
-
-                <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                  Your device ID: {fingerprint ? `${fingerprint.slice(0, 10)}…` : "checking…"}
-                </div>
-
-                <Button
-                  onClick={onGenerate}
-                  disabled={!turnstileToken || !fingerprint || submitting}
-                  className="w-full text-primary-foreground transition-transform hover:scale-[1.01] disabled:opacity-50"
-                  style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
+                <button
+                  type="button"
+                  onClick={() => copyKey(phase.key)}
+                  className="group relative w-full overflow-hidden rounded-2xl p-[1.5px] transition-transform active:scale-[0.99]"
+                  style={{
+                    background: "linear-gradient(135deg, var(--gold), var(--primary), var(--gold))",
+                  }}
                 >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Forging your key…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Get my key
-                    </>
-                  )}
-                </Button>
+                  <div
+                    className="rounded-[15px] px-5 py-6"
+                    style={{
+                      background: "color-mix(in oklch, var(--background) 92%, transparent)",
+                    }}
+                  >
+                    <div
+                      className="break-all text-center font-display text-4xl font-bold leading-tight tracking-[0.12em] sm:text-4xl"
+                      style={{
+                        background: "linear-gradient(180deg, #f4d98f, var(--gold))",
+                        WebkitBackgroundClip: "text",
+                        backgroundClip: "text",
+                        color: "transparent",
+                        filter: "drop-shadow(0 0 18px oklch(0.78 0.13 82 / 35%))",
+                      }}
+                    >
+                      {phase.key}
+                    </div>
+                    <div
+                      className="mt-3 flex items-center justify-center gap-1.5 text-xs font-medium"
+                      style={{ color: "#4ade80" }}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Copied — tap to copy again
+                    </div>
+                  </div>
+                </button>
               </div>
-            )}
 
-            {phase.kind === "success" && (
-              <div className="flex flex-col items-center gap-6 py-2">
-                {/* Key reveal card */}
-                <div className="w-full">
-                  <div className="mb-2 flex items-center justify-between px-1">
-                    <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--muted-foreground)" }}>
-                      Your key
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--gold)" }}>
-                      <Sparkles className="h-3 w-3" />
-                      {phase.remaining} left today
+              {/* Countdown */}
+              {secondsLeft !== null &&
+                (secondsLeft > 0 ? (
+                  <div
+                    className="w-full rounded-xl border px-4 py-3"
+                    style={
+                      secondsLeft <= 60
+                        ? {
+                            borderColor: "color-mix(in oklch, #f87171 35%, transparent)",
+                            background: "color-mix(in oklch, #f87171 7%, transparent)",
+                          }
+                        : {
+                            borderColor: "var(--border)",
+                            background: "color-mix(in oklch, var(--background) 45%, transparent)",
+                          }
+                    }
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span
+                        className="inline-flex items-center gap-1.5 text-xs font-medium"
+                        style={{ color: secondsLeft <= 60 ? "#f87171" : "var(--muted-foreground)" }}
+                      >
+                        <Timer className="h-3.5 w-3.5" />
+                        {secondsLeft <= 60 ? "Expiring soon" : "Expires in"}
+                      </span>
+                      <span
+                        className="font-display text-xl font-bold tabular-nums tracking-wide"
+                        style={{ color: secondsLeft <= 60 ? "#f87171" : "var(--gold)" }}
+                      >
+                        {fmtCountdown(secondsLeft)}
+                      </span>
+                    </div>
+                    <div
+                      className="mt-2.5 h-1 w-full overflow-hidden rounded-full"
+                      style={{ background: "var(--border)" }}
+                    >
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{
+                          background:
+                            secondsLeft <= 60
+                              ? "#f87171"
+                              : "linear-gradient(90deg, var(--primary), var(--gold))",
+                        }}
+                        animate={{ width: `${(secondsLeft / KEY_TTL_SECONDS) * 100}%` }}
+                        transition={{ duration: 0.6, ease: "linear" }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="flex w-full items-center gap-2 rounded-xl border px-4 py-3"
+                    style={{
+                      borderColor: "color-mix(in oklch, #f87171 40%, transparent)",
+                      background: "color-mix(in oklch, #f87171 10%, transparent)",
+                    }}
+                  >
+                    <XCircle className="h-4 w-4 shrink-0" style={{ color: "#f87171" }} />
+                    <span className="text-sm font-semibold" style={{ color: "#f87171" }}>
+                      This key ran out of time — get a new one
                     </span>
                   </div>
+                ))}
 
-                  <button
-                    type="button"
-                    onClick={() => copyKey(phase.key)}
-                    className="group relative w-full overflow-hidden rounded-2xl p-[1.5px] transition-transform active:scale-[0.99]"
-                    style={{ background: "linear-gradient(135deg, var(--gold), var(--primary), var(--gold))" }}
-                  >
-                    <div
-                      className="rounded-[15px] px-5 py-6"
-                      style={{ background: "color-mix(in oklch, var(--background) 92%, transparent)" }}
-                    >
-                      <div
-                        className="break-all text-center font-display text-4xl font-bold leading-tight tracking-[0.12em] sm:text-4xl"
-                        style={{
-                          background: "linear-gradient(180deg, #f4d98f, var(--gold))",
-                          WebkitBackgroundClip: "text",
-                          backgroundClip: "text",
-                          color: "transparent",
-                          filter: "drop-shadow(0 0 18px oklch(0.78 0.13 82 / 35%))",
-                        }}
-                      >
-                        {phase.key}
-                      </div>
-                      <div className="mt-3 flex items-center justify-center gap-1.5 text-xs font-medium" style={{ color: "#4ade80" }}>
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Copied — tap to copy again
-                      </div>
-                    </div>
-                  </button>
-                </div>
-
-                {/* Countdown */}
-                {secondsLeft !== null && (
-                  secondsLeft > 0 ? (
-                    <div
-                      className="w-full rounded-xl border px-4 py-3"
-                      style={
-                        secondsLeft <= 60
-                          ? { borderColor: "color-mix(in oklch, #f87171 35%, transparent)", background: "color-mix(in oklch, #f87171 7%, transparent)" }
-                          : { borderColor: "var(--border)", background: "color-mix(in oklch, var(--background) 45%, transparent)" }
-                      }
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span
-                          className="inline-flex items-center gap-1.5 text-xs font-medium"
-                          style={{ color: secondsLeft <= 60 ? "#f87171" : "var(--muted-foreground)" }}
-                        >
-                          <Timer className="h-3.5 w-3.5" />
-                          {secondsLeft <= 60 ? "Expiring soon" : "Expires in"}
-                        </span>
-                        <span
-                          className="font-display text-xl font-bold tabular-nums tracking-wide"
-                          style={{ color: secondsLeft <= 60 ? "#f87171" : "var(--gold)" }}
-                        >
-                          {fmtCountdown(secondsLeft)}
-                        </span>
-                      </div>
-                      <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
-                        <motion.div
-                          className="h-full rounded-full"
-                          style={{ background: secondsLeft <= 60 ? "#f87171" : "linear-gradient(90deg, var(--primary), var(--gold))" }}
-                          animate={{ width: `${(secondsLeft / KEY_TTL_SECONDS) * 100}%` }}
-                          transition={{ duration: 0.6, ease: "linear" }}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex w-full items-center gap-2 rounded-xl border px-4 py-3" style={{ borderColor: "color-mix(in oklch, #f87171 40%, transparent)", background: "color-mix(in oklch, #f87171 10%, transparent)" }}>
-                      <XCircle className="h-4 w-4 shrink-0" style={{ color: "#f87171" }} />
-                      <span className="text-sm font-semibold" style={{ color: "#f87171" }}>This key ran out of time — get a new one</span>
-                    </div>
-                  )
-                )}
-
-                <div className="flex w-full flex-col gap-2 sm:flex-row">
-                  <Button
-                    onClick={() => window.location.assign(startGate())}
-                    variant="outline"
-                    className="flex-1"
-                    style={{ borderColor: "color-mix(in oklch, var(--gold) 30%, transparent)", color: "var(--foreground)" }}
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    New key
-                  </Button>
-                  <Button
-                    onClick={() => copyAndOpenApp(phase.key)}
-                    disabled={secondsLeft === 0}
-                    className="flex-1 text-primary-foreground disabled:opacity-50"
-                    style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Copy &amp; Open App
-                  </Button>
-                </div>
+              <div className="flex w-full flex-col gap-2 sm:flex-row">
+                <Button
+                  onClick={() => window.location.assign(startGate())}
+                  variant="outline"
+                  className="flex-1"
+                  style={{
+                    borderColor: "color-mix(in oklch, var(--gold) 30%, transparent)",
+                    color: "var(--foreground)",
+                  }}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  New key
+                </Button>
+                <Button
+                  onClick={() => copyAndOpenApp(phase.key)}
+                  disabled={secondsLeft === 0}
+                  className="flex-1 text-primary-foreground disabled:opacity-50"
+                  style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Copy &amp; Open App
+                </Button>
               </div>
-            )}
+            </div>
+          )}
         </motion.div>
 
-        <p className="mt-4 text-center text-xs" style={{ color: "var(--muted-foreground)", opacity: 0.7 }}>
+        <p
+          className="mt-4 text-center text-xs"
+          style={{ color: "var(--muted-foreground)", opacity: 0.7 }}
+        >
           One key per device. Don't share your key — shared keys get blocked.
         </p>
       </div>

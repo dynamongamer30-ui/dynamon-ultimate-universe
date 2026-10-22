@@ -17,7 +17,10 @@ export function LevelBadge({ compact = false }: { compact?: boolean }) {
     <div className="rounded-2xl border border-border bg-card/60 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+          <span
+            className="grid h-9 w-9 place-items-center rounded-xl text-primary-foreground"
+            style={{ background: "var(--gradient-primary)" }}
+          >
             <Zap className="h-4 w-4" />
           </span>
           <div>
@@ -25,10 +28,18 @@ export function LevelBadge({ compact = false }: { compact?: boolean }) {
             <p className="font-display text-xl font-bold">Lv {level}</p>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">{xp.xp - base} / {next - base} XP</p>
+        <p className="text-xs text-muted-foreground">
+          {xp.xp - base} / {next - base} XP
+        </p>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-background/60">
-        <motion.div initial={{ width: 0 }} animate={{ width: `${progress * 100}%` }} transition={{ duration: 0.8 }} className="h-full rounded-full" style={{ background: "var(--gradient-primary)" }} />
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${progress * 100}%` }}
+          transition={{ duration: 0.8 }}
+          className="h-full rounded-full"
+          style={{ background: "var(--gradient-primary)" }}
+        />
       </div>
     </div>
   );

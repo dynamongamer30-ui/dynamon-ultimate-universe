@@ -22,19 +22,27 @@ const staticPages = [
   { path: "/privacy", changefreq: "monthly", priority: "0.2" },
 ];
 
-const modPages = slugs.map((slug) => ({ path: `/mods/${slug}`, changefreq: "weekly", priority: "0.8" }));
+const modPages = slugs.map((slug) => ({
+  path: `/mods/${slug}`,
+  changefreq: "weekly",
+  priority: "0.8",
+}));
 
 const urls = [...staticPages, ...modPages];
 const today = new Date().toISOString().slice(0, 10);
 
 const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map((u) => `  <url>
+${urls
+  .map(
+    (u) => `  <url>
     <loc>${SITE_URL}${u.path}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>${u.changefreq}</changefreq>
     <priority>${u.priority}</priority>
-  </url>`).join("\n")}
+  </url>`,
+  )
+  .join("\n")}
 </urlset>
 `;
 

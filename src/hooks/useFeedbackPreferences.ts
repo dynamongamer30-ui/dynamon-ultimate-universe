@@ -7,7 +7,9 @@ import {
 } from "@/lib/sound";
 
 export function useFeedbackPreferences() {
-  const [preference, setPreferenceState] = useState<FeedbackPreference>(() => getFeedbackPreference());
+  const [preference, setPreferenceState] = useState<FeedbackPreference>(() =>
+    getFeedbackPreference(),
+  );
 
   useEffect(() => subscribeToFeedbackPreference(setPreferenceState), []);
 

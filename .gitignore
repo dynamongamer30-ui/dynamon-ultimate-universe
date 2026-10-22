@@ -23,3 +23,5 @@ node_modules
 .output/
 .wrangler/
 android/local.properties
+test-results/
+playwright-report/

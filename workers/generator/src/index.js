@@ -135,7 +135,10 @@ function json(data, status = 200, origin = ALLOWED_ORIGINS[0]) {
 }
 
 function isUuid(value) {
-  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  );
 }
 function isBoundedString(value, max) {
   return typeof value === "string" && value.length > 0 && value.length <= max;
@@ -207,7 +210,8 @@ async function handleCheckToken(request, env, origin) {
   const data = await fbGet(`/AccessTokens/${token}`, env);
   if (!data) return json({ valid: false, reason: "not_found" }, 200, origin);
   if (data.used === true) return json({ valid: false, reason: "used" }, 200, origin);
-  if (Date.now() - data.createdAt > TOKEN_TTL_MS) return json({ valid: false, reason: "expired" }, 200, origin);
+  if (Date.now() - data.createdAt > TOKEN_TTL_MS)
+    return json({ valid: false, reason: "expired" }, 200, origin);
   return json({ valid: true }, 200, origin);
 }
 
@@ -222,7 +226,11 @@ async function handleGenerateKey(request, env, origin) {
   const { accessToken, turnstileToken, fingerprint } = body || {};
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
 
-  if (!isUuid(accessToken) || !isBoundedString(turnstileToken, 4096) || !isBoundedString(fingerprint, 200)) {
+  if (
+    !isUuid(accessToken) ||
+    !isBoundedString(turnstileToken, 4096) ||
+    !isBoundedString(fingerprint, 200)
+  ) {
     return json({ ok: false, error: "missing_fields" }, 400, origin);
   }
 
@@ -307,11 +315,15 @@ async function handleGenerateKey(request, env, origin) {
     result: "success",
   });
 
-  return json({
-    ok: true,
-    key: key,
-    remaining: Math.max(0, RATE_LIMIT_MAX - timestamps.length),
-  }, 200, origin);
+  return json(
+    {
+      ok: true,
+      key: key,
+      remaining: Math.max(0, RATE_LIMIT_MAX - timestamps.length),
+    },
+    200,
+    origin,
+  );
 }
 
 export default {
@@ -324,7 +336,7 @@ export default {
     }
     if (url.pathname === "/start") return handleStart(request, env);
     if (url.pathname.startsWith("/init")) return handleInit(request, env);
-        if (url.pathname === "/check-token" && request.method === "GET")
+    if (url.pathname === "/check-token" && request.method === "GET")
       return handleCheckToken(request, env, origin);
 
     if (url.pathname === "/generate-key" && request.method === "POST")

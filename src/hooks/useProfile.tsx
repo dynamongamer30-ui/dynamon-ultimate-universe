@@ -18,7 +18,11 @@ export function useProfile() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!user) { setProfile(null); setLoading(false); return; }
+    if (!user) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     // Use security-definer RPC so private columns (gender) stay locked down
     // at the column-grant level for other authenticated users.
@@ -28,7 +32,9 @@ export function useProfile() {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return { profile, loading, refresh };
 }

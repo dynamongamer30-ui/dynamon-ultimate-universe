@@ -15,12 +15,21 @@ const looseRpc = supabase.rpc.bind(supabase) as unknown as (
   fn: string,
   args?: Record<string, unknown>,
 ) => Promise<{ data: unknown; error: { message: string } | null }>;
-const db = (table: string): any => (supabase as any).from(table);
 
-type TrainerLevelRow = { level: number; days_required: number; reward_kind: string; reward_qty: number };
+type TrainerLevelRow = {
+  level: number;
+  days_required: number;
+  reward_kind: string;
+  reward_qty: number;
+};
 type TrainerProgress = {
-  current_level: number; next_level: number | null; days_required: number;
-  days_elapsed: number; reward_kind: string; reward_qty: number; claimable: boolean;
+  current_level: number;
+  next_level: number | null;
+  days_required: number;
+  days_elapsed: number;
+  reward_kind: string;
+  reward_qty: number;
+  claimable: boolean;
 };
 
 const rewardIcon = (kind: string) => {
@@ -44,8 +53,8 @@ function TrainerRankLadder() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await db("trainer_levels").select("*").order("level");
-      setLevels(((data ?? []) as unknown) as TrainerLevelRow[]);
+      const { data } = await supabase.from("trainer_levels").select("*").order("level");
+      setLevels((data ?? []) as unknown as TrainerLevelRow[]);
       if (user) {
         const { data: p, error } = await looseRpc("my_trainer_progress");
         if (!error) setProgress(((p as TrainerProgress[] | null) ?? [])[0] ?? null);
@@ -64,7 +73,10 @@ function TrainerRankLadder() {
         </div>
         <div className="mt-5 space-y-2">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-4 rounded-2xl border border-border bg-card/30 p-4">
+            <div
+              key={i}
+              className="flex items-center gap-4 rounded-2xl border border-border bg-card/30 p-4"
+            >
               <Skeleton className="h-10 w-10 shrink-0" />
               <div className="min-w-0 flex-1">
                 <Skeleton className="h-4 w-24" />
@@ -86,7 +98,8 @@ function TrainerRankLadder() {
         <h2 className="font-display text-xl font-bold uppercase tracking-tight">Trainer Rank</h2>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
-        Climb 10 levels by staying active. Real Phoenix Passes, DG keys, and — only at Level 10 — a VIP key you can't get any other way.
+        Climb 10 levels by staying active. Real Phoenix Passes, DG keys, and — only at Level 10 — a
+        VIP key you can't get any other way.
       </p>
 
       <div className="mt-5 space-y-2">
@@ -97,16 +110,22 @@ function TrainerRankLadder() {
           return (
             <motion.div
               key={lv.level}
-              initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: lv.level * 0.02 }}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: lv.level * 0.02 }}
               className={`flex items-center gap-4 rounded-2xl border p-4 ${
-                claimed ? "border-emerald-400/30 bg-emerald-500/5"
-                : claimable ? "border-primary/40 bg-primary/5"
-                : "border-border bg-card/30"
+                claimed
+                  ? "border-emerald-400/30 bg-emerald-500/5"
+                  : claimable
+                    ? "border-primary/40 bg-primary/5"
+                    : "border-border bg-card/30"
               }`}
             >
-              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl font-display font-black ${
-                claimed ? "bg-emerald-500/15 text-emerald-300" : "bg-card text-muted-foreground"
-              }`}>
+              <span
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl font-display font-black ${
+                  claimed ? "bg-emerald-500/15 text-emerald-300" : "bg-card text-muted-foreground"
+                }`}
+              >
                 {claimed ? <Check className="h-5 w-5" /> : lv.level}
               </span>
               <div className="min-w-0 flex-1">
@@ -114,7 +133,9 @@ function TrainerRankLadder() {
                 <p className="text-xs text-muted-foreground">
                   {isNext
                     ? `${progress?.days_elapsed ?? 0} / ${lv.days_required} day login streak`
-                    : claimed ? "Claimed" : `${lv.days_required}-day login streak`}
+                    : claimed
+                      ? "Claimed"
+                      : `${lv.days_required}-day login streak`}
                 </p>
               </div>
               {lv.reward_kind !== "none" && (
@@ -124,7 +145,8 @@ function TrainerRankLadder() {
               )}
               {claimable && (
                 <Link
-                  to="/claim" search={{ kind: "trainer_level", ref: "", label: "" }}
+                  to="/claim"
+                  search={{ kind: "trainer_level", ref: "", label: "" }}
                   className="press inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:brightness-110"
                 >
                   Claim <ArrowRight className="h-3 w-3" />
@@ -141,7 +163,12 @@ function TrainerRankLadder() {
 
 export const Route = createFileRoute("/achievements")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Achievements — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({
+    meta: [
+      { title: "Achievements — Dynamon Universe" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: AchievementsPage,
 });
 
@@ -180,8 +207,12 @@ function AchievementsPage() {
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-300">
           <Trophy className="h-3.5 w-3.5" /> Progression
         </p>
-        <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">Trainer achievements</h1>
-        <p className="mt-3 max-w-2xl text-muted-foreground">Earn XP, level up, keep your streak, unlock badges.</p>
+        <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">
+          Trainer achievements
+        </h1>
+        <p className="mt-3 max-w-2xl text-muted-foreground">
+          Earn XP, level up, keep your streak, unlock badges.
+        </p>
       </header>
 
       {!user ? (
@@ -201,12 +232,19 @@ function AchievementsPage() {
               return (
                 <motion.div
                   key={a.key}
-                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
                   className={`relative overflow-hidden rounded-3xl border p-5 ${owned ? "border-amber-400/40 bg-amber-500/5" : "border-border bg-card/40"}`}
                 >
-                  <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${tierStyle[a.tier] ?? "from-primary to-primary"} opacity-${owned ? "30" : "5"} blur-2xl`} aria-hidden />
+                  <div
+                    className={`absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${tierStyle[a.tier] ?? "from-primary to-primary"} opacity-${owned ? "30" : "5"} blur-2xl`}
+                    aria-hidden
+                  />
                   <div className="relative flex items-start justify-between">
-                    <div className={`grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br ${tierStyle[a.tier] ?? "from-primary to-primary"} ${owned ? "" : "grayscale opacity-50"}`}>
+                    <div
+                      className={`grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br ${tierStyle[a.tier] ?? "from-primary to-primary"} ${owned ? "" : "grayscale opacity-50"}`}
+                    >
                       <span className="text-xl">{a.icon ?? "🏆"}</span>
                     </div>
                     {!owned && <Lock className="h-4 w-4 text-muted-foreground" />}
@@ -214,8 +252,12 @@ function AchievementsPage() {
                   <h3 className="relative mt-3 font-display text-lg font-bold">{a.name}</h3>
                   <p className="relative mt-1 text-sm text-muted-foreground">{a.description}</p>
                   <div className="relative mt-3 flex items-center justify-between text-xs">
-                    <span className="inline-flex items-center gap-1 text-amber-300"><Zap className="h-3 w-3" /> +{a.xp_reward} XP</span>
-                    <span className="uppercase tracking-widest text-muted-foreground">{a.tier}</span>
+                    <span className="inline-flex items-center gap-1 text-amber-300">
+                      <Zap className="h-3 w-3" /> +{a.xp_reward} XP
+                    </span>
+                    <span className="uppercase tracking-widest text-muted-foreground">
+                      {a.tier}
+                    </span>
                   </div>
                 </motion.div>
               );
@@ -223,7 +265,8 @@ function AchievementsPage() {
           </section>
 
           <p className="mt-8 text-center text-xs text-muted-foreground">
-            {achievements.length} / {list.length} unlocked · Lv {xp.level} · <Flame className="inline h-3 w-3 text-orange-400" /> {streak.current}d streak
+            {achievements.length} / {list.length} unlocked · Lv {xp.level} ·{" "}
+            <Flame className="inline h-3 w-3 text-orange-400" /> {streak.current}d streak
           </p>
         </>
       )}

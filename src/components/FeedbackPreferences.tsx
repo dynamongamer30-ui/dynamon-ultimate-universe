@@ -33,7 +33,11 @@ export function FeedbackPreferences() {
         aria-controls="feedback-preferences-panel"
         onClick={() => setOpen((value) => !value)}
       >
-        {preference === "off" ? <VolumeX className="h-4 w-4" /> : <AudioLines className="h-4 w-4" />}
+        {preference === "off" ? (
+          <VolumeX className="h-4 w-4" />
+        ) : (
+          <AudioLines className="h-4 w-4" />
+        )}
       </button>
       {open && (
         <div
@@ -47,7 +51,10 @@ export function FeedbackPreferences() {
               <p className="text-sm font-semibold">Feedback</p>
               <p className="mt-0.5 text-xs text-muted-foreground">Optional sound and haptics</p>
             </div>
-            <ChevronDown className="mt-0.5 h-4 w-4 rotate-180 text-muted-foreground" aria-hidden="true" />
+            <ChevronDown
+              className="mt-0.5 h-4 w-4 rotate-180 text-muted-foreground"
+              aria-hidden="true"
+            />
           </div>
           <div className="grid gap-1" role="radiogroup" aria-label="Feedback preference">
             {options.map((option) => (
@@ -63,7 +70,9 @@ export function FeedbackPreferences() {
                   <span className="block font-semibold">{option.label}</span>
                   <span className="block text-xs text-muted-foreground">{option.description}</span>
                 </span>
-                {preference === option.value && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />}
+                {preference === option.value && (
+                  <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                )}
               </button>
             ))}
           </div>

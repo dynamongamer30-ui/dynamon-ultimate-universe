@@ -5,7 +5,10 @@ import type { Mod } from "@/lib/mods";
 export function ChangelogTimeline({ entries, glow }: { entries: Mod["changelog"]; glow: string }) {
   return (
     <div className="relative">
-      <div className="absolute left-[19px] top-2 bottom-2 w-px bg-gradient-to-b from-primary via-primary/30 to-transparent" aria-hidden />
+      <div
+        className="absolute left-[19px] top-2 bottom-2 w-px bg-gradient-to-b from-primary via-primary/30 to-transparent"
+        aria-hidden
+      />
       <ol className="space-y-5">
         {entries.map((c, i) => (
           <motion.li

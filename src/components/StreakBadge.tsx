@@ -14,7 +14,12 @@ export function StreakBadge({ compact = false }: { compact?: boolean }) {
   return (
     <div className="rounded-2xl border border-orange-400/30 bg-orange-500/5 p-4">
       <div className="flex items-center gap-2">
-        <motion.span animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }} className="grid h-9 w-9 place-items-center rounded-xl text-orange-100" style={{ background: "linear-gradient(135deg,#f97316,#dc2626)" }}>
+        <motion.span
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="grid h-9 w-9 place-items-center rounded-xl text-orange-100"
+          style={{ background: "linear-gradient(135deg,#f97316,#dc2626)" }}
+        >
           <Flame className="h-4 w-4" />
         </motion.span>
         <div>
@@ -22,7 +27,9 @@ export function StreakBadge({ compact = false }: { compact?: boolean }) {
           <p className="font-display text-xl font-bold">{streak.current} days</p>
         </div>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">Longest: {streak.longest} days · Come back tomorrow!</p>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Longest: {streak.longest} days · Come back tomorrow!
+      </p>
     </div>
   );
 }

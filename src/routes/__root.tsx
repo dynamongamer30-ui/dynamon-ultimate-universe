@@ -56,15 +56,13 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   // SPA-mode shell invariant: thrown during initial render for ssr:false routes.
   // Auto-recover by invalidating + resetting so client hydration takes over.
-  const isSpaShellInvariant =
-    message.includes("Expected to find a match below the root match");
+  const isSpaShellInvariant = message.includes("Expected to find a match below the root match");
 
   // A route's lazy chunk failing to load (stale tab after a redeploy) is
   // caught right here by the router's own error boundary — it never reaches
   // window-level 'error'/'unhandledrejection' listeners, so deployFreshness's
   // guard alone can't catch it. Handle it the same way: reload once, silently.
-  const isStaleChunk =
-    STALE_CHUNK_PATTERN.test(message);
+  const isStaleChunk = STALE_CHUNK_PATTERN.test(message);
 
   useEffect(() => {
     if (isSpaShellInvariant) {
@@ -95,13 +93,21 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
         <p className="mt-2 text-sm text-muted-foreground">Try refreshing the page.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={() => { router.invalidate(); reset(); }}
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
             className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold text-primary-foreground"
             style={{ background: "var(--gradient-primary)" }}
           >
             Try again
           </button>
-          <a href="/" className="inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-sm">Go home</a>
+          <a
+            href="/"
+            className="inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-sm"
+          >
+            Go home
+          </a>
         </div>
       </div>
     </div>
@@ -114,23 +120,43 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Dynamon Universe — Dynamons World Builds, Guides & Rewards" },
-      { name: "description", content: "Compare Dynamons World builds by feature set, version, element, ratings, and community signals. Explore release notes, rewards, and guided unlock access." },
+      {
+        name: "description",
+        content:
+          "Compare Dynamons World builds by feature set, version, element, ratings, and community signals. Explore release notes, rewards, and guided unlock access.",
+      },
       { name: "author", content: "Dynamon Universe" },
       { name: "theme-color", content: "#171020" },
       { name: "color-scheme", content: "dark" },
       { name: "referrer", content: "strict-origin-when-cross-origin" },
-      { property: "og:title", content: "Dynamon Universe — Dynamons World Builds, Guides & Rewards" },
-      { property: "og:description", content: "Compare Dynamons World builds by feature set, version, element, ratings, and community signals." },
+      {
+        property: "og:title",
+        content: "Dynamon Universe — Dynamons World Builds, Guides & Rewards",
+      },
+      {
+        property: "og:description",
+        content:
+          "Compare Dynamons World builds by feature set, version, element, ratings, and community signals.",
+      },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "Dynamon Universe" },
       { property: "og:image", content: canonicalUrl("/dynamon-gamer-avatar.png") },
       { property: "og:url", content: SITE_URL },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
+      {
+        name: "robots",
+        content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      },
     ],
     scripts: [organizationJsonLd(), websiteJsonLd()],
     links: [
-      { rel: "preload", href: "/fonts/aeonik-pro/AeonikPro-Bold.woff", as: "font", type: "font/woff", crossOrigin: "anonymous" },
+      {
+        rel: "preload",
+        href: "/fonts/aeonik-pro/AeonikPro-Bold.woff",
+        as: "font",
+        type: "font/woff",
+        crossOrigin: "anonymous",
+      },
       { rel: "icon", href: "/dynamon-gamer-avatar.png", sizes: "256x256", type: "image/png" },
       { rel: "apple-touch-icon", href: "/dynamon-gamer-avatar.png", sizes: "256x256" },
       { rel: "stylesheet", href: appCss },

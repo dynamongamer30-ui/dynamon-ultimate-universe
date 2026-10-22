@@ -9,7 +9,12 @@ type AuthCtx = {
   signOut: () => Promise<void>;
 };
 
-const Ctx = createContext<AuthCtx>({ user: null, session: null, loading: true, signOut: async () => {} });
+const Ctx = createContext<AuthCtx>({
+  user: null,
+  session: null,
+  loading: true,
+  signOut: async () => {},
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -66,9 +71,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (sessionStorage.getItem(key)) return;
       sessionStorage.setItem(key, "1");
-    } catch { /* private mode etc — still safe to touch */ }
-    (supabase as unknown as { rpc: (fn: string) => { then: (a: () => void, b: () => void) => void } })
-      .rpc("touch_last_active").then(() => {}, () => {});
+    } catch {
+      /* private mode etc — still safe to touch */
+    }
+    (
+      supabase as unknown as {
+        rpc: (fn: string) => { then: (a: () => void, b: () => void) => void };
+      }
+    )
+      .rpc("touch_last_active")
+      .then(
+        () => {},
+        () => {},
+      );
   }, [session?.user?.id]);
 
   const signOut = async () => {

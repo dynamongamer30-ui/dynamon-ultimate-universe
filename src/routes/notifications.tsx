@@ -10,13 +10,21 @@ import { Skeleton } from "@/components/Skeleton";
 
 export const Route = createFileRoute("/notifications")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Notifications — Dynamon Universe" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({
+    meta: [
+      { title: "Notifications — Dynamon Universe" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: NotificationsPage,
 });
 
 function fmt(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
-    month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 
@@ -40,15 +48,26 @@ function NotificationsPage() {
 
   return (
     <PageShell>
-      <header aria-labelledby="notifications-title" className="route-hero edge-light rounded-2xl glass p-8 sm:p-12">
+      <header
+        aria-labelledby="notifications-title"
+        className="route-hero edge-light rounded-2xl glass p-8 sm:p-12"
+      >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
               <Bell className="h-3.5 w-3.5" /> Inbox
             </p>
-            <h1 id="notifications-title" className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">Notifications</h1>
+            <h1
+              id="notifications-title"
+              className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl"
+            >
+              Notifications
+            </h1>
             <p className="mt-3 max-w-2xl text-muted-foreground">
-              Announcements and updates from the Dynamon Universe team.{unreadCount > 0 && <span className="ml-2 font-semibold text-primary">{unreadCount} new</span>}
+              Announcements and updates from the Dynamon Universe team.
+              {unreadCount > 0 && (
+                <span className="ml-2 font-semibold text-primary">{unreadCount} new</span>
+              )}
             </p>
           </div>
         </div>
@@ -56,12 +75,18 @@ function NotificationsPage() {
 
       {!user ? (
         <div className="mt-10 rounded-3xl border border-dashed border-border bg-card/30 p-10 text-center text-muted-foreground">
-          <Link to="/auth" className="font-semibold text-primary hover:underline">Sign in</Link> to view your notifications.
+          <Link to="/auth" className="font-semibold text-primary hover:underline">
+            Sign in
+          </Link>{" "}
+          to view your notifications.
         </div>
       ) : loading ? (
         <div className="mt-8 space-y-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-start gap-3 rounded-2xl border border-border bg-card/40 p-5">
+            <div
+              key={i}
+              className="flex items-start gap-3 rounded-2xl border border-border bg-card/40 p-5"
+            >
               <Skeleton className="h-9 w-9 shrink-0" />
               <div className="min-w-0 flex-1">
                 <Skeleton className="h-4 w-1/3" />
@@ -72,7 +97,10 @@ function NotificationsPage() {
         </div>
       ) : items.length === 0 ? (
         <div className="mt-10 flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border bg-card/30 p-12 text-center">
-          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary" style={{ boxShadow: "var(--shadow-glow)" }}>
+          <span
+            className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"
+            style={{ boxShadow: "var(--shadow-glow)" }}
+          >
             <BellOff className="h-6 w-6" />
           </span>
           <p className="text-muted-foreground">No notifications yet. Check back soon.</p>
@@ -109,8 +137,15 @@ function NotificationsPage() {
                       </p>
                     )}
                     <div className="notification-heading flex items-start justify-between gap-3">
-                      <h2 className="notification-copy min-w-0 font-display text-lg font-bold">{n.title}</h2>
-                      <time dateTime={n.created_at} className="notification-date shrink-0 text-right text-xs text-muted-foreground">{fmt(n.created_at)}</time>
+                      <h2 className="notification-copy min-w-0 font-display text-lg font-bold">
+                        {n.title}
+                      </h2>
+                      <time
+                        dateTime={n.created_at}
+                        className="notification-date shrink-0 text-right text-xs text-muted-foreground"
+                      >
+                        {fmt(n.created_at)}
+                      </time>
                     </div>
                     <p className="notification-copy mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                       <NotificationBody text={n.body} />

@@ -17,8 +17,15 @@ export function AvatarPicker({ value, onChange, gender }: Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("avatar_pool").select("id, url, gender, label").eq("active", true).order("sort_order")
-      .then(({ data }) => { setPool((data ?? []) as PoolAvatar[]); setLoading(false); });
+    supabase
+      .from("avatar_pool")
+      .select("id, url, gender, label")
+      .eq("active", true)
+      .order("sort_order")
+      .then(({ data }) => {
+        setPool((data ?? []) as PoolAvatar[]);
+        setLoading(false);
+      });
   }, []);
 
   const list = pool.filter((a) => {
@@ -27,7 +34,11 @@ export function AvatarPicker({ value, onChange, gender }: Props) {
   });
 
   if (loading) {
-    return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   if (list.length === 0) {
@@ -42,17 +53,30 @@ export function AvatarPicker({ value, onChange, gender }: Props) {
           <button
             key={a.id}
             type="button"
-            onClick={() => { onChange(a.url); playSoft(); }}
+            onClick={() => {
+              onChange(a.url);
+              playSoft();
+            }}
             className={`group relative aspect-square overflow-hidden rounded-2xl border-2 transition-all ${
-              selected ? "border-primary ring-2 ring-primary/40 scale-[1.03]" : "border-border hover:border-primary/40"
+              selected
+                ? "border-primary ring-2 ring-primary/40 scale-[1.03]"
+                : "border-border hover:border-primary/40"
             }`}
             aria-pressed={selected}
             aria-label={a.label ?? "Avatar"}
           >
-            <img src={a.url} alt={a.label ?? ""} className="h-full w-full object-cover transition-transform group-hover:scale-110" loading="lazy" width={256} height={256} />
+            <img
+              src={a.url}
+              alt={a.label ?? ""}
+              className="h-full w-full object-cover transition-transform group-hover:scale-110"
+              loading="lazy"
+              width={256}
+              height={256}
+            />
             {selected && (
               <motion.div
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
                 className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full text-primary-foreground"
                 style={{ background: "var(--gradient-primary)" }}
               >

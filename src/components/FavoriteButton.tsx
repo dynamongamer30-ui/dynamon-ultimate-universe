@@ -17,7 +17,10 @@ export function FavoriteButton({ slug, className = "" }: { slug: string; classNa
     <motion.button
       whileTap={{ scale: 0.9 }}
       onClick={async () => {
-        if (!user) { navigate({ to: "/auth" }); return; }
+        if (!user) {
+          navigate({ to: "/auth" });
+          return;
+        }
         playSoft();
         const added = await toggle(slug);
         if (added === null) {

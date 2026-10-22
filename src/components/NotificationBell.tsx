@@ -20,7 +20,8 @@ function timeAgo(iso: string): string {
 }
 
 export function NotificationBell() {
-  const { items, readIds, unreadCount, markAllRead, markOneRead, sender, error, refresh } = useNotifications();
+  const { items, readIds, unreadCount, markAllRead, markOneRead, sender, error, refresh } =
+    useNotifications();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -38,7 +39,10 @@ export function NotificationBell() {
   return (
     <div ref={ref} className="relative shrink-0">
       <button
-        onClick={() => { setOpen((v) => !v); playClick(); }}
+        onClick={() => {
+          setOpen((v) => !v);
+          playClick();
+        }}
         aria-label="Notifications"
         aria-expanded={open}
         aria-controls="notification-popover"
@@ -58,7 +62,9 @@ export function NotificationBell() {
             id="notification-popover"
             role="region"
             aria-label="Recent notifications"
-            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
             className="notification-popover absolute right-0 top-full overlay-popover mt-2 max-h-[min(32rem,calc(100dvh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl glass-l3 shadow-elev sm:w-80"
           >
             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
@@ -97,7 +103,11 @@ export function NotificationBell() {
                       <div
                         role="link"
                         tabIndex={0}
-                        onClick={() => { if (unread) markOneRead(n.id); setOpen(false); navigate({ to: "/notifications" }); }}
+                        onClick={() => {
+                          if (unread) markOneRead(n.id);
+                          setOpen(false);
+                          navigate({ to: "/notifications" });
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
@@ -109,12 +119,19 @@ export function NotificationBell() {
                         className="block cursor-pointer px-4 py-3 hover:bg-card/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       >
                         <div className="flex items-start gap-2">
-                          {unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />}
+                          {unread && (
+                            <span
+                              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary"
+                              aria-hidden
+                            />
+                          )}
                           <div className={`notification-copy min-w-0 ${unread ? "" : "pl-4"}`}>
                             {sender && (
                               <div className="mb-1 flex items-center gap-1.5">
                                 <img
-                                  src={sender.custom_avatar_url || sender.avatar_url || "/favicon.ico"}
+                                  src={
+                                    sender.custom_avatar_url || sender.avatar_url || "/favicon.ico"
+                                  }
                                   alt=""
                                   className="h-4 w-4 shrink-0 rounded-full object-cover"
                                 />
@@ -127,7 +144,9 @@ export function NotificationBell() {
                             <p className="notification-copy mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                               <NotificationBody text={n.body} />
                             </p>
-                            <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/70">{timeAgo(n.created_at)}</p>
+                            <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/70">
+                              {timeAgo(n.created_at)}
+                            </p>
                             <NotificationClaim notification={n} />
                           </div>
                         </div>

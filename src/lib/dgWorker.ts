@@ -11,7 +11,10 @@
  */
 
 export const GEN_WORKER_URL = (import.meta.env.VITE_GEN_WORKER_URL || "").replace(/\/+$/, "");
-export const LICENSE_WORKER_URL = (import.meta.env.VITE_LICENSE_WORKER_URL || "").replace(/\/+$/, "");
+export const LICENSE_WORKER_URL = (import.meta.env.VITE_LICENSE_WORKER_URL || "").replace(
+  /\/+$/,
+  "",
+);
 export const TURNSTILE_SITE_KEY = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string) || "";
 
 // ---------- Admin key (per-tab, sessionStorage) ----------
@@ -150,8 +153,17 @@ export async function uploadPayload(args: UploadPayloadArgs): Promise<{ ok: bool
   const protocol = Number(args.protocol);
   const issued = Number(args.issued);
   const minClient = Number(args.min_client);
-  if (protocol !== 2 || minClient !== 3 || !Number.isSafeInteger(issued) || issued <= 0 || issued > Math.floor(Date.now() / 1000) + 300 || !args.meta_sig_b64.trim()) {
-    throw new Error("Royal Void 0.3 requires a freshly signed protocol-2 bundle with min_client 3, issued and meta_sig_b64. Use the owner payload tool.");
+  if (
+    protocol !== 2 ||
+    minClient !== 3 ||
+    !Number.isSafeInteger(issued) ||
+    issued <= 0 ||
+    issued > Math.floor(Date.now() / 1000) + 300 ||
+    !args.meta_sig_b64.trim()
+  ) {
+    throw new Error(
+      "Royal Void 0.3 requires a freshly signed protocol-2 bundle with min_client 3, issued and meta_sig_b64. Use the owner payload tool.",
+    );
   }
   return adminJson("/admin/upload-payload", {
     method: "POST",
@@ -186,4 +198,3 @@ export interface ListDevicesResult {
 export async function listDevices(): Promise<ListDevicesResult> {
   return adminJson<ListDevicesResult>("/admin/list", { method: "GET" });
 }
-

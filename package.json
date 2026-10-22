@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "node scripts/generate-sitemap.mjs && NITRO_COMPATIBILITY_DATE=2026-08-22 vite build",
+    "build": "node scripts/build.mjs",
+    "check": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
     "build:dev": "vite build --mode development",
     "preview": "nitro preview",
     "lint": "eslint .",
@@ -40,6 +42,7 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "2.7.0",
+    "@playwright/test": "^1.64.1",
     "@types/canvas-confetti": "^1.9.0",
     "@types/crypto-js": "^4.2.2",
     "@types/node": "^22.16.5",

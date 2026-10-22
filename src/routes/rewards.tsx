@@ -1,7 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Feather, KeyRound, Sparkles, Clock, Users, Bell, Gift, ArrowRight, Loader2, Copy, Check } from "lucide-react";
+import {
+  Feather,
+  KeyRound,
+  Sparkles,
+  Clock,
+  Users,
+  Bell,
+  Gift,
+  ArrowRight,
+  Loader2,
+  Copy,
+  Check,
+} from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,11 +33,13 @@ const looseRpc = supabase.rpc.bind(supabase) as unknown as (
 type DailyKey = { id: string; key: string; claimed: boolean; expires_at: string };
 
 export const Route = createFileRoute("/rewards")({
-  head: () => pageSeoHead({
-    path: "/rewards",
-    title: "Dynamon Universe Daily Rewards — Keys, Passes & Trainer Progress",
-    description: "Learn how Dynamon Universe daily rewards, trainer progress, keys, and Phoenix Passes work, including the steps to claim available rewards.",
-  }),
+  head: () =>
+    pageSeoHead({
+      path: "/rewards",
+      title: "Dynamon Universe Daily Rewards — Keys, Passes & Trainer Progress",
+      description:
+        "Learn how Dynamon Universe daily rewards, trainer progress, keys, and Phoenix Passes work, including the steps to claim available rewards.",
+    }),
   component: Rewards,
 });
 
@@ -63,26 +77,39 @@ function Rewards() {
   return (
     <PageShell>
       {/* Hero */}
-      <section aria-labelledby="rewards-title" className="route-hero relative overflow-hidden edge-light rounded-2xl glass p-8 sm:p-14">
-        <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl" aria-hidden />
+      <section
+        aria-labelledby="rewards-title"
+        className="route-hero relative overflow-hidden edge-light rounded-2xl glass p-8 sm:p-14"
+      >
+        <div
+          className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl"
+          aria-hidden
+        />
         <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
           <span className="inline-block h-px w-8 bg-primary" aria-hidden />
           Daily rewards
         </p>
-        <h1 id="rewards-title" className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl">
+        <h1
+          id="rewards-title"
+          className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-balance sm:text-5xl"
+        >
           Two prizes. <span className="text-gradient">Every single day.</span>
         </h1>
         <p className="mt-5 max-w-2xl leading-relaxed text-muted-foreground text-pretty">
-          At <span className="font-semibold text-foreground">midnight IST</span> we draw winners for two different
-          rewards — a <span className="font-semibold text-foreground">Daily Key</span> and a{" "}
-          <span className="font-semibold text-foreground">Phoenix Pass</span>. Everyone with an account is
-          automatically in the running. Winners change daily, and you never need to buy anything.
+          At <span className="font-semibold text-foreground">midnight IST</span> we draw winners for
+          two different rewards — a <span className="font-semibold text-foreground">Daily Key</span>{" "}
+          and a <span className="font-semibold text-foreground">Phoenix Pass</span>. Everyone with
+          an account is automatically in the running. Winners change daily, and you never need to
+          buy anything.
         </p>
       </section>
 
       {/* Your active rewards */}
       {user && loading && (
-        <div role="status" className="mt-6 flex items-center gap-2 rounded-2xl border border-border bg-card/50 p-5 text-sm text-muted-foreground">
+        <div
+          role="status"
+          className="mt-6 flex items-center gap-2 rounded-2xl border border-border bg-card/50 p-5 text-sm text-muted-foreground"
+        >
           <Loader2 className="h-4 w-4 animate-spin" /> Checking your rewards…
         </div>
       )}
@@ -94,7 +121,8 @@ function Rewards() {
       {/* Active Phoenix Pass banner */}
       {user && !loading && pass && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
           className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex items-center gap-3">
@@ -104,12 +132,20 @@ function Rewards() {
             <div>
               <p className="text-sm font-bold">You have a Phoenix Pass ready!</p>
               <p className="text-xs text-muted-foreground">
-                Expires {new Date(pass.expires_at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · spend it on any mod
+                Expires{" "}
+                {new Date(pass.expires_at).toLocaleString(undefined, {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}{" "}
+                · spend it on any mod
               </p>
             </div>
           </div>
           <Link
-            to="/mods" onMouseDown={playClick}
+            to="/mods"
+            onMouseDown={playClick}
             className="touch-target press inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-amber-950 transition hover:brightness-110"
           >
             Pick a mod <ArrowRight className="h-4 w-4" />
@@ -119,7 +155,9 @@ function Rewards() {
 
       {/* The two prizes */}
       <section aria-labelledby="prizes-title" className="mt-10 grid gap-6 md:grid-cols-2">
-        <h2 id="prizes-title" className="sr-only">Available daily rewards</h2>
+        <h2 id="prizes-title" className="sr-only">
+          Available daily rewards
+        </h2>
         <PrizeCard
           icon={<KeyRound className="h-6 w-6" />}
           accent="text-primary"
@@ -152,18 +190,38 @@ function Rewards() {
 
       {/* How it works */}
       <section className="mt-12">
-        <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">How it works</h2>
+        <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">
+          How it works
+        </h2>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Step icon={<Clock className="h-5 w-5" />} title="Midnight IST" text="Both draws run automatically every day at 12:00 AM India time." />
-          <Step icon={<Users className="h-5 w-5" />} title="Fresh winners" text="Six different accounts win each day — three keys, three passes. Recent winners sit out so it spreads around." />
-          <Step icon={<Bell className="h-5 w-5" />} title="Everyone’s notified" text="The same announcement goes to every account, so you’ll always know a draw just happened." />
-          <Step icon={<Gift className="h-5 w-5" />} title="Collect in 24h" text="Won something? Grab it within 24 hours — a Daily Key from your notifications, a Phoenix Pass on any mod page." />
+          <Step
+            icon={<Clock className="h-5 w-5" />}
+            title="Midnight IST"
+            text="Both draws run automatically every day at 12:00 AM India time."
+          />
+          <Step
+            icon={<Users className="h-5 w-5" />}
+            title="Fresh winners"
+            text="Six different accounts win each day — three keys, three passes. Recent winners sit out so it spreads around."
+          />
+          <Step
+            icon={<Bell className="h-5 w-5" />}
+            title="Everyone’s notified"
+            text="The same announcement goes to every account, so you’ll always know a draw just happened."
+          />
+          <Step
+            icon={<Gift className="h-5 w-5" />}
+            title="Collect in 24h"
+            text="Won something? Grab it within 24 hours — a Daily Key from your notifications, a Phoenix Pass on any mod page."
+          />
         </div>
       </section>
 
       {/* Rules / fine print */}
       <section className="mt-12 rounded-2xl glass p-6 sm:p-8">
-        <h2 className="font-display text-xl font-extrabold uppercase tracking-tight">Good to know</h2>
+        <h2 className="font-display text-xl font-extrabold uppercase tracking-tight">
+          Good to know
+        </h2>
         <ul className="mt-4 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
           {[
             "You’re entered automatically just by having an account — nothing to sign up for.",
@@ -194,14 +252,16 @@ function Rewards() {
         <div className="flex flex-wrap justify-center gap-3">
           {!user && (
             <Link
-              to="/auth" onMouseDown={playClick}
+              to="/auth"
+              onMouseDown={playClick}
               className="press inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110"
             >
               <Sparkles className="h-4 w-4" /> Sign in free
             </Link>
           )}
           <Link
-            to="/mods" onMouseDown={playClick}
+            to="/mods"
+            onMouseDown={playClick}
             className="press inline-flex items-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-semibold transition-colors hover:border-primary/40"
           >
             Browse mods <ArrowRight className="h-4 w-4" />
@@ -244,14 +304,20 @@ function DailyKeyCard({ initial }: { initial: DailyKey }) {
 
   const copy = () => {
     if (!key) return;
-    navigator.clipboard?.writeText(key)
-      .then(() => { setCopied(true); toast.success("Key copied"); setTimeout(() => setCopied(false), 1800); })
+    navigator.clipboard
+      ?.writeText(key)
+      .then(() => {
+        setCopied(true);
+        toast.success("Key copied");
+        setTimeout(() => setCopied(false), 1800);
+      })
       .catch(() => {});
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
       className="mt-6 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-transparent p-5"
     >
       <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -273,7 +339,10 @@ function DailyKeyCard({ initial }: { initial: DailyKey }) {
 
         {claimed && key ? (
           <div className="flex w-full items-center gap-2 sm:w-auto">
-              <code aria-label="Daily Key" className="flex-1 select-all rounded-lg border border-border bg-background/60 px-3 py-2.5 text-center font-mono text-sm font-bold tracking-wider sm:flex-none">
+            <code
+              aria-label="Daily Key"
+              className="flex-1 select-all rounded-lg border border-border bg-background/60 px-3 py-2.5 text-center font-mono text-sm font-bold tracking-wider sm:flex-none"
+            >
               {key}
             </code>
             <button
@@ -282,17 +351,30 @@ function DailyKeyCard({ initial }: { initial: DailyKey }) {
               className="touch-target press grid shrink-0 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
               aria-label="Copy key"
             >
-              {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+              {copied ? (
+                <Check className="h-4 w-4 text-emerald-400" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
             </button>
           </div>
         ) : (
           <button
             type="button"
-            onClick={claim} disabled={busy}
+            onClick={claim}
+            disabled={busy}
             aria-busy={busy}
             className="touch-target press inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground glow-primary transition hover:brightness-110 disabled:opacity-60 sm:w-auto"
           >
-            {busy ? (<><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</>) : (<><Gift className="h-4 w-4" /> Claim your key</>)}
+            {busy ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Claiming…
+              </>
+            ) : (
+              <>
+                <Gift className="h-4 w-4" /> Claim your key
+              </>
+            )}
           </button>
         )}
       </div>
@@ -301,19 +383,36 @@ function DailyKeyCard({ initial }: { initial: DailyKey }) {
 }
 
 function PrizeCard({
-  icon, accent, ring, glow, eyebrow, title, body, points,
+  icon,
+  accent,
+  ring,
+  glow,
+  eyebrow,
+  title,
+  body,
+  points,
 }: {
-  icon: ReactNode; accent: string; ring: string; glow: string;
-  eyebrow: string; title: string; body: string; points: string[];
+  icon: ReactNode;
+  accent: string;
+  ring: string;
+  glow: string;
+  eyebrow: string;
+  title: string;
+  body: string;
+  points: string[];
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
       className={`relative overflow-hidden rounded-2xl border ${ring} bg-card p-6`}
     >
       <div className={`absolute inset-x-0 top-0 h-32 bg-gradient-to-b ${glow}`} aria-hidden />
       <div className="relative">
-        <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl bg-card/80 ${accent} ${ring} border`}>
+        <div
+          className={`inline-flex h-12 w-12 items-center justify-center rounded-xl bg-card/80 ${accent} ${ring} border`}
+        >
           {icon}
         </div>
         <p className={`mt-4 text-xs font-black uppercase tracking-[0.2em] ${accent}`}>{eyebrow}</p>
@@ -322,7 +421,9 @@ function PrizeCard({
         <ul className="mt-4 space-y-2">
           {points.map((p) => (
             <li key={p} className="flex items-start gap-2 text-sm">
-              <span className={`mt-0.5 ${accent}`}><Sparkles className="h-4 w-4" /></span>
+              <span className={`mt-0.5 ${accent}`}>
+                <Sparkles className="h-4 w-4" />
+              </span>
               <span>{p}</span>
             </li>
           ))}
@@ -335,7 +436,9 @@ function PrizeCard({
 function Step({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
   return (
     <div className="rounded-2xl glass p-5">
-      <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/15 text-primary">{icon}</div>
+      <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/15 text-primary">
+        {icon}
+      </div>
       <p className="mt-3 font-display text-sm font-bold uppercase tracking-wide">{title}</p>
       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{text}</p>
     </div>

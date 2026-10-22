@@ -22,10 +22,16 @@ export function ElementalReactions({ commentId }: { commentId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    supabase.from("comment_reactions").select("user_id, reaction").eq("comment_id", commentId).then(({ data }) => {
-      if (!cancelled) setRows((data ?? []) as Row[]);
-    });
-    return () => { cancelled = true; };
+    supabase
+      .from("comment_reactions")
+      .select("user_id, reaction")
+      .eq("comment_id", commentId)
+      .then(({ data }) => {
+        if (!cancelled) setRows((data ?? []) as Row[]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [commentId]);
 
   const toggle = async (reaction: ReactionKey) => {
@@ -34,10 +40,17 @@ export function ElementalReactions({ commentId }: { commentId: string }) {
     const mine = rows.find((r) => r.user_id === user.id && r.reaction === reaction);
     if (mine) {
       setRows((p) => p.filter((r) => !(r.user_id === user.id && r.reaction === reaction)));
-      await supabase.from("comment_reactions").delete().eq("comment_id", commentId).eq("user_id", user.id).eq("reaction", reaction);
+      await supabase
+        .from("comment_reactions")
+        .delete()
+        .eq("comment_id", commentId)
+        .eq("user_id", user.id)
+        .eq("reaction", reaction);
     } else {
       setRows((p) => [...p, { user_id: user.id, reaction }]);
-      await supabase.from("comment_reactions").insert({ comment_id: commentId, user_id: user.id, reaction });
+      await supabase
+        .from("comment_reactions")
+        .insert({ comment_id: commentId, user_id: user.id, reaction });
     }
   };
 
@@ -48,7 +61,8 @@ export function ElementalReactions({ commentId }: { commentId: string }) {
         const mine = !!user && rows.some((x) => x.user_id === user.id && x.reaction === r.key);
         return (
           <motion.button
-            key={r.key} whileTap={{ scale: 0.85 }}
+            key={r.key}
+            whileTap={{ scale: 0.85 }}
             onClick={() => toggle(r.key)}
             disabled={!user}
             className={`touch-target inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${mine ? "border-primary/50 bg-primary/10" : "border-border bg-card/60 text-muted-foreground hover:text-foreground"} disabled:cursor-not-allowed disabled:opacity-50`}

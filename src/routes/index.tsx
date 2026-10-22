@@ -1,7 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
-import { Shield, Zap, Users, ChevronRight, Star, Download, TrendingUp, ArrowRight, Gift, MessageCircle, ArrowUpRight } from "lucide-react";
+import {
+  Shield,
+  Zap,
+  Users,
+  ChevronRight,
+  Star,
+  Download,
+  TrendingUp,
+  ArrowRight,
+  Gift,
+  MessageCircle,
+  ArrowUpRight,
+} from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ForYouRail } from "@/components/ForYouRail";
@@ -18,14 +30,21 @@ export const Route = createFileRoute("/")({
     const { links, meta } = pageSeoHead({
       path: "/",
       title: "Dynamons World Mod APK Builds, Guides & Rewards | Dynamon Universe",
-      description: "Compare Dynamons World mod APK builds by features, version, element, ratings, and community signals. Explore release notes, rewards, and guided unlock access.",
+      description:
+        "Compare Dynamons World mod APK builds by features, version, element, ratings, and community signals. Explore release notes, rewards, and guided unlock access.",
     });
     return {
       meta,
       links,
       scripts: [
         faqPageJsonLd(FAQ_ITEMS),
-        itemListJsonLd(catalogMods.map((mod) => ({ name: mod.name, path: `/mods/${mod.slug}`, image: mod.image }))),
+        itemListJsonLd(
+          catalogMods.map((mod) => ({
+            name: mod.name,
+            path: `/mods/${mod.slug}`,
+            image: mod.image,
+          })),
+        ),
       ],
     };
   },
@@ -37,15 +56,18 @@ const spring = { type: "spring" as const, stiffness: 120, damping: 20 };
 const FAQ_ITEMS = [
   {
     question: "How do I choose the right Dynamons World build?",
-    answer: "Start with the feature list and version number. Choose a build that matches the way you want to play, whether that is collecting, competitive battles, exploration, or a specific element focus.",
+    answer:
+      "Start with the feature list and version number. Choose a build that matches the way you want to play, whether that is collecting, competitive battles, exploration, or a specific element focus.",
   },
   {
     question: "Where can I see what changed in a release?",
-    answer: "Every build page includes a changelog tab, a version label, and a concise feature overview so you can compare editions before starting the unlock flow.",
+    answer:
+      "Every build page includes a changelog tab, a version label, and a concise feature overview so you can compare editions before starting the unlock flow.",
   },
   {
     question: "Why do some download actions require sign-in?",
-    answer: "Sign-in keeps community features, saved builds, rewards, and device-bound download access connected to one trainer profile.",
+    answer:
+      "Sign-in keeps community features, saved builds, rewards, and device-bound download access connected to one trainer profile.",
   },
 ];
 
@@ -55,10 +77,18 @@ function Index() {
   // The first build is automatically the featured one.
   const sorted = sortByLatest(mods);
   const top = sorted[0];
-  const latestVersion = mods.reduce((v, m) => (compareVersions(m.version, v) > 0 ? m.version : v), "0");
+  const latestVersion = mods.reduce(
+    (v, m) => (compareVersions(m.version, v) > 0 ? m.version : v),
+    "0",
+  );
   const totalDownloads = mods.reduce((s, m) => s + m.downloads, 0);
 
-  if (!top) return <PageShell><div className="py-20 text-center text-muted-foreground">No mods available yet.</div></PageShell>;
+  if (!top)
+    return (
+      <PageShell>
+        <div className="py-20 text-center text-muted-foreground">No mods available yet.</div>
+      </PageShell>
+    );
 
   return (
     <PageShell>
@@ -66,103 +96,122 @@ function Index() {
       <section aria-labelledby="homepage-title" className="relative pt-4 sm:pt-10 lg:pt-14">
         <div className="hero-field">
           <div className="grid gap-8 lg:grid-cols-[1.25fr_1fr] lg:items-center lg:gap-12">
-          <div>
-            <motion.p
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={spring}
-              className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary"
-            >
-              <span className="inline-block h-px w-8 bg-primary" aria-hidden />
-              Dynamon Gamer Space
-            </motion.p>
+            <div>
+              <motion.p
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={spring}
+                className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary"
+              >
+                <span className="inline-block h-px w-8 bg-primary" aria-hidden />
+                Dynamon Gamer Space
+              </motion.p>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.06 }}
-              id="homepage-title"
-              className="mt-6 font-display text-4xl font-black uppercase leading-[1.05] tracking-tight text-balance sm:text-6xl lg:text-7xl xl:text-8xl"
-            >
-              Dynamons World
-              <br />
-              <span className="text-gradient">Builds, guides & rewards.</span>
-            </motion.h1>
+              <motion.h1
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...spring, delay: 0.06 }}
+                id="homepage-title"
+                className="mt-6 font-display text-4xl font-black uppercase leading-[1.05] tracking-tight text-balance sm:text-6xl lg:text-7xl xl:text-8xl"
+              >
+                Dynamons World
+                <br />
+                <span className="text-gradient">Builds, guides & rewards.</span>
+              </motion.h1>
 
-            <motion.p
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.12 }}
-              className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg text-pretty"
-            >
-              Explore a focused collection of Dynamons World builds with clear feature notes,
-              version details, and community signals. Find the edition that fits your play style,
-              then unlock it through a simple, guided flow.
-            </motion.p>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...spring, delay: 0.12 }}
+                className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg text-pretty"
+              >
+                Explore a focused collection of Dynamons World builds with clear feature notes,
+                version details, and community signals. Find the edition that fits your play style,
+                then unlock it through a simple, guided flow.
+              </motion.p>
 
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...spring, delay: 0.18 }}
+                className="mt-8 flex flex-wrap items-center gap-3"
+              >
+                <Link
+                  to="/mods"
+                  onMouseDown={playClick}
+                  onMouseEnter={playHover}
+                  className="press touch-target group inline-flex items-center gap-2 rounded-xl border border-primary/45 bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_34px_-8px_oklch(0.66_0.21_318_/_0.8)]"
+                >
+                  Browse every build
+                  <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </motion.div>
+
+              {/* Honest stats — machined row */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...spring, delay: 0.24 }}
+                className="mt-8 grid grid-cols-3 divide-x divide-border border-y border-border sm:mt-10"
+              >
+                <HeroStat value={`${formatCount(totalDownloads)}+`} label="Community downloads" />
+                <HeroStat value={`${mods.length}`} label="Curated editions" />
+                <HeroStat value={`v${latestVersion}`} label="Latest release" />
+              </motion.div>
+            </div>
+
+            {/* Featured cartridge */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.18 }}
-              className="mt-8 flex flex-wrap items-center gap-3"
+              initial={{ opacity: 1, scale: 0.94, rotate: 1 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ ...spring, delay: 0.1 }}
+              className="relative mx-auto w-full max-w-md"
             >
               <Link
-                to="/mods"
+                to="/mods/$slug"
+                params={{ slug: top.slug }}
                 onMouseDown={playClick}
                 onMouseEnter={playHover}
-                className="press touch-target group inline-flex items-center gap-2 rounded-xl border border-primary/45 bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_34px_-8px_oklch(0.66_0.21_318_/_0.8)]"
+                aria-label={`View featured build: ${top.name}`}
+                className="edge-light group relative block overflow-hidden rounded-[var(--radius-surface)] border border-border bg-card shadow-elev transition-transform duration-300 hover:-translate-y-1.5"
+                style={{ boxShadow: elementTheme[top.element].glow }}
               >
-                Browse every build
-                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <img
+                    src={heroImg}
+                    alt={`${top.name} key art`}
+                    width={1536}
+                    height={1024}
+                    fetchPriority="high"
+                    decoding="async"
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div
+                    className="absolute inset-0 bg-[var(--artwork-overlay)]"
+                    aria-hidden="true"
+                  />
+                </div>
+                <div className="relative p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-black uppercase tracking-widest text-primary-foreground">
+                      <TrendingUp className="h-3 w-3" /> Featured build
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-gold">
+                      <Star className="h-3.5 w-3.5 fill-gold" /> {top.baseRating.toFixed(1)}
+                    </span>
+                  </div>
+                  <p className="mt-3 font-display text-2xl font-extrabold uppercase tracking-tight">
+                    {top.name}
+                  </p>
+                  <div className="mt-1 flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      v{top.version} · {formatCount(top.downloads)}+ downloads
+                    </p>
+                    <ArrowRight className="h-4 w-4 text-primary transition-transform group-hover:translate-x-1" />
+                  </div>
+                </div>
               </Link>
             </motion.div>
-
-            {/* Honest stats — machined row */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.24 }}
-              className="mt-8 grid grid-cols-3 divide-x divide-border border-y border-border sm:mt-10"
-            >
-              <HeroStat value={`${formatCount(totalDownloads)}+`} label="Community downloads" />
-              <HeroStat value={`${mods.length}`} label="Curated editions" />
-              <HeroStat value={`v${latestVersion}`} label="Latest release" />
-            </motion.div>
-          </div>
-
-          {/* Featured cartridge */}
-          <motion.div
-            initial={{ opacity: 1, scale: 0.94, rotate: 1 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={{ ...spring, delay: 0.1 }}
-            className="relative mx-auto w-full max-w-md"
-          >
-            <Link
-              to="/mods/$slug" params={{ slug: top.slug }} onMouseDown={playClick} onMouseEnter={playHover}
-              aria-label={`View featured build: ${top.name}`}
-              className="edge-light group relative block overflow-hidden rounded-[var(--radius-surface)] border border-border bg-card shadow-elev transition-transform duration-300 hover:-translate-y-1.5"
-              style={{ boxShadow: elementTheme[top.element].glow }}
-            >
-              <div className="relative aspect-[4/3] overflow-hidden">
-                <img
-                  src={heroImg}
-                  alt={`${top.name} key art`}
-                  width={1536} height={1024}
-                  fetchPriority="high"
-                  decoding="async"
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-[var(--artwork-overlay)]" aria-hidden="true" />
-              </div>
-              <div className="relative p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-black uppercase tracking-widest text-primary-foreground">
-                    <TrendingUp className="h-3 w-3" /> Featured build
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-gold">
-                    <Star className="h-3.5 w-3.5 fill-gold" /> {top.baseRating.toFixed(1)}
-                  </span>
-                </div>
-                <p className="mt-3 font-display text-2xl font-extrabold uppercase tracking-tight">{top.name}</p>
-                <div className="mt-1 flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    v{top.version} · {formatCount(top.downloads)}+ downloads
-                  </p>
-                  <ArrowRight className="h-4 w-4 text-primary transition-transform group-hover:translate-x-1" />
-                </div>
-              </div>
-            </Link>
-          </motion.div>
           </div>
         </div>
       </section>
@@ -171,7 +220,10 @@ function Index() {
       <section className="mt-14 overflow-hidden border-y border-border py-3" aria-hidden>
         <div className="animate-ticker flex w-max items-center gap-8 whitespace-nowrap">
           {[...mods, ...mods].map((m, i) => (
-            <span key={`${m.slug}-${i}`} className="inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[0.25em] text-muted-foreground">
+            <span
+              key={`${m.slug}-${i}`}
+              className="inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[0.25em] text-muted-foreground"
+            >
               <span className={elementTheme[m.element].text}>◆</span>
               {m.name}
             </span>
@@ -180,12 +232,29 @@ function Index() {
       </section>
 
       {/* ── FEATURE STRIP ────────────────────────────────── */}
-      <section aria-labelledby="value-signals-title" className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:mt-14 sm:grid-cols-3">
-        <h2 id="value-signals-title" className="sr-only">Why trainers use the vault</h2>
-          {[
-          { Icon: Shield, title: "Clear build notes", text: "See the features, version, and gameplay focus before you choose an edition." },
-          { Icon: Zap, title: "Release-aware", text: "Track active editions and recent updates without hunting through unrelated pages." },
-          { Icon: Users, title: "Community signal", text: "Use ratings, favorites, and trainer feedback to make a faster, better-informed choice." },
+      <section
+        aria-labelledby="value-signals-title"
+        className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:mt-14 sm:grid-cols-3"
+      >
+        <h2 id="value-signals-title" className="sr-only">
+          Why trainers use the vault
+        </h2>
+        {[
+          {
+            Icon: Shield,
+            title: "Clear build notes",
+            text: "See the features, version, and gameplay focus before you choose an edition.",
+          },
+          {
+            Icon: Zap,
+            title: "Release-aware",
+            text: "Track active editions and recent updates without hunting through unrelated pages.",
+          },
+          {
+            Icon: Users,
+            title: "Community signal",
+            text: "Use ratings, favorites, and trainer feedback to make a faster, better-informed choice.",
+          },
         ].map(({ Icon, title, text }, i) => (
           <FeaturePanel key={title} Icon={Icon} title={title} text={text} index={i} />
         ))}
@@ -199,13 +268,18 @@ function Index() {
               <span className="inline-block h-px w-8 bg-primary" aria-hidden />
               The vault
             </p>
-            <h2 id="showcase-title" className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-5xl">
+            <h2
+              id="showcase-title"
+              className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-5xl"
+            >
               Start with the
               <br className="sm:hidden" /> latest builds
             </h2>
           </div>
           <Link
-            to="/mods" onMouseDown={playClick} onMouseEnter={playHover}
+            to="/mods"
+            onMouseDown={playClick}
+            onMouseEnter={playHover}
             className="group hidden shrink-0 items-center gap-2 text-sm font-bold uppercase tracking-wider text-primary sm:inline-flex"
           >
             Compare builds
@@ -221,7 +295,8 @@ function Index() {
 
         <div className="mt-8 sm:hidden">
           <Link
-            to="/mods" onMouseDown={playClick}
+            to="/mods"
+            onMouseDown={playClick}
             className="press flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-bold uppercase tracking-wider"
           >
             Compare all builds <ArrowRight className="h-4 w-4" />
@@ -244,11 +319,15 @@ function Index() {
               <span className="inline-block h-px w-8 bg-primary" aria-hidden />
               Your trainer journey
             </p>
-            <h2 id="journey-title" className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-4xl">
+            <h2
+              id="journey-title"
+              className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-4xl"
+            >
               Choose with confidence. <span className="text-gradient">Keep your progress.</span>
             </h2>
             <p className="page-copy mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Save the builds you care about, share useful feedback, and keep reward progress connected to your trainer profile.
+              Save the builds you care about, share useful feedback, and keep reward progress
+              connected to your trainer profile.
             </p>
           </div>
           <Link
@@ -292,7 +371,10 @@ function Index() {
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Before you choose
           </p>
-          <h2 id="faq-title" className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-4xl">
+          <h2
+            id="faq-title"
+            className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-4xl"
+          >
             Questions, answered.
           </h2>
           <p className="page-copy mt-4 max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
@@ -305,9 +387,16 @@ function Index() {
             <details key={item.question} className="group rounded-2xl glass px-5 py-4">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-bold tracking-tight marker:content-none">
                 {item.question}
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-primary/30 text-primary transition-transform duration-300 group-open:rotate-45" aria-hidden>+</span>
+                <span
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-primary/30 text-primary transition-transform duration-300 group-open:rotate-45"
+                  aria-hidden
+                >
+                  +
+                </span>
               </summary>
-              <p className="page-copy max-w-2xl pt-3 text-sm leading-relaxed text-muted-foreground">{item.answer}</p>
+              <p className="page-copy max-w-2xl pt-3 text-sm leading-relaxed text-muted-foreground">
+                {item.answer}
+              </p>
             </details>
           ))}
         </div>
@@ -333,15 +422,19 @@ function FeaturePanel({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }} transition={{ ...spring, delay: index * 0.08 }}
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ ...spring, delay: index * 0.08 }}
       className="group bg-card p-2 transition-colors hover:bg-secondary"
     >
       <div ref={tiltRef} className="feature-tilt h-full rounded-xl p-4 sm:p-6">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
           <Icon className="h-5 w-5" />
         </div>
-          <h3 className="mt-4 font-display text-base font-extrabold uppercase tracking-tight">{title}</h3>
+        <h3 className="mt-4 font-display text-base font-extrabold uppercase tracking-tight">
+          {title}
+        </h3>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{text}</p>
       </div>
     </motion.div>
@@ -370,7 +463,10 @@ function JourneyCard({
       className="group material-l1 press flex min-h-56 flex-col justify-between rounded-[var(--radius-surface)] p-6 transition-[border-color,box-shadow,transform] hover:border-primary/45 hover:shadow-[var(--interactive-glow)]"
     >
       <div>
-        <span className="grid h-10 w-10 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary" aria-hidden="true">
+        <span
+          className="grid h-10 w-10 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary"
+          aria-hidden="true"
+        >
           {icon}
         </span>
         <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-primary">{eyebrow}</p>
@@ -388,7 +484,9 @@ function HeroStat({ value, label }: { value: string; label: string }) {
   return (
     <div className="min-w-0 px-2 py-3 first:pl-0 last:pr-0 sm:px-6 sm:py-4">
       <p className="truncate font-display text-xl font-black tracking-tight sm:text-3xl">{value}</p>
-      <p className="mt-0.5 text-[0.65rem] font-semibold uppercase leading-tight tracking-[0.12em] text-muted-foreground sm:text-xs sm:tracking-[0.2em]">{label}</p>
+      <p className="mt-0.5 text-[0.65rem] font-semibold uppercase leading-tight tracking-[0.12em] text-muted-foreground sm:text-xs sm:tracking-[0.2em]">
+        {label}
+      </p>
     </div>
   );
 }

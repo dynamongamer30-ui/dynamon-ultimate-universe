@@ -5,9 +5,9 @@ type Size = "xs" | "sm" | "md" | "lg";
 
 const SIZES: Record<Size, { pad: string; text: string; icon: string }> = {
   xs: { pad: "px-1.5 py-0.5", text: "text-xs", icon: "h-2.5 w-2.5" },
-  sm: { pad: "px-2 py-0.5",   text: "text-xs", icon: "h-3 w-3" },
-  md: { pad: "px-2.5 py-1",   text: "text-xs",   icon: "h-3.5 w-3.5" },
-  lg: { pad: "px-3 py-1.5",   text: "text-sm",   icon: "h-4 w-4" },
+  sm: { pad: "px-2 py-0.5", text: "text-xs", icon: "h-3 w-3" },
+  md: { pad: "px-2.5 py-1", text: "text-xs", icon: "h-3.5 w-3.5" },
+  lg: { pad: "px-3 py-1.5", text: "text-sm", icon: "h-4 w-4" },
 };
 
 export function OwnerBadge({ size = "sm", label = "OWNER" }: { size?: Size; label?: string }) {

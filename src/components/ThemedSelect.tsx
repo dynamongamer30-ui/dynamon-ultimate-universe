@@ -35,7 +35,10 @@ export function ThemedSelect({
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger
         aria-label={ariaLabel}
-        className={cn("border-border bg-background/60 focus:border-primary focus:ring-0", className)}
+        className={cn(
+          "border-border bg-background/60 focus:border-primary focus:ring-0",
+          className,
+        )}
       >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

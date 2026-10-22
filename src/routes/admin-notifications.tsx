@@ -14,15 +14,26 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin-notifications")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Notifications — Dynamon Universe Admin" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({
+    meta: [
+      { title: "Notifications — Dynamon Universe Admin" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: AdminNotificationsRoute,
 });
 
 function AdminNotificationsRoute() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   if (!mounted) return null;
-  return <OwnerGate><AdminNotifications /></OwnerGate>;
+  return (
+    <OwnerGate>
+      <AdminNotifications />
+    </OwnerGate>
+  );
 }
 
 function AdminNotifications() {
@@ -38,11 +49,17 @@ function AdminNotifications() {
 
   const reload = async () => {
     setLoading(true);
-    try { setItems(await listNotifications()); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setLoading(false); }
+    try {
+      setItems(await listNotifications());
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
-  useEffect(() => { reload(); }, []);
+  useEffect(() => {
+    reload();
+  }, []);
 
   const send = async () => {
     if (!title.trim() || !body.trim()) {
@@ -53,15 +70,23 @@ function AdminNotifications() {
     try {
       await createNotification(title.trim(), body.trim());
       toast.success("Notification sent to all signed-in users");
-      setTitle(""); setBody("");
+      setTitle("");
+      setBody("");
       await reload();
-    } catch (e) { toast.error((e as Error).message); }
-    finally { setSending(false); }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSending(false);
+    }
   };
 
   const remove = async (id: string) => {
-    try { await deleteNotification(id); setItems((p) => p.filter((n) => n.id !== id)); }
-    catch (e) { toast.error((e as Error).message); }
+    try {
+      await deleteNotification(id);
+      setItems((p) => p.filter((n) => n.id !== id));
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
 
   const startEdit = (n: AppNotification) => {
@@ -84,26 +109,39 @@ function AdminNotifications() {
     setSavingEdit(true);
     try {
       await updateNotification(id, editTitle.trim(), editBody.trim());
-      setItems((p) => p.map((n) => (n.id === id ? { ...n, title: editTitle.trim(), body: editBody.trim() } : n)));
+      setItems((p) =>
+        p.map((n) => (n.id === id ? { ...n, title: editTitle.trim(), body: editBody.trim() } : n)),
+      );
       toast.success("Notification updated");
       cancelEdit();
-    } catch (e) { toast.error((e as Error).message); }
-    finally { setSavingEdit(false); }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   return (
     <PageShell>
-      <Link to="/admin" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/admin"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-4 w-4" /> Back to dashboard
       </Link>
 
       <header className="mb-8 flex items-center gap-3">
-        <span className="grid h-11 w-11 place-items-center rounded-2xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+        <span
+          className="grid h-11 w-11 place-items-center rounded-2xl text-primary-foreground"
+          style={{ background: "var(--gradient-primary)" }}
+        >
           <Bell className="h-5 w-5" />
         </span>
         <div>
           <h1 className="font-display text-2xl font-extrabold">Notifications</h1>
-          <p className="text-sm text-muted-foreground">Send announcements to all signed-in users.</p>
+          <p className="text-sm text-muted-foreground">
+            Send announcements to all signed-in users.
+          </p>
         </div>
       </header>
 
@@ -112,7 +150,9 @@ function AdminNotifications() {
         <div className="rounded-2xl border border-border bg-card/60 p-5">
           <h2 className="mb-4 font-display text-lg font-bold">Compose</h2>
           <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Title</span>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Title
+            </span>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -122,7 +162,9 @@ function AdminNotifications() {
             />
           </label>
           <label className="mt-4 block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Message</span>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Message
+            </span>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -139,7 +181,11 @@ function AdminNotifications() {
               className="press inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
               style={{ background: "var(--gradient-primary)" }}
             >
-              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {sending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
               Send notification
             </button>
           </div>
@@ -186,7 +232,11 @@ function AdminNotifications() {
                           className="press inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-primary-foreground disabled:opacity-60"
                           style={{ background: "var(--gradient-primary)" }}
                         >
-                          {savingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                          {savingEdit ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Check className="h-3.5 w-3.5" />
+                          )}
                           Save
                         </button>
                       </div>
@@ -195,7 +245,9 @@ function AdminNotifications() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{n.title}</p>
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{n.body}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                          {n.body}
+                        </p>
                         <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground/70">
                           {new Date(n.created_at).toLocaleString()}
                         </p>

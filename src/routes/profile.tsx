@@ -16,7 +16,10 @@ export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
       { title: "My profile — Dynamon Universe" },
-      { name: "description", content: "Edit your trainer identity: display name, avatar and more." },
+      {
+        name: "description",
+        content: "Edit your trainer identity: display name, avatar and more.",
+      },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -32,12 +35,17 @@ function ProfilePage() {
   const [gender, setGender] = useState<"male" | "female" | "other" | null>(null);
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [username, setUsername] = useState("");
-  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "ok" | "taken" | "invalid">("idle");
+  const [usernameStatus, setUsernameStatus] = useState<
+    "idle" | "checking" | "ok" | "taken" | "invalid"
+  >("idle");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { navigate({ to: "/auth" }); return; }
+    if (!user) {
+      navigate({ to: "/auth" });
+      return;
+    }
   }, [user, loading, navigate]);
 
   useEffect(() => {
@@ -53,13 +61,20 @@ function ProfilePage() {
   useEffect(() => {
     const u = (username ?? "").trim();
     if (!u || (profile && u.toLowerCase() === (profile.username ?? "").toLowerCase())) {
-      setUsernameStatus("idle"); return;
+      setUsernameStatus("idle");
+      return;
     }
-    if (!/^[a-zA-Z0-9_]{3,24}$/.test(u)) { setUsernameStatus("invalid"); return; }
+    if (!/^[a-zA-Z0-9_]{3,24}$/.test(u)) {
+      setUsernameStatus("invalid");
+      return;
+    }
     setUsernameStatus("checking");
     const t = setTimeout(async () => {
       const { data, error } = await supabase.rpc("username_available", { _username: u });
-      if (error) { setUsernameStatus("idle"); return; }
+      if (error) {
+        setUsernameStatus("idle");
+        return;
+      }
       setUsernameStatus(data ? "ok" : "taken");
     }, 350);
     return () => clearTimeout(t);
@@ -68,11 +83,21 @@ function ProfilePage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!displayName.trim()) { toast.error("Display name required"); return; }
-    if (!gender) { toast.error("Pick a gender"); return; }
-    if (!avatarId) { toast.error("Pick an avatar"); return; }
+    if (!displayName.trim()) {
+      toast.error("Display name required");
+      return;
+    }
+    if (!gender) {
+      toast.error("Pick a gender");
+      return;
+    }
+    if (!avatarId) {
+      toast.error("Pick an avatar");
+      return;
+    }
     if (username !== profile?.username && usernameStatus !== "ok") {
-      toast.error("Username unavailable"); return;
+      toast.error("Username unavailable");
+      return;
     }
     setBusy(true);
     try {
@@ -110,9 +135,17 @@ function ProfilePage() {
     return (
       <PageShell>
         <div className="mx-auto max-w-md py-20 text-center">
-          <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight">Finish setting up your trainer</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Pick a username, avatar and gender first.</p>
-          <Link to="/auth" className="mt-6 inline-flex rounded-full px-5 py-3 text-sm font-semibold text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+          <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight">
+            Finish setting up your trainer
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Pick a username, avatar and gender first.
+          </p>
+          <Link
+            to="/auth"
+            className="mt-6 inline-flex rounded-full px-5 py-3 text-sm font-semibold text-primary-foreground"
+            style={{ background: "var(--gradient-primary)" }}
+          >
             Complete profile
           </Link>
         </div>
@@ -127,23 +160,35 @@ function ProfilePage() {
       <div className="mx-auto grid max-w-6xl gap-8 py-6 lg:grid-cols-[1fr_1.5fr] lg:py-12">
         {/* Identity card */}
         <motion.aside
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
           className="surface-l1 relative overflow-hidden edge-light rounded-2xl p-6 lg:sticky lg:top-24"
         >
           <div className="relative flex flex-col items-center text-center">
             <div className="relative">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="h-32 w-32 rounded-full object-cover ring-4 ring-primary/40" />
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-32 w-32 rounded-full object-cover ring-4 ring-primary/40"
+                />
               ) : (
-                <div className="grid h-32 w-32 place-items-center rounded-full text-4xl font-bold text-primary-foreground" style={{ background: "var(--gradient-violet)" }}>
+                <div
+                  className="grid h-32 w-32 place-items-center rounded-full text-4xl font-bold text-primary-foreground"
+                  style={{ background: "var(--gradient-violet)" }}
+                >
                   {displayName[0]?.toUpperCase() ?? "T"}
                 </div>
               )}
               {profile.is_owner && (
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2"><OwnerBadge size="md" /></span>
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+                  <OwnerBadge size="md" />
+                </span>
               )}
             </div>
-            <h1 className="mt-6 font-display text-2xl font-extrabold uppercase tracking-tight">{displayName || "Your name"}</h1>
+            <h1 className="mt-6 font-display text-2xl font-extrabold uppercase tracking-tight">
+              {displayName || "Your name"}
+            </h1>
             <p className="text-sm text-muted-foreground">@{username || profile.username}</p>
             {profile.is_owner && (
               <div className="mt-3 flex flex-wrap justify-center gap-2">
@@ -160,13 +205,21 @@ function ProfilePage() {
         {/* Edit form */}
         <motion.form
           aria-labelledby="edit-profile-title"
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
           onSubmit={submit}
           className="route-hero space-y-6 edge-light rounded-2xl glass p-7 sm:p-8"
         >
           <div>
-            <h2 id="edit-profile-title" className="font-display text-2xl font-extrabold uppercase tracking-tight">Edit profile</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Update your name, avatar or username anytime.</p>
+            <h2
+              id="edit-profile-title"
+              className="font-display text-2xl font-extrabold uppercase tracking-tight"
+            >
+              Edit profile
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Update your name, avatar or username anytime.
+            </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -174,9 +227,11 @@ function ProfilePage() {
               <div className="relative">
                 <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
-                  value={username} onChange={(e) => setUsername(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
-                  maxLength={24} required
+                  maxLength={24}
+                  required
                   className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-20 text-sm outline-none focus:border-primary"
                 />
                 <UsernameBadge status={usernameStatus} />
@@ -187,9 +242,11 @@ function ProfilePage() {
               <div className="relative">
                 <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
-                  value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
                   autoComplete="name"
-                  maxLength={40} required
+                  maxLength={40}
+                  required
                   className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
                 />
               </div>
@@ -197,15 +254,23 @@ function ProfilePage() {
           </div>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gender</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Gender
+            </p>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {(["male", "female", "other"] as const).map((g) => (
                 <button
-                  key={g} type="button"
-                  onClick={() => { setGender(g); playSoft(); }}
+                  key={g}
+                  type="button"
+                  onClick={() => {
+                    setGender(g);
+                    playSoft();
+                  }}
                   aria-pressed={gender === g}
                   className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
-                    gender === g ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
+                    gender === g
+                      ? "border-primary/50 bg-primary/10 text-primary"
+                      : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {g}
@@ -215,14 +280,18 @@ function ProfilePage() {
           </div>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avatar</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Avatar
+            </p>
             <div className="mt-3">
               <AvatarPicker value={avatarId} onChange={setAvatarId} gender={gender} />
             </div>
           </div>
 
           <button
-            type="submit" disabled={busy} onMouseDown={playClick}
+            type="submit"
+            disabled={busy}
+            onMouseDown={playClick}
             aria-busy={busy}
             className="touch-target inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
             style={{ background: "var(--gradient-primary)" }}
@@ -236,11 +305,21 @@ function ProfilePage() {
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block">
       <div className="flex items-baseline justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </span>
         {hint && <span className="text-xs text-muted-foreground/80">{hint}</span>}
       </div>
       <div className="mt-1.5">{children}</div>
@@ -252,13 +331,15 @@ function UsernameBadge({ status }: { status: "idle" | "checking" | "ok" | "taken
   if (status === "idle") return null;
   const map = {
     checking: { text: "checking…", c: "text-muted-foreground" },
-    ok:       { text: "available", c: "text-emerald-400" },
-    taken:    { text: "taken",     c: "text-rose-400" },
-    invalid:  { text: "invalid",   c: "text-amber-400" },
+    ok: { text: "available", c: "text-emerald-400" },
+    taken: { text: "taken", c: "text-rose-400" },
+    invalid: { text: "invalid", c: "text-amber-400" },
   } as const;
   const s = map[status];
   return (
-    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wider ${s.c}`}>
+    <span
+      className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wider ${s.c}`}
+    >
       {s.text}
     </span>
   );

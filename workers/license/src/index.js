@@ -1,16 +1,17 @@
 // Pure policy helpers: no credentials, database access, or request state.
 function licenseReason(activation, keyData, fingerprint, now) {
-  if (!activation || !keyData) return 'no-login';
-  const key = String(activation.key || activation.Key || '');
-  if (!key || String(keyData.device || '') !== fingerprint) return 'device_mismatch';
-  if (String(keyData.status || 'active').toLowerCase() !== 'active') return 'suspended';
+  if (!activation || !keyData) return "no-login";
+  const key = String(activation.key || activation.Key || "");
+  if (!key || String(keyData.device || "") !== fingerprint) return "device_mismatch";
+  if (String(keyData.status || "active").toLowerCase() !== "active") return "suspended";
   let last = Number(activation.lastLogin || 0);
   if (last > 0 && last < 1e12) last *= 1000;
-  if (!Number.isFinite(last) || last > now + 60000 || now - last > 1800000 || last <= 0) return 'no-login';
+  if (!Number.isFinite(last) || last > now + 60000 || now - last > 1800000 || last <= 0)
+    return "no-login";
   const expiry = Number(keyData.expiry || 0);
-  if (!Number.isFinite(expiry) || expiry < 0) return 'invalid_license';
-  if (expiry > 0 && expiry * 1000 <= now) return 'expired';
-  return '';
+  if (!Number.isFinite(expiry) || expiry < 0) return "invalid_license";
+  if (expiry > 0 && expiry * 1000 <= now) return "expired";
+  return "";
 }
 function maintenance(config, locks) {
   return config === true || !!(locks && (locks.app === true || locks.mods === true));
@@ -35,7 +36,11 @@ const MAX_PAYLOAD_B64_CHARS = 10_000_000;
 const BAN_CACHE_MS = 60 * 1000;
 const BAN_CACHE = new Map();
 async function safeR2Get(bucket, key) {
-  try { return bucket ? await bucket.get(key) : null; } catch (_) { return null; }
+  try {
+    return bucket ? await bucket.get(key) : null;
+  } catch (_) {
+    return null;
+  }
 }
 
 // VIP keys are prefixed "VIP-" or "DGVIP-" (case-insensitive).
@@ -48,7 +53,14 @@ function isLifetimeDuration(mode) {
   const m = String(mode == null ? "" : mode)
     .trim()
     .toLowerCase();
-  return m === "" || m === "0" || m === "lifetime" || m === "life" || m === "permanent" || m === "unlimited";
+  return (
+    m === "" ||
+    m === "0" ||
+    m === "lifetime" ||
+    m === "life" ||
+    m === "permanent" ||
+    m === "unlimited"
+  );
 }
 
 // Accepts numbers (interpreted as HOURS, matching the admin panel's
@@ -60,12 +72,18 @@ function parseDurationToSeconds(mode) {
   if (!m) return 0;
   const n = parseFloat(m[1]);
   switch (m[2]) {
-    case "s": return Math.floor(n);
-    case "m": return Math.floor(n * 60);
-    case "d": return Math.floor(n * 86400);
-    case "w": return Math.floor(n * 604800);
-    case "h": return Math.floor(n * 3600);
-    default: return Math.floor(n * 3600); // bare number = hours
+    case "s":
+      return Math.floor(n);
+    case "m":
+      return Math.floor(n * 60);
+    case "d":
+      return Math.floor(n * 86400);
+    case "w":
+      return Math.floor(n * 604800);
+    case "h":
+      return Math.floor(n * 3600);
+    default:
+      return Math.floor(n * 3600); // bare number = hours
   }
 }
 
@@ -114,31 +132,60 @@ function isBuildId(value) {
 function dexBrandConfig(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const name = text(value.name, "Dynamon Gamer", 80);
-  const links = Array.isArray(value.links) ? value.links.slice(0, 12).flatMap(link => {
-    if (!link || typeof link !== "object") return [];
-    const url = safePublicUrl(link.url);
-    return url ? [{title: text(link.title, "Open link", 60), url, icon: /^[a-z]{1,20}$/.test(link.icon || "") ? link.icon : "globe"}] : [];
-  }) : [];
-  return {name: name || "Dynamon Gamer", edition: text(value.edition, "Royal Void", 60), links};
+  const links = Array.isArray(value.links)
+    ? value.links.slice(0, 12).flatMap((link) => {
+        if (!link || typeof link !== "object") return [];
+        const url = safePublicUrl(link.url);
+        return url
+          ? [
+              {
+                title: text(link.title, "Open link", 60),
+                url,
+                icon: /^[a-z]{1,20}$/.test(link.icon || "") ? link.icon : "globe",
+              },
+            ]
+          : [];
+      })
+    : [];
+  return { name: name || "Dynamon Gamer", edition: text(value.edition, "Royal Void", 60), links };
 }
 
-const DEX_THEME_IDS = ["dark","fire","thunder","water","earth","diamond","gold","spirit"];
-const DEX_THEME_COLORS = ["background","panel","card","primary","deep","highlight","text","muted","border","input","success","error"];
+const DEX_THEME_IDS = ["dark", "fire", "thunder", "water", "earth", "diamond", "gold", "spirit"];
+const DEX_THEME_COLORS = [
+  "background",
+  "panel",
+  "card",
+  "primary",
+  "deep",
+  "highlight",
+  "text",
+  "muted",
+  "border",
+  "input",
+  "success",
+  "error",
+];
 function dexThemeConfig(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value) || value.schema !== 1) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.schema !== 1)
+    return null;
   const enabledThemes = Array.isArray(value.enabledThemes)
-    ? [...new Set(value.enabledThemes.filter(id => DEX_THEME_IDS.includes(id)))] : [...DEX_THEME_IDS];
+    ? [...new Set(value.enabledThemes.filter((id) => DEX_THEME_IDS.includes(id)))]
+    : [...DEX_THEME_IDS];
   if (!enabledThemes.length) enabledThemes.push("dark");
-  const defaultTheme = enabledThemes.includes(value.defaultTheme) ? value.defaultTheme : enabledThemes[0];
+  const defaultTheme = enabledThemes.includes(value.defaultTheme)
+    ? value.defaultTheme
+    : enabledThemes[0];
   const palettes = {};
   for (const id of DEX_THEME_IDS) {
-    const source=value.palettes && value.palettes[id];
+    const source = value.palettes && value.palettes[id];
     if (!source || typeof source !== "object" || Array.isArray(source)) continue;
-    const colors={};
-    for (const key of DEX_THEME_COLORS) if (typeof source[key] === "string" && /^#[0-9a-f]{6}$/i.test(source[key])) colors[key]=source[key].toUpperCase();
-    if (Object.keys(colors).length) palettes[id]=colors;
+    const colors = {};
+    for (const key of DEX_THEME_COLORS)
+      if (typeof source[key] === "string" && /^#[0-9a-f]{6}$/i.test(source[key]))
+        colors[key] = source[key].toUpperCase();
+    if (Object.keys(colors).length) palettes[id] = colors;
   }
-  return {schema:1,defaultTheme,enabledThemes,palettes};
+  return { schema: 1, defaultTheme, enabledThemes, palettes };
 }
 
 function publicAppConfig(config) {
@@ -146,7 +193,8 @@ function publicAppConfig(config) {
   const update = cfg.Update && typeof cfg.Update === "object" ? cfg.Update : {};
   const links = cfg.Links && typeof cfg.Links === "object" ? cfg.Links : {};
   const tutorial = cfg.Tutorial && typeof cfg.Tutorial === "object" ? cfg.Tutorial : {};
-  const rawFeatureLocks = cfg.FeatureLocks && typeof cfg.FeatureLocks === "object" ? cfg.FeatureLocks : {};
+  const rawFeatureLocks =
+    cfg.FeatureLocks && typeof cfg.FeatureLocks === "object" ? cfg.FeatureLocks : {};
   const featureLocks = {};
   for (const [key, value] of Object.entries(rawFeatureLocks)) {
     if (/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(key) && typeof value === "boolean") {
@@ -154,8 +202,9 @@ function publicAppConfig(config) {
     }
   }
   const tutorialId = text(tutorial.videoId, "", 64);
-  const tutorialUrl = safePublicUrl(cfg.TutorialUrl)
-    || (tutorialId ? safePublicUrl("https://youtu.be/" + encodeURIComponent(tutorialId)) : "");
+  const tutorialUrl =
+    safePublicUrl(cfg.TutorialUrl) ||
+    (tutorialId ? safePublicUrl("https://youtu.be/" + encodeURIComponent(tutorialId)) : "");
   const updateUrl = safePublicUrl(update.UpdateUrl);
 
   return {
@@ -247,11 +296,15 @@ export default {
         extra || {},
       );
     const isAdmin = async () => {
-      const value=req.headers.get("X-Admin");
-      if(typeof env.ADMIN_KEY!=="string" || !env.ADMIN_KEY || !value || value.length>512)return false;
-      const encoder=new TextEncoder();
-      const [a,b]=await Promise.all([crypto.subtle.digest("SHA-256",encoder.encode(value)),crypto.subtle.digest("SHA-256",encoder.encode(env.ADMIN_KEY))]);
-      return crypto.subtle.timingSafeEqual(a,b);
+      const value = req.headers.get("X-Admin");
+      if (typeof env.ADMIN_KEY !== "string" || !env.ADMIN_KEY || !value || value.length > 512)
+        return false;
+      const encoder = new TextEncoder();
+      const [a, b] = await Promise.all([
+        crypto.subtle.digest("SHA-256", encoder.encode(value)),
+        crypto.subtle.digest("SHA-256", encoder.encode(env.ADMIN_KEY)),
+      ]);
+      return crypto.subtle.timingSafeEqual(a, b);
     };
 
     const fbGet = async (p) => {
@@ -281,14 +334,22 @@ export default {
     };
     const dexAppearance = async () => {
       try {
-        const response=await fetch(SB_URL+"/rest/v1/app_config?id=in.(DexBranding,DexThemes)&select=id,data",{headers:sbHead()});
-        if (!response.ok) return {brand:null,themes:null};
-        const rows=await response.json();
-        if (!Array.isArray(rows)) return {brand:null,themes:null};
-        const brandRow=rows.find(row=>row.id==="DexBranding");
-        const themeRow=rows.find(row=>row.id==="DexThemes");
-        return {brand:dexBrandConfig(brandRow&&brandRow.data),themes:dexThemeConfig(themeRow&&themeRow.data)};
-      } catch (_) {return {brand:null,themes:null};}
+        const response = await fetch(
+          SB_URL + "/rest/v1/app_config?id=in.(DexBranding,DexThemes)&select=id,data",
+          { headers: sbHead() },
+        );
+        if (!response.ok) return { brand: null, themes: null };
+        const rows = await response.json();
+        if (!Array.isArray(rows)) return { brand: null, themes: null };
+        const brandRow = rows.find((row) => row.id === "DexBranding");
+        const themeRow = rows.find((row) => row.id === "DexThemes");
+        return {
+          brand: dexBrandConfig(brandRow && brandRow.data),
+          themes: dexThemeConfig(themeRow && themeRow.data),
+        };
+      } catch (_) {
+        return { brand: null, themes: null };
+      }
     };
     const fbPut = async (p, val) => {
       try {
@@ -349,7 +410,9 @@ export default {
         const requestedBuild = url.searchParams.get("build");
         if (requestedBuild && !isBuildId(requestedBuild)) return json({ error: "no payload" }, 404);
         const currentObject = await safeR2Get(DG_R2, "current_build");
-        const build = requestedBuild || (currentObject ? await currentObject.text() : await KV.get("current_build"));
+        const build =
+          requestedBuild ||
+          (currentObject ? await currentObject.text() : await KV.get("current_build"));
         if (!isBuildId(build)) return json({ error: "no build" }, 404);
         const payloadObject = await safeR2Get(DG_R2, "ct:" + build);
         const ct = payloadObject ? await payloadObject.json() : await KV.get("ct:" + build, "json");
@@ -360,7 +423,10 @@ export default {
           iv_b64: ct.iv_b64,
           sig_b64: ct.sig_b64,
           ct_sha: ct.ct_sha,
-          protocol: ct.protocol, issued: ct.issued, min_client: ct.min_client, meta_sig_b64: ct.meta_sig_b64,
+          protocol: ct.protocol,
+          issued: ct.issued,
+          min_client: ct.min_client,
+          meta_sig_b64: ct.meta_sig_b64,
         });
       }
 
@@ -370,7 +436,11 @@ export default {
         const fp = d.fp,
           build = d.build,
           ctsha = d.ctsha;
-        if (!isBoundedString(fp, 200) || !isBuildId(build) || (ctsha != null && ctsha !== "" && !isBoundedString(ctsha, 128)))
+        if (
+          !isBoundedString(fp, 200) ||
+          !isBuildId(build) ||
+          (ctsha != null && ctsha !== "" && !isBoundedString(ctsha, 128))
+        )
           return json({ banned: true, reason: "bad request" });
 
         const ban = await isBanned(fp);
@@ -398,7 +468,8 @@ export default {
         const au = await fbGet("ActivatedUsers/" + fp);
         let last = au && au.lastLogin ? Number(au.lastLogin) : 0;
         if (last > 0 && last < 1e12) last = last * 1000; // seconds -> ms
-        const fresh = last > 0 && last <= Date.now() + 60000 && Date.now() - last <= LOGIN_GRACE * 1000;
+        const fresh =
+          last > 0 && last <= Date.now() + 60000 && Date.now() - last <= LOGIN_GRACE * 1000;
         if (!phoenixPass && (!au || !fresh)) {
           // Block the mod but do NOT ban — user just needs to log in properly.
           return json({ blocked: true, reason: "no-login" });
@@ -406,9 +477,10 @@ export default {
 
         const maintenanceMode = await fbGet("Config/Maintenance");
         const featureLocks = await fbGet("Config/FeatureLocks");
-        if (maintenance(maintenanceMode, featureLocks)) return json({ blocked: true, reason: "maintenance" });
+        if (maintenance(maintenanceMode, featureLocks))
+          return json({ blocked: true, reason: "maintenance" });
         if (!phoenixPass) {
-          const license = au && await fbGet("ValidKeys/" + String(au.key || au.Key || ""));
+          const license = au && (await fbGet("ValidKeys/" + String(au.key || au.Key || "")));
           const reason = licenseReason(au, license, fp, Date.now());
           if (reason) return json({ blocked: true, reason });
         }
@@ -420,13 +492,19 @@ export default {
           return json({ blocked: true, reason: "integrity" });
         }
 
-        
         const appearance = await dexAppearance();
-        return json({ key: kf.key_b64, phoenixPass: phoenixPass, xpAvailable: xpAvailable, featureLocks: featureLocks || {}, ...appearance });
+        return json({
+          key: kf.key_b64,
+          phoenixPass: phoenixPass,
+          xpAvailable: xpAvailable,
+          featureLocks: featureLocks || {},
+          ...appearance,
+        });
       }
 
       // ---------- legacy heartbeat: no storage work ----------
-      if (path === "/heartbeat" && req.method === "POST") return json({ ok: true, stateless: true });
+      if (path === "/heartbeat" && req.method === "POST")
+        return json({ ok: true, stateless: true });
 
       // ---------- tamper compatibility: never auto-ban an untrusted report ----------
       if (path === "/tamper" && req.method === "POST") {
@@ -464,7 +542,8 @@ export default {
         if (status !== "active") return json({ ok: false, error: "suspended" });
 
         const nowSec = Math.floor(Date.now() / 1000);
-        const durationMode = kd.durationHours != null ? String(kd.durationHours) : String(kd.duration || "24");
+        const durationMode =
+          kd.durationHours != null ? String(kd.durationHours) : String(kd.duration || "24");
         const lifetime = isLifetimeDuration(durationMode);
         const boundDevice = kd.device == null ? "" : String(kd.device);
         const vip = isVipKey(key);
@@ -490,7 +569,13 @@ export default {
             ExpiryReadable: expiry > 0 ? new Date(expiry * 1000).toISOString() : "Lifetime",
           });
 
-          return json({ ok: true, vip: vip, durationMode: durationMode, expiry: expiry, lifetime: lifetime });
+          return json({
+            ok: true,
+            vip: vip,
+            durationMode: durationMode,
+            expiry: expiry,
+            lifetime: lifetime,
+          });
         }
 
         // Returning device: must match + not be expired.
@@ -503,7 +588,13 @@ export default {
             au.Key = key;
             au.key = key;
             await fbPut("ActivatedUsers/" + fp, au);
-            return json({ ok: true, vip: vip, durationMode: durationMode, expiry: expiry, lifetime: lifetime });
+            return json({
+              ok: true,
+              vip: vip,
+              durationMode: durationMode,
+              expiry: expiry,
+              lifetime: lifetime,
+            });
           }
           return json({ ok: false, error: "expired" });
         }
@@ -516,31 +607,68 @@ export default {
       if (path === "/admin/upload-payload" && req.method === "POST") {
         if (!(await isAdmin())) return json({ error: "forbidden" }, 403);
         const d = await body();
-        if (!isBuildId(d.build) || !isBoundedString(d.ct_b64, MAX_PAYLOAD_B64_CHARS) || !isBoundedString(d.key_b64, MAX_PAYLOAD_B64_CHARS))
+        if (
+          !isBuildId(d.build) ||
+          !isBoundedString(d.ct_b64, MAX_PAYLOAD_B64_CHARS) ||
+          !isBoundedString(d.key_b64, MAX_PAYLOAD_B64_CHARS)
+        )
           return json({ error: "need build, ct_b64, key_b64" }, 400);
         const ctValue = JSON.stringify({
           ct_b64: d.ct_b64,
           iv_b64: d.iv_b64 || "",
           sig_b64: d.sig_b64 || "",
           ct_sha: d.ct_sha || "",
-          protocol: d.protocol, issued: d.issued, min_client: d.min_client, meta_sig_b64: d.meta_sig_b64,
+          protocol: d.protocol,
+          issued: d.issued,
+          min_client: d.min_client,
+          meta_sig_b64: d.meta_sig_b64,
         });
         const keyValue = JSON.stringify({ key_b64: d.key_b64, ct_sha: d.ct_sha || "" });
         const byteLength = (value) => new TextEncoder().encode(value).byteLength;
         try {
-          await DG_R2.put("ct:" + d.build, ctValue, { httpMetadata: { contentType: "application/json" } });
+          await DG_R2.put("ct:" + d.build, ctValue, {
+            httpMetadata: { contentType: "application/json" },
+          });
         } catch (e) {
-          return json({ error: "payload_storage_failed", operation: "ciphertext", bytes: byteLength(ctValue), message: String(e && e.message ? e.message : e).slice(0, 200) }, 413);
+          return json(
+            {
+              error: "payload_storage_failed",
+              operation: "ciphertext",
+              bytes: byteLength(ctValue),
+              message: String(e && e.message ? e.message : e).slice(0, 200),
+            },
+            413,
+          );
         }
         try {
-          await DG_R2.put("key:" + d.build, keyValue, { httpMetadata: { contentType: "application/json" } });
+          await DG_R2.put("key:" + d.build, keyValue, {
+            httpMetadata: { contentType: "application/json" },
+          });
         } catch (e) {
-          return json({ error: "payload_storage_failed", operation: "key", bytes: byteLength(keyValue), message: String(e && e.message ? e.message : e).slice(0, 200) }, 413);
+          return json(
+            {
+              error: "payload_storage_failed",
+              operation: "key",
+              bytes: byteLength(keyValue),
+              message: String(e && e.message ? e.message : e).slice(0, 200),
+            },
+            413,
+          );
         }
         try {
-          await DG_R2.put("current_build", d.build, { httpMetadata: { contentType: "text/plain; charset=utf-8" } });
+          await DG_R2.put("current_build", d.build, {
+            httpMetadata: { contentType: "text/plain; charset=utf-8" },
+          });
         } catch (e) {
-          return json({ error: "payload_storage_failed", operation: "current_build", bytes: byteLength(d.build), message: String(e && e.message ? e.message : e).slice(0, 200) }, 500);
+          return json(
+            {
+              error: "payload_storage_failed",
+              operation: "current_build",
+              bytes: byteLength(d.build),
+              message: String(e && e.message ? e.message : e).slice(0, 200),
+            },
+            500,
+          );
         }
         // Publishing any new payload ends the one-build Dark Eclipse policy.
         const darkEclipsePolicy = await fbGet("Config/DarkEclipsePolicy");

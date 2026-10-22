@@ -19,14 +19,20 @@ export function NotificationOptIn() {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase.from("notification_prefs").select("asked_at").eq("user_id", user.id).maybeSingle();
+      const { data } = await supabase
+        .from("notification_prefs")
+        .select("asked_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
       if (!cancelled && !data?.asked_at) {
         const skipKey = `notif-skipped:${user.id}`;
         const skipped = typeof window !== "undefined" && sessionStorage.getItem(skipKey);
         if (!skipped) setTimeout(() => setOpen(true), 1500);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const save = async () => {
@@ -34,7 +40,11 @@ export function NotificationOptIn() {
     setBusy(true);
     try {
       if (push && typeof window !== "undefined" && "Notification" in window) {
-        try { await Notification.requestPermission(); } catch { /* ignore */ }
+        try {
+          await Notification.requestPermission();
+        } catch {
+          /* ignore */
+        }
       }
       const { error: prefsError } = await supabase.from("notification_prefs").upsert({
         user_id: user.id,
@@ -61,7 +71,9 @@ export function NotificationOptIn() {
       setOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save");
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const skip = () => {
@@ -73,38 +85,75 @@ export function NotificationOptIn() {
     <AnimatePresence>
       {open && (
         <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           className="modal-frame fixed inset-0 z-[100] grid place-items-center bg-background/70 backdrop-blur-sm"
           onClick={skip}
         >
           <motion.div
             ref={dialogRef}
-            initial={{ scale: 0.94, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.94, opacity: 0 }}
+            initial={{ scale: 0.94, y: 20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.94, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            role="dialog" aria-modal="true" aria-labelledby="notification-opt-in-title" tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notification-opt-in-title"
+            tabIndex={-1}
             className="modal-panel relative w-full max-w-md overflow-hidden rounded-3xl glass shadow-elev"
           >
-            <button type="button" onClick={skip} className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground" aria-label="Close notification preferences">
+            <button
+              type="button"
+              onClick={skip}
+              className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground"
+              aria-label="Close notification preferences"
+            >
               <X className="h-4 w-4" />
             </button>
             <div className="relative p-7">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary">
                 <Sparkles className="h-3 w-3" /> Stay in the loop
               </span>
-              <h2 id="notification-opt-in-title" className="mt-4 font-display text-2xl font-extrabold">Get notified on new mods</h2>
+              <h2
+                id="notification-opt-in-title"
+                className="mt-4 font-display text-2xl font-extrabold"
+              >
+                Get notified on new mods
+              </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                We drop fresh Dynamons World builds every week. Pick how you want to hear about them.
+                We drop fresh Dynamons World builds every week. Pick how you want to hear about
+                them.
               </p>
               <div className="mt-6 space-y-3">
-                <Toggle icon={<Mail className="h-4 w-4" />} label="Email me on new mod drops" value={email} onChange={setEmail} hint="Sent to the email on your account" />
-                <Toggle icon={<Bell className="h-4 w-4" />} label="Browser push notifications" value={push} onChange={setPush} hint="Instant on this device" />
+                <Toggle
+                  icon={<Mail className="h-4 w-4" />}
+                  label="Email me on new mod drops"
+                  value={email}
+                  onChange={setEmail}
+                  hint="Sent to the email on your account"
+                />
+                <Toggle
+                  icon={<Bell className="h-4 w-4" />}
+                  label="Browser push notifications"
+                  value={push}
+                  onChange={setPush}
+                  hint="Instant on this device"
+                />
               </div>
               <div className="mt-7 flex gap-2">
-                <button type="button" onClick={skip} className="flex-1 rounded-full border border-border bg-card/60 px-4 py-2.5 text-sm font-semibold">
+                <button
+                  type="button"
+                  onClick={skip}
+                  className="flex-1 rounded-full border border-border bg-card/60 px-4 py-2.5 text-sm font-semibold"
+                >
                   Maybe later
                 </button>
                 <button
-                  onClick={() => { playClick(); save(); }}
+                  onClick={() => {
+                    playClick();
+                    save();
+                  }}
                   disabled={busy}
                   className="flex-[1.4] rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-60"
                   style={{ background: "var(--gradient-primary)" }}
@@ -120,18 +169,42 @@ export function NotificationOptIn() {
   );
 }
 
-function Toggle({ icon, label, value, onChange, hint }: { icon: React.ReactNode; label: string; value: boolean; onChange: (v: boolean) => void; hint: string }) {
+function Toggle({
+  icon,
+  label,
+  value,
+  onChange,
+  hint,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  hint: string;
+}) {
   return (
-    <button type="button" onClick={() => onChange(!value)} aria-pressed={value} className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-colors ${value ? "border-primary/50 bg-primary/10" : "border-border bg-card/60"}`}>
-      <span className={`grid h-9 w-9 place-items-center rounded-xl ${value ? "text-primary-foreground" : "text-muted-foreground bg-background/60"}`} style={value ? { background: "var(--gradient-primary)" } : undefined}>
+    <button
+      type="button"
+      onClick={() => onChange(!value)}
+      aria-pressed={value}
+      className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-colors ${value ? "border-primary/50 bg-primary/10" : "border-border bg-card/60"}`}
+    >
+      <span
+        className={`grid h-9 w-9 place-items-center rounded-xl ${value ? "text-primary-foreground" : "text-muted-foreground bg-background/60"}`}
+        style={value ? { background: "var(--gradient-primary)" } : undefined}
+      >
         {icon}
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">{label}</p>
         <p className="text-xs text-muted-foreground">{hint}</p>
       </div>
-      <span className={`h-5 w-9 rounded-full transition-colors ${value ? "bg-primary" : "bg-border"}`}>
-        <span className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${value ? "translate-x-4" : ""}`} />
+      <span
+        className={`h-5 w-9 rounded-full transition-colors ${value ? "bg-primary" : "bg-border"}`}
+      >
+        <span
+          className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${value ? "translate-x-4" : ""}`}
+        />
       </span>
     </button>
   );
