@@ -32,6 +32,12 @@ Validation before release: all nine themes on phone/tablet/desktop, persistence 
 
 Phase limits: production owner publication, all-route nine-theme contrast, Firefox/WebKit, browser zoom/text scaling, complete user journeys and real APK validation remain BLOCKED or PENDING. The increment is not certification of complete phases 08–36. No DB migration or live settings write. Theme choice produces zero server writes; one intentional owner publication writes one existing settings row and refreshes the existing settings bundle. Cloudflare GraphQL usage query returned rate-limiter budget depleted; no usage figures inferred from that error.
 
+Theme rollout: main commit `f42ee71362b748b7f4b626a3ff24d4cd0fbe09b2`. Cloudflare build `f88c789f-91f5-47af-be72-e419689ff814` succeeded; deployment `17da08c4-42c5-422b-9d55-01bb3b5c0efe`, version `fa1a7869-30dc-433e-919d-c1c783d6afed`, 100%. All 12 production browser tests passed (3.6 minutes). Production screenshots for all nine themes were captured and reviewed. Theme foundations/public switching: PASS. Protected owner-save journey remains unverified; mocked concurrency/permission tests pass.
+
+Approved security increment: the user explicitly approved the grant-only proposal. Supabase migration `protect_internal_progression_grants` applied successfully. Read-only postflight confirms both helpers inaccessible to anon/authenticated, direct progression writes blocked, reads/record_engagement/service-role access retained. Advisors no longer flag the two helpers: anonymous definer findings 27→25 and authenticated 30→28. No reward rows were created and no data removed; RLS and native contracts preserved. Real authenticated award journey remains unverified. See PROGRESSION-SECURITY-REVIEW.md for the exact SQL, evidence and emergency rollback. Other advisor findings are not marked resolved.
+
+Quota follow-up: bounded Cloudflare analytics retry succeeded. The measured window reports 1,939 invocations, zero invocation errors and elevated p99 CPU in website/dg. See QUOTA.md. This supersedes the earlier temporary analytics blocker; complete storage/database/peak-capacity certification remains pending.
+
 PENDING. Website themes, owner theme controls, Royal Black, shell and responsive improvements, all page modernization, query efficiency, performance, SEO/PWA, accessibility, expanded visual QA, native compatibility and real quota validation have not yet passed their required gates. Do not infer completion from the baseline pass.
 
 ## Current safety boundary
