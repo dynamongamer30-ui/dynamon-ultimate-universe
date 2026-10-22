@@ -18,6 +18,8 @@ Pre-commit verification: TypeScript PASS; lint PASS (zero errors, 11 existing Fa
 
 ## Phases 05–36
 
+Release attempt: main commit `e62f05b2ab001d1058bf941e728274e3c91d81fa` published with GitHub MCP after terminal Git credentials failed. Cloudflare did not automatically enqueue the connector ref update; the existing main build trigger was invoked explicitly. Build `2e5f3a11-3ff2-4cdb-93a2-0db0f4ff54fe` failed at dependency installation: pnpm 9.10.0 requires a `packages` list in pnpm-workspace.yaml, unlike the local pnpm 11 generator. No production deployment occurred. Add explicit root package selection and verify with production pnpm before retrying. This failure is not a website runtime regression.
+
 PENDING. Website themes, owner theme controls, Royal Black, shell and responsive improvements, all page modernization, query efficiency, performance, SEO/PWA, accessibility, expanded visual QA, native compatibility and real quota validation have not yet passed their required gates. Do not infer completion from the baseline pass.
 
 ## Current safety boundary
