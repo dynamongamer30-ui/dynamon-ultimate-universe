@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { Calendar, GitCommit } from "lucide-react";
 import type { Mod } from "@/lib/mods";
+import { formatReleaseDate } from "@/lib/releaseDate";
 
 export function ChangelogTimeline({ entries, glow }: { entries: Mod["changelog"]; glow: string }) {
   return (
@@ -29,7 +30,7 @@ export function ChangelogTimeline({ entries, glow }: { entries: Mod["changelog"]
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-display text-lg font-bold">v{c.version}</span>
                 <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background/40 px-2.5 py-0.5 text-xs text-muted-foreground">
-                  <Calendar className="h-3 w-3" /> {new Date(c.date).toLocaleDateString()}
+                  <Calendar className="h-3 w-3" /> {formatReleaseDate(c.date)}
                 </span>
               </div>
               <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">

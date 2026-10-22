@@ -35,6 +35,7 @@ import { breadcrumbJsonLd, pageSeoHead, softwareAppJsonLd } from "@/lib/seo";
 import { playClick } from "@/lib/sound";
 import { toast } from "sonner";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
+import { formatReleaseDate } from "@/lib/releaseDate";
 
 export const Route = createFileRoute("/mods/$slug")({
   loader: ({ params }) => {
@@ -284,14 +285,7 @@ function ModDetail() {
             <Stat label="Downloads" value={`${formatCount(blendedMod.downloads)}+`} />
             <Stat label="Version" value={blendedMod.version} />
             <Stat label="Size" value={blendedMod.size} />
-            <Stat
-              label="Updated"
-              value={new Date(blendedMod.updated).toLocaleDateString(undefined, {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            />
+            <Stat label="Updated" value={formatReleaseDate(blendedMod.updated)} />
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Build trust metadata">
@@ -303,7 +297,7 @@ function ModDetail() {
             <TrustSignal
               icon={<CalendarDays className="h-4 w-4" />}
               label="Release"
-              value={`Updated ${new Date(blendedMod.updated).toLocaleDateString(undefined, { month: "short", year: "numeric" })}`}
+              value={`Updated ${formatReleaseDate(blendedMod.updated, true)}`}
             />
             <TrustSignal
               icon={<FileArchive className="h-4 w-4" />}

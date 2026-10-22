@@ -50,7 +50,7 @@ test("all nine appearances change full surfaces, persist and send no theme reque
     if (request.url().includes("supabase.co")) requests++;
   });
   await page.goto("/", { waitUntil: "networkidle" });
-  if (testInfo.project.name !== "desktop")
+  if ((page.viewportSize()?.width ?? 0) < 1024)
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
   const selector = page.getByRole("combobox", { name: "Website theme" });
   const before = requests;

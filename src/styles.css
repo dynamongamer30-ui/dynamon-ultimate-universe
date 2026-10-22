@@ -844,16 +844,16 @@ select:focus-visible {
 /* AuroraCursor ring — border-color/box-shadow toggle only on hover-state
    change (not every animation frame), transitioned smoothly by CSS. */
 .aurora-ring {
-  border-color: oklch(0.66 0.21 318 / 0.58);
-  box-shadow: 0 0 16px 0px oklch(0.6 0.23 300 / 0.2);
+  border-color: color-mix(in srgb, var(--primary) 58%, transparent);
+  box-shadow: 0 0 16px 0px color-mix(in srgb, var(--primary) 20%, transparent);
   transition:
     opacity 300ms,
     border-color 150ms,
     box-shadow 150ms;
 }
 .aurora-ring.aurora-ring-hover {
-  border-color: oklch(0.76 0.17 322 / 0.94);
-  box-shadow: 0 0 26px 3px oklch(0.64 0.22 308 / 0.38);
+  border-color: color-mix(in srgb, var(--primary) 94%, transparent);
+  box-shadow: 0 0 26px 3px color-mix(in srgb, var(--primary) 38%, transparent);
 }
 
 /* Hero-specific static fields: restrained accents behind the content, never a

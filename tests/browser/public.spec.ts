@@ -30,7 +30,7 @@ test("public routes render without runtime errors or horizontal overflow", async
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   for (const route of routes) {
-    const response = await page.goto(route);
+    const response = await page.goto(route, { waitUntil: "networkidle" });
     expect(response?.status(), route).toBeLessThan(400);
     await expect(page.locator("main")).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Something glitched");
@@ -45,7 +45,7 @@ test("public routes render without runtime errors or horizontal overflow", async
 
 test("search and mobile navigation remain usable", async ({ page }, testInfo) => {
   await page.goto("/", { waitUntil: "networkidle" });
-  if (testInfo.project.name !== "desktop") {
+  if ((page.viewportSize()?.width ?? 0) < 1024) {
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
     await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
     await page.getByRole("button", { name: "Close menu", exact: true }).click();

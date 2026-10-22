@@ -1,108 +1,116 @@
 import { useEffect, useRef } from "react";
 
-/**
- * Ember cursor — a precise dot with a spring-trailing ring.
- * The ring expands with a hot ember glow over interactive elements
- * and contracts sharply on press for mechanical feel.
- * Hidden on touch / coarse pointers and for reduced motion.
- */
+/** Optional pointer depth. Schedule frames only while the spring is moving. */
 export function AuroraCursor() {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const coarse = window.matchMedia("(pointer: coarse)").matches;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (coarse || reduced) return;
-
-    const dot = dotRef.current;
-    const ring = ringRef.current;
+    const dot = dotRef.current,
+      ring = ringRef.current;
     if (!dot || !ring) return;
-
-    let mx = window.innerWidth / 2,
-      my = window.innerHeight / 2;
-    // spring state for the ring
-    let rx = mx,
+    const coarse = window.matchMedia("(pointer: coarse)");
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const wide = window.matchMedia("(min-width: 768px)");
+    const enabled = () => !coarse.matches && !reduced.matches && wide.matches && !document.hidden;
+    let mx = innerWidth / 2,
+      my = innerHeight / 2,
+      rx = mx,
       ry = my,
       vx = 0,
       vy = 0;
-    let isHover = false;
-    let isDown = false;
-    let visible = false;
-
-    const onMove = (e: PointerEvent) => {
-      mx = e.clientX;
-      my = e.clientY;
+    let visible = false,
+      hover = false,
+      down = false,
+      frame = 0;
+    const schedule = () => {
+      if (!frame && visible && enabled()) frame = requestAnimationFrame(paint);
+    };
+    const paint = () => {
+      frame = 0;
+      if (!visible || !enabled()) return;
+      vx = (vx + (mx - rx) * 0.14) * 0.72;
+      vy = (vy + (my - ry) * 0.14) * 0.72;
+      rx += vx;
+      ry += vy;
+      const moving = Math.abs(mx - rx) + Math.abs(my - ry) + Math.abs(vx) + Math.abs(vy) > 0.05;
+      if (!moving) {
+        rx = mx;
+        ry = my;
+        vx = 0;
+        vy = 0;
+      }
+      dot.style.transform = `translate3d(${mx - 3}px, ${my - 3}px, 0) scale(${down ? 0.6 : 1})`;
+      ring.style.transform = `translate3d(${rx - 19}px, ${ry - 19}px, 0) scale(${down ? 0.72 : hover ? 1.55 : 1})`;
+      ring.classList.toggle("aurora-ring-hover", hover);
+      if (moving) schedule();
+    };
+    const hide = () => {
+      visible = false;
+      hover = false;
+      down = false;
+      cancelAnimationFrame(frame);
+      frame = 0;
+      dot.style.opacity = "0";
+      ring.style.opacity = "0";
+    };
+    const move = (event: PointerEvent) => {
+      if (!enabled()) return;
+      mx = event.clientX;
+      my = event.clientY;
       if (!visible) {
+        rx = mx;
+        ry = my;
+        vx = 0;
+        vy = 0;
         visible = true;
         dot.style.opacity = "1";
         ring.style.opacity = "0.8";
       }
+      schedule();
     };
-    const hoverable = (target: Element | null) =>
-      target?.closest("a,button,[role='button'],input,textarea,select,label,[data-cursor]");
-    const onOver = (e: Event) => {
-      if (hoverable(e.target as Element)) isHover = true;
-    };
-    const onOut = (e: Event) => {
-      if (hoverable(e.target as Element)) isHover = false;
-    };
-    const onDown = () => {
-      isDown = true;
-    };
-    const onUp = () => {
-      isDown = false;
-    };
-    const onLeaveWindow = () => {
-      visible = false;
-      dot.style.opacity = "0";
-      ring.style.opacity = "0";
-    };
-
-    window.addEventListener("pointermove", onMove, { passive: true });
-    document.addEventListener("pointerover", onOver, true);
-    document.addEventListener("pointerout", onOut, true);
-    window.addEventListener("pointerdown", onDown);
-    window.addEventListener("pointerup", onUp);
-    document.documentElement.addEventListener("pointerleave", onLeaveWindow);
-
-    let raf = 0;
-    let prevHover = false;
-    const loop = () => {
-      // critically-damped spring for the ring
-      const STIFF = 0.14;
-      const DAMP = 0.72;
-      vx = (vx + (mx - rx) * STIFF) * DAMP;
-      vy = (vy + (my - ry) * STIFF) * DAMP;
-      rx += vx;
-      ry += vy;
-
-      const scale = isDown ? 0.72 : isHover ? 1.55 : 1;
-      dot.style.transform = `translate3d(${mx - 3}px, ${my - 3}px, 0) scale(${isDown ? 0.6 : 1})`;
-      ring.style.transform = `translate3d(${rx - 19}px, ${ry - 19}px, 0) scale(${scale})`;
-
-      // box-shadow/border-color are non-composited — only write them when
-      // hover state actually changes, not on every one of 60 frames/sec.
-      if (isHover !== prevHover) {
-        prevHover = isHover;
-        ring.classList.toggle("aurora-ring-hover", isHover);
+    const interactive = (target: EventTarget | null) =>
+      target instanceof Element &&
+      target.closest("a,button,[role='button'],input,textarea,select,label,[data-cursor]");
+    const over = (event: Event) => {
+      if (interactive(event.target)) {
+        hover = true;
+        schedule();
       }
-
-      raf = requestAnimationFrame(loop);
     };
-    raf = requestAnimationFrame(loop);
-
+    const out = (event: Event) => {
+      if (interactive(event.target)) {
+        hover = false;
+        schedule();
+      }
+    };
+    const press = () => {
+      down = true;
+      schedule();
+    };
+    const release = () => {
+      down = false;
+      schedule();
+    };
+    window.addEventListener("pointermove", move, { passive: true });
+    document.addEventListener("pointerover", over, true);
+    document.addEventListener("pointerout", out, true);
+    window.addEventListener("pointerdown", press);
+    window.addEventListener("pointerup", release);
+    document.documentElement.addEventListener("pointerleave", hide);
+    document.addEventListener("visibilitychange", hide);
+    for (const media of [coarse, reduced, wide]) media.addEventListener("change", hide);
     return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("pointermove", onMove);
-      document.removeEventListener("pointerover", onOver, true);
-      document.removeEventListener("pointerout", onOut, true);
-      window.removeEventListener("pointerdown", onDown);
-      window.removeEventListener("pointerup", onUp);
-      document.documentElement.removeEventListener("pointerleave", onLeaveWindow);
+      hide();
+      window.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerover", over, true);
+      document.removeEventListener("pointerout", out, true);
+      window.removeEventListener("pointerdown", press);
+      window.removeEventListener("pointerup", release);
+      document.documentElement.removeEventListener("pointerleave", hide);
+      document.removeEventListener("visibilitychange", hide);
+      for (const media of [coarse, reduced, wide]) media.removeEventListener("change", hide);
     };
   }, []);
-
   return (
     <>
       <div
@@ -113,10 +121,7 @@ export function AuroraCursor() {
       <div
         ref={dotRef}
         className="pointer-events-none fixed left-0 top-0 z-[62] hidden h-1.5 w-1.5 rounded-full opacity-0 transition-opacity duration-300 md:block"
-        style={{
-          background: "oklch(0.76 0.18 320)",
-          boxShadow: "0 0 10px oklch(0.62 0.23 300 / 0.88)",
-        }}
+        style={{ background: "var(--primary)", boxShadow: "var(--interactive-glow)" }}
         aria-hidden
       />
     </>

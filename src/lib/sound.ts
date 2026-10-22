@@ -12,11 +12,17 @@ const FEEDBACK_EVENT = "dynamon-feedback-preference-change";
 
 let ctx: AudioContext | null = null;
 let lastHoverAt = 0;
+let sessionPreference: FeedbackPreference | null = null;
 
 function readPreference(): FeedbackPreference {
   if (typeof window === "undefined") return "full";
-  const value = window.localStorage.getItem(FEEDBACK_PREFERENCE_KEY);
-  return value === "reduced" || value === "off" ? value : "full";
+  if (sessionPreference) return sessionPreference;
+  try {
+    const value = window.localStorage.getItem(FEEDBACK_PREFERENCE_KEY);
+    return value === "reduced" || value === "off" ? value : "full";
+  } catch {
+    return "off";
+  }
 }
 
 export function getFeedbackPreference(): FeedbackPreference {
@@ -206,6 +212,11 @@ export function subscribeToFeedbackPreference(listener: (preference: FeedbackPre
 
 export function setFeedbackPreference(preference: FeedbackPreference) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(FEEDBACK_PREFERENCE_KEY, preference);
+  sessionPreference = preference;
+  try {
+    window.localStorage.setItem(FEEDBACK_PREFERENCE_KEY, preference);
+  } catch {
+    /* Keep the deliberate choice for this page session. */
+  }
   window.dispatchEvent(new CustomEvent(FEEDBACK_EVENT, { detail: preference }));
 }

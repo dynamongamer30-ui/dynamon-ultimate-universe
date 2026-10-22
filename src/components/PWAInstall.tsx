@@ -13,27 +13,52 @@ export function PWAInstall() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (sessionStorage.getItem("pwa-dismissed")) return;
+    try {
+      if (sessionStorage.getItem("pwa-dismissed")) return;
+    } catch {
+      /* Storage is optional. */
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BeforeInstallPromptEvent);
-      setTimeout(() => setShow(true), 4000);
+      clearTimeout(timer);
+      timer = setTimeout(() => setShow(true), 4000);
+    };
+    const installed = () => {
+      clearTimeout(timer);
+      setShow(false);
+      setDeferred(null);
     };
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", installed);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installed);
+    };
   }, []);
 
   const install = async () => {
     if (!deferred) return;
-    await deferred.prompt();
-    await deferred.userChoice;
-    setShow(false);
-    setDeferred(null);
+    try {
+      await deferred.prompt();
+      await deferred.userChoice;
+    } catch {
+      /* A browser can withdraw install eligibility while the prompt is open. */
+    } finally {
+      setShow(false);
+      setDeferred(null);
+    }
   };
 
   const dismiss = () => {
     setShow(false);
-    sessionStorage.setItem("pwa-dismissed", "1");
+    try {
+      sessionStorage.setItem("pwa-dismissed", "1");
+    } catch {
+      /* Already dismissed for this render. */
+    }
   };
 
   return (

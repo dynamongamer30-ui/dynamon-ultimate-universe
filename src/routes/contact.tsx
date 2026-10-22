@@ -3,8 +3,8 @@ import { useState } from "react";
 import { PageShell } from "@/components/PageShell";
 import { SocialStrip } from "@/components/SocialStrip";
 import { Mail, Send } from "lucide-react";
-import { playClick, playSuccess } from "@/lib/sound";
-import { toast } from "sonner";
+import { playClick } from "@/lib/sound";
+import { SUPPORT_EMAIL, supportDraftUrl } from "@/lib/contact";
 import { pageSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/contact")({
@@ -23,9 +23,7 @@ function Contact() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.message.trim()) return;
-    playSuccess();
-    toast.success("Message sent — we’ll get back to you soon.");
-    setForm({ name: "", email: "", message: "" });
+    window.open(supportDraftUrl(form.name, form.email, form.message), "_self");
   };
   return (
     <PageShell>
@@ -101,10 +99,17 @@ function Contact() {
             onMouseDown={playClick}
             className="press mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110"
           >
-            <Send className="h-4 w-4" /> Send message
+            <Send className="h-4 w-4" /> Open email draft
           </button>
-          <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <Mail className="h-3 w-3" /> Or email hello@dynamon.universe
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            This opens your email app. Send the draft there to deliver your message. Your text stays
+            here if no email app is available.
+          </p>
+          <p className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <Mail className="h-3 w-3" /> Or email{" "}
+            <a className="text-primary underline" href={`mailto:${SUPPORT_EMAIL}`}>
+              {SUPPORT_EMAIL}
+            </a>
           </p>
         </form>
       </section>
