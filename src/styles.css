@@ -1,6 +1,7 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+@import "./website-themes.css";
 
 /* One expressive display family and one readable text family. Only four font
    files are loaded; browser synthesis covers intermediate UI weights. */

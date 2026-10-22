@@ -1,0 +1,150 @@
+/* Website appearance is independent of the protected native DexThemes schema. */
+:root {
+  --theme-background: #080a0d;
+  --theme-card: #12161c;
+  --theme-elevated: #202630;
+  --theme-text: #f5f4f0;
+  --theme-muted: #b5bac3;
+  --theme-accent: #e5c480;
+  --theme-accentEnd: #f4e2ba;
+}
+:root[data-website-theme="dark"] {
+  --theme-background: #0c0912;
+  --theme-card: #18121f;
+  --theme-elevated: #261d31;
+  --theme-text: #f6f0ff;
+  --theme-muted: #bdb2cc;
+  --theme-accent: #c4a1ff;
+  --theme-accentEnd: #e3caff;
+}
+:root[data-website-theme="fire"] {
+  --theme-background: #110b09;
+  --theme-card: #201510;
+  --theme-elevated: #302017;
+  --theme-text: #fff3e8;
+  --theme-muted: #ceb9aa;
+  --theme-accent: #ffb07a;
+  --theme-accentEnd: #ffd8a6;
+}
+:root[data-website-theme="thunder"] {
+  --theme-background: #080d14;
+  --theme-card: #101b28;
+  --theme-elevated: #1a2a3b;
+  --theme-text: #f0f6ff;
+  --theme-muted: #b3c3d5;
+  --theme-accent: #9ed8ff;
+  --theme-accentEnd: #d1ecff;
+}
+:root[data-website-theme="water"] {
+  --theme-background: #071113;
+  --theme-card: #0e2024;
+  --theme-elevated: #193035;
+  --theme-text: #edffff;
+  --theme-muted: #adc9cc;
+  --theme-accent: #84e6ee;
+  --theme-accentEnd: #bdf8f1;
+}
+:root[data-website-theme="earth"] {
+  --theme-background: #0c1009;
+  --theme-card: #192014;
+  --theme-elevated: #28321f;
+  --theme-text: #f4f8eb;
+  --theme-muted: #bfcbb1;
+  --theme-accent: #c5dfa1;
+  --theme-accentEnd: #e3edbd;
+}
+:root[data-website-theme="diamond"] {
+  --theme-background: #0c1016;
+  --theme-card: #171e29;
+  --theme-elevated: #252f3c;
+  --theme-text: #f1f6ff;
+  --theme-muted: #b9c7d8;
+  --theme-accent: #c8d9ee;
+  --theme-accentEnd: #f1f6ff;
+}
+:root[data-website-theme="gold"] {
+  --theme-background: #110f08;
+  --theme-card: #211c10;
+  --theme-elevated: #322918;
+  --theme-text: #fff8e7;
+  --theme-muted: #d0c4a6;
+  --theme-accent: #f0d687;
+  --theme-accentEnd: #ffeab1;
+}
+:root[data-website-theme="spirit"] {
+  --theme-background: #110c16;
+  --theme-card: #21172a;
+  --theme-elevated: #30213b;
+  --theme-text: #fcf2ff;
+  --theme-muted: #cbb7d8;
+  --theme-accent: #e5c6fb;
+  --theme-accentEnd: #f5dafa;
+}
+:root[data-website-theme] {
+  color-scheme: dark;
+  --background: var(--theme-background);
+  --foreground: var(--theme-text);
+  --card: var(--theme-card);
+  --card-foreground: var(--theme-text);
+  --popover: var(--theme-elevated);
+  --popover-foreground: var(--theme-text);
+  --secondary: var(--theme-elevated);
+  --secondary-foreground: var(--theme-text);
+  --muted: var(--theme-elevated);
+  --muted-foreground: var(--theme-muted);
+  --primary: var(--theme-accent);
+  --primary-foreground: #101114;
+  --accent: var(--theme-accentEnd);
+  --accent-foreground: #101114;
+  --gold: #e5c480;
+  --success: #9cddb9;
+  --warning: #efcf8d;
+  --info: #a5d4f5;
+  --destructive: #ef9298;
+  --destructive-foreground: #101114;
+  --border: color-mix(in srgb, var(--theme-text) 16%, var(--theme-card));
+  --input: var(--theme-elevated);
+  --ring: var(--theme-accent);
+  --gradient-primary: linear-gradient(120deg, var(--theme-accent), var(--theme-accentEnd));
+  --gradient-violet: var(--gradient-primary);
+  --gradient-hero:
+    radial-gradient(
+      ellipse at 90% 0%,
+      color-mix(in srgb, var(--primary) 6%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(var(--background), var(--background));
+  --shadow-glow: 0 8px 28px -16px color-mix(in srgb, var(--primary) 45%, transparent);
+  --shadow-violet: var(--shadow-glow);
+  --shadow-card: 0 18px 50px -24px #000b;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+  --interactive-glow: 0 0 24px -12px color-mix(in srgb, var(--primary) 35%, transparent);
+  --overlay-scrim: color-mix(in srgb, var(--background) 85%, transparent);
+  --header-surface: color-mix(in srgb, var(--card) 95%, transparent);
+  --footer-surface: var(--card);
+}
+html[data-website-theme] .app-shell::before {
+  opacity: 0.4;
+  background: radial-gradient(
+    55rem 30rem at 80% 0%,
+    color-mix(in srgb, var(--primary) 8%, transparent),
+    transparent 70%
+  );
+}
+html[data-website-theme] ::selection {
+  background: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+html[data-website-theme] ::-webkit-scrollbar-thumb {
+  background: var(--theme-elevated);
+}
+html[data-website-theme] ::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+html[data-website-theme] option {
+  background: var(--popover);
+  color: var(--foreground);
+}
+html[data-website-theme] .hero-field {
+  background: linear-gradient(135deg, var(--card), var(--background));
+  border-color: var(--border);
+}

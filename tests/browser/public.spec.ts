@@ -54,4 +54,9 @@ test("search and mobile navigation remain usable", async ({ page }, testInfo) =>
   await expect(page.getByRole("region", { name: "Site search" })).toBeVisible();
   await page.getByRole("button", { name: "Close search", exact: true }).click();
   await expect(page.getByRole("region", { name: "Site search" })).toBeHidden();
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Site search" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("region", { name: "Site search" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Search", exact: true })).toBeFocused();
 });

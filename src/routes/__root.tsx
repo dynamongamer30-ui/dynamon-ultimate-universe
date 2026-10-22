@@ -22,6 +22,8 @@ import { PWAInstall } from "@/components/PWAInstall";
 import { SITE_URL, canonicalUrl, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { SiteSettingsProvider } from "@/hooks/useSiteSettings";
+import { WebsiteThemeProvider } from "@/hooks/useWebsiteTheme";
+import { WEBSITE_THEMES, WEBSITE_THEME_STORAGE } from "@/lib/websiteThemes";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { GamificationProvider } from "@/hooks/useGamification";
 import { OwnerReturnRedirect } from "@/components/OwnerReturnRedirect";
@@ -148,7 +150,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
       },
     ],
-    scripts: [organizationJsonLd(), websiteJsonLd()],
+    scripts: [
+      organizationJsonLd(),
+      websiteJsonLd(),
+      {
+        children: `try{const t=localStorage.getItem(${JSON.stringify(WEBSITE_THEME_STORAGE)});if(${JSON.stringify(WEBSITE_THEMES.map((theme) => theme.id))}.includes(t))document.documentElement.dataset.websiteTheme=t}catch{}`,
+      },
+    ],
     links: [
       {
         rel: "preload",
@@ -171,7 +179,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-website-theme="royal-black" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
@@ -205,30 +213,32 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SiteSettingsProvider>
-          <GamificationProvider>
-            <ConfirmProvider>
-              <MotionConfig reducedMotion="user">
-                <AuroraCursor />
-                <AnnouncementBanner />
-                <OwnerReturnRedirect />
-                <PageTransition>
-                  <Outlet />
-                </PageTransition>
-                <Toaster
-                  theme="dark"
-                  position="bottom-right"
-                  visibleToasts={1}
-                  toastOptions={{
-                    className: "site-toast",
-                    duration: 4200,
-                  }}
-                />
-                <NotificationOptIn />
-                <PWAInstall />
-                <DailyCheckIn />
-              </MotionConfig>
-            </ConfirmProvider>
-          </GamificationProvider>
+          <WebsiteThemeProvider>
+            <GamificationProvider>
+              <ConfirmProvider>
+                <MotionConfig reducedMotion="user">
+                  <AuroraCursor />
+                  <AnnouncementBanner />
+                  <OwnerReturnRedirect />
+                  <PageTransition>
+                    <Outlet />
+                  </PageTransition>
+                  <Toaster
+                    theme="dark"
+                    position="bottom-right"
+                    visibleToasts={1}
+                    toastOptions={{
+                      className: "site-toast",
+                      duration: 4200,
+                    }}
+                  />
+                  <NotificationOptIn />
+                  <PWAInstall />
+                  <DailyCheckIn />
+                </MotionConfig>
+              </ConfirmProvider>
+            </GamificationProvider>
+          </WebsiteThemeProvider>
         </SiteSettingsProvider>
       </AuthProvider>
     </QueryClientProvider>

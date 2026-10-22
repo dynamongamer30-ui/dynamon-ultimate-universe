@@ -26,6 +26,7 @@ import { LevelBadge } from "@/components/LevelBadge";
 import { StreakBadge } from "@/components/StreakBadge";
 import { NotificationBell } from "@/components/NotificationBell";
 import { FeedbackPreferences } from "@/components/FeedbackPreferences";
+import { WebsiteThemeSelector } from "@/components/WebsiteThemeSelector";
 
 const nav = [
   { to: "/", label: "Home" },
@@ -45,6 +46,26 @@ export function Header() {
   const { xp, streak } = useGamification();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (searchOpen) {
+        setSearchOpen(false);
+        searchButtonRef.current?.focus();
+      } else if (open) {
+        setOpen(false);
+        mobileButtonRef.current?.focus();
+      } else if (menuOpen) {
+        setMenuOpen(false);
+        menuRef.current?.querySelector("button")?.focus();
+      }
+    };
+    document.addEventListener("keydown", onEscape);
+    return () => document.removeEventListener("keydown", onEscape);
+  }, [searchOpen, open, menuOpen]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -115,6 +136,7 @@ export function Header() {
               playClick();
             }}
             aria-label="Search"
+            ref={searchButtonRef}
             aria-expanded={searchOpen}
             aria-controls="site-search-panel"
             className="press touch-target grid place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-[color,border-color,box-shadow] hover:border-primary/55 hover:text-foreground"
@@ -123,6 +145,9 @@ export function Header() {
           </button>
 
           <FeedbackPreferences />
+          <div className="hidden lg:block">
+            <WebsiteThemeSelector />
+          </div>
 
           {user && <NotificationBell />}
 
@@ -281,6 +306,7 @@ export function Header() {
             }}
             className="touch-target grid place-items-center rounded-xl border border-border lg:hidden"
             aria-label={open ? "Close menu" : "Open menu"}
+            ref={mobileButtonRef}
             aria-expanded={open}
             aria-controls="mobile-navigation"
           >
@@ -321,6 +347,7 @@ export function Header() {
                       e.preventDefault();
                       setSearchOpen(false);
                       setQ("");
+                      searchButtonRef.current?.focus();
                     }
                   }}
                   placeholder="Search mods, elements, features…"
@@ -382,6 +409,7 @@ export function Header() {
           className="glass-l2 border-t border-border/60 lg:hidden"
         >
           <div className="flex flex-col gap-1 px-4 py-3">
+            <WebsiteThemeSelector />
             {nav.map((n) => (
               <Link
                 key={n.to}

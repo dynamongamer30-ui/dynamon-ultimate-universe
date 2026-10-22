@@ -88,6 +88,7 @@ export const DEFAULT_SOCIALS: Socials = {
 };
 
 type Ctx = {
+  websiteAppearance: unknown;
   loading: boolean;
   branding: SiteBranding;
   announcement: Announcement;
@@ -99,6 +100,7 @@ type Ctx = {
 };
 
 const C = createContext<Ctx>({
+  websiteAppearance: undefined,
   loading: true,
   branding: DEFAULT_BRANDING,
   announcement: DEFAULT_ANNOUNCEMENT,
@@ -169,6 +171,7 @@ function applyOverride(
 }
 
 export function SiteSettingsProvider({ children }: { children: ReactNode }) {
+  const [websiteAppearance, setWebsiteAppearance] = useState<unknown>(undefined);
   const [loading, setLoading] = useState(true);
   const [branding, setBranding] = useState<SiteBranding>(DEFAULT_BRANDING);
   const [announcement, setAnnouncement] = useState<Announcement>(DEFAULT_ANNOUNCEMENT);
@@ -190,6 +193,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       ]);
     const map = new Map<string, unknown>();
     (settings ?? []).forEach((r: { key: string; value: unknown }) => map.set(r.key, r.value));
+    setWebsiteAppearance(map.get("website_appearance"));
     setBranding({
       ...DEFAULT_BRANDING,
       ...(map.get("branding") as Partial<SiteBranding> | undefined),
@@ -249,7 +253,17 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
   return (
     <C.Provider
-      value={{ loading, branding, announcement, socials, overrides, mods, allMods, refresh }}
+      value={{
+        loading,
+        branding,
+        announcement,
+        socials,
+        overrides,
+        mods,
+        allMods,
+        refresh,
+        websiteAppearance,
+      }}
     >
       {children}
     </C.Provider>

@@ -21,7 +21,6 @@ import { usePerspectiveTilt } from "@/components/HeroWebGL";
 import { formatCount, elementTheme, mods as catalogMods } from "@/lib/mods";
 import { compareVersions, sortByLatest } from "@/lib/versionSort";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
-import heroImg from "@/assets/hero.webp";
 import { playClick, playHover } from "@/lib/sound";
 import { faqPageJsonLd, itemListJsonLd, pageSeoHead } from "@/lib/seo";
 
@@ -104,7 +103,7 @@ function Index() {
                 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary"
               >
                 <span className="inline-block h-px w-8 bg-primary" aria-hidden />
-                Dynamon Gamer Space
+                Dynamon Gamer / The elemental collection
               </motion.p>
 
               <motion.h1
@@ -112,11 +111,11 @@ function Index() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ ...spring, delay: 0.06 }}
                 id="homepage-title"
-                className="mt-6 font-display text-4xl font-black uppercase leading-[1.05] tracking-tight text-balance sm:text-6xl lg:text-7xl xl:text-8xl"
+                className="mt-6 max-w-[16ch] font-display text-[clamp(2.25rem,4.6vw,4.5rem)] font-bold leading-[1.03] tracking-[-0.045em] text-balance"
               >
                 Dynamons World
                 <br />
-                <span className="text-gradient">Builds, guides & rewards.</span>
+                <span className="text-gradient">Find your element.</span>
               </motion.h1>
 
               <motion.p
@@ -178,9 +177,9 @@ function Index() {
               >
                 <div className="relative aspect-[4/3] overflow-hidden">
                   <img
-                    src={heroImg}
+                    src={top.image}
                     alt={`${top.name} key art`}
-                    width={1536}
+                    width={1024}
                     height={1024}
                     fetchPriority="high"
                     decoding="async"

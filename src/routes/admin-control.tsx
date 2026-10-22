@@ -40,6 +40,7 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { mods as baseMods } from "@/lib/mods";
 import { Cipher } from "@/lib/cipher";
 import { toast } from "sonner";
+import { WebsiteAppearanceEditor } from "@/components/WebsiteAppearanceEditor";
 
 export const Route = createFileRoute("/admin-control")({
   ssr: false,
@@ -66,6 +67,7 @@ function ControlRoute() {
 }
 
 type Tab =
+  | "appearance"
   | "dex"
   | "branding"
   | "announcement"
@@ -81,6 +83,7 @@ function ControlPanel() {
   const [tab, setTab] = useState<Tab>("branding");
 
   const tabs: { id: Tab; label: string; icon: typeof Settings2 }[] = [
+    { id: "appearance", label: "Website themes", icon: Eye },
     { id: "dex", label: "Royal Void DEX", icon: Shield },
     { id: "branding", label: "Branding & Hero", icon: Settings2 },
     { id: "announcement", label: "Announcement", icon: Megaphone },
@@ -129,6 +132,7 @@ function ControlPanel() {
       </div>
 
       <div className="mt-6">
+        {tab === "appearance" && <WebsiteAppearanceEditor />}
         {tab === "dex" && (
           <div className="rounded-2xl border border-border bg-card/60 p-5">
             <h2 className="text-xl font-bold">DEX controls have moved</h2>
