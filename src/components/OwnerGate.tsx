@@ -20,12 +20,13 @@ export function OwnerGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!user || !profile?.is_owner) return;
-    const back = sessionStorage.getItem(RETURN_KEY);
-    if (back && back !== window.location.pathname) {
-      sessionStorage.removeItem(RETURN_KEY);
-      navigate({ to: back });
-    } else if (back) {
-      sessionStorage.removeItem(RETURN_KEY);
+    try {
+      const back = sessionStorage.getItem(RETURN_KEY);
+      if (back) sessionStorage.removeItem(RETURN_KEY);
+      if (back?.startsWith("/") && !back.startsWith("//") && back !== window.location.pathname)
+        navigate({ to: back });
+    } catch {
+      /* Continue on the current owner route without the optional hint. */
     }
   }, [user, profile?.is_owner, navigate]);
 
@@ -34,20 +35,32 @@ export function OwnerGate({ children }: { children: ReactNode }) {
     setErr(null);
     try {
       // Remember where we were so we can return after OAuth.
-      sessionStorage.setItem(RETURN_KEY, window.location.pathname);
+      try {
+        sessionStorage.setItem(RETURN_KEY, window.location.pathname);
+      } catch {
+        /* Optional return hint. */
+      }
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
         extraParams: { prompt: "select_account" },
       });
       if (result.error) {
         setErr(result.error.message || "Google sign-in failed");
-        sessionStorage.removeItem(RETURN_KEY);
+        try {
+          sessionStorage.removeItem(RETURN_KEY);
+        } catch {
+          /* Optional return hint. */
+        }
         setBusy(false);
       }
       // Browser redirects to Google; on return, useAuth picks up the session.
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Sign-in failed");
-      sessionStorage.removeItem(RETURN_KEY);
+      try {
+        sessionStorage.removeItem(RETURN_KEY);
+      } catch {
+        /* Optional return hint. */
+      }
       setBusy(false);
     }
   };

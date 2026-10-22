@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 export function FavoriteButton({ slug, className = "" }: { slug: string; className?: string }) {
   const { user } = useAuth();
-  const { has, toggle, slugs } = useFavorites();
+  const { has, toggle } = useFavorites();
   const { award } = useGamification();
   const navigate = useNavigate();
   const fav = has(slug);

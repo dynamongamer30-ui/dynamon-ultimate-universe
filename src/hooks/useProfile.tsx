@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
@@ -14,27 +15,30 @@ export type Profile = {
 
 export function useProfile() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-
+  const userId = user?.id;
+  const client = useQueryClient();
+  const query = useQuery({
+    queryKey: ["my-profile", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      // Keep private columns behind the existing current-user RPC and grants.
+      const { data, error } = await supabase.rpc("get_my_profile");
+      if (error) throw new Error(error.message);
+      const row = Array.isArray(data) ? data[0] : data;
+      return (row as Profile | null) ?? null;
+    },
+    staleTime: 60_000,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
   const refresh = useCallback(async () => {
-    if (!user) {
-      setProfile(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    // Use security-definer RPC so private columns (gender) stay locked down
-    // at the column-grant level for other authenticated users.
-    const { data } = await supabase.rpc("get_my_profile");
-    const row = Array.isArray(data) ? data[0] : data;
-    setProfile((row as Profile | null) ?? null);
-    setLoading(false);
-  }, [user]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { profile, loading, refresh };
+    if (userId) await client.invalidateQueries({ queryKey: ["my-profile", userId], exact: true });
+  }, [client, userId]);
+  return {
+    profile: userId ? (query.data ?? null) : null,
+    loading: !!userId && query.isPending,
+    error: query.error,
+    refresh,
+  };
 }

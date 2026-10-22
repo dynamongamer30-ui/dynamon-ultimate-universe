@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Heart } from "lucide-react";
+import { Bookmark } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
-import { supabase } from "@/integrations/supabase/client";
+import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { SkeletonCard } from "@/components/Skeleton";
@@ -22,20 +21,7 @@ export const Route = createFileRoute("/favorites")({
 function FavoritesPage() {
   const { user } = useAuth();
   const { mods } = useSiteSettings();
-  const [slugs, setSlugs] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    (async () => {
-      const { data } = await supabase.from("favorites").select("mod_slug").eq("user_id", user.id);
-      setSlugs((data ?? []).map((r: { mod_slug: string }) => r.mod_slug));
-      setLoading(false);
-    })();
-  }, [user]);
+  const { slugs, loading, error, refresh } = useFavorites();
 
   const favs = mods.filter((m) => slugs.includes(m.slug));
 
@@ -43,7 +29,7 @@ function FavoritesPage() {
     <PageShell>
       <header className="route-hero edge-light rounded-2xl glass p-8 sm:p-12">
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-rose-300">
-          <Heart className="h-3.5 w-3.5 fill-rose-400" /> Your Vault
+          <Bookmark className="h-3.5 w-3.5" /> Your Vault
         </p>
         <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl">
           My favorites
@@ -66,17 +52,31 @@ function FavoritesPage() {
             <SkeletonCard key={i} />
           ))}
         </div>
+      ) : error ? (
+        <div role="alert" className="mt-10 rounded-2xl border border-border bg-card p-8">
+          <p>Could not load your saved mods.</p>
+          <button
+            type="button"
+            onClick={() => refresh()}
+            className="touch-target mt-3 text-primary underline"
+          >
+            Try again
+          </button>
+        </div>
       ) : favs.length === 0 ? (
         <div className="mt-10 flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border bg-card/30 p-12 text-center">
           <span
             className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"
             style={{ boxShadow: "var(--shadow-glow)" }}
           >
-            <Heart className="h-6 w-6" />
+            <Bookmark className="h-6 w-6" />
           </span>
           <p className="text-muted-foreground">
-            No favorites yet. Tap the heart on any mod to save it here.
+            No favorites yet. Tap the bookmark on any mod to save it here.
           </p>
+          <Link to="/mods" className="touch-target inline-flex items-center text-primary underline">
+            Explore mods
+          </Link>
         </div>
       ) : (
         <section className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">

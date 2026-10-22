@@ -16,22 +16,33 @@ export function NotificationOptIn() {
   const dialogRef = useDialogFocus(open, () => setOpen(false));
 
   useEffect(() => {
+    setOpen(false);
     if (!user) return;
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("notification_prefs")
         .select("asked_at")
         .eq("user_id", user.id)
         .maybeSingle();
-      if (!cancelled && !data?.asked_at) {
+      if (!cancelled && !error && !data?.asked_at) {
         const skipKey = `notif-skipped:${user.id}`;
-        const skipped = typeof window !== "undefined" && sessionStorage.getItem(skipKey);
-        if (!skipped) setTimeout(() => setOpen(true), 1500);
+        let skipped = false;
+        try {
+          skipped = !!sessionStorage.getItem(skipKey);
+        } catch {
+          /* Optional storage. */
+        }
+        if (!skipped)
+          timer = setTimeout(() => {
+            if (!cancelled) setOpen(true);
+          }, 1500);
       }
     })();
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [user]);
 
@@ -77,7 +88,13 @@ export function NotificationOptIn() {
   };
 
   const skip = () => {
-    if (user) sessionStorage.setItem(`notif-skipped:${user.id}`, "1");
+    if (user) {
+      try {
+        sessionStorage.setItem(`notif-skipped:${user.id}`, "1");
+      } catch {
+        /* Dismiss for this render. */
+      }
+    }
     setOpen(false);
   };
 

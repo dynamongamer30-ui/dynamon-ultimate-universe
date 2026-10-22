@@ -47,7 +47,7 @@ export function AvatarPicker({ value, onChange, gender }: Props) {
 
   return (
     <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
-      {list.map((a) => {
+      {list.map((a, index) => {
         const selected = value === a.url;
         return (
           <button
@@ -63,7 +63,7 @@ export function AvatarPicker({ value, onChange, gender }: Props) {
                 : "border-border hover:border-primary/40"
             }`}
             aria-pressed={selected}
-            aria-label={a.label ?? "Avatar"}
+            aria-label={a.label?.trim() || `Avatar ${index + 1}`}
           >
             <img
               src={a.url}

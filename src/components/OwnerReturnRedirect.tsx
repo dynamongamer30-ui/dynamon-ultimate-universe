@@ -15,10 +15,15 @@ export function OwnerReturnRedirect() {
   const navigate = useNavigate();
   useEffect(() => {
     if (loading || !user || typeof window === "undefined") return;
-    const back = sessionStorage.getItem(RETURN_KEY);
-    if (!back) return;
-    sessionStorage.removeItem(RETURN_KEY);
-    if (back !== window.location.pathname) navigate({ to: back });
+    try {
+      const back = sessionStorage.getItem(RETURN_KEY);
+      if (!back) return;
+      sessionStorage.removeItem(RETURN_KEY);
+      if (back.startsWith("/") && !back.startsWith("//") && back !== window.location.pathname)
+        navigate({ to: back });
+    } catch {
+      /* A return hint is optional; stay on the current page without storage. */
+    }
   }, [user, loading, navigate]);
   return null;
 }
