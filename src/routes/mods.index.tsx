@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Search, TrendingUp, Clock, Heart, Download, Star, Sparkles, X } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
@@ -8,8 +8,16 @@ import { formatCount, elementTheme, mods as catalogMods, type Element } from "@/
 import { compareVersions, sortByLatest } from "@/lib/versionSort";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { itemListJsonLd, pageSeoHead } from "@/lib/seo";
+import {
+  DISCOVERY_ELEMENTS,
+  DISCOVERY_BADGES,
+  normalizeDiscoverySearch,
+  type DiscoverySearch,
+  type DiscoverySort,
+} from "@/lib/modDiscovery";
 
 export const Route = createFileRoute("/mods/")({
+  validateSearch: normalizeDiscoverySearch,
   head: () => {
     const { links, meta } = pageSeoHead({
       path: "/mods",
@@ -34,26 +42,31 @@ export const Route = createFileRoute("/mods/")({
   component: ModsPage,
 });
 
-type Sort = "latest" | "popular" | "downloads" | "likes" | "newest";
-
-const ALL_ELEMENTS: Element[] = [
-  "dark",
-  "fire",
-  "thunder",
-  "water",
-  "earth",
-  "diamond",
-  "gold",
-  "spirit",
-];
-
 function ModsPage() {
   const { mods } = useSiteSettings();
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<Sort>("latest");
-  const [elements, setElements] = useState<Set<Element>>(new Set());
-  const [minRating, setMinRating] = useState(0);
-  const [version, setVersion] = useState<string>("all");
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const q = search.q ?? "";
+  const sort = search.sort ?? "latest";
+  const elements = useMemo(
+    () => new Set((search.elements?.split(",") ?? []) as Element[]),
+    [search.elements],
+  );
+  const minRating = search.rating ?? 0;
+  const version = search.version ?? "all";
+  const updateSearch = (patch: DiscoverySearch, replace = false) => {
+    void navigate({
+      search: (previous) => normalizeDiscoverySearch({ ...previous, ...patch }),
+      replace,
+      resetScroll: false,
+    });
+  };
+  const setQ = (q: string) => updateSearch({ q }, true);
+  const setSort = (sort: DiscoverySort) => updateSearch({ sort });
+  const setMinRating = (rating: number) => updateSearch({ rating });
+  const setVersion = (version: string) => updateSearch({ version });
+  const clearFilters = () =>
+    updateSearch({ elements: undefined, rating: undefined, version: undefined });
 
   const totalDownloads = useMemo(() => mods.reduce((s, m) => s + m.downloads, 0), [mods]);
   const versions = useMemo(
@@ -83,7 +96,7 @@ function ModsPage() {
     });
   }, [mods, q, sort, elements, minRating, version]);
 
-  const sorts: { id: Sort; label: string; icon: React.ReactNode }[] = [
+  const sorts: { id: DiscoverySort; label: string; icon: React.ReactNode }[] = [
     { id: "latest", label: "Latest Version", icon: <Sparkles className="h-3.5 w-3.5" /> },
     { id: "popular", label: "Most Popular", icon: <TrendingUp className="h-3.5 w-3.5" /> },
     { id: "downloads", label: "Most Downloaded", icon: <Download className="h-3.5 w-3.5" /> },
@@ -92,12 +105,10 @@ function ModsPage() {
   ];
 
   const toggleElement = (el: Element) => {
-    setElements((prev) => {
-      const next = new Set(prev);
-      if (next.has(el)) next.delete(el);
-      else next.add(el);
-      return next;
-    });
+    const next = new Set(elements);
+    if (next.has(el)) next.delete(el);
+    else next.add(el);
+    updateSearch({ elements: [...next].join(",") });
   };
 
   const activeFilters = elements.size + (minRating > 0 ? 1 : 0) + (version !== "all" ? 1 : 0);
@@ -132,6 +143,7 @@ function ModsPage() {
             <input
               id="mods-search"
               name="q"
+              maxLength={200}
               type="search"
               autoComplete="off"
               value={q}
@@ -183,7 +195,7 @@ function ModsPage() {
             <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <Sparkles className="h-3 w-3" /> Element
             </span>
-            {ALL_ELEMENTS.map((el) => {
+            {DISCOVERY_ELEMENTS.map((el) => {
               const active = elements.has(el);
               const t = elementTheme[el];
               return (
@@ -223,19 +235,19 @@ function ModsPage() {
               value={version}
               onValueChange={setVersion}
               ariaLabel="Filter by version"
-              className="h-auto w-auto rounded-md bg-secondary px-3 py-1 text-xs font-semibold"
+              contentClassName="max-w-[calc(100vw-2rem)] [&_[role=option]]:break-all"
+              className="h-auto w-full min-w-0 max-w-full rounded-md bg-secondary px-3 py-1 text-xs font-semibold sm:w-auto sm:max-w-[18rem]"
               options={[
                 { value: "all", label: "All" },
                 ...versions.map((v) => ({ value: v, label: `v${v}` })),
+                ...(version !== "all" && !versions.includes(version)
+                  ? [{ value: version, label: `v${version} (unavailable)` }]
+                  : []),
               ]}
             />
             {activeFilters > 0 && (
               <button
-                onClick={() => {
-                  setElements(new Set());
-                  setMinRating(0);
-                  setVersion("all");
-                }}
+                onClick={clearFilters}
                 className="touch-target ml-auto rounded-md px-3 py-1 text-xs font-semibold text-rose-300 hover:bg-rose-400/10 hover:text-rose-200"
               >
                 Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}
@@ -253,6 +265,7 @@ function ModsPage() {
               <button
                 key={el}
                 type="button"
+                aria-label={`Remove ${elementTheme[el].label} filter`}
                 onClick={() => toggleElement(el)}
                 className="touch-target inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
               >
@@ -263,6 +276,7 @@ function ModsPage() {
             {minRating > 0 && (
               <button
                 type="button"
+                aria-label="Remove minimum rating filter"
                 onClick={() => setMinRating(0)}
                 className="touch-target inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300"
               >
@@ -273,20 +287,17 @@ function ModsPage() {
             {version !== "all" && (
               <button
                 type="button"
+                aria-label="Remove version filter"
                 onClick={() => setVersion("all")}
-                className="touch-target inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground"
+                className="touch-target inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border border-border bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground"
               >
-                v{version}
-                <X className="h-3 w-3" aria-hidden="true" />
+                <span className="truncate">v{version}</span>
+                <X className="h-3 w-3 shrink-0" aria-hidden="true" />
               </button>
             )}
             <button
               type="button"
-              onClick={() => {
-                setElements(new Set());
-                setMinRating(0);
-                setVersion("all");
-              }}
+              onClick={clearFilters}
               className="touch-target ml-auto inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
             >
               Reset all
@@ -309,12 +320,14 @@ function ModsPage() {
           {(activeFilters > 0 || q) && (
             <button
               type="button"
-              onClick={() => {
-                setQ("");
-                setElements(new Set());
-                setMinRating(0);
-                setVersion("all");
-              }}
+              onClick={() =>
+                updateSearch({
+                  q: undefined,
+                  elements: undefined,
+                  rating: undefined,
+                  version: undefined,
+                })
+              }
               className="touch-target mt-5 inline-flex items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold hover:border-primary/50 hover:text-foreground"
             >
               Reset discovery
@@ -334,8 +347,8 @@ function ModsPage() {
               key={m.slug}
               mod={m}
               index={i}
-              featured={i === 0 && sort !== "newest"}
-              badge={sort === "latest" ? "Latest update" : "Most popular"}
+              featured={i === 0}
+              badge={DISCOVERY_BADGES[sort]}
               headingLevel="h2"
             />
           ))}

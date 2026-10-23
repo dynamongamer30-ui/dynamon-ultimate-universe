@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GameplayTrailer } from "@/components/GameplayTrailer";
 import { CommentsPanel } from "@/components/CommentsPanel";
 import { ChangelogTimeline } from "@/components/ChangelogTimeline";
 import { FavoriteButton } from "@/components/FavoriteButton";
@@ -386,16 +387,12 @@ function ModDetail() {
           style={{ boxShadow: theme.glow }}
         >
           {blendedMod.youtubeId ? (
-            <div className="relative aspect-video w-full">
-              <iframe
-                className="absolute inset-0 h-full w-full"
-                src={`https://www.youtube.com/embed/${blendedMod.youtubeId}`}
-                title={`${blendedMod.name} gameplay`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                loading="lazy"
-              />
-            </div>
+            <GameplayTrailer
+              key={`${blendedMod.slug}:${blendedMod.youtubeId}`}
+              videoId={blendedMod.youtubeId}
+              name={blendedMod.name}
+              image={blendedMod.image}
+            />
           ) : (
             <div className="relative aspect-video w-full">
               <img
