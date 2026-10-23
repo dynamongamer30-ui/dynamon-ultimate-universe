@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test";
 test("gameplay waits for keyboard activation and preserves space with a YouTube fallback", async ({
   page,
 }, testInfo) => {
+  // This journey performs two full navigations plus an isolated player load.
+  test.setTimeout(60_000);
   const videoRequests: string[] = [];
   page.on("request", (request) => {
     if (/youtube\.com|ytimg\.com|googlevideo\.com/.test(request.url()))

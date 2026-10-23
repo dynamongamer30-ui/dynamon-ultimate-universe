@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Heart, Send, Star, Loader2, Trash2, Reply as ReplyIcon } from "lucide-react";
 import { OwnerBadge } from "@/components/OwnerBadge";
@@ -79,8 +79,30 @@ export function CommentsPanel({
   const [commentBusy, setCommentBusy] = useState(false);
   const [replyOpen, setReplyOpen] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
+  const actionLocks = useRef(new Set<string>());
+  const [pendingActions, setPendingActions] = useState(new Set<string>());
+  const loadRevision = useRef(0);
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  const beginAction = (key: string) => {
+    if (actionLocks.current.has(key)) return false;
+    actionLocks.current.add(key);
+    setPendingActions(new Set(actionLocks.current));
+    return true;
+  };
+  const endAction = (key: string) => {
+    actionLocks.current.delete(key);
+    if (active.current) setPendingActions(new Set(actionLocks.current));
+  };
 
   const load = useCallback(async () => {
+    if (!active.current) return;
+    const revision = ++loadRevision.current;
     setLoading(true);
     setLoadError(null);
     try {
@@ -100,6 +122,7 @@ export function CommentsPanel({
           .order("created_at", { ascending: false }),
       ]);
       if (commentsError || ratingsError) throw commentsError || ratingsError;
+      if (!active.current || revision !== loadRevision.current) return;
 
       const list = (rawComments ?? []) as CommentRow[];
       setRatings((rawRatings ?? []) as RatingRow[]);
@@ -120,6 +143,7 @@ export function CommentsPanel({
           supabase.from("comment_likes").select("comment_id, user_id").in("comment_id", commentIds),
         ]);
       if (authorsError || likesError) throw authorsError || likesError;
+      if (!active.current || revision !== loadRevision.current) return;
 
       const authorMap = new Map<string, AuthorRow>(
         (authors ?? []).map((a) => [a.id as string, a as unknown as AuthorRow]),
@@ -137,9 +161,10 @@ export function CommentsPanel({
       });
       setComments(enriched);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Could not load community activity");
+      if (active.current && revision === loadRevision.current)
+        setLoadError(err instanceof Error ? err.message : "Could not load community activity");
     } finally {
-      setLoading(false);
+      if (active.current && revision === loadRevision.current) setLoading(false);
     }
   }, [slug, user]);
 
@@ -260,22 +285,31 @@ export function CommentsPanel({
       toast.error("Sign in first");
       return;
     }
-    if (!replyBody.trim()) return;
-    const { error } = await supabase.from("comments").insert({
-      mod_slug: slug,
-      user_id: user.id,
-      body: replyBody.trim(),
-      rating: null,
-      parent_id: parentId,
-    });
-    if (error) {
-      toast.error(error.message);
-      return;
+    const text = replyBody.trim();
+    if (!text || !beginAction("reply")) return;
+    try {
+      const { error } = await supabase.from("comments").insert({
+        mod_slug: slug,
+        user_id: user.id,
+        body: text,
+        rating: null,
+        parent_id: parentId,
+      });
+      if (error) throw error;
+      if (!active.current) return;
+      toast.dismiss(`reply-${slug}:${parentId}`);
+      setReplyBody("");
+      setReplyOpen(null);
+      playSuccess();
+      await load();
+    } catch {
+      if (active.current)
+        toast.error("Could not post reply. Your draft is still here.", {
+          id: `reply-${slug}:${parentId}`,
+        });
+    } finally {
+      endAction("reply");
     }
-    setReplyBody("");
-    setReplyOpen(null);
-    playSuccess();
-    load();
   };
 
   const toggleLike = async (c: EnrichedComment) => {
@@ -283,6 +317,8 @@ export function CommentsPanel({
       toast.error("Sign in to like");
       return;
     }
+    const key = `like:${c.id}`;
+    if (!beginAction(key)) return;
     playSoft();
     setComments((prev) =>
       prev.map((x) =>
@@ -291,26 +327,66 @@ export function CommentsPanel({
           : x,
       ),
     );
-    if (c.likedByMe) {
-      await supabase.from("comment_likes").delete().eq("comment_id", c.id).eq("user_id", user.id);
-    } else {
-      await supabase.from("comment_likes").insert({ comment_id: c.id, user_id: user.id });
+    try {
+      const { data, error } = c.likedByMe
+        ? await supabase
+            .from("comment_likes")
+            .delete()
+            .eq("comment_id", c.id)
+            .eq("user_id", user.id)
+            .select("comment_id")
+        : await supabase.from("comment_likes").insert({ comment_id: c.id, user_id: user.id });
+      if (error || (c.likedByMe && !data?.some((row) => row.comment_id === c.id)))
+        throw error ?? new Error("Like removal was not confirmed");
+      if (active.current) toast.dismiss(`review-like-${c.id}`);
+    } catch {
+      if (!active.current) return;
+      setComments((previous) =>
+        previous.map((row) =>
+          row.id === c.id && row.likedByMe !== c.likedByMe
+            ? {
+                ...row,
+                likedByMe: c.likedByMe,
+                likeCount: Math.max(0, row.likeCount + (c.likedByMe ? 1 : -1)),
+              }
+            : row,
+        ),
+      );
+      toast.error("Could not update review like. Try again.", { id: `review-like-${c.id}` });
+    } finally {
+      endAction(key);
     }
   };
 
   const remove = async (c: EnrichedComment) => {
     if (!user || (c.user_id !== user.id && !profile?.is_owner)) return;
-    if (
-      !(await confirm({
-        title: "Delete review",
-        description: "Delete this review? This cannot be undone.",
-        confirmText: "Delete",
-        danger: true,
-      }))
-    )
-      return;
-    await supabase.from("comments").delete().eq("id", c.id);
-    setComments((prev) => prev.filter((x) => x.id !== c.id && x.parent_id !== c.id));
+    const key = `delete:${c.id}`;
+    if (!beginAction(key)) return;
+    try {
+      if (
+        !(await confirm({
+          title: "Delete review",
+          description: "Delete this review? This cannot be undone.",
+          confirmText: "Delete",
+          danger: true,
+        }))
+      )
+        return;
+      if (!active.current) return;
+      const { data, error } = await supabase.from("comments").delete().eq("id", c.id).select("id");
+      if (error || !data?.some((row) => row.id === c.id))
+        throw error ?? new Error("No row deleted");
+      if (!active.current) return;
+      toast.dismiss(`review-delete-${c.id}`);
+      setComments((prev) => prev.filter((x) => x.id !== c.id && x.parent_id !== c.id));
+    } catch {
+      if (active.current)
+        toast.error("Could not delete review. It is still visible; refresh and try again.", {
+          id: `review-delete-${c.id}`,
+        });
+    } finally {
+      endAction(key);
+    }
   };
 
   const renderComment = (c: EnrichedComment, isReply = false) => {
@@ -322,6 +398,7 @@ export function CommentsPanel({
     return (
       <motion.div
         key={c.id}
+        data-comment-id={c.id}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
@@ -382,6 +459,7 @@ export function CommentsPanel({
           <button
             type="button"
             onClick={() => toggleLike(c)}
+            disabled={pendingActions.has(`like:${c.id}`)}
             aria-label={`${c.likedByMe ? "Unlike" : "Like"} review by ${authorName}`}
             aria-pressed={c.likedByMe}
             className={`touch-target inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold transition-colors ${
@@ -396,6 +474,7 @@ export function CommentsPanel({
           {!isReply && (
             <button
               type="button"
+              disabled={pendingActions.has("reply")}
               onClick={() => {
                 setReplyOpen(replyOpen === c.id ? null : c.id);
                 setReplyBody("");
@@ -412,6 +491,7 @@ export function CommentsPanel({
             <button
               type="button"
               onClick={() => remove(c)}
+              disabled={pendingActions.has(`delete:${c.id}`)}
               className="touch-target ml-auto inline-flex items-center gap-1 rounded-lg px-2 text-xs text-muted-foreground hover:text-rose-400"
             >
               <Trash2 className="h-3 w-3" /> Delete
@@ -434,6 +514,7 @@ export function CommentsPanel({
                 id={`reply-${c.id}`}
                 name={`reply-${c.id}`}
                 value={replyBody}
+                disabled={pendingActions.has("reply")}
                 onChange={(e) => setReplyBody(e.target.value)}
                 placeholder={`Reply to @${c.author?.username ?? "trainer"}…`}
                 rows={2}
@@ -444,6 +525,7 @@ export function CommentsPanel({
                 <button
                   type="button"
                   onClick={() => setReplyOpen(null)}
+                  disabled={pendingActions.has("reply")}
                   className="touch-target rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
                 >
                   Cancel
@@ -451,11 +533,16 @@ export function CommentsPanel({
                 <button
                   type="button"
                   onClick={() => submitReply(c.id)}
-                  disabled={!replyBody.trim()}
+                  disabled={!replyBody.trim() || pendingActions.has("reply")}
                   className="touch-target inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
                   style={{ background: "var(--gradient-primary)" }}
                 >
-                  <Send className="h-3 w-3" /> Post reply
+                  {pendingActions.has("reply") ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Send className="h-3 w-3" />
+                  )}
+                  {pendingActions.has("reply") ? "Posting…" : "Post reply"}
                 </button>
               </div>
             </motion.div>

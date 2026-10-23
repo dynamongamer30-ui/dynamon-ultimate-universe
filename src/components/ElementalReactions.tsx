@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { playSoft } from "@/lib/sound";
+import { toast } from "sonner";
 
 type ReactionKey = "fire" | "water" | "thunder" | "leaf" | "spirit";
 
@@ -19,43 +20,102 @@ type Row = { user_id: string; reaction: ReactionKey };
 export function ElementalReactions({ commentId }: { commentId: string }) {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reload, setReload] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const locked = useRef(false);
+  const active = useRef(true);
 
   useEffect(() => {
     let cancelled = false;
-    supabase
-      .from("comment_reactions")
-      .select("user_id, reaction")
-      .eq("comment_id", commentId)
-      .then(({ data }) => {
+    active.current = true;
+    setLoading(true);
+    setLoadError(false);
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("comment_reactions")
+          .select("user_id, reaction")
+          .eq("comment_id", commentId);
+        if (error) throw error;
         if (!cancelled) setRows((data ?? []) as Row[]);
-      });
+      } catch {
+        if (!cancelled) setLoadError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
     return () => {
       cancelled = true;
+      active.current = false;
     };
-  }, [commentId]);
+  }, [commentId, reload]);
 
   const toggle = async (reaction: ReactionKey) => {
-    if (!user) return;
+    if (!user || loading || loadError || locked.current) return;
+    locked.current = true;
+    setBusy(true);
     playSoft();
     const mine = rows.find((r) => r.user_id === user.id && r.reaction === reaction);
     if (mine) {
       setRows((p) => p.filter((r) => !(r.user_id === user.id && r.reaction === reaction)));
-      await supabase
-        .from("comment_reactions")
-        .delete()
-        .eq("comment_id", commentId)
-        .eq("user_id", user.id)
-        .eq("reaction", reaction);
     } else {
       setRows((p) => [...p, { user_id: user.id, reaction }]);
-      await supabase
-        .from("comment_reactions")
-        .insert({ comment_id: commentId, user_id: user.id, reaction });
+    }
+    try {
+      const { data, error } = mine
+        ? await supabase
+            .from("comment_reactions")
+            .delete()
+            .eq("comment_id", commentId)
+            .eq("user_id", user.id)
+            .eq("reaction", reaction)
+            .select("user_id, reaction")
+        : await supabase
+            .from("comment_reactions")
+            .insert({ comment_id: commentId, user_id: user.id, reaction });
+      if (
+        error ||
+        (mine && !data?.some((row) => row.user_id === user.id && row.reaction === reaction))
+      )
+        throw error ?? new Error("Reaction removal was not confirmed");
+      if (active.current) toast.dismiss(`reaction-${commentId}`);
+    } catch {
+      if (active.current) {
+        setRows((previous) => {
+          const others = previous.filter(
+            (row) => !(row.user_id === user.id && row.reaction === reaction),
+          );
+          return mine ? [...others, mine] : others;
+        });
+        toast.error("Could not update reaction. Try again.", { id: `reaction-${commentId}` });
+      }
+    } finally {
+      locked.current = false;
+      if (active.current) setBusy(false);
     }
   };
 
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div
+      className="flex flex-wrap gap-1.5"
+      role="group"
+      aria-label="Elemental reactions"
+      aria-busy={loading || busy}
+    >
+      {loadError && (
+        <p role="status" className="w-full text-xs text-muted-foreground">
+          Reactions could not load.{" "}
+          <button
+            type="button"
+            onClick={() => setReload((value) => value + 1)}
+            className="touch-target font-semibold text-primary hover:underline"
+          >
+            Retry reactions
+          </button>
+        </p>
+      )}
       {REACTIONS.map((r) => {
         const count = rows.filter((x) => x.reaction === r.key).length;
         const mine = !!user && rows.some((x) => x.user_id === user.id && x.reaction === r.key);
@@ -64,7 +124,7 @@ export function ElementalReactions({ commentId }: { commentId: string }) {
             key={r.key}
             whileTap={{ scale: 0.85 }}
             onClick={() => toggle(r.key)}
-            disabled={!user}
+            disabled={!user || loading || loadError || busy}
             className={`touch-target inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${mine ? "border-primary/50 bg-primary/10" : "border-border bg-card/60 text-muted-foreground hover:text-foreground"} disabled:cursor-not-allowed disabled:opacity-50`}
             aria-label={`${mine ? "Remove" : "Add"} ${r.key} reaction`}
             aria-pressed={mine}

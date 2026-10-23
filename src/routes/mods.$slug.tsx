@@ -422,6 +422,7 @@ function ModDetail() {
       </section>
 
       <CommentsPanel
+        key={`${mod.slug}:${user?.id ?? "public"}`}
         slug={mod.slug}
         combinedRating={blendedMod.baseRating}
         combinedCount={blendedMod.ratingCount}
