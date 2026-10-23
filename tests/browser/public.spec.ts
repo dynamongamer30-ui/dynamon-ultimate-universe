@@ -54,6 +54,9 @@ test("public routes render without runtime errors or horizontal overflow", async
 
 test("search and mobile navigation remain usable", async ({ page }, testInfo) => {
   await page.goto("/", { waitUntil: "networkidle" });
+  await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true", {
+    timeout: 15_000,
+  });
   if ((page.viewportSize()?.width ?? 0) < 1024) {
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
     await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
