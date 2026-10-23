@@ -82,6 +82,9 @@ async function account(page: Page, setup = false) {
     releaseSave: undefined as undefined | (() => void),
     releaseName: undefined as undefined | (() => void),
     nameFailure: false,
+    avatarMode: "allow" as "allow" | "deny" | "empty" | "hold",
+    avatarReads: 0,
+    releaseAvatars: undefined as undefined | (() => void),
   };
   await page.route("**/*.supabase.co/**", async (route) => {
     const request = route.request(),
@@ -126,16 +129,117 @@ async function account(page: Page, setup = false) {
         state.profile = { ...state.profile!, ...request.postDataJSON(), id };
         data = [{ id }];
       }
-    } else if (url.pathname.endsWith("/avatar_pool"))
-      data = [
-        { id: "avatar", url: "/dynamon-gamer-avatar.png", gender: "male", label: "Fixture hero" },
-      ];
-    else if (url.pathname.endsWith("/notification_prefs"))
+    } else if (url.pathname.endsWith("/avatar_pool")) {
+      state.avatarReads++;
+      if (state.avatarMode === "hold")
+        await new Promise<void>((resolve) => {
+          state.releaseAvatars = resolve;
+        });
+      if (state.avatarMode === "deny") {
+        status = 503;
+        data = { message: "Fixture avatar load failed" };
+      } else
+        data =
+          state.avatarMode === "empty"
+            ? []
+            : [
+                {
+                  id: "avatar",
+                  url: "/dynamon-gamer-avatar.png",
+                  gender: "male",
+                  label: "Fixture hero",
+                },
+              ];
+      await route
+        .fulfill({ status, contentType: "application/json", body: JSON.stringify(data) })
+        .catch(() => {});
+      return;
+    } else if (url.pathname.endsWith("/notification_prefs"))
       data = { asked_at: "2026-01-01T00:00:00Z" };
     await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(data) });
   });
   return state;
 }
+
+for (const path of ["/auth", "/profile"]) {
+  test(`${path} retries avatar failures without losing drafts or submitting the profile`, async ({
+    page,
+  }, info) => {
+    const state = await account(page, path === "/auth");
+    state.avatarMode = "deny";
+    await ready(page, path);
+    const form = page.getByRole("form", {
+      name: path === "/auth" ? "Build your trainer" : "Edit profile",
+    });
+    const name = form.getByRole("textbox", { name: /Display name/ });
+    await name.fill("Keep this draft");
+    if (path === "/auth") await form.getByRole("button", { name: "other", exact: true }).click();
+    await expect(form.getByRole("alert")).toContainText("Could not load avatars");
+    await expect(form).not.toContainText("No avatars available");
+    expect(state.avatarReads).toBe(1);
+    await page.screenshot({ path: info.outputPath("avatar-error.png"), fullPage: true });
+    state.avatarMode = "hold";
+    await form.getByRole("button", { name: "Retry avatars", exact: true }).dblclick();
+    await expect(form.getByRole("status")).toContainText("Loading avatars");
+    await expect.poll(() => state.avatarReads).toBe(2);
+    await expect(name).toHaveValue("Keep this draft");
+    state.avatarMode = "allow";
+    state.releaseAvatars!();
+    const hero = form.getByRole("button", { name: "Fixture hero", exact: true });
+    await expect(hero).toBeVisible();
+    await expect(hero).toHaveAttribute("aria-pressed", path === "/profile" ? "true" : "false");
+    await hero.click();
+    await expect(hero).toHaveAttribute("aria-pressed", "true");
+    await form.getByRole("button", { name: "female", exact: true }).click();
+    await expect(
+      form.getByText("No avatars available for this selection.", { exact: true }),
+    ).toBeVisible();
+    await form.getByRole("button", { name: "other", exact: true }).click();
+    await expect(hero).toHaveAttribute("aria-pressed", path === "/auth" ? "false" : "true");
+    expect(state.avatarReads).toBe(2);
+    expect(state.saves).toEqual([]);
+    await form.scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({ path: info.outputPath("avatar-retry.png"), fullPage: true });
+  });
+}
+
+test("avatar empty state is distinct from a failed request", async ({ page }) => {
+  const state = await account(page);
+  state.avatarMode = "empty";
+  await ready(page, "/profile");
+  const form = page.getByRole("form", { name: "Edit profile" });
+  await expect(form.getByText("No avatars available yet.", { exact: true })).toBeVisible();
+  await expect(form.getByRole("button", { name: "Retry avatars" })).toHaveCount(0);
+  expect(state.avatarReads).toBe(1);
+  expect(state.saves).toEqual([]);
+});
+
+test("avatar deadline allows retry and ignores the expired response", async ({ page }) => {
+  await page.clock.install();
+  const state = await account(page);
+  state.avatarMode = "hold";
+  await ready(page, "/profile");
+  const form = page.getByRole("form", { name: "Edit profile" });
+  await expect(form.getByRole("status")).toContainText("Loading avatars");
+  await expect.poll(() => !!state.releaseAvatars).toBe(true);
+  const releaseExpired = state.releaseAvatars!;
+  await page.clock.runFor(10_001);
+  await expect(form.getByRole("button", { name: "Retry avatars", exact: true })).toBeVisible();
+  expect(state.avatarReads).toBe(1);
+  state.avatarMode = "allow";
+  await form.getByRole("button", { name: "Retry avatars", exact: true }).click();
+  const hero = form.getByRole("button", { name: "Fixture hero", exact: true });
+  await expect(hero).toHaveAttribute("aria-pressed", "true");
+  state.avatarMode = "empty";
+  releaseExpired();
+  await page.waitForTimeout(150); // Settle the deliberately late, aborted fixture response.
+  await expect(hero).toHaveAttribute("aria-pressed", "true");
+  expect(state.avatarReads).toBe(2);
+  expect(state.saves).toEqual([]);
+});
 
 for (const path of ["/auth", "/profile"]) {
   test(`${path} ignores superseded username checks and offers a failed-check retry`, async ({

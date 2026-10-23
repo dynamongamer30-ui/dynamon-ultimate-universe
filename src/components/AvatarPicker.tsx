@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,38 +15,113 @@ type Props = {
 export function AvatarPicker({ value, onChange, gender }: Props) {
   const [pool, setPool] = useState<PoolAvatar[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const pending = useRef(false);
 
   useEffect(() => {
-    supabase
-      .from("avatar_pool")
-      .select("id, url, gender, label")
-      .eq("active", true)
-      .order("sort_order")
-      .then(({ data }) => {
-        setPool((data ?? []) as PoolAvatar[]);
-        setLoading(false);
-      });
-  }, []);
+    let active = true;
+    const controller = new AbortController();
+    pending.current = true;
+    const deadline = setTimeout(() => controller.abort(), 10_000);
+    const load = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("avatar_pool")
+          .select("id, url, gender, label")
+          .eq("active", true)
+          .order("sort_order")
+          .retry(false)
+          .abortSignal(controller.signal);
+        if (!active) return;
+        if (error || !Array.isArray(data)) setFailed(true);
+        else {
+          setPool(data as PoolAvatar[]);
+          setFailed(false);
+        }
+      } catch {
+        if (active) setFailed(true);
+      } finally {
+        clearTimeout(deadline);
+        if (active) {
+          pending.current = false;
+          setLoading(false);
+        }
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+      clearTimeout(deadline);
+      controller.abort();
+    };
+  }, [revision]);
+
+  const retry = () => {
+    if (pending.current) return;
+    pending.current = true;
+    setLoading(true);
+    setRevision((value) => value + 1);
+  };
 
   const list = pool.filter((a) => {
     if (gender === "male" || gender === "female") return a.gender === gender;
     return true;
   });
 
-  if (loading) {
+  if (loading && !failed) {
     return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      <div
+        role="status"
+        className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"
+      >
+        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+        Loading avatars
+      </div>
+    );
+  }
+
+  if (failed) {
+    return (
+      <div
+        role="alert"
+        aria-busy={loading}
+        className="rounded-xl border border-border bg-background/40 p-4 text-sm"
+      >
+        <p>Could not load avatars. Your current selection is unchanged.</p>
+        <button
+          type="button"
+          onClick={retry}
+          disabled={loading}
+          className="touch-target mt-2 rounded-lg border border-border px-3 py-2 font-semibold text-primary hover:bg-primary/10 disabled:opacity-60"
+        >
+          Retry avatars
+        </button>
+        {loading && (
+          <p role="status" className="mt-2 text-muted-foreground">
+            Loading avatars
+          </p>
+        )}
       </div>
     );
   }
 
   if (list.length === 0) {
-    return <p className="text-sm text-muted-foreground">No avatars available yet.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        {pool.length === 0
+          ? "No avatars available yet."
+          : "No avatars available for this selection."}
+      </p>
+    );
   }
 
   return (
-    <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
+    <div
+      role="group"
+      aria-label="Available avatars"
+      className="grid grid-cols-4 gap-3 sm:grid-cols-5"
+    >
       {list.map((a, index) => {
         const selected = value === a.url;
         return (

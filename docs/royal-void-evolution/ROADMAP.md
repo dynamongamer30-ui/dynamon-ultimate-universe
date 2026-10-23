@@ -1,6 +1,6 @@
 # Execution map — 24 October 2026
 
-Current workstream: **Phase 17 User account experience — profile layout, avatars and account-settings review next**. Account form reliability (04e5ad5) and sign-in layout/copy (2abfa64) are deployed. The latter passes all 12 local and 12 live public/layout/theme checks across four browser projects. Real OAuth and broader protected journeys remain. This is not certification of all phases.
+Current workstream: **Phase 17 User account experience — avatar request recovery under final verification**. Existing account reliability and sign-in layout are deployed. Avatar loading/error/empty states, explicit retry, bounded requests and pending-action placement are under final verification. Profile layout/settings and real OAuth remain. This is not certification of all phases.
 
 This table describes progress, not final phase certification. Work has followed verified dependencies: tooling and themes first, then proven security, browser reliability and account/query defects. A later phase number does not imply every earlier phase is complete.
 
