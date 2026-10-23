@@ -96,56 +96,37 @@ function AuthPage() {
 
   return (
     <PageShell>
-      <div className="mx-auto grid max-w-6xl gap-10 py-6 lg:grid-cols-[1.1fr_1.2fr] lg:items-start lg:py-12">
-        <motion.div
+      <div className="mx-auto grid max-w-6xl gap-5 py-2 sm:gap-8 sm:py-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start lg:gap-x-12 lg:py-12">
+        <motion.header
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:sticky lg:top-24"
+          className="min-w-0"
         >
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> Trainers only
-          </div>
-          <h1 className="mt-5 font-display text-4xl font-black uppercase tracking-tight leading-tight sm:text-5xl">
-            Forge your <span className="text-gradient">trainer identity.</span>
+          <h1 className="font-display text-2xl font-black tracking-tight leading-tight sm:text-4xl lg:text-5xl">
+            Your trainer <span className="text-gradient">account.</span>
           </h1>
-          <p className="mt-4 max-w-md text-muted-foreground">
-            One trainer, one username. Pick a profile avatar from 20 hand-crafted heroes and join
-            the Dynamon vault.
+          <p className="mt-2 max-w-md text-sm text-muted-foreground sm:mt-4 sm:text-base">
+            Save builds. Join the conversation.
           </p>
-          <ul className="mt-6 space-y-3 text-sm">
-            {[
-              "Unique @username locked to your account",
-              "20 aurora-ringed avatars to choose from",
-              "Review mods, like comments, climb the wall",
-              "Early access to every weekly drop",
-            ].map((t) => (
-              <li key={t} className="flex items-center gap-3">
-                <span
-                  className="grid h-6 w-6 place-items-center rounded-full text-primary-foreground"
-                  style={{ background: "var(--gradient-primary)" }}
-                >
-                  <Check className="h-3 w-3" />
-                </span>
-                {t}
-              </li>
-            ))}
-          </ul>
-
-          {/* Progress chips */}
-          <div className="mt-8 flex items-center gap-2 text-xs">
-            <Chip active={step === "credentials" || !user}>1. Account</Chip>
-            <ArrowRight className="h-3 w-3 text-muted-foreground" />
-            <Chip active={step === "profile" && !!user}>2. Profile</Chip>
-          </div>
-        </motion.div>
+        </motion.header>
 
         <motion.div
-          aria-labelledby="auth-step-title"
+          role="region"
+          aria-label="Account access"
           key={step}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="route-hero relative overflow-hidden edge-light rounded-2xl glass p-7 shadow-elev sm:p-8"
+          className="relative min-w-0 overflow-hidden edge-light rounded-2xl glass p-5 shadow-elev sm:p-8 lg:col-start-2 lg:row-start-1 lg:row-span-2"
         >
+          <div
+            role="list"
+            aria-label="Account setup progress"
+            className="mb-4 flex flex-wrap items-center gap-2 text-xs sm:mb-6"
+          >
+            <Chip active={step === "credentials" || !user}>1. Account</Chip>
+            <ArrowRight className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+            <Chip active={step === "profile" && !!user}>2. Profile</Chip>
+          </div>
           {profileError && profileLoaded && <ProfileLoadError retry={refresh} />}
           <AnimatePresence mode="wait">
             {loading || profileLoading ? (
@@ -162,6 +143,31 @@ function AuthPage() {
             )}
           </AnimatePresence>
         </motion.div>
+
+        <aside
+          aria-labelledby="account-benefits-title"
+          className="min-w-0 rounded-2xl border border-border/70 bg-card/35 p-5 sm:p-6 lg:col-start-1 lg:row-start-2"
+        >
+          <h2
+            id="account-benefits-title"
+            className="flex items-center gap-2 font-display text-lg font-bold"
+          >
+            <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" /> Make it yours
+          </h2>
+          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+            {[
+              "Choose an avatar and your own display name",
+              "Update your unique username from your profile",
+              "Keep favorite builds together in your vault",
+              "Join reviews and react to other trainers",
+            ].map((text) => (
+              <li key={text} className="flex items-start gap-3">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
+        </aside>
       </div>
     </PageShell>
   );
@@ -170,6 +176,8 @@ function AuthPage() {
 function Chip({ active, children }: { active: boolean; children: React.ReactNode }) {
   return (
     <span
+      role="listitem"
+      aria-current={active ? "step" : undefined}
       className={`inline-flex items-center rounded-full border px-3 py-1 font-semibold uppercase tracking-wider ${active ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
     >
       {children}
@@ -187,18 +195,16 @@ function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => vo
     >
       <h2
         id="auth-step-title"
-        className="font-display text-2xl font-extrabold uppercase tracking-tight"
+        className="font-display text-xl font-extrabold tracking-tight sm:text-2xl"
       >
         Welcome, Trainer
       </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Sign in with your Google account to continue.
-      </p>
+      <p className="mt-1 text-sm text-muted-foreground">Sign in with Google to continue.</p>
 
       <button
         onClick={onGoogle}
         disabled={busy}
-        className="touch-target mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card/60 px-4 py-3 text-sm font-semibold transition-colors hover:bg-card disabled:opacity-60"
+        className="touch-target mt-4 flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card/60 px-4 py-3 text-sm font-semibold transition-colors hover:bg-card disabled:opacity-60"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
         Continue with Google
@@ -206,18 +212,17 @@ function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => vo
 
       <p className="mt-5 text-center text-xs text-muted-foreground">
         By continuing you agree to our{" "}
-        <Link to="/disclaimer" className="text-primary hover:underline">
+        <Link to="/disclaimer" tabIndex={0} className="text-primary hover:underline">
           Disclaimer &amp; Safety
         </Link>{" "}
         and{" "}
-        <Link to="/privacy" className="text-primary hover:underline">
+        <Link to="/privacy" tabIndex={0} className="text-primary hover:underline">
           Privacy Policy
         </Link>
         .
       </p>
       <p className="mt-2 text-center text-xs text-muted-foreground/80">
-        Accounts that don&apos;t sign in for 30 days are automatically deleted, along with their
-        data.
+        Accounts with no recorded activity for 30 days may be deleted.
       </p>
     </motion.div>
   );

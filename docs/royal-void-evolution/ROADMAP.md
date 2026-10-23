@@ -1,6 +1,6 @@
-# Execution map — 23 October 2026
+# Execution map — 24 October 2026
 
-Current workstream: **Phase 17 User account experience — layout/copy review next**. Account/name-scoped availability checks, draft preservation, confirmed saves, load-failure recovery and return navigation are deployed as 04e5ad5 with passing local and live public gates. Broader account visuals and real OAuth round-trip verification remain. Phase 16 reporting/community increments are deployed; this is not certification of all phases.
+Current workstream: **Phase 17 User account experience — sign-in layout/copy verification**. Account form reliability is deployed as 04e5ad5. Compact phone sign-in, desktop composition, current-step semantics, factual account copy and policy-link keyboard traversal are under final verification. Real OAuth and broader protected account journeys remain. This is not certification of all phases.
 
 This table describes progress, not final phase certification. Work has followed verified dependencies: tooling and themes first, then proven security, browser reliability and account/query defects. A later phase number does not imply every earlier phase is complete.
 
