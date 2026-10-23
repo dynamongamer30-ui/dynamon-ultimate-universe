@@ -1,6 +1,6 @@
 # Execution map — 24 October 2026
 
-Current workstream: **Phase 18 favorites/subscriptions — subscription journey review next**. Phase 17 account reliability, sign-in, avatar recovery and profile presentation increments are deployed. Profile presentation passes the final eight layout/theme checks and four live signed-out checks; an existing authorized session also passes read-only phone/desktop layout and keyboard checks. Fresh OAuth, production mutation and broader device/accessibility gates remain; this is not final phase certification.
+Current workstream: **Phase 18 subscription preference reliability — final responsive/rollout checks**. All 32 local subscription/account-cache checks pass. The client detects unconfirmed/partial saves and preserves choices. Production own-row UPDATE/DELETE policies are missing; an exact review is prepared and remains unapplied pending approval. Broader subscription settings, real mutation and fresh OAuth gates remain.
 
 This table describes progress, not final phase certification. Work has followed verified dependencies: tooling and themes first, then proven security, browser reliability and account/query defects. A later phase number does not imply every earlier phase is complete.
 

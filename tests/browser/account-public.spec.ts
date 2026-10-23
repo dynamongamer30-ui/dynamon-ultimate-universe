@@ -12,7 +12,11 @@ test("signed-out account routes show sign-in without private reads or setup writ
     const url = new URL(request.url());
     if (!url.hostname.endsWith(".supabase.co")) return;
     if (request.method() !== "GET") writes.push(url.pathname);
-    if (/\/(get_my_profile|username_available|profiles)$/.test(url.pathname))
+    if (
+      /\/(get_my_profile|username_available|profiles|notification_prefs|mod_subscribers)$/.test(
+        url.pathname,
+      )
+    )
       privateReads.push(url.pathname);
   });
   await page.goto("/auth", { waitUntil: "domcontentloaded" });
@@ -20,6 +24,9 @@ test("signed-out account routes show sign-in without private reads or setup writ
   await expect(page.getByRole("button", { name: /Google/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Google/ })).toBeInViewport({ ratio: 1 });
   await expect(page.getByRole("region", { name: "Account access" })).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Get notified on new mods", exact: true }),
+  ).toHaveCount(0);
   const progress = page.getByRole("list", { name: "Account setup progress" });
   await expect(progress.getByRole("listitem")).toHaveCount(2);
   await expect(progress.getByText("1. Account", { exact: true })).toHaveAttribute(
