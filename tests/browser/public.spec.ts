@@ -48,6 +48,27 @@ test("public routes render without runtime errors or horizontal overflow", async
         message: route,
       })
       .toBe(true);
+    if (route === "/mods/thunder-arena") {
+      const community = page.locator("#comments");
+      await expect(community).not.toContainText("Loading reviews…");
+      await expect(community).not.toContainText("Community activity could not be loaded.");
+      await expect
+        .poll(
+          () =>
+            community.evaluate((root) => {
+              const bounds = root.getBoundingClientRect();
+              return [...root.querySelectorAll(".glass, [data-review-thread]")].every((node) => {
+                const box = node.getBoundingClientRect();
+                return box.left >= bounds.left - 1 && box.right <= bounds.right + 1;
+              });
+            }),
+          {
+            message:
+              "Community panels must fit within their section, even when body overflow is clipped",
+          },
+        )
+        .toBe(true);
+    }
   }
   expect(errors, JSON.stringify(networkFailures)).toEqual([]);
 });

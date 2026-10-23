@@ -656,8 +656,8 @@ export function CommentsPanel({
         />
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
-        <div className="rounded-3xl glass p-6">
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+        <div className="min-w-0 rounded-3xl glass p-6">
           <h3 className="font-display text-xl font-bold">Leave a review</h3>
           {!user ? (
             <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/40 p-5 text-sm text-muted-foreground">
@@ -781,7 +781,7 @@ export function CommentsPanel({
           )}
         </div>
 
-        <div className="rounded-3xl glass p-6">
+        <div className="min-w-0 rounded-3xl glass p-6">
           <h3
             ref={reviewsHeading}
             tabIndex={-1}

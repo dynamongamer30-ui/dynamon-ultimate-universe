@@ -40,7 +40,7 @@ test("review pages keep global ranking and batch only visible reactions", async 
             {
               id: "trainer",
               username: "trainer",
-              display_name: "Fixture trainer",
+              display_name: "Fixture trainer with a deliberately long display name",
               is_owner: false,
             },
           ];
@@ -64,7 +64,7 @@ test("review pages keep global ranking and batch only visible reactions", async 
   await expect(roots.nth(1)).toHaveAttribute("data-comment-id", "review-21");
   await expect(page.getByText("Reply stays with owner", { exact: true })).toBeVisible();
   await expect(page.getByText("Reviews 1–10 of 23", { exact: true })).toBeVisible();
-  expect(batches).toHaveLength(1);
+  await expect.poll(() => batches.length).toBe(1);
   expect(batches[0]).toHaveLength(10);
   const first = batches[0];
   const snapshotReads = snapshots;
@@ -87,6 +87,15 @@ test("review pages keep global ranking and batch only visible reactions", async 
   await expect(page.getByText("Reply stays with owner", { exact: true })).toBeVisible();
   expect(snapshots).toBe(snapshotReads);
   expect(batches.every((ids) => ids.length <= 10 && !ids.includes("reply"))).toBe(true);
+  expect(
+    await page.locator("#comments").evaluate((root) => {
+      const bounds = root.getBoundingClientRect();
+      return [...root.querySelectorAll(".glass, [data-review-thread]")].every((node) => {
+        const box = node.getBoundingClientRect();
+        return box.left >= bounds.left - 1 && box.right <= bounds.right + 1;
+      });
+    }),
+  ).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
