@@ -30,12 +30,12 @@ async function ready(page: Page, path: string) {
   await page.waitForFunction(() => document.documentElement.dataset.siteSettingsReady === "true");
 }
 
-async function account(page: Page, setup = false) {
+async function account(page: Page, setup = false, email = "fixture@example.test") {
   const id = "00000000-0000-4000-8000-000000000001";
   const expires = Math.floor(Date.now() / 1000) + 3600;
   const user = {
     id,
-    email: "fixture@example.test",
+    email,
     aud: "authenticated",
     role: "authenticated",
     app_metadata: { provider: "email", providers: ["email"] },
@@ -160,6 +160,127 @@ async function account(page: Page, setup = false) {
   });
   return state;
 }
+
+test("profile keeps long identity details and editable controls inside narrow and wide layouts", async ({
+  page,
+}, info) => {
+  test.setTimeout(60_000);
+  const email = `${"trainer".repeat(8)}@${"dynamon".repeat(5)}.example.test`;
+  const state = await account(page, false, email);
+  const displayName = "Trainer".repeat(5) + "ABCDE";
+  const username = "trainer_".repeat(3);
+  state.profile = { ...state.profile!, display_name: displayName, username, is_owner: true };
+  await ready(page, "/profile");
+  const form = page.getByRole("form", { name: "Edit profile" });
+  await expect(form.getByRole("textbox", { name: /Display name/ })).toHaveValue(displayName);
+  for (const [width, height] of [
+    [320, 568],
+    [360, 640],
+    [390, 844],
+    [600, 900],
+    [820, 1180],
+    [1024, 900],
+    [1440, 1000],
+    [1920, 1080],
+  ]) {
+    await page.setViewportSize({ width, height });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      `${width} document width`,
+    ).toBe(true);
+    expect(
+      await form.evaluate((node) => {
+        const r = node.getBoundingClientRect();
+        return r.left >= 0 && r.right <= innerWidth;
+      }),
+      `${width} form bounds`,
+    ).toBe(true);
+    expect(
+      await form.getByRole("textbox", { name: /Username/ }).evaluate((node) => {
+        const s = getComputedStyle(node);
+        return node.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
+      }),
+      `${width} username text space`,
+    ).toBeGreaterThan(175);
+    const preview = page.getByRole("complementary", { name: "Profile preview" });
+    for (const text of [displayName, email])
+      expect(
+        await preview
+          .getByText(text, { exact: true })
+          .evaluate((node) => node.scrollWidth <= node.clientWidth),
+        `${width} identity wrapping`,
+      ).toBe(true);
+    if (width === 320) await form.screenshot({ path: info.outputPath("profile-320.png") });
+  }
+  const preview = page.getByRole("complementary", { name: "Profile preview" });
+  await expect(preview.getByRole("heading", { name: displayName, exact: true })).toBeVisible();
+  await expect(preview.getByText(email, { exact: true })).toBeVisible();
+  expect(
+    await preview
+      .getByText(email, { exact: true })
+      .evaluate((node) => node.scrollWidth <= node.clientWidth),
+  ).toBe(true);
+  await expect(page.getByRole("heading", { name: "Your profile", exact: true })).toBeVisible();
+  const name = form.getByRole("textbox", { name: "Display name", exact: true });
+  await form.getByRole("textbox", { name: "Username", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(name).toBeFocused();
+  await name.fill("Unsaved preview");
+  await expect(
+    preview.getByRole("heading", { name: "Unsaved preview", exact: true }),
+  ).toBeVisible();
+  expect(state.saves).toEqual([]);
+  expect(state.avatarReads).toBe(1);
+  expect(state.checks).toEqual([]);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: info.outputPath("profile-wide.png") });
+});
+
+test("profile preview and editable fields support all nine themes without new account reads", async ({
+  page,
+}, info) => {
+  test.setTimeout(60_000);
+  const state = await account(page);
+  await ready(page, "/profile");
+  const form = page.getByRole("form", { name: "Edit profile" });
+  await expect(form.getByRole("button", { name: "Fixture hero", exact: true })).toBeVisible();
+  const reads = state.reads,
+    avatars = state.avatarReads;
+  const surfaces = new Set<string>();
+  for (const theme of [
+    "royal-black",
+    "dark",
+    "fire",
+    "thunder",
+    "water",
+    "earth",
+    "diamond",
+    "gold",
+    "spirit",
+  ]) {
+    const menu = page.getByRole("button", { name: "Open menu", exact: true });
+    const mobile = await menu.isVisible();
+    if (mobile) await menu.click();
+    await page.getByRole("combobox", { name: "Website theme" }).selectOption(theme);
+    if (mobile) await page.keyboard.press("Escape");
+    await expect(page.locator("html")).toHaveAttribute("data-website-theme", theme);
+    const surface = await form.evaluate((node) => ({
+      background: getComputedStyle(node).backgroundColor,
+      root: getComputedStyle(document.documentElement).getPropertyValue("--card").trim(),
+    }));
+    expect(surface.background).not.toBe("rgba(0, 0, 0, 0)");
+    surfaces.add(surface.root);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    if (theme === "fire" || theme === "spirit")
+      await form.screenshot({ path: info.outputPath(`profile-${theme}.png`) });
+  }
+  expect(surfaces.size).toBe(9);
+  expect(state.reads).toBe(reads);
+  expect(state.avatarReads).toBe(avatars);
+  expect(state.saves).toEqual([]);
+});
 
 for (const path of ["/auth", "/profile"]) {
   test(`${path} retries avatar failures without losing drafts or submitting the profile`, async ({

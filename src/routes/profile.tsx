@@ -158,194 +158,230 @@ function ProfileEditor({
 
   return (
     <PageShell>
-      <div className="mx-auto grid max-w-6xl gap-8 py-6 lg:grid-cols-[1fr_1.5fr] lg:py-12">
-        {/* Identity card */}
-        <motion.aside
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="surface-l1 relative overflow-hidden edge-light rounded-2xl p-6 lg:sticky lg:top-24"
-        >
-          <div className="relative flex flex-col items-center text-center">
-            <div className="relative">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  className="h-32 w-32 rounded-full object-cover ring-4 ring-primary/40"
-                />
-              ) : (
-                <div
-                  className="grid h-32 w-32 place-items-center rounded-full text-4xl font-bold text-primary-foreground"
-                  style={{ background: "var(--gradient-violet)" }}
-                >
-                  {displayName[0]?.toUpperCase() ?? "T"}
-                </div>
-              )}
-              {profile.is_owner && (
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2">
-                  <OwnerBadge size="md" />
-                </span>
-              )}
-            </div>
-            <h1 className="mt-6 font-display text-2xl font-extrabold uppercase tracking-tight">
-              {displayName || "Your name"}
-            </h1>
-            <p className="text-sm text-muted-foreground">@{username || profile.username}</p>
-            {profile.is_owner && (
-              <div className="mt-3 flex flex-wrap justify-center gap-2">
-                <VerifiedFounderChip />
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300">
-                  <ShieldCheck className="h-3.5 w-3.5" /> Trusted Authority
-                </span>
-              </div>
-            )}
-            <p className="mt-4 text-xs text-muted-foreground">{user.email}</p>
-          </div>
-        </motion.aside>
-
-        {/* Edit form */}
-        <motion.form
-          aria-labelledby="edit-profile-title"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          onSubmit={submit}
-          aria-busy={busy}
-          className="route-hero space-y-6 edge-light rounded-2xl glass p-7 sm:p-8"
-        >
-          <div>
-            <h2
-              id="edit-profile-title"
-              className="font-display text-2xl font-extrabold uppercase tracking-tight"
-            >
-              Edit profile
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Update your name, avatar or username anytime.
+      <div className="mx-auto max-w-6xl py-4 sm:py-6 lg:py-12">
+        <header className="mb-5 sm:mb-8">
+          <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
+            Your profile
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Manage your trainer identity. Save when you are ready.
+          </p>
+        </header>
+        <div className="grid min-w-0 gap-5 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:items-start">
+          {/* Identity card */}
+          <motion.aside
+            aria-label="Profile preview"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="surface-l1 relative min-w-0 edge-light rounded-2xl p-5 sm:p-6 lg:sticky lg:top-24"
+          >
+            <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Profile preview
             </p>
-          </div>
-
-          <fieldset disabled={busy} className="min-w-0 space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Username" hint="3–24 chars, letters, numbers, _">
-                <div className="relative">
-                  <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    autoComplete="username"
-                    maxLength={24}
-                    required
-                    className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-20 text-sm outline-none focus:border-primary"
+            <div className="relative flex items-start gap-4 lg:flex-col lg:items-center lg:text-center">
+              <div className="relative shrink-0">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    width={128}
+                    height={128}
+                    className="h-16 w-16 rounded-full object-cover ring-4 ring-primary/40 lg:h-32 lg:w-32"
                   />
-                  <UsernameBadge status={usernameStatus} />
-                </div>
-              </Field>
-
-              <Field label="Display name" hint="Shown on reviews">
-                <div className="relative">
-                  <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    autoComplete="name"
-                    maxLength={40}
-                    required
-                    className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
-                  />
-                </div>
-              </Field>
-            </div>
-
-            {usernameStatus === "error" && (
-              <p role="alert" className="text-sm text-rose-300">
-                Could not check this username.{" "}
-                <button
-                  type="button"
-                  onClick={availability.retry}
-                  className="touch-target underline"
-                >
-                  Retry username check
-                </button>
-              </p>
-            )}
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Gender
-              </p>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {(["male", "female", "other"] as const).map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => {
-                      setGender(g);
-                      playSoft();
-                    }}
-                    aria-pressed={gender === g}
-                    className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
-                      gender === g
-                        ? "border-primary/50 bg-primary/10 text-primary"
-                        : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
-                    }`}
+                ) : (
+                  <div
+                    className="grid h-16 w-16 place-items-center rounded-full text-2xl font-bold text-primary-foreground lg:h-32 lg:w-32 lg:text-4xl"
+                    style={{ background: "var(--gradient-violet)" }}
                   >
-                    {g}
-                  </button>
-                ))}
+                    {displayName[0]?.toUpperCase() ?? "T"}
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1 [overflow-wrap:anywhere] lg:w-full">
+                <h2 className="font-display text-lg font-extrabold tracking-tight lg:text-2xl">
+                  {displayName || "Your name"}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  @{username || profile.username}
+                </p>
+                {profile.is_owner && (
+                  <div className="mt-3 flex flex-wrap gap-2 lg:justify-center">
+                    <OwnerBadge size="sm" />
+                    <VerifiedFounderChip />
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300">
+                      <ShieldCheck className="h-3.5 w-3.5" /> Trusted Authority
+                    </span>
+                  </div>
+                )}
+                <p className="mt-3 text-xs text-muted-foreground">{user.email}</p>
               </div>
             </div>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Preview your changes here. Save to update your profile.
+            </p>
+          </motion.aside>
 
+          {/* Edit form */}
+          <motion.form
+            aria-labelledby="edit-profile-title"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            onSubmit={submit}
+            aria-busy={busy}
+            className="min-w-0 space-y-6 edge-light rounded-2xl glass p-5 sm:p-8"
+          >
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Avatar
+              <h2
+                id="edit-profile-title"
+                className="font-display text-xl font-extrabold tracking-tight sm:text-2xl"
+              >
+                Edit profile
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Update your name, avatar or username anytime.
               </p>
-              <div className="mt-3">
-                <AvatarPicker value={avatarId} onChange={setAvatarId} gender={gender} />
-              </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={busy || !availability.canSubmit}
-              onMouseDown={playClick}
-              aria-busy={busy}
-              className="touch-target inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save changes
-            </button>
-            {saveError && (
-              <p role="alert" className="text-sm text-rose-300">
-                Could not save your profile. Your changes are still here. Please try again.
-              </p>
-            )}
-          </fieldset>
-        </motion.form>
+            <fieldset disabled={busy} className="min-w-0 space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  id="profile-username"
+                  label="Username"
+                  hint="3–24 characters: letters, numbers or underscores."
+                >
+                  <div className="relative">
+                    <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      id="profile-username"
+                      aria-describedby="profile-username-hint profile-username-status"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      autoComplete="username"
+                      maxLength={24}
+                      required
+                      className="w-full min-w-0 rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div id="profile-username-status" className="mt-1 min-h-4">
+                    <UsernameBadge status={usernameStatus} />
+                  </div>
+                </Field>
+
+                <Field id="profile-display-name" label="Display name" hint="Shown on reviews.">
+                  <div className="relative">
+                    <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      id="profile-display-name"
+                      aria-describedby="profile-display-name-hint"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      autoComplete="name"
+                      maxLength={40}
+                      required
+                      className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                </Field>
+              </div>
+
+              {usernameStatus === "error" && (
+                <p role="alert" className="text-sm text-rose-300">
+                  Could not check this username.{" "}
+                  <button
+                    type="button"
+                    onClick={availability.retry}
+                    className="touch-target underline"
+                  >
+                    Retry username check
+                  </button>
+                </p>
+              )}
+
+              <fieldset className="min-w-0">
+                <legend className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Gender
+                </legend>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {(["male", "female", "other"] as const).map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => {
+                        setGender(g);
+                        playSoft();
+                      }}
+                      aria-pressed={gender === g}
+                      className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
+                        gender === g
+                          ? "border-primary/50 bg-primary/10 text-primary"
+                          : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+
+              <fieldset className="min-w-0">
+                <legend className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Avatar
+                </legend>
+                <div className="mt-3">
+                  <AvatarPicker value={avatarId} onChange={setAvatarId} gender={gender} />
+                </div>
+              </fieldset>
+
+              <button
+                type="submit"
+                disabled={busy || !availability.canSubmit}
+                onMouseDown={playClick}
+                aria-busy={busy}
+                className="touch-target inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
+                style={{ background: "var(--gradient-primary)" }}
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save changes
+              </button>
+              {saveError && (
+                <p role="alert" className="text-sm text-rose-300">
+                  Could not save your profile. Your changes are still here. Please try again.
+                </p>
+              )}
+            </fieldset>
+          </motion.form>
+        </div>
       </div>
     </PageShell>
   );
 }
 
 function Field({
+  id,
   label,
   hint,
   children,
 }: {
+  id: string;
   label: string;
   hint?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <div className="flex items-baseline justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {label}
-        </span>
-        {hint && <span className="text-xs text-muted-foreground/80">{hint}</span>}
-      </div>
+    <div className="min-w-0">
+      <label
+        htmlFor={id}
+        className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+      >
+        {label}
+      </label>
+      {hint && (
+        <p id={`${id}-hint`} className="mt-1 text-xs leading-4 text-muted-foreground sm:min-h-8">
+          {hint}
+        </p>
+      )}
       <div className="mt-1.5">{children}</div>
-    </label>
+    </div>
   );
 }
 
@@ -360,10 +396,7 @@ function UsernameBadge({ status }: { status: UsernameStatus }) {
   } as const;
   const s = map[status];
   return (
-    <span
-      role="status"
-      className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wider ${s.c}`}
-    >
+    <span role="status" className={`text-xs font-semibold uppercase tracking-wider ${s.c}`}>
       {s.text}
     </span>
   );

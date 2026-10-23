@@ -1,6 +1,6 @@
 # Execution map — 24 October 2026
 
-Current workstream: **Phase 17 User account experience — profile layout/account settings next**. Account reliability, compact sign-in and avatar request recovery are deployed. Avatar loading/failure/empty states, bounded explicit retry and pending-action placement pass all 44 local profile/onboarding checks. All eight live signed-out account-route/viewport checks pass. Real OAuth and broader protected journeys remain. This is not certification of all phases.
+Current workstream: **Phase 17 profile presentation — release verification; Phase 18 subscriptions review next**. Compact preview, long-identity wrapping, usable username entry and explicit field/group semantics pass focused cross-engine layout/theme checks. Existing account reliability and avatar recovery remain verified. An authorized browser session is available for read-only live profile validation after deployment. Fresh OAuth and broader protected mutation gates remain.
 
 This table describes progress, not final phase certification. Work has followed verified dependencies: tooling and themes first, then proven security, browser reliability and account/query defects. A later phase number does not imply every earlier phase is complete.
 
