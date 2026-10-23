@@ -79,7 +79,7 @@ type Tab =
   | "rewards";
 
 function ControlPanel() {
-  const { branding, announcement, socials, overrides, refresh } = useSiteSettings();
+  const { branding, announcement, socials, overrides, refresh, loading, error } = useSiteSettings();
   const [tab, setTab] = useState<Tab>("branding");
 
   const tabs: { id: Tab; label: string; icon: typeof Settings2 }[] = [
@@ -123,7 +123,8 @@ function ControlPanel() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${tab === t.id ? "text-primary-foreground glow-primary" : "border border-border bg-card/60 text-muted-foreground hover:text-foreground"}`}
+            aria-pressed={tab === t.id}
+            className={`touch-target inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${tab === t.id ? "text-primary-foreground glow-primary" : "border border-border bg-card/60 text-muted-foreground hover:text-foreground"}`}
             style={tab === t.id ? { background: "var(--gradient-primary)" } : undefined}
           >
             <t.icon className="h-4 w-4" /> {t.label}
@@ -132,32 +133,56 @@ function ControlPanel() {
       </div>
 
       <div className="mt-6">
-        {tab === "appearance" && <WebsiteAppearanceEditor />}
-        {tab === "dex" && (
-          <div className="rounded-2xl border border-border bg-card/60 p-5">
-            <h2 className="text-xl font-bold">DEX controls have moved</h2>
-            <p className="my-3 text-sm text-muted-foreground">
-              Manage feature locks, themes, branding and community links in Key system → Royal Void
-              DEX.
-            </p>
-            <Link to="/admin-keys" className="text-primary underline">
-              Open Key system
-            </Link>
+        {loading ? (
+          <p
+            role="status"
+            className="rounded-2xl border border-border bg-card p-6 text-muted-foreground"
+          >
+            Loading site configuration…
+          </p>
+        ) : error ? (
+          <div role="alert" className="rounded-2xl border border-border bg-card p-6">
+            <p>{error}</p>
+            <button
+              type="button"
+              onClick={() => refresh()}
+              className="touch-target mt-3 text-primary underline"
+            >
+              Try again
+            </button>
           </div>
-        )}
-        {tab === "branding" && <BrandingEditor initial={branding} onSaved={refresh} />}
-        {tab === "announcement" && <AnnouncementEditor initial={announcement} onSaved={refresh} />}
-        {tab === "socials" && <SocialsEditor initial={socials} onSaved={refresh} />}
-        {tab === "featured" && <FeaturedEditor onSaved={refresh} />}
-        {tab === "mods" && <ModsEditor overrides={overrides} onSaved={refresh} />}
-        {tab === "security" && (
+        ) : (
           <>
-            <SecurityEditor />
-            <AccountsEditor />
+            {tab === "appearance" && <WebsiteAppearanceEditor />}
+            {tab === "dex" && (
+              <div className="rounded-2xl border border-border bg-card/60 p-5">
+                <h2 className="text-xl font-bold">DEX controls have moved</h2>
+                <p className="my-3 text-sm text-muted-foreground">
+                  Manage feature locks, themes, branding and community links in Key system → Royal
+                  Void DEX.
+                </p>
+                <Link to="/admin-keys" className="text-primary underline">
+                  Open Key system
+                </Link>
+              </div>
+            )}
+            {tab === "branding" && <BrandingEditor initial={branding} onSaved={refresh} />}
+            {tab === "announcement" && (
+              <AnnouncementEditor initial={announcement} onSaved={refresh} />
+            )}
+            {tab === "socials" && <SocialsEditor initial={socials} onSaved={refresh} />}
+            {tab === "featured" && <FeaturedEditor onSaved={refresh} />}
+            {tab === "mods" && <ModsEditor overrides={overrides} onSaved={refresh} />}
+            {tab === "security" && (
+              <>
+                <SecurityEditor />
+                <AccountsEditor />
+              </>
+            )}
+            {tab === "avatars" && <AvatarsEditor />}
+            {tab === "rewards" && <RewardsEditor />}
           </>
         )}
-        {tab === "avatars" && <AvatarsEditor />}
-        {tab === "rewards" && <RewardsEditor />}
       </div>
     </PageShell>
   );

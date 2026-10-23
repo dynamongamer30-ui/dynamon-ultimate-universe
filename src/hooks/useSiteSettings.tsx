@@ -90,6 +90,7 @@ export const DEFAULT_SOCIALS: Socials = {
 type Ctx = {
   websiteAppearance: unknown;
   loading: boolean;
+  error: string | null;
   branding: SiteBranding;
   announcement: Announcement;
   socials: Socials;
@@ -102,6 +103,7 @@ type Ctx = {
 const C = createContext<Ctx>({
   websiteAppearance: undefined,
   loading: true,
+  error: null,
   branding: DEFAULT_BRANDING,
   announcement: DEFAULT_ANNOUNCEMENT,
   socials: DEFAULT_SOCIALS,
@@ -173,6 +175,7 @@ function applyOverride(
 export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   const [websiteAppearance, setWebsiteAppearance] = useState<unknown>(undefined);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     document.documentElement.dataset.siteSettingsReady = String(!loading);
   }, [loading]);
@@ -187,52 +190,63 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   );
 
   const refresh = async () => {
-    const [{ data: settings }, { data: ov }, { data: likeRows }, { data: ratingRows }] =
-      await Promise.all([
+    setLoading(true);
+    setError(null);
+    try {
+      const [
+        { data: settings, error: settingsError },
+        { data: ov, error: overridesError },
+        { data: likeRows },
+        { data: ratingRows },
+      ] = await Promise.all([
         supabase.from("site_settings").select("key, value"),
         supabase.from("mod_overrides").select("*"),
         supabase.from("mod_likes").select("mod_slug"),
         supabase.from("mod_ratings").select("mod_slug, rating"),
       ]);
-    const map = new Map<string, unknown>();
-    (settings ?? []).forEach((r: { key: string; value: unknown }) => map.set(r.key, r.value));
-    setWebsiteAppearance(map.get("website_appearance"));
-    setBranding({
-      ...DEFAULT_BRANDING,
-      ...(map.get("branding") as Partial<SiteBranding> | undefined),
-    });
-    setAnnouncement({
-      ...DEFAULT_ANNOUNCEMENT,
-      ...(map.get("announcement") as Partial<Announcement> | undefined),
-    });
-    setSocials({ ...DEFAULT_SOCIALS, ...(map.get("socials") as Partial<Socials> | undefined) });
-    const f = map.get("featured") as { slug?: string } | undefined;
-    setFeaturedSlug(f?.slug ?? null);
-    const overrideMap: Record<string, ModOverride> = {};
-    (ov ?? []).forEach((r) => {
-      overrideMap[r.slug as string] = r as unknown as ModOverride;
-    });
-    setOverrides(overrideMap);
+      if (settingsError || overridesError) throw settingsError || overridesError;
+      const map = new Map<string, unknown>();
+      (settings ?? []).forEach((r: { key: string; value: unknown }) => map.set(r.key, r.value));
+      setWebsiteAppearance(map.get("website_appearance"));
+      setBranding({
+        ...DEFAULT_BRANDING,
+        ...(map.get("branding") as Partial<SiteBranding> | undefined),
+      });
+      setAnnouncement({
+        ...DEFAULT_ANNOUNCEMENT,
+        ...(map.get("announcement") as Partial<Announcement> | undefined),
+      });
+      setSocials({ ...DEFAULT_SOCIALS, ...(map.get("socials") as Partial<Socials> | undefined) });
+      const f = map.get("featured") as { slug?: string } | undefined;
+      setFeaturedSlug(f?.slug ?? null);
+      const overrideMap: Record<string, ModOverride> = {};
+      (ov ?? []).forEach((r) => {
+        overrideMap[r.slug as string] = r as unknown as ModOverride;
+      });
+      setOverrides(overrideMap);
 
-    // Real per-mod like counts — one row per user per mod in mod_likes.
-    const likeCounts: Record<string, number> = {};
-    (likeRows ?? []).forEach((r: { mod_slug: string }) => {
-      likeCounts[r.mod_slug] = (likeCounts[r.mod_slug] || 0) + 1;
-    });
-    setRealLikes(likeCounts);
+      // Real per-mod like counts — one row per user per mod in mod_likes.
+      const likeCounts: Record<string, number> = {};
+      (likeRows ?? []).forEach((r: { mod_slug: string }) => {
+        likeCounts[r.mod_slug] = (likeCounts[r.mod_slug] || 0) + 1;
+      });
+      setRealLikes(likeCounts);
 
-    // Real per-mod rating aggregates — ratings are stored separately from comments.
-    const ratingAgg: Record<string, { sum: number; count: number }> = {};
-    (ratingRows ?? []).forEach((r: { mod_slug: string; rating: number | null }) => {
-      if (r.rating == null) return; // guard: never count a null as a 0-star
-      const cur = ratingAgg[r.mod_slug] || { sum: 0, count: 0 };
-      cur.sum += r.rating;
-      cur.count += 1;
-      ratingAgg[r.mod_slug] = cur;
-    });
-    setRealRatings(ratingAgg);
-
-    setLoading(false);
+      // Real per-mod rating aggregates — ratings are stored separately from comments.
+      const ratingAgg: Record<string, { sum: number; count: number }> = {};
+      (ratingRows ?? []).forEach((r: { mod_slug: string; rating: number | null }) => {
+        if (r.rating == null) return; // guard: never count a null as a 0-star
+        const cur = ratingAgg[r.mod_slug] || { sum: 0, count: 0 };
+        cur.sum += r.rating;
+        cur.count += 1;
+        ratingAgg[r.mod_slug] = cur;
+      });
+      setRealRatings(ratingAgg);
+    } catch {
+      setError("Could not load site configuration. Please retry before editing.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -258,6 +272,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     <C.Provider
       value={{
         loading,
+        error,
         branding,
         announcement,
         socials,

@@ -1,6 +1,6 @@
 # Execution map — 23 October 2026
 
-Current implementation: **Phase 20, Notifications**, together with Phase 25 query efficiency and Phase 31 regression testing. The notification increment is awaiting its final release gates. Latest deployed code is `8ecf0c4`; publication/deployment evidence belongs in PROGRESS.md.
+Current implementation: **Phase 22, Owner dashboard**, together with configuration data safety and Phase 31 regression testing. The notification increment is deployed as `485d5b2`. Owner-editor loading/error handling is being corrected before continuing the Phase 11 font-licensing work. Publication/deployment evidence belongs in PROGRESS.md.
 
 This table describes progress, not final phase certification. Work has followed verified dependencies: tooling and themes first, then proven security, browser reliability and account/query defects. A later phase number does not imply every earlier phase is complete.
 
@@ -26,9 +26,9 @@ This table describes progress, not final phase certification. Work has followed 
 | 17 Account experience | Verified increment | Shared private profile read, distinct avatar names, owner/profile inspection and blocked-storage fixes; further account UX review remains. |
 | 18 Favorites/subscriptions | Partial | Shared collections, failed-write rollback, synchronized removal, useful empty/error states; subscription journey remains. |
 | 19 Rewards/progression | Partial | Approved grant-only security remediation applied; signed-in XP/rank/reward reads verified; real claim/award mutation journeys remain unverified. |
-| 20 Notifications | Current implementation | Shared inbox/read state, failure rollback, zero signed-out reads and local category filters; release validation underway. |
+| 20 Notifications | Verified increment | Shared inbox/read state, failure rollback, zero signed-out reads, local category filters and corrected avatar fallback deployed; broader pagination remains separate work. |
 | 21 Generator | Pending broader work | Existing public page and offline bad-input/CORS contracts checked; generator UX refinement remains. |
-| 22 Owner dashboard | Partial | Owner navigation/control/key surfaces inspected; new website-appearance editor delivered. Broader tables/forms review remains. |
+| 22 Owner dashboard | Current implementation | Owner navigation/control/key surfaces inspected; new website-appearance editor delivered. Loading/error guards prevent editing fallback configuration. Broader tables/forms review remains. |
 | 23 Theme owner controls | Verified increment | Nine enabled options, default, preview, palette validation and explicit save; initial real production configuration saved and reloaded. Concurrency/denial tested in isolation. |
 | 24 Owner keys/devices | Partial | Existing key timing/lifetime/conditional-write tests and owner key surface checked; no production keys/devices created for testing. |
 | 25 Supabase efficiency | Current implementation | Likes/favorites/profile deduplication deployed; notification sharing under test. Aggregate reads and community pagination remain. |
