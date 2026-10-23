@@ -28,11 +28,20 @@ const routes = [
 test("public routes render without runtime errors or horizontal overflow", async ({ page }) => {
   test.setTimeout(180_000);
   const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  let currentRoute = "initial";
+  const networkFailures: string[] = [];
+  page.on("requestfailed", (request) =>
+    networkFailures.push(`${currentRoute}: ${request.url()} ${request.failure()?.errorText}`),
+  );
+  page.on("pageerror", (error) => errors.push(`${currentRoute}: ${error.message}`));
   for (const route of routes) {
+    currentRoute = route;
     const response = await page.goto(route, { waitUntil: "networkidle" });
     expect(response?.status(), route).toBeLessThan(400);
     await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true", {
+      timeout: 15_000,
+    });
     await expect(page.locator("body")).not.toContainText("Something glitched");
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), {
@@ -40,7 +49,7 @@ test("public routes render without runtime errors or horizontal overflow", async
       })
       .toBe(true);
   }
-  expect(errors).toEqual([]);
+  expect(errors, JSON.stringify(networkFailures)).toEqual([]);
 });
 
 test("search and mobile navigation remain usable", async ({ page }, testInfo) => {

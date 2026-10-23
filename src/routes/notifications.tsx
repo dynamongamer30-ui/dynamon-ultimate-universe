@@ -30,21 +30,30 @@ function fmt(iso: string): string {
 
 function NotificationsPage() {
   const { user } = useAuth();
-  const { items, readIds, loading, markAllRead, sender } = useNotifications();
+  const { items, readIds, loading, error, refresh, markAllRead, sender } = useNotifications();
   const unreadCount = items.filter((n) => !readIds.has(n.id)).length;
+  const [filter, setFilter] = useState<"all" | "rewards" | "updates">("all");
+  const visibleItems = items.filter(
+    (n) => filter === "all" || (filter === "rewards" ? !!n.reward_kind : !n.reward_kind),
+  );
 
   // Snapshot which notifications were unread when the page opened, so they keep
   // their "new" highlight during this visit even after we mark them read.
   const [unreadOnArrival, setUnreadOnArrival] = useState<Set<string>>(new Set());
   const snapshotted = useRef(false);
+  useEffect(() => {
+    snapshotted.current = false;
+    setUnreadOnArrival(new Set());
+    setFilter("all");
+  }, [user?.id]);
 
   // Auto-mark everything read once the list has loaded — no button needed.
   useEffect(() => {
-    if (!user || loading || snapshotted.current) return;
+    if (!user || loading || error || snapshotted.current) return;
     snapshotted.current = true;
     setUnreadOnArrival(new Set(items.filter((n) => !readIds.has(n.id)).map((n) => n.id)));
     markAllRead();
-  }, [user, loading, items, readIds, markAllRead]);
+  }, [user, loading, error, items, readIds, markAllRead]);
 
   return (
     <PageShell>
@@ -73,12 +82,45 @@ function NotificationsPage() {
         </div>
       </header>
 
+      {user && !loading && !error && items.length > 0 && (
+        <div role="group" aria-label="Filter notifications" className="mt-6 flex flex-wrap gap-2">
+          {(
+            [
+              ["all", "All"],
+              ["rewards", "Rewards"],
+              ["updates", "Updates"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={filter === value}
+              onClick={() => setFilter(value)}
+              className={`touch-target rounded-full border px-4 py-2 text-sm font-semibold ${filter === value ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground hover:text-foreground"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {!user ? (
         <div className="mt-10 rounded-3xl border border-dashed border-border bg-card/30 p-10 text-center text-muted-foreground">
           <Link to="/auth" className="font-semibold text-primary hover:underline">
             Sign in
           </Link>{" "}
           to view your notifications.
+        </div>
+      ) : error ? (
+        <div role="alert" className="mt-8 rounded-2xl border border-border bg-card p-6">
+          <p>Could not load your notifications.</p>
+          <button
+            type="button"
+            onClick={() => refresh()}
+            className="touch-target mt-3 text-primary underline"
+          >
+            Try again
+          </button>
         </div>
       ) : loading ? (
         <div className="mt-8 space-y-3">
@@ -95,7 +137,7 @@ function NotificationsPage() {
             </div>
           ))}
         </div>
-      ) : items.length === 0 ? (
+      ) : visibleItems.length === 0 ? (
         <div className="mt-10 flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border bg-card/30 p-12 text-center">
           <span
             className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"
@@ -103,11 +145,15 @@ function NotificationsPage() {
           >
             <BellOff className="h-6 w-6" />
           </span>
-          <p className="text-muted-foreground">No notifications yet. Check back soon.</p>
+          <p className="text-muted-foreground">
+            {items.length === 0
+              ? "No notifications yet. Check back soon."
+              : `No ${filter} in this inbox.`}
+          </p>
         </div>
       ) : (
         <ul aria-label="Notifications" className="notification-list mt-8 space-y-3">
-          {items.map((n) => {
+          {visibleItems.map((n) => {
             const unread = unreadOnArrival.has(n.id);
             return (
               <li
@@ -117,7 +163,13 @@ function NotificationsPage() {
                 <div className="flex items-start gap-3">
                   {sender ? (
                     <img
-                      src={sender.custom_avatar_url || sender.avatar_url || "/favicon.ico"}
+                      src={
+                        sender.custom_avatar_url || sender.avatar_url || "/dynamon-gamer-avatar.png"
+                      }
+                      onError={(event) => {
+                        if (event.currentTarget.getAttribute("src") !== "/dynamon-gamer-avatar.png")
+                          event.currentTarget.src = "/dynamon-gamer-avatar.png";
+                      }}
                       alt=""
                       className="mt-0.5 h-9 w-9 shrink-0 rounded-xl object-cover"
                     />

@@ -173,6 +173,9 @@ function applyOverride(
 export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   const [websiteAppearance, setWebsiteAppearance] = useState<unknown>(undefined);
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    document.documentElement.dataset.siteSettingsReady = String(!loading);
+  }, [loading]);
   const [branding, setBranding] = useState<SiteBranding>(DEFAULT_BRANDING);
   const [announcement, setAnnouncement] = useState<Announcement>(DEFAULT_ANNOUNCEMENT);
   const [socials, setSocials] = useState<Socials>(DEFAULT_SOCIALS);

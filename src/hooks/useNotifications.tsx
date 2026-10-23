@@ -1,99 +1,112 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./useAuth";
+import { toast } from "sonner";
 import {
   listNotifications,
   listMyReadIds,
   markRead,
   getSenderProfile,
   type AppNotification,
-  type SenderProfile,
 } from "@/lib/notifications";
 
-/**
- * Loads notifications + the current user's read receipts (logged-in only).
- * Exposes the unread count and helpers to mark items read.
- */
+type Inbox = { list: AppNotification[]; reads: string[] };
+
+/** One account-scoped inbox shared by the header and notification center. */
 export function useNotifications() {
   const { user } = useAuth();
-  const [items, setItems] = useState<AppNotification[]>([]);
-  const [readIds, setReadIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [sender, setSender] = useState<SenderProfile | null>(null);
-
-  useEffect(() => {
-    getSenderProfile()
-      .then(setSender)
-      .catch(() => setSender(null));
-  }, []);
-
-  const refresh = useCallback(async () => {
-    if (!user) {
-      setItems([]);
-      setReadIds(new Set());
-      setError(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
+  const userId = user?.id;
+  const client = useQueryClient();
+  const query = useQuery({
+    queryKey: ["notifications", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<Inbox> => {
       const [list, reads] = await Promise.all([listNotifications(), listMyReadIds()]);
-      const readSet = new Set(reads);
-      setItems(list.filter((n) => !n.burn_after_read || !readSet.has(n.id)));
-      setReadIds(readSet);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load notifications");
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
+      return { list, reads };
+    },
+    staleTime: 60_000,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const senderQuery = useQuery({
+    queryKey: ["notification-sender"],
+    enabled: !!userId,
+    queryFn: getSenderProfile,
+    staleTime: 300_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const data = userId ? query.data : undefined;
+  const readIds = useMemo(() => new Set(data?.reads ?? []), [data?.reads]);
+  const items = useMemo(
+    () => (data?.list ?? []).filter((n) => !n.burn_after_read || !readIds.has(n.id)),
+    [data?.list, readIds],
+  );
   const unread = useMemo(() => items.filter((n) => !readIds.has(n.id)), [items, readIds]);
-
-  const markAllRead = useCallback(async () => {
-    if (!user) return;
-    const unreadIds = unread.map((n) => n.id);
-    if (unreadIds.length === 0) return;
-    // Optimistic update
-    setReadIds((prev) => {
-      const next = new Set(prev);
-      unreadIds.forEach((id) => next.add(id));
-      return next;
-    });
-    setItems((prev) => prev.filter((n) => !n.burn_after_read || !unreadIds.includes(n.id)));
-    try {
-      await markRead(unreadIds, user.id);
-    } catch {
-      refresh();
-    }
-  }, [user, unread, refresh]);
-
-  const markOneRead = useCallback(
-    async (id: string) => {
-      if (!user || readIds.has(id)) return;
-      setReadIds((prev) => new Set(prev).add(id));
-      setItems((prev) => prev.filter((n) => !n.burn_after_read || n.id !== id));
+  const refresh = useCallback(async () => {
+    if (userId)
+      await client.invalidateQueries({ queryKey: ["notifications", userId], exact: true });
+  }, [client, userId]);
+  const saveReads = useCallback(
+    async (ids: string[]) => {
+      if (!userId || !ids.length) return;
+      const key = ["notifications", userId] as const;
+      await client.cancelQueries({ queryKey: key, exact: true });
+      const previous = client.getQueryData<Inbox>(key);
+      if (!previous) return;
+      const newIds = ids.filter((id) => !previous.reads.includes(id));
+      if (!newIds.length) return;
+      client.setQueryData<Inbox>(key, {
+        ...previous,
+        reads: [...new Set([...previous.reads, ...newIds])],
+      });
       try {
-        await markRead([id], user.id);
+        await markRead(newIds, userId);
+        toast.dismiss(`notification-read:${userId}`);
+        if (client.getQueryState(key)) {
+          client.setQueryData<Inbox>(
+            key,
+            (current) =>
+              current && { ...current, reads: [...new Set([...current.reads, ...newIds])] },
+          );
+        }
       } catch {
-        refresh();
+        toast.error("Could not mark notifications as read. Please try again.", {
+          id: `notification-read:${userId}`,
+        });
+        // Preserve other successful read actions; refetch server truth on failure.
+        if (client.getQueryState(key)) {
+          client.setQueryData<Inbox>(
+            key,
+            (current) =>
+              current && {
+                ...current,
+                reads: current.reads.filter(
+                  (id) => !newIds.includes(id) || previous.reads.includes(id),
+                ),
+              },
+          );
+          await client.invalidateQueries({ queryKey: key, exact: true });
+        }
       }
     },
-    [user, readIds, refresh],
+    [client, userId],
   );
-
+  const markAllRead = useCallback(() => saveReads(unread.map((n) => n.id)), [saveReads, unread]);
+  const markOneRead = useCallback(
+    async (id: string) => {
+      if (!readIds.has(id)) await saveReads([id]);
+    },
+    [readIds, saveReads],
+  );
   return {
     items,
     readIds,
     unreadCount: unread.length,
-    loading,
-    error,
-    sender,
+    loading: !!userId && query.isPending,
+    error: query.error?.message ?? null,
+    sender: userId ? (senderQuery.data ?? null) : null,
     refresh,
     markAllRead,
     markOneRead,

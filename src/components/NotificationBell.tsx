@@ -130,8 +130,17 @@ export function NotificationBell() {
                               <div className="mb-1 flex items-center gap-1.5">
                                 <img
                                   src={
-                                    sender.custom_avatar_url || sender.avatar_url || "/favicon.ico"
+                                    sender.custom_avatar_url ||
+                                    sender.avatar_url ||
+                                    "/dynamon-gamer-avatar.png"
                                   }
+                                  onError={(event) => {
+                                    if (
+                                      event.currentTarget.getAttribute("src") !==
+                                      "/dynamon-gamer-avatar.png"
+                                    )
+                                      event.currentTarget.src = "/dynamon-gamer-avatar.png";
+                                  }}
                                   alt=""
                                   className="h-4 w-4 shrink-0 rounded-full object-cover"
                                 />
