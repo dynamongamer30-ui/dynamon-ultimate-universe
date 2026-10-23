@@ -1,6 +1,6 @@
 # Community database reads and pagination
 
-Status: additive database functions installed; website integration in release validation. This record extends phase 16 and phase 25. It does not certify the remaining program phases.
+Status: additive database functions and website integration deployed and read back. This record extends phase 16 and phase 25. It does not certify the remaining program phases.
 
 ## Request contract
 
@@ -35,3 +35,11 @@ Browser mutation tests use intercepted localhost requests and synthetic identiti
 The next broad run was 26/28: the remaining WebKit public checks did not settle settings readiness in 15 seconds. A separate traced WebKit sample completed every settings/statistics request successfully on localhost and the deployed site; the failed evidence is retained. Configuration reads now have a ten-second abort deadline and always settle, and failed public totals retain prior counts without blocking successful configuration. Owner fixtures additionally deny the statistics endpoint while verifying that saved configuration can still load, edit and publish normally. Final focused validation passes 8/8 community/owner checks across all four projects, including actual review counts and failed-statistics isolation. The full WebKit public-route/navigation repeat passes 2/2. TypeScript, all 24 Node tests, lint (zero errors, 12 existing warnings) and production build pass. The earlier failed runs remain recorded; the broad run is not reported as 28/28. Website publication and live readback follow this checkpoint.
 
 Recovery: the old website can continue operating with the new functions installed. If a website rollback is required, roll back the website first and retain the read-only endpoints. No production record rollback is needed. Any later removal of unused endpoints should be a separately reviewed schema migration.
+
+## Website rollout and live readback
+
+Code commit `5194cf8a8e659234e70eba05abace13d3ea85817`; tree `fcacff6a635b71a980edca56832b101f3c267e19`. Automatic Cloudflare build `6f977c20-0642-40e2-bc6a-680ff8244643` succeeded. Deployment `20b49c2b-22fc-44cd-9b7e-339e2dc25a56`, version `026c71ac-8e55-40ab-bde1-792de053e016`, serves 100%.
+
+Live phone/desktop samples confirm the deployed bundle, eight actual review threads, correct panel bounds, no console/runtime errors, one review-page GET, one statistics GET, one shared reaction GET, and zero raw comment/rating/like/profile snapshots. All sampled Supabase traffic is GET; no production community mutation was made.
+
+The production public run passed seven of eight tests, including every four-project route sweep. WebKit's separate navigation test timed out at page.goto while waiting for networkidle (30-second total test budget). The navigation test now waits for DOMContentLoaded and the existing explicit settings-ready flag, keeping every menu, search, Escape and focus assertion. Playwright's installed API reference discourages networkidle for test readiness. The focused live WebKit repeat passes in 9.7 seconds; the failed run is retained. The final four-project live navigation repeat passes 4/4 in 35.8 seconds. All four projects have passing route and navigation results; the original 7/8 run remains recorded.

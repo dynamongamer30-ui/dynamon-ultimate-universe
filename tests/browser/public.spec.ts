@@ -74,7 +74,7 @@ test("public routes render without runtime errors or horizontal overflow", async
 });
 
 test("search and mobile navigation remain usable", async ({ page }, testInfo) => {
-  await page.goto("/", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true", {
     timeout: 15_000,
   });
