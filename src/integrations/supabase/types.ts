@@ -1402,6 +1402,23 @@ export type Database = {
           username: string;
         }[];
       };
+      get_public_mod_stats: {
+        Args: { p_slugs: string[] };
+        Returns: {
+          like_count: number;
+          mod_slug: string;
+          rating_count: number;
+          rating_sum: number;
+        }[];
+      };
+      get_review_page: {
+        Args: { p_page?: number; p_slug: string };
+        Returns: Json;
+      };
+      get_review_replies: {
+        Args: { p_after_id?: string; p_after_time?: string; p_parent: string };
+        Returns: Json;
+      };
       grant_achievement: { Args: { _key: string }; Returns: boolean };
       grant_achievement_internal: {
         Args: { _key: string; _uid: string };

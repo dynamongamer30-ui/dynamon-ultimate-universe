@@ -40,6 +40,7 @@
     "vite-tsconfig-paths": "^6.0.2"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.11",
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "2.7.0",
     "@playwright/test": "^1.64.1",

@@ -66,7 +66,10 @@ test("owner editors wait for saved settings and block writes after a failed load
           custom_avatar_url: null,
         },
       ];
-    else if (url.pathname.endsWith("/site_settings")) {
+    else if (url.pathname.endsWith("/rpc/get_public_mod_stats")) {
+      status = 403;
+      data = { message: "Fixture public totals unavailable" };
+    } else if (url.pathname.endsWith("/site_settings")) {
       if (request.method() === "GET") {
         settingsReads++;
         await initialRead;

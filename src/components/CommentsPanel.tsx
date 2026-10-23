@@ -13,42 +13,15 @@ import { useGamification } from "@/hooks/useGamification";
 import { playClick, playSoft, playSuccess } from "@/lib/sound";
 import { toast } from "sonner";
 
-import { readCommunityRows, readCommunityIds, REVIEW_PAGE_SIZE } from "@/lib/communityReads";
+import {
+  parseReviewPage,
+  parseReplyPage,
+  REVIEW_PAGE_SIZE,
+  type CommunityComment as EnrichedComment,
+  type ReviewPage,
+} from "@/lib/communityPage";
 import { useCommentReactions } from "@/hooks/useCommentReactions";
-
-type CommentRow = {
-  id: string;
-  mod_slug: string;
-  user_id: string;
-  body: string;
-  created_at: string;
-  parent_id: string | null;
-};
-
-type RatingRow = {
-  id: string;
-  mod_slug: string;
-  user_id: string;
-  rating: number;
-  created_at: string;
-};
-
-type AuthorRow = {
-  id: string;
-  username: string;
-  display_name: string;
-  avatar_url: string | null;
-  custom_avatar_url: string | null;
-  is_owner: boolean;
-};
-
-type LikeRow = { comment_id: string; user_id: string };
-
-type EnrichedComment = CommentRow & {
-  author?: AuthorRow;
-  likeCount: number;
-  likedByMe: boolean;
-};
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export function CommentsPanel({
   slug,
@@ -72,7 +45,13 @@ export function CommentsPanel({
   const { award } = useGamification();
   const confirm = useConfirm();
   const [comments, setComments] = useState<EnrichedComment[]>([]);
-  const [ratings, setRatings] = useState<RatingRow[]>([]);
+  const [pageData, setPageData] = useState<ReviewPage | null>(null);
+  const [replyState, setReplyState] = useState<Record<string, { total: number; hasMore: boolean }>>(
+    {},
+  );
+  const [replyErrors, setReplyErrors] = useState(new Set<string>());
+  const originalLikes = useRef(new Map<string, number>());
+  const { refresh: refreshSiteSettings } = useSiteSettings();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [body, setBody] = useState("");
@@ -86,7 +65,7 @@ export function CommentsPanel({
   const [pendingActions, setPendingActions] = useState(new Set<string>());
   const loadRevision = useRef(0);
   const active = useRef(true);
-  const requestScope = useRef<{ controller?: AbortController }>({}).current;
+  const requestScope = useRef<{ controller?: AbortController; page: number }>({ page: 0 }).current;
   const [pageIndex, setPageIndex] = useState(0);
   const reviewsHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -116,115 +95,42 @@ export function CommentsPanel({
     setLoading(true);
     setLoadError(null);
     try {
-      const [rawComments, rawRatings] = await Promise.all([
-        readCommunityRows<CommentRow>((from, to) =>
-          supabase
-            .from("comments")
-            .select("id, mod_slug, user_id, body, created_at, parent_id")
-            .eq("mod_slug", slug)
-            .order("created_at", { ascending: false })
-            .order("id", { ascending: false })
-            .range(from, to)
-            .abortSignal(controller.signal),
-        ),
-        readCommunityRows<RatingRow>((from, to) =>
-          supabase
-            .from("mod_ratings")
-            .select("id, mod_slug, user_id, rating, created_at")
-            .eq("mod_slug", slug)
-            .order("created_at", { ascending: false })
-            .order("id", { ascending: false })
-            .range(from, to)
-            .abortSignal(controller.signal),
-        ),
-      ]);
+      const { data, error } = await supabase
+        .rpc("get_review_page", { p_slug: slug, p_page: requestScope.page }, { get: true })
+        .abortSignal(controller.signal);
+      if (error) throw error;
+      const result = parseReviewPage(data, slug);
       if (!active.current || revision !== loadRevision.current) return;
-
-      const list = (rawComments ?? []) as CommentRow[];
-      setRatings((rawRatings ?? []) as RatingRow[]);
-      if (list.length === 0) {
-        setComments([]);
-        return;
-      }
-
-      const authorIds = [...new Set(list.map((c) => c.user_id))];
-      const commentIds = list.map((c) => c.id);
-
-      const [authors, likes] = await Promise.all([
-        readCommunityIds(authorIds, (ids, from, to) =>
-          supabase
-            .from("public_profiles")
-            .select("id, username, display_name, avatar_url, custom_avatar_url, is_owner")
-            .in("id", ids)
-            .order("id")
-            .range(from, to)
-            .abortSignal(controller.signal),
+      const list = result.threads.flatMap((thread) => [thread, ...thread.replies]);
+      originalLikes.current = new Map(list.map((comment) => [comment.id, comment.likeCount]));
+      setPageData(result);
+      setReplyState(
+        Object.fromEntries(
+          result.threads.map((thread) => [
+            thread.id,
+            { total: thread.replyCount, hasMore: thread.replies.length < thread.replyCount },
+          ]),
         ),
-        readCommunityIds<LikeRow>(commentIds, (ids, from, to) =>
-          supabase
-            .from("comment_likes")
-            .select("comment_id, user_id")
-            .in("comment_id", ids)
-            .order("comment_id")
-            .order("user_id")
-            .range(from, to)
-            .abortSignal(controller.signal),
-        ),
-      ]);
-      if (!active.current || revision !== loadRevision.current) return;
-
-      const authorMap = new Map<string, AuthorRow>(
-        (authors ?? []).map((a) => [a.id as string, a as unknown as AuthorRow]),
       );
-      const likeCounts = new Map<string, number>();
-      const likedByMe = new Set<string>();
-      for (const row of likes) {
-        likeCounts.set(row.comment_id, (likeCounts.get(row.comment_id) ?? 0) + 1);
-        if (row.user_id === user?.id) likedByMe.add(row.comment_id);
-      }
-
-      const enriched: EnrichedComment[] = list.map((c) => {
-        return {
-          ...c,
-          author: authorMap.get(c.user_id),
-          likeCount: likeCounts.get(c.id) ?? 0,
-          likedByMe: likedByMe.has(c.id),
-        };
-      });
-      setComments(enriched);
+      setReplyErrors(new Set());
+      setComments(list);
     } catch (err) {
       if (active.current && revision === loadRevision.current)
         setLoadError(err instanceof Error ? err.message : "Could not load community activity");
     } finally {
       if (active.current && revision === loadRevision.current) setLoading(false);
     }
-  }, [slug, user, requestScope]);
+  }, [slug, requestScope]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    requestScope.page = pageIndex;
+    void load();
+  }, [load, pageIndex, requestScope]);
 
-  const topLevel = useMemo(() => comments.filter((c) => !c.parent_id), [comments]);
-  // Order: owner comments always come first (newest owner comment on top),
-  // then everyone else by most likes, with ties broken by newest first.
-  const visibleComments = useMemo(() => {
-    const time = (c: EnrichedComment) => +new Date(c.created_at);
-    return topLevel
-      .filter((c) => c.body.trim().length > 0)
-      .sort((a, b) => {
-        const aOwner = a.author?.is_owner ? 1 : 0;
-        const bOwner = b.author?.is_owner ? 1 : 0;
-        if (aOwner !== bOwner) return bOwner - aOwner;
-        if (aOwner === 1) return time(b) - time(a);
-        return b.likeCount - a.likeCount || time(b) - time(a);
-      });
-  }, [topLevel]);
-  const pageCount = Math.max(1, Math.ceil(visibleComments.length / REVIEW_PAGE_SIZE));
-  const currentPage = Math.min(pageIndex, pageCount - 1);
-  const pageComments = visibleComments.slice(
-    currentPage * REVIEW_PAGE_SIZE,
-    (currentPage + 1) * REVIEW_PAGE_SIZE,
-  );
+  const pageComments = useMemo(() => comments.filter((comment) => !comment.parent_id), [comments]);
+  const totalThreads = pageData?.totalThreads ?? 0;
+  const pageCount = Math.max(1, Math.ceil(totalThreads / REVIEW_PAGE_SIZE));
+  const currentPage = pageData?.page ?? 0;
   const reactions = useCommentReactions(
     pageComments.map((comment) => comment.id),
     !loading && !loadError,
@@ -248,9 +154,7 @@ export function CommentsPanel({
     return map;
   }, [comments]);
 
-  const avg = ratings.length
-    ? ratings.reduce((sum, row) => sum + row.rating, 0) / ratings.length
-    : 0;
+  const avg = pageData?.ratingCount ? pageData.ratingSum / pageData.ratingCount : 0;
 
   const submitRating = async () => {
     if (!user || !profile) {
@@ -281,7 +185,7 @@ export function CommentsPanel({
       playSuccess();
       toast.success(existing ? "Rating updated" : `${rating}-star rating submitted`);
       if (!existing) await award(15, "Reviewed", "rating", slug);
-      await load();
+      await Promise.all([load(), refreshSiteSettings()]);
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -426,11 +330,54 @@ export function CommentsPanel({
       if (!active.current) return;
       toast.dismiss(`review-delete-${c.id}`);
       setComments((prev) => prev.filter((x) => x.id !== c.id && x.parent_id !== c.id));
+      await load();
     } catch {
       if (active.current)
         toast.error("Could not delete review. It is still visible; refresh and try again.", {
           id: `review-delete-${c.id}`,
         });
+    } finally {
+      endAction(key);
+    }
+  };
+
+  const loadReplies = async (parent: string) => {
+    const key = "replies:" + parent;
+    if (!beginAction(key)) return;
+    const revision = loadRevision.current;
+    const last = repliesByParent.get(parent)?.at(-1);
+    try {
+      const { data, error } = await supabase
+        .rpc(
+          "get_review_replies",
+          {
+            p_parent: parent,
+            p_after_time: last?.created_at,
+            p_after_id: last?.id,
+          },
+          { get: true },
+        )
+        .abortSignal(requestScope.controller!.signal);
+      if (error) throw error;
+      const result = parseReplyPage(data, parent, slug);
+      if (!active.current || revision !== loadRevision.current) return;
+      for (const row of result.replies) originalLikes.current.set(row.id, row.likeCount);
+      setComments((previous) => {
+        const ids = new Set(previous.map((row) => row.id));
+        return [...previous, ...result.replies.filter((row) => !ids.has(row.id))];
+      });
+      setReplyState((previous) => ({
+        ...previous,
+        [parent]: { total: result.total, hasMore: result.hasMore },
+      }));
+      setReplyErrors((previous) => {
+        const next = new Set(previous);
+        next.delete(parent);
+        return next;
+      });
+    } catch {
+      if (active.current && revision === loadRevision.current)
+        setReplyErrors((previous) => new Set(previous).add(parent));
     } finally {
       endAction(key);
     }
@@ -603,15 +550,37 @@ export function CommentsPanel({
           )}
         </AnimatePresence>
 
+        {!isReply && replyErrors.has(c.id) && (
+          <p role="status" className="mt-3 text-xs text-muted-foreground">
+            More replies could not load. Your current replies are still here.
+          </p>
+        )}
         {replies.length > 0 && (
           <div className="mt-3 space-y-3">{replies.map((r) => renderComment(r, true))}</div>
+        )}
+        {!isReply && replyState[c.id]?.hasMore && (
+          <button
+            type="button"
+            onClick={() => void loadReplies(c.id)}
+            disabled={pendingActions.has("replies:" + c.id)}
+            className="touch-target mt-3 rounded-full border border-border px-4 py-2 text-xs font-semibold text-primary disabled:opacity-50"
+          >
+            {pendingActions.has("replies:" + c.id)
+              ? "Loading replies…"
+              : replyErrors.has(c.id)
+                ? "Retry more replies"
+                : "Load more replies"}
+            <span className="ml-1 text-muted-foreground">
+              ({replies.length} of {replyState[c.id].total})
+            </span>
+          </button>
         )}
       </motion.div>
     );
   };
 
   const displayRating = combinedRating != null ? combinedRating : avg;
-  const displayCount = combinedCount != null ? combinedCount : ratings.length;
+  const displayCount = combinedCount != null ? combinedCount : (pageData?.ratingCount ?? 0);
 
   return (
     <section id="comments" aria-labelledby="community-title" className="mt-14 scroll-mt-24">
@@ -648,10 +617,20 @@ export function CommentsPanel({
           sub={`${displayCount} ratings`}
           stars={Math.round(displayRating)}
         />
-        <StatCard label="Reviews" value={String(displayCount)} sub="Be helpful. Be honest." />
+        <StatCard label="Reviews" value={String(totalThreads)} sub="Be helpful. Be honest." />
         <StatCard
           label="Likes"
-          value={String((combinedLikes ?? 0) + comments.reduce((s, c) => s + c.likeCount, 0))}
+          value={String(
+            (combinedLikes ?? 0) +
+              (pageData?.reviewLikeCount ?? 0) +
+              comments.reduce(
+                (sum, comment) =>
+                  sum +
+                  comment.likeCount -
+                  (originalLikes.current.get(comment.id) ?? comment.likeCount),
+                0,
+              ),
+          )}
           sub="One like per trainer per comment"
         />
       </div>
@@ -813,7 +792,7 @@ export function CommentsPanel({
                 Loading reviews…
               </p>
             )}
-            {!loadError && !loading && visibleComments.length === 0 && (
+            {!loadError && !loading && totalThreads === 0 && (
               <p className="rounded-2xl border border-dashed border-border bg-background/40 p-6 text-center text-sm text-muted-foreground">
                 No reviews yet. Be the first to share your experience.
               </p>
@@ -852,8 +831,7 @@ export function CommentsPanel({
                 </button>
                 <p role="status" className="text-sm text-muted-foreground">
                   Reviews {currentPage * REVIEW_PAGE_SIZE + 1}–
-                  {Math.min((currentPage + 1) * REVIEW_PAGE_SIZE, visibleComments.length)} of{" "}
-                  {visibleComments.length}
+                  {Math.min((currentPage + 1) * REVIEW_PAGE_SIZE, totalThreads)} of {totalThreads}
                 </p>
                 <button
                   type="button"

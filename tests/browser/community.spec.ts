@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { fixtureReviewPage } from "./fixtures/community";
 
 test("community writes recover from denial and replies cannot be posted twice", async ({
   page,
@@ -92,6 +93,18 @@ test("community writes recover from denial and replies cannot be posted twice", 
           custom_avatar_url: null,
         },
       ];
+    else if (url.pathname.endsWith("/rpc/get_review_page"))
+      data = fixtureReviewPage(
+        comments,
+        [
+          { id, username: "fixture", display_name: "Fixture Trainer", is_owner: false },
+          { id: otherId, username: "other", display_name: "Other Trainer", is_owner: false },
+        ],
+        likes,
+        "thunder-arena",
+        Number(url.searchParams.get("p_page") ?? 0),
+        id,
+      );
     else if (url.pathname.endsWith("/notification_prefs"))
       data = { asked_at: "2026-01-01T00:00:00Z" };
     else if (url.pathname.endsWith("/public_profiles"))
@@ -257,7 +270,9 @@ test("community writes recover from denial and replies cannot be posted twice", 
   await expect(draft).toHaveValue("A preserved fixture reply");
   denyReply = false;
   await review.getByRole("button", { name: "Post reply", exact: true }).click();
-  await expect(review.getByText("A preserved fixture reply", { exact: true })).toBeVisible();
+  await expect(
+    review.locator("p").filter({ hasText: /^A preserved fixture reply$/ }),
+  ).toBeVisible();
   expect(replies).toBe(2);
   for (const mode of ["deny", "empty", "allow"] as const) {
     deleteMode = mode;

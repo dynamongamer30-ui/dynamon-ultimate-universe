@@ -192,17 +192,19 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   const refresh = async () => {
     setLoading(true);
     setError(null);
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), 10_000);
     try {
       const [
         { data: settings, error: settingsError },
         { data: ov, error: overridesError },
-        { data: likeRows },
-        { data: ratingRows },
+        { data: stats, error: statsError },
       ] = await Promise.all([
-        supabase.from("site_settings").select("key, value"),
-        supabase.from("mod_overrides").select("*"),
-        supabase.from("mod_likes").select("mod_slug"),
-        supabase.from("mod_ratings").select("mod_slug, rating"),
+        supabase.from("site_settings").select("key, value").abortSignal(controller.signal),
+        supabase.from("mod_overrides").select("*").abortSignal(controller.signal),
+        supabase
+          .rpc("get_public_mod_stats", { p_slugs: baseMods.map((mod) => mod.slug) }, { get: true })
+          .abortSignal(controller.signal),
       ]);
       if (settingsError || overridesError) throw settingsError || overridesError;
       const map = new Map<string, unknown>();
@@ -225,26 +227,21 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       });
       setOverrides(overrideMap);
 
-      // Real per-mod like counts — one row per user per mod in mod_likes.
-      const likeCounts: Record<string, number> = {};
-      (likeRows ?? []).forEach((r: { mod_slug: string }) => {
-        likeCounts[r.mod_slug] = (likeCounts[r.mod_slug] || 0) + 1;
-      });
-      setRealLikes(likeCounts);
-
-      // Real per-mod rating aggregates — ratings are stored separately from comments.
-      const ratingAgg: Record<string, { sum: number; count: number }> = {};
-      (ratingRows ?? []).forEach((r: { mod_slug: string; rating: number | null }) => {
-        if (r.rating == null) return; // guard: never count a null as a 0-star
-        const cur = ratingAgg[r.mod_slug] || { sum: 0, count: 0 };
-        cur.sum += r.rating;
-        cur.count += 1;
-        ratingAgg[r.mod_slug] = cur;
-      });
-      setRealRatings(ratingAgg);
+      // Public activity totals must not block configuration or reset known counts on failure.
+      if (!statsError && stats) {
+        const likeCounts: Record<string, number> = {};
+        const ratingAgg: Record<string, { sum: number; count: number }> = {};
+        for (const row of stats ?? []) {
+          likeCounts[row.mod_slug] = row.like_count;
+          ratingAgg[row.mod_slug] = { sum: row.rating_sum, count: row.rating_count };
+        }
+        setRealLikes(likeCounts);
+        setRealRatings(ratingAgg);
+      }
     } catch {
       setError("Could not load site configuration. Please retry before editing.");
     } finally {
+      clearTimeout(deadline);
       setLoading(false);
     }
   };
