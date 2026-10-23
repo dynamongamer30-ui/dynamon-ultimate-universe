@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, useNavigate, useRouterState, Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Loader2, Sparkles, User as UserIcon, AtSign, Check, ArrowRight } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useUsernameAvailability, type UsernameStatus } from "@/hooks/useUsernameAvailability";
+import { ProfileLoadError } from "@/components/ProfileLoadError";
 import { toast } from "sonner";
 import { playClick, playSuccess, playSoft } from "@/lib/sound";
 
@@ -31,10 +33,18 @@ type Step = "credentials" | "profile";
 
 function AuthPage() {
   const { user, loading } = useAuth();
-  const { profile, loading: profileLoading, refresh } = useProfile();
+  const {
+    profile,
+    loading: profileLoading,
+    loaded: profileLoaded,
+    error: profileError,
+    refresh,
+  } = useProfile();
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [step, setStep] = useState<Step>("credentials");
   const [busy, setBusy] = useState(false);
+  const redirectingUser = useRef<string | null>(null);
 
   const afterAuthPath = () => {
     try {
@@ -46,10 +56,13 @@ function AuthPage() {
     return "/mods";
   };
 
-  // If user already has a complete profile, send them to /mods
+  // Route transitions can briefly remount the old outlet; redirect only while auth is active.
   useEffect(() => {
-    if (loading || profileLoading) return;
+    if (pathname !== "/auth" || loading || profileLoading || (profileError && !profileLoaded))
+      return;
     if (user && profile) {
+      if (redirectingUser.current === user.id) return;
+      redirectingUser.current = user.id;
       const destination = afterAuthPath();
       try {
         sessionStorage.removeItem("dg_after_auth");
@@ -58,8 +71,9 @@ function AuthPage() {
       }
       navigate({ to: destination });
     }
+    if (!user) redirectingUser.current = null;
     if (user && !profile) setStep("profile");
-  }, [user, profile, loading, profileLoading, navigate]);
+  }, [pathname, user, profile, loading, profileLoading, profileError, profileLoaded, navigate]);
 
   const handleGoogle = async () => {
     playClick();
@@ -132,23 +146,19 @@ function AuthPage() {
           animate={{ opacity: 1, y: 0 }}
           className="route-hero relative overflow-hidden edge-light rounded-2xl glass p-7 shadow-elev sm:p-8"
         >
+          {profileError && profileLoaded && <ProfileLoadError retry={refresh} />}
           <AnimatePresence mode="wait">
-            {step === "credentials" && !user ? (
+            {loading || profileLoading ? (
+              <div role="status" className="flex items-center gap-2 py-10">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Loading profile
+              </div>
+            ) : profileError && !profileLoaded ? (
+              <ProfileLoadError retry={refresh} />
+            ) : step === "credentials" && !user ? (
               <CredentialsStep key="creds" busy={busy} onGoogle={handleGoogle} />
             ) : (
-              <ProfileStep
-                key="profile"
-                onDone={async () => {
-                  await refresh();
-                  const destination = afterAuthPath();
-                  try {
-                    sessionStorage.removeItem("dg_after_auth");
-                  } catch {
-                    /* ignore */
-                  }
-                  navigate({ to: destination });
-                }}
-              />
+              <ProfileStep key={user?.id ?? "profile"} onDone={refresh} />
             )}
           </AnimatePresence>
         </motion.div>
@@ -213,47 +223,33 @@ function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => vo
   );
 }
 
-function ProfileStep({ onDone }: { onDone: () => void }) {
+function ProfileStep({ onDone }: { onDone: () => Promise<void> }) {
   const { user } = useAuth();
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [gender, setGender] = useState<"male" | "female" | "other" | null>(null);
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [usernameStatus, setUsernameStatus] = useState<
-    "idle" | "checking" | "ok" | "taken" | "invalid"
-  >("idle");
-
-  // Live username availability check
+  const availability = useUsernameAvailability(username);
+  const usernameStatus = availability.status;
+  const [saveError, setSaveError] = useState(false);
+  const locked = useRef(false);
+  const active = useRef(true);
   useEffect(() => {
-    const u = username.trim();
-    if (!u) {
-      setUsernameStatus("idle");
-      return;
-    }
-    if (!/^[a-zA-Z0-9_]{3,24}$/.test(u)) {
-      setUsernameStatus("invalid");
-      return;
-    }
-    setUsernameStatus("checking");
-    const t = setTimeout(async () => {
-      const { data, error } = await supabase.rpc("username_available", { _username: u });
-      if (error) {
-        setUsernameStatus("idle");
-        return;
-      }
-      setUsernameStatus(data ? "ok" : "taken");
-    }, 350);
-    return () => clearTimeout(t);
-  }, [username]);
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (locked.current) return;
     if (!user) {
       toast.error("Not signed in");
       return;
     }
-    if (usernameStatus !== "ok") {
+    if (!availability.canSubmit) {
       toast.error("Pick a valid, available username");
       return;
     }
@@ -270,23 +266,31 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
       return;
     }
 
+    locked.current = true;
     setBusy(true);
+    setSaveError(false);
     try {
-      const { error } = await supabase.from("profiles").upsert({
-        id: user.id,
-        username: username.trim(),
-        display_name: displayName.trim(),
-        gender,
-        avatar_url: avatarId,
-      });
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          username: username.trim(),
+          display_name: displayName.trim(),
+          gender,
+          avatar_url: avatarId,
+        })
+        .select("id");
+      if (error || !data?.some((row) => row.id === user.id))
+        throw error ?? new Error("Profile creation was not confirmed");
+      if (!active.current) return;
       playSuccess();
       toast.success("Profile ready — welcome to the Universe!");
-      onDone();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Could not save profile");
+      await onDone();
+    } catch {
+      if (active.current) setSaveError(true);
     } finally {
-      setBusy(false);
+      locked.current = false;
+      if (active.current) setBusy(false);
     }
   };
 
@@ -294,6 +298,7 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
     <motion.form
       aria-labelledby="profile-step-title"
       onSubmit={submit}
+      aria-busy={busy}
       initial={{ opacity: 0, x: 10 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -10 }}
@@ -311,100 +316,116 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Username" hint="3–24 chars, letters, numbers, _">
-          <div className="relative">
-            <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="ember_master"
-              maxLength={24}
-              required
-              className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-20 text-sm outline-none focus:border-primary"
-            />
-            <UsernameBadge status={usernameStatus} />
-          </div>
-        </Field>
+      <fieldset disabled={busy} className="min-w-0 space-y-5">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Username" hint="3–24 chars, letters, numbers, _">
+            <div className="relative">
+              <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="ember_master"
+                maxLength={24}
+                required
+                className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-20 text-sm outline-none focus:border-primary"
+              />
+              <UsernameBadge status={usernameStatus} />
+            </div>
+          </Field>
 
-        <Field label="Display name" hint="Shown on reviews">
-          <div className="relative">
-            <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Ember Master"
-              maxLength={40}
-              required
-              className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
-            />
-          </div>
-        </Field>
-      </div>
+          <Field label="Display name" hint="Shown on reviews">
+            <div className="relative">
+              <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Ember Master"
+                maxLength={40}
+                required
+                className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
+              />
+            </div>
+          </Field>
+        </div>
 
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Gender
-        </p>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {(["male", "female", "other"] as const).map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => {
-                setGender(g);
-                setAvatarId(null);
-                playSoft();
-              }}
-              aria-pressed={gender === g}
-              className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
-                gender === g
-                  ? "border-primary/50 bg-primary/10 text-primary"
-                  : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {g}
+        {usernameStatus === "error" && (
+          <p role="alert" className="text-sm text-rose-300">
+            Could not check this username.{" "}
+            <button type="button" onClick={availability.retry} className="touch-target underline">
+              Retry username check
             </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-end justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Pick your avatar
           </p>
-          {gender && (
-            <p className="text-xs text-muted-foreground">
-              {gender === "female"
-                ? "10 female heroes"
-                : gender === "male"
-                  ? "10 male heroes"
-                  : "All 20 heroes"}
-            </p>
-          )}
-        </div>
-        <div className="mt-3">
-          {gender ? (
-            <AvatarPicker value={avatarId} onChange={setAvatarId} gender={gender} />
-          ) : (
-            <p className="rounded-xl border border-dashed border-border bg-background/40 p-6 text-center text-sm text-muted-foreground">
-              Pick a gender to see your heroes.
-            </p>
-          )}
-        </div>
-      </div>
+        )}
 
-      <button
-        type="submit"
-        disabled={busy}
-        aria-busy={busy}
-        className="touch-target inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
-        style={{ background: "var(--gradient-primary)" }}
-      >
-        {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-        Enter the Universe
-      </button>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Gender
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {(["male", "female", "other"] as const).map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => {
+                  setGender(g);
+                  setAvatarId(null);
+                  playSoft();
+                }}
+                aria-pressed={gender === g}
+                className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
+                  gender === g
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-end justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Pick your avatar
+            </p>
+            {gender && (
+              <p className="text-xs text-muted-foreground">
+                {gender === "female"
+                  ? "10 female heroes"
+                  : gender === "male"
+                    ? "10 male heroes"
+                    : "All 20 heroes"}
+              </p>
+            )}
+          </div>
+          <div className="mt-3">
+            {gender ? (
+              <AvatarPicker value={avatarId} onChange={setAvatarId} gender={gender} />
+            ) : (
+              <p className="rounded-xl border border-dashed border-border bg-background/40 p-6 text-center text-sm text-muted-foreground">
+                Pick a gender to see your heroes.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={busy || !availability.canSubmit}
+          aria-busy={busy}
+          className="touch-target inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
+          style={{ background: "var(--gradient-primary)" }}
+        >
+          {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+          Enter the Universe
+        </button>
+        {saveError && (
+          <p role="alert" className="text-sm text-rose-300">
+            Could not save your profile. Your changes are still here. Please try again.
+          </p>
+        )}
+      </fieldset>
 
       <p className="text-center text-xs text-muted-foreground">
         By continuing you agree to our{" "}
@@ -439,17 +460,19 @@ function Field({
   );
 }
 
-function UsernameBadge({ status }: { status: "idle" | "checking" | "ok" | "taken" | "invalid" }) {
+function UsernameBadge({ status }: { status: UsernameStatus }) {
   if (status === "idle") return null;
   const map = {
     checking: { text: "checking…", c: "text-muted-foreground" },
     ok: { text: "available", c: "text-emerald-400" },
     taken: { text: "taken", c: "text-rose-400" },
     invalid: { text: "invalid", c: "text-amber-400" },
+    error: { text: "unverified", c: "text-rose-400" },
   } as const;
   const s = map[status];
   return (
     <span
+      role="status"
       className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wider ${s.c}`}
     >
       {s.text}

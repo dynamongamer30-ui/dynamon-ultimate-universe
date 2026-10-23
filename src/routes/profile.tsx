@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import { motion } from "motion/react";
 import { Loader2, Save, User as UserIcon, AtSign, ShieldCheck } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
@@ -7,7 +8,9 @@ import { AvatarPicker } from "@/components/AvatarPicker";
 import { OwnerBadge, VerifiedFounderChip } from "@/components/OwnerBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile, type Profile } from "@/hooks/useProfile";
+import { useUsernameAvailability, type UsernameStatus } from "@/hooks/useUsernameAvailability";
+import { ProfileLoadError } from "@/components/ProfileLoadError";
 import { toast } from "sonner";
 import { playClick, playSuccess, playSoft } from "@/lib/sound";
 
@@ -28,17 +31,8 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const { user, loading } = useAuth();
-  const { profile, loading: profileLoading, refresh } = useProfile();
+  const { profile, loading: profileLoading, error, refresh } = useProfile();
   const navigate = useNavigate();
-
-  const [displayName, setDisplayName] = useState("");
-  const [gender, setGender] = useState<"male" | "female" | "other" | null>(null);
-  const [avatarId, setAvatarId] = useState<string | null>(null);
-  const [username, setUsername] = useState("");
-  const [usernameStatus, setUsernameStatus] = useState<
-    "idle" | "checking" | "ok" | "taken" | "invalid"
-  >("idle");
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -48,41 +42,71 @@ function ProfilePage() {
     }
   }, [user, loading, navigate]);
 
-  useEffect(() => {
-    if (profile) {
-      setDisplayName(profile.display_name ?? "");
-      setGender(profile.gender);
-      setAvatarId(profile.avatar_url);
-      setUsername(profile.username ?? "");
-    }
-  }, [profile]);
+  if (loading || profileLoading || !user)
+    return (
+      <PageShell>
+        <div role="status" className="grid place-items-center py-20 text-muted-foreground">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="sr-only">Loading profile</span>
+        </div>
+      </PageShell>
+    );
+  if (error && !profile)
+    return (
+      <PageShell>
+        <ProfileLoadError retry={refresh} />
+      </PageShell>
+    );
+  if (!profile)
+    return (
+      <PageShell>
+        <div className="mx-auto max-w-md py-20 text-center">
+          <h1 className="font-display text-2xl font-extrabold">Finish setting up your trainer</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Pick a username, avatar and gender first.
+          </p>
+          <Link
+            to="/auth"
+            className="touch-target mt-6 inline-flex rounded-full bg-primary px-5 py-3 text-primary-foreground"
+          >
+            Complete profile
+          </Link>
+        </div>
+      </PageShell>
+    );
+  return <ProfileEditor key={user.id} user={user} profile={profile} refresh={refresh} />;
+}
 
-  // username availability
+function ProfileEditor({
+  user,
+  profile,
+  refresh,
+}: {
+  user: User;
+  profile: Profile;
+  refresh: () => Promise<void>;
+}) {
+  const [displayName, setDisplayName] = useState(profile.display_name ?? "");
+  const [gender, setGender] = useState(profile.gender);
+  const [avatarId, setAvatarId] = useState(profile.avatar_url);
+  const [username, setUsername] = useState(profile.username ?? "");
+  const [savedUsername, setSavedUsername] = useState(profile.username);
+  const availability = useUsernameAvailability(username, savedUsername);
+  const usernameStatus = availability.status;
+  const [busy, setBusy] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const locked = useRef(false);
+  const active = useRef(true);
   useEffect(() => {
-    const u = (username ?? "").trim();
-    if (!u || (profile && u.toLowerCase() === (profile.username ?? "").toLowerCase())) {
-      setUsernameStatus("idle");
-      return;
-    }
-    if (!/^[a-zA-Z0-9_]{3,24}$/.test(u)) {
-      setUsernameStatus("invalid");
-      return;
-    }
-    setUsernameStatus("checking");
-    const t = setTimeout(async () => {
-      const { data, error } = await supabase.rpc("username_available", { _username: u });
-      if (error) {
-        setUsernameStatus("idle");
-        return;
-      }
-      setUsernameStatus(data ? "ok" : "taken");
-    }, 350);
-    return () => clearTimeout(t);
-  }, [username, profile]);
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (locked.current) return;
     if (!displayName.trim()) {
       toast.error("Display name required");
       return;
@@ -95,13 +119,15 @@ function ProfilePage() {
       toast.error("Pick an avatar");
       return;
     }
-    if (username !== profile?.username && usernameStatus !== "ok") {
+    if (!availability.canSubmit) {
       toast.error("Username unavailable");
       return;
     }
+    locked.current = true;
     setBusy(true);
+    setSaveError(false);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .update({
           username: username.trim(),
@@ -109,49 +135,24 @@ function ProfilePage() {
           gender,
           avatar_url: avatarId,
         })
-        .eq("id", user.id);
-      if (error) throw error;
+        .eq("id", user.id)
+        .select("id");
+      if (error || !data?.some((row) => row.id === user.id))
+        throw error ?? new Error("Profile save was not confirmed");
+      if (!active.current) return;
+      setUsername(username.trim());
+      setSavedUsername(username.trim());
+      setDisplayName(displayName.trim());
       playSuccess();
       toast.success("Profile updated");
       await refresh();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Could not update");
+    } catch {
+      if (active.current) setSaveError(true);
     } finally {
-      setBusy(false);
+      locked.current = false;
+      if (active.current) setBusy(false);
     }
   };
-
-  if (loading || profileLoading || !user) {
-    return (
-      <PageShell>
-        <div className="grid place-items-center py-20 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      </PageShell>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <PageShell>
-        <div className="mx-auto max-w-md py-20 text-center">
-          <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight">
-            Finish setting up your trainer
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Pick a username, avatar and gender first.
-          </p>
-          <Link
-            to="/auth"
-            className="mt-6 inline-flex rounded-full px-5 py-3 text-sm font-semibold text-primary-foreground"
-            style={{ background: "var(--gradient-primary)" }}
-          >
-            Complete profile
-          </Link>
-        </div>
-      </PageShell>
-    );
-  }
 
   const avatarUrl = avatarId;
 
@@ -208,6 +209,7 @@ function ProfilePage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           onSubmit={submit}
+          aria-busy={busy}
           className="route-hero space-y-6 edge-light rounded-2xl glass p-7 sm:p-8"
         >
           <div>
@@ -222,83 +224,103 @@ function ProfilePage() {
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Username" hint="3–24 chars, letters, numbers, _">
-              <div className="relative">
-                <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
-                  maxLength={24}
-                  required
-                  className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-20 text-sm outline-none focus:border-primary"
-                />
-                <UsernameBadge status={usernameStatus} />
-              </div>
-            </Field>
+          <fieldset disabled={busy} className="min-w-0 space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Username" hint="3–24 chars, letters, numbers, _">
+                <div className="relative">
+                  <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    autoComplete="username"
+                    maxLength={24}
+                    required
+                    className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-20 text-sm outline-none focus:border-primary"
+                  />
+                  <UsernameBadge status={usernameStatus} />
+                </div>
+              </Field>
 
-            <Field label="Display name" hint="Shown on reviews">
-              <div className="relative">
-                <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  autoComplete="name"
-                  maxLength={40}
-                  required
-                  className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
-                />
-              </div>
-            </Field>
-          </div>
+              <Field label="Display name" hint="Shown on reviews">
+                <div className="relative">
+                  <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    autoComplete="name"
+                    maxLength={40}
+                    required
+                    className="w-full rounded-xl border border-border bg-background/60 py-3 pl-10 pr-3 text-sm outline-none focus:border-primary"
+                  />
+                </div>
+              </Field>
+            </div>
 
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Gender
-            </p>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {(["male", "female", "other"] as const).map((g) => (
+            {usernameStatus === "error" && (
+              <p role="alert" className="text-sm text-rose-300">
+                Could not check this username.{" "}
                 <button
-                  key={g}
                   type="button"
-                  onClick={() => {
-                    setGender(g);
-                    playSoft();
-                  }}
-                  aria-pressed={gender === g}
-                  className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
-                    gender === g
-                      ? "border-primary/50 bg-primary/10 text-primary"
-                      : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
-                  }`}
+                  onClick={availability.retry}
+                  className="touch-target underline"
                 >
-                  {g}
+                  Retry username check
                 </button>
-              ))}
-            </div>
-          </div>
+              </p>
+            )}
 
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Avatar
-            </p>
-            <div className="mt-3">
-              <AvatarPicker value={avatarId} onChange={setAvatarId} gender={gender} />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Gender
+              </p>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {(["male", "female", "other"] as const).map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => {
+                      setGender(g);
+                      playSoft();
+                    }}
+                    aria-pressed={gender === g}
+                    className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
+                      gender === g
+                        ? "border-primary/50 bg-primary/10 text-primary"
+                        : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={busy}
-            onMouseDown={playClick}
-            aria-busy={busy}
-            className="touch-target inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
-            style={{ background: "var(--gradient-primary)" }}
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save changes
-          </button>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Avatar
+              </p>
+              <div className="mt-3">
+                <AvatarPicker value={avatarId} onChange={setAvatarId} gender={gender} />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={busy || !availability.canSubmit}
+              onMouseDown={playClick}
+              aria-busy={busy}
+              className="touch-target inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save changes
+            </button>
+            {saveError && (
+              <p role="alert" className="text-sm text-rose-300">
+                Could not save your profile. Your changes are still here. Please try again.
+              </p>
+            )}
+          </fieldset>
         </motion.form>
       </div>
     </PageShell>
@@ -327,17 +349,19 @@ function Field({
   );
 }
 
-function UsernameBadge({ status }: { status: "idle" | "checking" | "ok" | "taken" | "invalid" }) {
+function UsernameBadge({ status }: { status: UsernameStatus }) {
   if (status === "idle") return null;
   const map = {
     checking: { text: "checking…", c: "text-muted-foreground" },
     ok: { text: "available", c: "text-emerald-400" },
     taken: { text: "taken", c: "text-rose-400" },
     invalid: { text: "invalid", c: "text-amber-400" },
+    error: { text: "unverified", c: "text-rose-400" },
   } as const;
   const s = map[status];
   return (
     <span
+      role="status"
       className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wider ${s.c}`}
     >
       {s.text}

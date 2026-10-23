@@ -38,6 +38,7 @@ export function useProfile() {
   return {
     profile: userId ? (query.data ?? null) : null,
     loading: !!userId && query.isPending,
+    loaded: !!userId && query.data !== undefined,
     error: query.error,
     refresh,
   };
