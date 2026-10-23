@@ -451,6 +451,7 @@ export function CommentsPanel({
               rows={reactions.rows.filter((row) => row.comment_id === c.id)}
               loading={reactions.loading}
               loadError={reactions.error}
+              prepare={reactions.prepare}
               update={(change) => reactions.update(c.id, change)}
             />
           </div>

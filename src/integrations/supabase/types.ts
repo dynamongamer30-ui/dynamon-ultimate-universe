@@ -1415,6 +1415,15 @@ export type Database = {
         Args: { p_page?: number; p_slug: string };
         Returns: Json;
       };
+      get_review_reaction_counts: {
+        Args: { p_comment_ids: string[] };
+        Returns: {
+          comment_id: string;
+          mine: boolean;
+          reaction: string;
+          total: number;
+        }[];
+      };
       get_review_replies: {
         Args: { p_after_id?: string; p_after_time?: string; p_parent: string };
         Returns: Json;

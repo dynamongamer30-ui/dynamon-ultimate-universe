@@ -1,17 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { readCommunityRows } from "@/lib/communityReads";
-
-export type ReactionKey = "fire" | "water" | "thunder" | "leaf" | "spirit";
-export type ReactionRow = { user_id: string; reaction: ReactionKey };
-type BatchRow = ReactionRow & { comment_id: string };
+import { parseReactionCounts, type ReactionCounts, type ReactionRow } from "@/lib/reactionCounts";
 
 export function useCommentReactions(ids: string[], enabled: boolean) {
   const { user } = useAuth();
   const client = useQueryClient();
   const commentIds = [...new Set(ids)].sort();
-  const queryKey = ["comment-reactions", user?.id ?? "public", commentIds] as const;
+  const queryKey = ["comment-reaction-counts", user?.id ?? "public", commentIds] as const;
   const query = useQuery({
     queryKey,
     enabled: enabled && commentIds.length > 0,
@@ -19,22 +15,18 @@ export function useCommentReactions(ids: string[], enabled: boolean) {
     gcTime: 0,
     retry: false,
     refetchOnWindowFocus: false,
-    queryFn: async ({ signal }) =>
-      readCommunityRows<BatchRow>(async (from, to) => {
-        const result = await supabase
-          .from("comment_reactions")
-          .select("comment_id, user_id, reaction")
-          .in("comment_id", commentIds)
-          .order("comment_id")
-          .order("user_id")
-          .order("reaction")
-          .range(from, to)
-          .abortSignal(signal);
-        return { data: result.data as BatchRow[] | null, error: result.error };
-      }),
+    refetchOnReconnect: false,
+    queryFn: async ({ signal }) => {
+      if (commentIds.length > 10) throw new Error("Too many review reactions requested");
+      const { data, error } = await supabase
+        .rpc("get_review_reaction_counts", { p_comment_ids: commentIds }, { get: true })
+        .abortSignal(signal);
+      if (error) throw error;
+      return parseReactionCounts(data, commentIds);
+    },
   });
   const update = (commentId: string, change: (rows: ReactionRow[]) => ReactionRow[]) => {
-    client.setQueryData<BatchRow[]>(queryKey, (previous) => {
+    client.setQueryData<ReactionCounts[]>(queryKey, (previous) => {
       if (!previous) return previous;
       const mine = previous.filter((row) => row.comment_id === commentId);
       const rest = previous.filter((row) => row.comment_id !== commentId);
@@ -46,6 +38,7 @@ export function useCommentReactions(ids: string[], enabled: boolean) {
     loading: query.isPending || query.isFetching,
     error: query.isError,
     retry: () => query.refetch(),
+    prepare: () => client.cancelQueries({ queryKey, exact: true }),
     update,
   };
 }

@@ -95,14 +95,15 @@ test("review pages keep global ranking and batch only visible reactions", async 
           ];
     else if (url.pathname.endsWith("/comment_likes"))
       data = [{ comment_id: "review-21", user_id: "voter" }];
-    else if (url.pathname.endsWith("/comment_reactions")) {
-      const filter = url.searchParams.get("comment_id") ?? "";
-      const ids = filter.slice(4, -1).split(",");
+    else if (url.pathname.endsWith("/rpc/get_review_reaction_counts")) {
+      const filter = url.searchParams.get("p_comment_ids") ?? "";
+      const ids = filter.slice(1, -1).split(",");
       batches.push(ids);
       if (deny) {
         status = 403;
         data = { message: "Fixture read denied" };
-      } else data = ids.map((comment_id) => ({ comment_id, user_id: "voter", reaction: "fire" }));
+      } else
+        data = ids.map((comment_id) => ({ comment_id, total: 1, mine: false, reaction: "fire" }));
     }
     await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(data) });
   });

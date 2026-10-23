@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { playSoft } from "@/lib/sound";
 import { toast } from "sonner";
 
-import type { ReactionKey, ReactionRow } from "@/hooks/useCommentReactions";
+import { setOwnReaction, type ReactionKey, type ReactionRow } from "@/lib/reactionCounts";
 
 const REACTIONS: { key: ReactionKey; emoji: string; color: string }[] = [
   { key: "fire", emoji: "🔥", color: "text-orange-300" },
@@ -20,12 +20,14 @@ export function ElementalReactions({
   rows,
   loading,
   loadError,
+  prepare,
   update,
 }: {
   commentId: string;
   rows: ReactionRow[];
   loading: boolean;
   loadError: boolean;
+  prepare: () => Promise<void>;
   update: (change: (previous: ReactionRow[]) => ReactionRow[]) => void;
 }) {
   const { user } = useAuth();
@@ -45,13 +47,11 @@ export function ElementalReactions({
     locked.current = true;
     setBusy(true);
     playSoft();
-    const mine = rows.find((r) => r.user_id === user.id && r.reaction === reaction);
-    if (mine) {
-      update((p) => p.filter((r) => !(r.user_id === user.id && r.reaction === reaction)));
-    } else {
-      update((p) => [...p, { user_id: user.id, reaction }]);
-    }
+    const mine = !!rows.find((r) => r.reaction === reaction)?.mine;
     try {
+      await prepare();
+      if (!active.current) return;
+      update((previous) => setOwnReaction(previous, reaction, !mine));
       const { data, error } = mine
         ? await supabase
             .from("comment_reactions")
@@ -68,15 +68,13 @@ export function ElementalReactions({
         (mine && !data?.some((row) => row.user_id === user.id && row.reaction === reaction))
       )
         throw error ?? new Error("Reaction removal was not confirmed");
-      if (active.current) toast.dismiss(`reaction-${commentId}`);
+      if (active.current) {
+        update((previous) => setOwnReaction(previous, reaction, !mine));
+        toast.dismiss(`reaction-${commentId}`);
+      }
     } catch {
       if (active.current) {
-        update((previous) => {
-          const others = previous.filter(
-            (row) => !(row.user_id === user.id && row.reaction === reaction),
-          );
-          return mine ? [...others, mine] : others;
-        });
+        update((previous) => setOwnReaction(previous, reaction, mine));
         toast.error("Could not update reaction. Try again.", { id: `reaction-${commentId}` });
       }
     } finally {
@@ -94,8 +92,9 @@ export function ElementalReactions({
       aria-describedby={loadError ? "community-reaction-error" : undefined}
     >
       {REACTIONS.map((r) => {
-        const count = rows.filter((x) => x.reaction === r.key).length;
-        const mine = !!user && rows.some((x) => x.user_id === user.id && x.reaction === r.key);
+        const row = rows.find((x) => x.reaction === r.key);
+        const count = row?.count ?? 0;
+        const mine = !!user && !!row?.mine;
         return (
           <motion.button
             key={r.key}

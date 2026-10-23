@@ -166,13 +166,20 @@ test("community writes recover from denial and replies cannot be posted twice", 
         data = likes;
         likes = [];
       }
+    } else if (url.pathname.endsWith("/rpc/get_review_reaction_counts")) {
+      if (url.searchParams.get("p_comment_ids")?.includes(commentId)) {
+        if (denyReactionRead) denied();
+        else
+          data = [...new Set(reactions.map((row) => row.reaction))].map((reaction) => ({
+            comment_id: commentId,
+            reaction,
+            total: reactions.filter((row) => row.reaction === reaction).length,
+            mine: reactions.some((row) => row.reaction === reaction && row.user_id === id),
+          }));
+      }
     } else if (url.pathname.endsWith("/comment_reactions")) {
-      if (method === "GET") {
-        if (url.searchParams.get("comment_id")?.includes(commentId)) {
-          if (denyReactionRead) denied();
-          else data = reactions.map((row) => ({ ...row, comment_id: commentId }));
-        }
-      } else if (denyReaction) denied();
+      if (method === "GET") throw new Error("Raw reaction reads must use counts RPC");
+      if (denyReaction) denied();
       else if (method === "POST") {
         reactions = [...reactions, { user_id: id, reaction: "fire" }];
         status = 201;
