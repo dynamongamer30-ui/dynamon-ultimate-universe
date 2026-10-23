@@ -22,6 +22,7 @@ export function ThemedSelect({
   className,
   contentClassName,
   ariaLabel,
+  disabled = false,
 }: {
   value: string;
   onValueChange: (value: string) => void;
@@ -30,9 +31,10 @@ export function ThemedSelect({
   className?: string;
   contentClassName?: string;
   ariaLabel?: string;
+  disabled?: boolean;
 }) {
   return (
-    <Select value={value} onValueChange={onValueChange}>
+    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger
         aria-label={ariaLabel}
         className={cn(
