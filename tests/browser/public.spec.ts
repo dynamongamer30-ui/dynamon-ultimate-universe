@@ -38,7 +38,7 @@ test("public routes render without runtime errors or horizontal overflow", async
     currentRoute = route;
     const response = await page.goto(route, { waitUntil: "networkidle" });
     expect(response?.status(), route).toBeLessThan(400);
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main"), `main content for ${route} at ${page.url()}`).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true", {
       timeout: 15_000,
     });

@@ -111,7 +111,7 @@ function Index() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ ...spring, delay: 0.06 }}
                 id="homepage-title"
-                className="mt-6 max-w-[16ch] font-display text-[clamp(2.25rem,4.6vw,4.5rem)] font-bold leading-[1.03] tracking-[-0.045em] text-balance"
+                className="mt-6 max-w-[16ch] font-display text-[clamp(1.5rem,7.7vw,4.5rem)] font-bold leading-[1.03] tracking-[-0.045em] text-balance lg:text-[clamp(2.25rem,4.6vw,4.5rem)]"
               >
                 Dynamons World
                 <br />

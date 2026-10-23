@@ -5,8 +5,16 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import type {} from "nitro/vite";
 
 export default defineConfig({
+  vite: {
+    nitro: {
+      // Preserve legacy source assets while excluding unverified font licenses
+      // from the generated public asset bundle and its server manifest.
+      ignore: ["**/fonts/aeonik-pro/**", "**/fonts/general-sans/**"],
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this

@@ -3,52 +3,38 @@
 @import "tw-animate-css";
 @import "./website-themes.css";
 
-/* One expressive display family and one readable text family. Only four font
-   files are loaded; browser synthesis covers intermediate UI weights. */
+/* Two self-hosted OFL variable families; Latin glyphs fall back to the system
+   stack when unavailable. Source versions and hashes are in ASSET_LICENSES.md. */
 @font-face {
-  font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-Regular.woff2") format("woff2");
-  font-weight: 400;
+  font-family: "Manrope";
+  src: url("/fonts/manrope/manrope-latin-wght-a30ddcd34970.woff2") format("woff2");
+  font-weight: 200 800;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "General Sans";
-  src: url("/fonts/general-sans/GeneralSans-Semibold.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-Regular.woff") format("woff");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Aeonik Pro";
-  src: url("/fonts/aeonik-pro/AeonikPro-Bold.woff") format("woff");
-  font-weight: 700 900;
+  font-family: "Sora";
+  src: url("/fonts/sora/sora-latin-wght-fa26406eeda9.woff2") format("woff2");
+  font-weight: 100 800;
   font-style: normal;
   font-display: swap;
 }
 
-/* Metric-compatible fallbacks reduce layout shift during font swap. */
+/* Arial fallbacks use measured x-height/ascent/descent ratios for these files. */
 @font-face {
-  font-family: "General Sans Fallback";
+  font-family: "Manrope Fallback";
   src: local("Arial");
-  size-adjust: 97%;
-  ascent-override: 90%;
-  descent-override: 22%;
+  size-adjust: 104.14%;
+  ascent-override: 102.37%;
+  descent-override: 28.81%;
   line-gap-override: 0%;
 }
 @font-face {
-  font-family: "Aeonik Pro Fallback";
+  font-family: "Sora Fallback";
   src: local("Arial");
-  size-adjust: 93%;
-  ascent-override: 88%;
-  descent-override: 20%;
+  size-adjust: 102.98%;
+  ascent-override: 94.19%;
+  descent-override: 28.16%;
   line-gap-override: 0%;
 }
 
@@ -85,9 +71,10 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-gold: var(--gold);
-  --font-display: "Aeonik Pro", "Aeonik Pro Fallback", ui-sans-serif, system-ui;
-  --font-sans: "General Sans", "General Sans Fallback", ui-sans-serif, system-ui;
-  --font-aeonik: "Aeonik Pro", "Aeonik Pro Fallback", ui-sans-serif, system-ui;
+  --font-display: "Sora", "Sora Fallback", ui-sans-serif, system-ui;
+  --font-sans: "Manrope", "Manrope Fallback", ui-sans-serif, system-ui;
+  --font-aeonik: "Sora", "Sora Fallback", ui-sans-serif, system-ui;
+  --font-weight-black: 800;
   --text-xs: var(--type-0);
   --text-sm: var(--type-1);
   --text-base: var(--type-2);
