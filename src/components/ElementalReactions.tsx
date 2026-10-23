@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { playSoft } from "@/lib/sound";
 import { toast } from "sonner";
 
-type ReactionKey = "fire" | "water" | "thunder" | "leaf" | "spirit";
+import type { ReactionKey, ReactionRow } from "@/hooks/useCommentReactions";
 
 const REACTIONS: { key: ReactionKey; emoji: string; color: string }[] = [
   { key: "fire", emoji: "🔥", color: "text-orange-300" },
@@ -15,42 +15,30 @@ const REACTIONS: { key: ReactionKey; emoji: string; color: string }[] = [
   { key: "spirit", emoji: "✨", color: "text-fuchsia-300" },
 ];
 
-type Row = { user_id: string; reaction: ReactionKey };
-
-export function ElementalReactions({ commentId }: { commentId: string }) {
+export function ElementalReactions({
+  commentId,
+  rows,
+  loading,
+  loadError,
+  update,
+}: {
+  commentId: string;
+  rows: ReactionRow[];
+  loading: boolean;
+  loadError: boolean;
+  update: (change: (previous: ReactionRow[]) => ReactionRow[]) => void;
+}) {
   const { user } = useAuth();
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
   const locked = useRef(false);
   const active = useRef(true);
 
   useEffect(() => {
-    let cancelled = false;
     active.current = true;
-    setLoading(true);
-    setLoadError(false);
-    void (async () => {
-      try {
-        const { data, error } = await supabase
-          .from("comment_reactions")
-          .select("user_id, reaction")
-          .eq("comment_id", commentId);
-        if (error) throw error;
-        if (!cancelled) setRows((data ?? []) as Row[]);
-      } catch {
-        if (!cancelled) setLoadError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
     return () => {
-      cancelled = true;
       active.current = false;
     };
-  }, [commentId, reload]);
+  }, []);
 
   const toggle = async (reaction: ReactionKey) => {
     if (!user || loading || loadError || locked.current) return;
@@ -59,9 +47,9 @@ export function ElementalReactions({ commentId }: { commentId: string }) {
     playSoft();
     const mine = rows.find((r) => r.user_id === user.id && r.reaction === reaction);
     if (mine) {
-      setRows((p) => p.filter((r) => !(r.user_id === user.id && r.reaction === reaction)));
+      update((p) => p.filter((r) => !(r.user_id === user.id && r.reaction === reaction)));
     } else {
-      setRows((p) => [...p, { user_id: user.id, reaction }]);
+      update((p) => [...p, { user_id: user.id, reaction }]);
     }
     try {
       const { data, error } = mine
@@ -83,7 +71,7 @@ export function ElementalReactions({ commentId }: { commentId: string }) {
       if (active.current) toast.dismiss(`reaction-${commentId}`);
     } catch {
       if (active.current) {
-        setRows((previous) => {
+        update((previous) => {
           const others = previous.filter(
             (row) => !(row.user_id === user.id && row.reaction === reaction),
           );
@@ -103,19 +91,8 @@ export function ElementalReactions({ commentId }: { commentId: string }) {
       role="group"
       aria-label="Elemental reactions"
       aria-busy={loading || busy}
+      aria-describedby={loadError ? "community-reaction-error" : undefined}
     >
-      {loadError && (
-        <p role="status" className="w-full text-xs text-muted-foreground">
-          Reactions could not load.{" "}
-          <button
-            type="button"
-            onClick={() => setReload((value) => value + 1)}
-            className="touch-target font-semibold text-primary hover:underline"
-          >
-            Retry reactions
-          </button>
-        </p>
-      )}
       {REACTIONS.map((r) => {
         const count = rows.filter((x) => x.reaction === r.key).length;
         const mine = !!user && rows.some((x) => x.user_id === user.id && x.reaction === r.key);

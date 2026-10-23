@@ -155,9 +155,9 @@ test("community writes recover from denial and replies cannot be posted twice", 
       }
     } else if (url.pathname.endsWith("/comment_reactions")) {
       if (method === "GET") {
-        if (url.searchParams.get("comment_id") === `eq.${commentId}`) {
+        if (url.searchParams.get("comment_id")?.includes(commentId)) {
           if (denyReactionRead) denied();
-          else data = reactions;
+          else data = reactions.map((row) => ({ ...row, comment_id: commentId }));
         }
       } else if (denyReaction) denied();
       else if (method === "POST") {
@@ -207,7 +207,7 @@ test("community writes recover from denial and replies cannot be posted twice", 
     reactionGroup.getByRole("button", { name: "Add fire reaction", exact: true }),
   ).toBeDisabled();
   denyReactionRead = false;
-  await reactionGroup.getByRole("button", { name: "Retry reactions" }).click();
+  await page.getByRole("button", { name: "Retry reactions" }).click();
   const fire = reactionGroup.getByRole("button", { name: "Add fire reaction", exact: true });
   await expect(fire).toBeEnabled();
   await fire.click();

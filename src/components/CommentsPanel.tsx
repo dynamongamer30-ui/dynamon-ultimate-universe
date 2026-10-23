@@ -13,6 +13,9 @@ import { useGamification } from "@/hooks/useGamification";
 import { playClick, playSoft, playSuccess } from "@/lib/sound";
 import { toast } from "sonner";
 
+import { readCommunityRows, readCommunityIds, REVIEW_PAGE_SIZE } from "@/lib/communityReads";
+import { useCommentReactions } from "@/hooks/useCommentReactions";
+
 type CommentRow = {
   id: string;
   mod_slug: string;
@@ -83,12 +86,16 @@ export function CommentsPanel({
   const [pendingActions, setPendingActions] = useState(new Set<string>());
   const loadRevision = useRef(0);
   const active = useRef(true);
+  const requestScope = useRef<{ controller?: AbortController }>({}).current;
+  const [pageIndex, setPageIndex] = useState(0);
+  const reviewsHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     active.current = true;
     return () => {
       active.current = false;
+      requestScope.controller?.abort();
     };
-  }, []);
+  }, [requestScope]);
   const beginAction = (key: string) => {
     if (actionLocks.current.has(key)) return false;
     actionLocks.current.add(key);
@@ -103,25 +110,34 @@ export function CommentsPanel({
   const load = useCallback(async () => {
     if (!active.current) return;
     const revision = ++loadRevision.current;
+    requestScope.controller?.abort();
+    const controller = new AbortController();
+    requestScope.controller = controller;
     setLoading(true);
     setLoadError(null);
     try {
-      const [
-        { data: rawComments, error: commentsError },
-        { data: rawRatings, error: ratingsError },
-      ] = await Promise.all([
-        supabase
-          .from("comments")
-          .select("id, mod_slug, user_id, body, created_at, parent_id")
-          .eq("mod_slug", slug)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("mod_ratings")
-          .select("id, mod_slug, user_id, rating, created_at")
-          .eq("mod_slug", slug)
-          .order("created_at", { ascending: false }),
+      const [rawComments, rawRatings] = await Promise.all([
+        readCommunityRows<CommentRow>((from, to) =>
+          supabase
+            .from("comments")
+            .select("id, mod_slug, user_id, body, created_at, parent_id")
+            .eq("mod_slug", slug)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to)
+            .abortSignal(controller.signal),
+        ),
+        readCommunityRows<RatingRow>((from, to) =>
+          supabase
+            .from("mod_ratings")
+            .select("id, mod_slug, user_id, rating, created_at")
+            .eq("mod_slug", slug)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to)
+            .abortSignal(controller.signal),
+        ),
       ]);
-      if (commentsError || ratingsError) throw commentsError || ratingsError;
       if (!active.current || revision !== loadRevision.current) return;
 
       const list = (rawComments ?? []) as CommentRow[];
@@ -134,29 +150,45 @@ export function CommentsPanel({
       const authorIds = [...new Set(list.map((c) => c.user_id))];
       const commentIds = list.map((c) => c.id);
 
-      const [{ data: authors, error: authorsError }, { data: likes, error: likesError }] =
-        await Promise.all([
+      const [authors, likes] = await Promise.all([
+        readCommunityIds(authorIds, (ids, from, to) =>
           supabase
             .from("public_profiles")
             .select("id, username, display_name, avatar_url, custom_avatar_url, is_owner")
-            .in("id", authorIds),
-          supabase.from("comment_likes").select("comment_id, user_id").in("comment_id", commentIds),
-        ]);
-      if (authorsError || likesError) throw authorsError || likesError;
+            .in("id", ids)
+            .order("id")
+            .range(from, to)
+            .abortSignal(controller.signal),
+        ),
+        readCommunityIds<LikeRow>(commentIds, (ids, from, to) =>
+          supabase
+            .from("comment_likes")
+            .select("comment_id, user_id")
+            .in("comment_id", ids)
+            .order("comment_id")
+            .order("user_id")
+            .range(from, to)
+            .abortSignal(controller.signal),
+        ),
+      ]);
       if (!active.current || revision !== loadRevision.current) return;
 
       const authorMap = new Map<string, AuthorRow>(
         (authors ?? []).map((a) => [a.id as string, a as unknown as AuthorRow]),
       );
-      const likeRows = (likes ?? []) as LikeRow[];
+      const likeCounts = new Map<string, number>();
+      const likedByMe = new Set<string>();
+      for (const row of likes) {
+        likeCounts.set(row.comment_id, (likeCounts.get(row.comment_id) ?? 0) + 1);
+        if (row.user_id === user?.id) likedByMe.add(row.comment_id);
+      }
 
       const enriched: EnrichedComment[] = list.map((c) => {
-        const likesFor = likeRows.filter((l) => l.comment_id === c.id);
         return {
           ...c,
           author: authorMap.get(c.user_id),
-          likeCount: likesFor.length,
-          likedByMe: !!user && likesFor.some((l) => l.user_id === user.id),
+          likeCount: likeCounts.get(c.id) ?? 0,
+          likedByMe: likedByMe.has(c.id),
         };
       });
       setComments(enriched);
@@ -166,7 +198,7 @@ export function CommentsPanel({
     } finally {
       if (active.current && revision === loadRevision.current) setLoading(false);
     }
-  }, [slug, user]);
+  }, [slug, user, requestScope]);
 
   useEffect(() => {
     load();
@@ -187,6 +219,21 @@ export function CommentsPanel({
         return b.likeCount - a.likeCount || time(b) - time(a);
       });
   }, [topLevel]);
+  const pageCount = Math.max(1, Math.ceil(visibleComments.length / REVIEW_PAGE_SIZE));
+  const currentPage = Math.min(pageIndex, pageCount - 1);
+  const pageComments = visibleComments.slice(
+    currentPage * REVIEW_PAGE_SIZE,
+    (currentPage + 1) * REVIEW_PAGE_SIZE,
+  );
+  const reactions = useCommentReactions(
+    pageComments.map((comment) => comment.id),
+    !loading && !loadError,
+  );
+  const changePage = (next: number) => {
+    setPageIndex(next);
+    reviewsHeading.current?.focus();
+    reviewsHeading.current?.scrollIntoView({ block: "start" });
+  };
   const repliesByParent = useMemo(() => {
     const map = new Map<string, EnrichedComment[]>();
     for (const c of comments) {
@@ -399,6 +446,7 @@ export function CommentsPanel({
       <motion.div
         key={c.id}
         data-comment-id={c.id}
+        data-review-thread={isReply ? undefined : "true"}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
@@ -451,7 +499,13 @@ export function CommentsPanel({
 
         {!isReply && (
           <div className="mt-3">
-            <ElementalReactions commentId={c.id} />
+            <ElementalReactions
+              commentId={c.id}
+              rows={reactions.rows.filter((row) => row.comment_id === c.id)}
+              loading={reactions.loading}
+              loadError={reactions.error}
+              update={(change) => reactions.update(c.id, change)}
+            />
           </div>
         )}
 
@@ -728,7 +782,13 @@ export function CommentsPanel({
         </div>
 
         <div className="rounded-3xl glass p-6">
-          <h3 className="font-display text-xl font-bold">What trainers are saying</h3>
+          <h3
+            ref={reviewsHeading}
+            tabIndex={-1}
+            className="scroll-mt-24 font-display text-xl font-bold"
+          >
+            What trainers are saying
+          </h3>
           <div className="mt-5 space-y-4">
             {loadError && (
               <div
@@ -758,9 +818,53 @@ export function CommentsPanel({
                 No reviews yet. Be the first to share your experience.
               </p>
             )}
+            {reactions.error && (
+              <p
+                id="community-reaction-error"
+                role="status"
+                className="text-sm text-muted-foreground"
+              >
+                Reactions could not load. Comments remain available.{" "}
+                <button
+                  type="button"
+                  onClick={() => void reactions.retry()}
+                  className="touch-target font-semibold text-primary hover:underline"
+                >
+                  Retry reactions
+                </button>
+              </p>
+            )}
             <AnimatePresence initial={false}>
-              {visibleComments.map((c) => renderComment(c))}
+              {pageComments.map((c) => renderComment(c))}
             </AnimatePresence>
+            {!loading && !loadError && pageCount > 1 && (
+              <nav
+                aria-label="Review pages"
+                className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4"
+              >
+                <button
+                  type="button"
+                  disabled={currentPage === 0}
+                  onClick={() => changePage(currentPage - 1)}
+                  className="touch-target rounded-xl border border-border px-4 py-2 text-sm disabled:opacity-50"
+                >
+                  Previous reviews
+                </button>
+                <p role="status" className="text-sm text-muted-foreground">
+                  Reviews {currentPage * REVIEW_PAGE_SIZE + 1}–
+                  {Math.min((currentPage + 1) * REVIEW_PAGE_SIZE, visibleComments.length)} of{" "}
+                  {visibleComments.length}
+                </p>
+                <button
+                  type="button"
+                  disabled={currentPage === pageCount - 1}
+                  onClick={() => changePage(currentPage + 1)}
+                  className="touch-target rounded-xl border border-border px-4 py-2 text-sm disabled:opacity-50"
+                >
+                  Next reviews
+                </button>
+              </nav>
+            )}
           </div>
         </div>
       </div>
