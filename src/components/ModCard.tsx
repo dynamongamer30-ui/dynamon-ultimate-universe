@@ -159,12 +159,12 @@ export function ModCard({
           />
         </div>
 
-        <div className="mt-auto flex items-center gap-2 pt-5">
+        <div className="mt-auto grid grid-cols-4 items-center gap-2 pt-5">
           <Link
             to="/mods/$slug"
             params={{ slug: mod.slug }}
             onClick={handleGet}
-            className="press touch-target inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_30px_-8px_oklch(0.66_0.21_318_/_0.78)] glow-primary"
+            className="press touch-target col-span-4 inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_30px_-8px_oklch(0.66_0.21_318_/_0.78)] glow-primary"
           >
             <Download className="h-4 w-4 shrink-0" />
             <span className="truncate">{user ? "Download" : "Sign in to download"}</span>
@@ -184,7 +184,7 @@ export function ModCard({
             hash="comments"
             aria-label="Comments"
             onMouseDown={playClick}
-            className="press touch-target hidden shrink-0 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground transition-colors hover:text-foreground sm:flex"
+            className="press touch-target flex items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground transition-colors hover:text-foreground"
           >
             <MessageSquare className="h-4 w-4" />
           </Link>

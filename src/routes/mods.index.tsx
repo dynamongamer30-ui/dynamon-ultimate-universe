@@ -131,7 +131,7 @@ function ModsPage() {
           {formatCount(totalDownloads)}+ downloads across all builds.
         </p>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div className="mt-8 grid gap-3">
           <div className="relative">
             <label htmlFor="mods-search" className="sr-only">
               Search mods, features

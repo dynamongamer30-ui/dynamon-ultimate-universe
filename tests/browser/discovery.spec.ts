@@ -8,6 +8,7 @@ test("shared discovery URLs survive detail navigation, reload and history", asyn
   await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true");
   const query = page.getByRole("searchbox", { name: "Search mods, features" });
   await expect(query).toHaveValue("Thunder");
+  expect((await query.boundingBox())!.width).toBeGreaterThan(250);
   await expect(page.getByRole("combobox", { name: "Filter by version" })).toContainText("1.13.37");
   await expect(page.getByRole("button", { name: "Most Downloaded", exact: true })).toHaveAttribute(
     "aria-pressed",
@@ -72,6 +73,12 @@ test("discovery filters recover from empty results and badges match each ranking
   await expect(page.getByText("No builds found", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Reset discovery", exact: true }).click();
   await expect(page.locator("article").first()).toBeVisible();
+  const card = page.locator("article").first();
+  await expect(card.getByRole("link", { name: "Comments", exact: true })).toBeVisible();
+  const primary = card.getByRole("link", { name: "Sign in to download", exact: true });
+  expect(
+    await primary.locator("span").evaluate((element) => element.scrollWidth <= element.clientWidth),
+  ).toBe(true);
   await expect(page.getByRole("searchbox", { name: "Search mods, features" })).toHaveValue("");
   await expect(page.getByRole("button", { name: "Remove Fire filter" })).toBeHidden();
   expect(requests).toEqual([]);
