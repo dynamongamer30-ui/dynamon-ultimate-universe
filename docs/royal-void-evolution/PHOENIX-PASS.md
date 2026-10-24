@@ -27,3 +27,9 @@ Synthetic sessions, pass IDs, ciphertext, clipboard behavior and RPC responses a
 The initial local run passed the early confirmation/retry cases, then was intentionally interrupted to tighten malformed-row validation and expand encryption/expiry coverage. Logs are retained externally. Development component-tagger hydration warnings, Firefox's existing Windows executable launch limitation and unavailable authenticated live browser tooling remain documented limitations. Fixture evidence is not live mutation certification.
 
 Full Phase 19 remains open: Tesla campaign auto-claims, Trainer Rank account state, durable claim/redemption receipts, concurrency/expiry refresh and fresh authorized OAuth/device/mutation checks remain.
+
+## Application and public rollout verified
+
+Application commit `3b0de03b0cde6938754521f80bceaa96774960e2`, tree `0b32bd538220bfb04946efc9b2d3dd16e2294a40`, is on main. Automatic Cloudflare build `904318d0-7ed5-46fe-86fd-9995d933bf0e` succeeded. Deployment `860e8b00-6d25-44f0-8428-0968049d6920`, version `93803231-2610-4691-9363-62d7e05321d9`, serves 100%.
+
+Four fresh live signed-out checks pass in 31.3 seconds across Chrome phone/tablet/desktop and WebKit. Each visits `/mods` and `/mods/fire-phoenix`, confirms visible headings/document fit, and selects **Log in to unlock** to reach `/auth`. There are no runtime exceptions or `my_active_phoenix_pass`/`redeem_phoenix_pass` requests. Logs and screenshots use `pass-live-public` in the external audit directory. No authenticated production pass redemption is claimed. The client reliability increment is delivered; durable receipt recovery and the remaining Phase 19 scope above stay open.
