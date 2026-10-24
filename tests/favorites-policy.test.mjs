@@ -51,7 +51,16 @@ test("reviewed favorites SELECT policy preserves self/owner reads and own writes
       new URL("../docs/royal-void-evolution/FAVORITES-SECURITY-REVIEW.md", import.meta.url),
       "utf8",
     );
-    await db.exec(review.match(/```sql\s+([\s\S]*?)```/)[1]);
+    const approvedSql = review.match(/```sql\s+([\s\S]*?)```/)[1];
+    const migration = await readFile(
+      new URL(
+        "../supabase/migrations/20261024040729_favorites_select_self_or_owner.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    assert.equal(migration.replaceAll("\r\n", "\n").trim(), approvedSql.trim());
+    await db.exec(migration);
     assert.deepEqual(
       (await db.query("select * from public.favorites order by user_id,mod_slug")).rows,
       before,
