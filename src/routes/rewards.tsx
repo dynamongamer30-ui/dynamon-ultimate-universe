@@ -16,21 +16,10 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { useDailyRewards } from "@/hooks/useDailyRewards";
 import { playClick } from "@/lib/sound";
 import { toast } from "sonner";
 import { pageSeoHead } from "@/lib/seo";
-
-// These reward RPCs aren't in the generated Supabase types yet; call loosely.
-// IMPORTANT: must .bind(supabase) or calling this later throws
-// "Cannot read properties of undefined (reading 'rest')" — extracting a
-// Supabase client method into a plain variable loses its `this` binding.
-const looseRpc = supabase.rpc.bind(supabase) as unknown as (
-  fn: string,
-  args?: Record<string, unknown>,
-) => Promise<{ data: unknown; error: { message: string } | null }>;
-
-type DailyKey = { id: string; key: string; claimed: boolean; expires_at: string };
 
 export const Route = createFileRoute("/rewards")({
   head: () =>
@@ -45,35 +34,6 @@ export const Route = createFileRoute("/rewards")({
 
 function Rewards() {
   const { user } = useAuth();
-  const [pass, setPass] = useState<{ id: string; expires_at: string } | null>(null);
-  const [dailyKey, setDailyKey] = useState<DailyKey | null>(null);
-  const [loading, setLoading] = useState(false);
-  const checked = useRef(false);
-
-  useEffect(() => {
-    if (!user || checked.current) return;
-    checked.current = true;
-    setLoading(true);
-    (async () => {
-      try {
-        const [passRes, keyRes] = await Promise.all([
-          looseRpc("my_active_phoenix_pass"),
-          looseRpc("my_daily_key"),
-        ]);
-        if (!passRes.error) {
-          const rows = (passRes.data as Array<{ id: string; expires_at: string }> | null) || [];
-          setPass(rows[0] || null);
-        }
-        if (!keyRes.error) {
-          const rows = (keyRes.data as DailyKey[] | null) || [];
-          setDailyKey(rows[0] || null);
-        }
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [user]);
-
   return (
     <PageShell>
       {/* Hero */}
@@ -104,54 +64,7 @@ function Rewards() {
         </p>
       </section>
 
-      {/* Your active rewards */}
-      {user && loading && (
-        <div
-          role="status"
-          className="mt-6 flex items-center gap-2 rounded-2xl border border-border bg-card/50 p-5 text-sm text-muted-foreground"
-        >
-          <Loader2 className="h-4 w-4 animate-spin" /> Checking your rewards…
-        </div>
-      )}
-
-      {/* Already-claimed Daily Key — read-only lookup, no claim button here.
-          Claiming only happens from the winning notification itself. */}
-      {user && !loading && dailyKey?.claimed && <DailyKeyCard initial={dailyKey} />}
-
-      {/* Active Phoenix Pass banner */}
-      {user && !loading && pass && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-400/15 text-amber-300">
-              <Feather className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-sm font-bold">You have a Phoenix Pass ready!</p>
-              <p className="text-xs text-muted-foreground">
-                Expires{" "}
-                {new Date(pass.expires_at).toLocaleString(undefined, {
-                  day: "2-digit",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}{" "}
-                · spend it on any mod
-              </p>
-            </div>
-          </div>
-          <Link
-            to="/mods"
-            onMouseDown={playClick}
-            className="touch-target press inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-amber-950 transition hover:brightness-110"
-          >
-            Pick a mod <ArrowRight className="h-4 w-4" />
-          </Link>
-        </motion.div>
-      )}
+      {user && <AccountRewards key={user.id} />}
 
       {/* The two prizes */}
       <section aria-labelledby="prizes-title" className="mt-10 grid gap-6 md:grid-cols-2">
@@ -272,111 +185,152 @@ function Rewards() {
   );
 }
 
-function DailyKeyCard({ initial }: { initial: DailyKey }) {
-  const [claimed, setClaimed] = useState(initial.claimed);
-  const [key, setKey] = useState<string | null>(initial.claimed ? initial.key : null);
-  const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
+function AccountRewards() {
+  const { pass, dailyKey } = useDailyRewards();
+  const loading = pass.isFetching || dailyKey.isFetching;
+  const keyUnavailable = !!(dailyKey.data?.claimed && !dailyKey.data.key);
+  const failed = !!(pass.error || dailyKey.error || keyUnavailable);
+  const retry = () => {
+    if (pass.error) void pass.refetch();
+    if (dailyKey.error || keyUnavailable) void dailyKey.refetch();
+  };
+  return (
+    <section aria-label="Your rewards" aria-busy={loading}>
+      {loading && (
+        <p
+          role="status"
+          className="mt-6 flex items-center gap-2 rounded-2xl border border-border bg-card/50 p-5 text-sm text-muted-foreground"
+        >
+          <Loader2 className="h-4 w-4 animate-spin" /> Checking your rewards…
+        </p>
+      )}
+      {failed && (
+        <div className="mt-6 rounded-2xl border border-border bg-card p-5">
+          <p role="alert">
+            Could not finish checking your rewards. Retry to load the missing information.
+          </p>
+          <button
+            type="button"
+            onClick={retry}
+            disabled={loading}
+            className="touch-target mt-3 rounded-full border border-border px-4 py-2 text-primary disabled:opacity-60"
+          >
+            {loading ? "Retrying rewards…" : "Retry reward lookup"}
+          </button>
+        </div>
+      )}
+      {!dailyKey.isFetching && !dailyKey.error && dailyKey.data?.claimed && dailyKey.data.key && (
+        <DailyKeyCard key={dailyKey.data.id + dailyKey.data.key} value={dailyKey.data.key} />
+      )}
+      {/* Active Phoenix Pass banner */}
+      {!pass.isFetching && !pass.error && pass.data && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-400/15 text-amber-300">
+              <Feather className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-sm font-bold">You have a Phoenix Pass ready!</p>
+              <p className="text-xs text-muted-foreground">
+                Expires{" "}
+                {new Date(pass.data.expires_at).toLocaleString(undefined, {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}{" "}
+                · spend it on any mod
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/mods"
+            onMouseDown={playClick}
+            className="touch-target press inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-amber-950 transition hover:brightness-110"
+          >
+            Pick a mod <ArrowRight className="h-4 w-4" />
+          </Link>
+        </motion.div>
+      )}
 
-  const claim = async () => {
-    setBusy(true);
+      {!loading && !failed && !pass.data && !dailyKey.data && (
+        <p className="mt-6 rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
+          No active rewards were returned for your account. Check Notifications for draw
+          announcements.
+        </p>
+      )}
+      {!dailyKey.isFetching && !dailyKey.error && dailyKey.data && !dailyKey.data.claimed && (
+        <p className="mt-6 rounded-2xl border border-border bg-card p-5 text-sm">
+          A Daily Key is waiting in Notifications. Open the winning notification to collect it.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function DailyKeyCard({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  const active = useRef(true);
+  const reset = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+      clearTimeout(reset.current);
+    };
+  }, []);
+  const copy = async () => {
     try {
-      const { data, error } = await looseRpc("claim_daily_key", { p_id: initial.id });
-      if (error) throw new Error("claim_failed");
-      const res = data as { ok?: boolean; error?: string; key?: string } | null;
-      if (!res || !res.ok || !res.key) {
-        const map: Record<string, string> = {
-          not_a_winner: "This key isn’t available to claim — it may have expired.",
-        };
-        toast.error(map[res?.error || ""] || "We couldn’t claim your key. Please try again.");
-        return;
-      }
-      setKey(res.key);
-      setClaimed(true);
-      playClick();
-      toast.success("Daily Key claimed 🎉");
+      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(value);
+      if (!active.current) return;
+      setCopied(true);
+      toast.success("Key copied");
+      clearTimeout(reset.current);
+      reset.current = setTimeout(() => setCopied(false), 1800);
     } catch {
-      toast.error("We couldn’t claim your key. Please try again.");
-    } finally {
-      setBusy(false);
+      if (active.current)
+        toast.error("Could not copy your key. Select the key and copy it manually.");
     }
   };
-
-  const copy = () => {
-    if (!key) return;
-    navigator.clipboard
-      ?.writeText(key)
-      .then(() => {
-        setCopied(true);
-        toast.success("Key copied");
-        setTimeout(() => setCopied(false), 1800);
-      })
-      .catch(() => {});
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="mt-6 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-transparent p-5"
     >
-      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
             <KeyRound className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-sm font-bold">
-              {claimed ? "Your Daily Key" : "You won a Daily Key!"}
-            </p>
+            <h2 className="text-sm font-bold">Your Daily Key</h2>
             <p className="text-xs text-muted-foreground">
-              {claimed
-                ? "Paste this into the Dynamon Universe app. Works for 24 hours."
-                : `Claim it before ${new Date(initial.expires_at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}.`}
+              Paste this into the Dynamon Universe app.
             </p>
           </div>
         </div>
-
-        {claimed && key ? (
-          <div className="flex w-full items-center gap-2 sm:w-auto">
-            <code
-              aria-label="Daily Key"
-              className="flex-1 select-all rounded-lg border border-border bg-background/60 px-3 py-2.5 text-center font-mono text-sm font-bold tracking-wider sm:flex-none"
-            >
-              {key}
-            </code>
-            <button
-              type="button"
-              onClick={copy}
-              className="touch-target press grid shrink-0 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
-              aria-label="Copy key"
-            >
-              {copied ? (
-                <Check className="h-4 w-4 text-emerald-400" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-        ) : (
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+          <code
+            aria-label="Daily Key"
+            className="min-w-0 flex-1 select-all break-all rounded-lg border border-border bg-background/60 px-3 py-2.5 text-center font-mono text-sm font-bold tracking-wider"
+          >
+            {value}
+          </code>
           <button
             type="button"
-            onClick={claim}
-            disabled={busy}
-            aria-busy={busy}
-            className="touch-target press inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground glow-primary transition hover:brightness-110 disabled:opacity-60 sm:w-auto"
+            onClick={copy}
+            className="touch-target press grid shrink-0 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+            aria-label="Copy key"
           >
-            {busy ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Claiming…
-              </>
-            ) : (
-              <>
-                <Gift className="h-4 w-4" /> Claim your key
-              </>
-            )}
+            {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
           </button>
-        )}
+        </div>
       </div>
     </motion.div>
   );
