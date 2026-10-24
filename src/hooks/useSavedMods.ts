@@ -119,6 +119,7 @@ export function useSavedMods(table: SavedTable) {
   return {
     slugs,
     loading: !!userId && query.isPending,
+    fetching: query.isFetching,
     error: query.error,
     refresh,
     toggle: mutation.mutateAsync,
