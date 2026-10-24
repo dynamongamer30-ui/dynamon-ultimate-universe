@@ -27,3 +27,9 @@ Coverage includes one automatic claim across same-account auth refresh/focus/rec
 All synthetic campaign sessions, acknowledgments and calls are localhost-only, with Supabase HTTP traffic intercepted. Production browser checks must use fresh signed-out contexts: opening this route in an authenticated production browser intentionally can award a pass. No real campaign claim, pass, key, clipboard value or protected row is used for QA. Development tagger hydration warnings and the existing Firefox Windows launch limit remain documented.
 
 Full Phase 19 remains open for Trainer Rank state, durable reward/download recovery, broader expiry/concurrency handling and fresh authorized mutation/OAuth/device gates.
+
+## Application and public rollout verified
+
+Application commit `ff660bc17941fbca5ae580fe19640a02d36c176b`, tree `9f81c903321620dc0fd88bae6c02d5e36ca97394`, is on main. Automatic Cloudflare build `e635a309-963a-476f-8318-54bd930fd6be` succeeded. Deployment `d4ffdfa6-9f59-455a-aa2f-ff8dd4d61df5`, version `330c7de4-a0ed-4f44-9f61-77f98e21e8ac`, serves 100%.
+
+Four fresh live signed-out checks pass in 43.4 seconds across Chrome phone/tablet/desktop and WebKit. Each visits `/claim`, a Trainer Rank claim URL, a synthetic granted-key URL and `/claim/tesla`. They verify visible headings, document fit, no exposed supplied key, no signed-out Claim now button, no runtime exception and no claim/redeem RPC. Logs/screenshots use `tesla-live-public` in the external audit directory. No authenticated production campaign visit or award was used for QA. This client increment is delivered; the remaining Phase 19 scope and real OAuth/device gates above stay open.
