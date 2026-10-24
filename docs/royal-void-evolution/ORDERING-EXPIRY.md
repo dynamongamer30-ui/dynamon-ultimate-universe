@@ -1,0 +1,33 @@
+# XP confirmation ordering and loaded reward expiry — 25 October 2026
+
+Concurrent engagement responses previously assigned XP in arrival order. A delayed older response could replace a newer total. The existing server also returns the initial engagement XP row before achievement helpers can add bonus XP, so that receipt is not always the final account total. Loaded reward cards had no expiry refresh and could remain visible after their lookup/use window ended.
+
+## Account-scoped XP confirmation
+
+The provider now sequences engagement confirmation jobs within the current account scope. Each job sends the existing `record_engagement` payload once, validates its one-row receipt and then reads the caller-filtered `user_xp` row before updating XP. The grant plus confirming SELECT share one ten-second deadline with SDK retries disabled. This adds one own-row read per acknowledged engagement; it is not polling. Underlying favorite/like/rating actions keep their existing persistence paths. A queued confirmation can wait behind a previous job's deadline.
+
+The final read includes server-side badge bonuses and can accept a legitimate lower total. No client maximum or permanent XP floor is imposed. Read revisions protect that result from older/during-job progress lookups. Pending and failed confirmation have separate flags; level badges and the account-menu level avoid presenting unconfirmed numeric values. A failed lookup exposes **Retry XP lookup**, which uses the existing shared progress SELECTs and never replays the engagement grant. Level-up feedback uses confirmed current level, suppressing a receipt-only lower/stale announcement. The existing aggregate progress-error behavior remains conservative for unrelated field errors.
+
+An uncertain job does not block later queued jobs indefinitely. Scope disposal aborts the active request, and queued old-account jobs recheck identity before dispatch. They cannot run using the next account's session. Badge snapshots retain the previously delivered stale/revision guard. No client-selected award amount is added to the RPC.
+
+This queue exists only in the current provider/account lifetime. It is not a durable outbox or cross-tab/device lock. Abort is not database rollback. A later read confirms the account snapshot at that time; it cannot prove transaction finality for an earlier lost receipt. Server-side recovery receipts and multi-session concurrency verification remain separate work.
+
+## Expiry and suspended tabs
+
+Reward lookup results now require a valid row ID and parseable expiry; key rows also require valid claimed/key fields. Each loaded expiry schedules a one-shot read of its own source. A focus/visibility catch-up handles suspended-tab deadlines, and a per-expiry fence prevents repeated automatic requests if the server returns the same expired snapshot. Timers are chunked at the signed 32-bit maximum so a 30-day pass does not overflow into an immediate timer. Cleanup removes old account timers/listeners.
+
+Expired data is hidden immediately, including after a failed refresh. A stale expired server response produces an explicit lookup retry rather than a usable card or refresh loop. Healthy companion reward data remains visible. The copy handler independently checks the key lookup deadline before clipboard access. These lookups do not claim, consume, revoke or delete anything. There is no periodic polling or new-arrival subscription; the behavior concerns already loaded expiry timestamps.
+
+The daily-key timestamp is the server's collection/lookup window, not proof of an activated license's validity. Hiding the card does not revoke a copied/activated key. Pass lookup expiry is the spending window enforced by the server. Public copy now correctly distinguishes 24 hours to collect a won pass from 30 days to spend it after claim, instead of claiming that a collected pass expires 24 hours after the win. Draw/claim/license rules are unchanged.
+
+## Existing production contract verified read-only
+
+Production metadata matches the reviewed repository bodies after whitespace normalization: `record_engagement` MD5 `a292243a2cb3bc3f807e34f1b4d5ec0a`, `grant_achievement_internal` MD5 `c28b1bd8e7b0e9f0ce06793a542d9b53`, and `claim_phoenix_pass` MD5 `f07a4969488c3dbb4a0e524bd7d11785`. The reviewed engagement body calls badge helpers before returning its initial XP row; the helper can add XP. The claim definition starts a 30-day expiry on collection. No production award/claim function was invoked for QA, and no real private XP/reward row or key was read/copied.
+
+## Validation
+
+All 128 distinct local browser cases are validated across Chrome phone/tablet/desktop and WebKit. The first combined run passed 25 phone progression/reward/public cases, then exposed a fixture assumption that the compact header counter was visible on phones. It is intentionally hidden there. The corrected XP fixture checks its state and the full-page feedback; all 24 XP cases pass in 3.3 minutes. The remaining 75 progression/reward/public regressions pass in 4.8 minutes without repeating the already passing phone cases. Four badge stale/older-read compatibility checks pass in 39.1 seconds. The initial interrupted log is retained.
+
+Coverage includes queued awards, bonus reconciliation, lookup-only retry, stalled receipts, disposal of queued work, legitimate lower snapshots, expiry-specific refresh, stale expired responses, focus catch-up/copy guard, account timer cleanup, invalid expiry and 30-day timer chunking. The progression fixture models server XP after an award and holds only its intended initial lookup, allowing the distinct confirming SELECT. Longer-lived synthetic reward sessions permit the long-deadline clock test without manufacturing auth expiry. TypeScript, production build and 31 Node tests pass; lint has zero errors and 12 baseline warnings. The 320/1440-pixel recovery layout/44-pixel target checks pass, and the narrow screenshot was reviewed. Generated sitemap output was restored.
+
+Artifacts use `ordering-expiry-local`, `xp-confirmation-final`, `ordering-expiry-regression` and `ordering-badge` in the external audit directory. All synthetic writes and private responses are localhost-only with Supabase HTTP intercepted. Public rollout checks will use fresh signed-out contexts. No database definition/grant/policy, server award amount, campaign/draw rule, native source or unrelated Worker changed. Existing development tagger hydration warnings and Firefox's Windows launch limit remain documented. Real OAuth/device/protected mutation and durable server recovery/concurrency gates remain; this is not final Phase 19 certification.

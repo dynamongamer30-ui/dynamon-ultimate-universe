@@ -60,6 +60,7 @@ async function fixture(page: Page, legacy = false) {
     releases: new Map<string, () => void>(),
     reads: {} as Record<string, number>,
     saved: false,
+    xpA: 0,
   };
   await page.route("**/*.supabase.co/**", async (route) => {
     const req = route.request(),
@@ -88,11 +89,14 @@ async function fixture(page: Page, legacy = false) {
       state.reads[k] = (state.reads[k] ?? 0) + 1;
       data =
         fn === "user_xp"
-          ? { xp: uid === idA ? 0 : 50, level: uid === idA ? 1 : 2 }
+          ? { xp: uid === idA ? state.xpA : 50, level: uid === idA ? (state.xpA ? 3 : 1) : 2 }
           : fn === "user_streaks"
             ? { current_streak: 1, longest_streak: 1 }
             : [];
-      if (state.hold.has(k)) await new Promise<void>((resolve) => state.releases.set(k, resolve));
+      if (state.hold.has(k)) {
+        state.hold.delete(k);
+        await new Promise<void>((resolve) => state.releases.set(k, resolve));
+      }
       if (state.deny.has(k)) {
         status = 503;
         data = { message: "Fixture read denied" };
@@ -121,6 +125,7 @@ async function fixture(page: Page, legacy = false) {
             ];
     } else if (fn === "record_engagement") {
       state.awards++;
+      state.xpA = 200;
       if (state.holdAward)
         await new Promise<void>((resolve) => {
           state.releaseAward = resolve;

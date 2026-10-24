@@ -3,7 +3,7 @@ const key = "sb-dfxcpxzylyycrirtnkof-auth-token";
 const idA = "00000000-0000-4000-8000-000000000001";
 const idB = "00000000-0000-4000-8000-000000000002";
 function sessionFor(id: string) {
-  const expires = Math.floor(Date.now() / 1000) + 3600;
+  const expires = Math.floor(Date.now() / 1000) + 60 * 86400;
   const user = {
     id,
     email: "fixture@example.test",
@@ -18,7 +18,7 @@ function sessionFor(id: string) {
     access_token: `${Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url")}.${Buffer.from(JSON.stringify({ sub: id, exp: expires, role: "authenticated" })).toString("base64url")}.fixture`,
     refresh_token: "local-fixture-only",
     expires_at: expires,
-    expires_in: 3600,
+    expires_in: 60 * 86400,
     token_type: "bearer",
   };
 }
@@ -63,6 +63,9 @@ async function fixture(page: Page) {
     claimed: true,
     missingKey: false,
     pass: true,
+    keyPresent: true,
+    keyExpires: "2027-01-01T00:00:00Z",
+    passExpires: "2027-01-01T00:00:00Z",
   };
   await page.route("**/*.supabase.co/**", async (route) => {
     const req = route.request(),
@@ -90,7 +93,7 @@ async function fixture(page: Page) {
         readKey = `${fn}:${who}`;
       state.reads[readKey] = (state.reads[readKey] ?? 0) + 1;
       data =
-        who !== idA
+        who !== idA || (fn === "my_daily_key" && !state.keyPresent)
           ? []
           : fn === "my_daily_key"
             ? [
@@ -98,11 +101,11 @@ async function fixture(page: Page) {
                   id: "fixture-reward",
                   key: state.missingKey ? "" : fixtureKey,
                   claimed: state.claimed,
-                  expires_at: "2027-01-01T00:00:00Z",
+                  expires_at: state.keyExpires,
                 },
               ]
             : state.pass
-              ? [{ id: "fixture-pass", expires_at: "2027-01-01T00:00:00Z" }]
+              ? [{ id: "fixture-pass", expires_at: state.passExpires }]
               : [];
       const denied = state.deny.has(readKey);
       if (state.hold.has(readKey))
@@ -282,5 +285,145 @@ test("sign-out removes the key and ignores a late pass result", async ({ page })
   state.releases.get(`my_active_phoenix_pass:${idA}`)?.();
   await expect(rewards(page)).toHaveCount(0);
   await expect(page.getByText(fixtureKey, { exact: true })).toHaveCount(0);
+  expect(state.mutations).toEqual([]);
+});
+
+test("expiry refreshes only the expired source and removes its old private value", async ({
+  page,
+}) => {
+  const state = await fixture(page),
+    now = Date.now();
+  state.keyExpires = new Date(now + 60_000).toISOString();
+  state.passExpires = new Date(now + 120_000).toISOString();
+  await page.clock.install({ time: now });
+  await open(page);
+  await expect(page.getByText(fixtureKey, { exact: true })).toBeVisible();
+  state.keyPresent = false;
+  await page.clock.fastForward(61_000);
+  await expect(page.getByText(fixtureKey, { exact: true })).toHaveCount(0);
+  await expect(
+    rewards(page).getByText("You have a Phoenix Pass ready!", { exact: true }),
+  ).toBeVisible();
+  expect(state.reads[`my_daily_key:${idA}`]).toBe(2);
+  expect(state.reads[`my_active_phoenix_pass:${idA}`]).toBe(1);
+  state.pass = false;
+  await page.clock.fastForward(60_000);
+  await expect(rewards(page).getByText(/No active rewards were returned/)).toBeVisible();
+  expect(state.reads[`my_active_phoenix_pass:${idA}`]).toBe(2);
+  expect(state.mutations).toEqual([]);
+});
+
+test("an expired server snapshot cannot trigger a refresh loop or stay visible", async ({
+  page,
+}) => {
+  const state = await fixture(page),
+    now = Date.now();
+  state.keyExpires = new Date(now + 60_000).toISOString();
+  await page.clock.install({ time: now });
+  await open(page);
+  await expect(page.getByText(fixtureKey, { exact: true })).toBeVisible();
+  await page.clock.fastForward(61_000);
+  await expect(
+    rewards(page).getByRole("button", { name: "Retry reward lookup", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(fixtureKey, { exact: true })).toHaveCount(0);
+  await page.clock.fastForward(600_000);
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("focus"));
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  expect(state.reads[`my_daily_key:${idA}`]).toBe(2);
+  state.keyPresent = false;
+  await rewards(page).getByRole("button", { name: "Retry reward lookup", exact: true }).click();
+  await expect(rewards(page).getByRole("alert")).toHaveCount(0);
+  expect(state.reads[`my_daily_key:${idA}`]).toBe(3);
+});
+
+test("wake after expiry catches up and copying checks the deadline before clipboard access", async ({
+  page,
+}) => {
+  const state = await fixture(page),
+    now = Date.now();
+  state.keyExpires = new Date(now + 60_000).toISOString();
+  await page.clock.install({ time: now });
+  await open(page);
+  const copy = rewards(page).getByRole("button", { name: "Copy key", exact: true });
+  await expect(copy).toBeVisible();
+  state.keyPresent = false;
+  await page.clock.setSystemTime(now + 70_000);
+  await copy.evaluate((element) => (element as HTMLButtonElement).click());
+  expect(
+    await page.evaluate(() => (window as unknown as { copiedKeys: string[] }).copiedKeys),
+  ).toEqual([]);
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("focus"));
+    window.dispatchEvent(new Event("focus"));
+  });
+  await expect(page.getByText(fixtureKey, { exact: true })).toHaveCount(0);
+  await expect.poll(() => state.reads[`my_daily_key:${idA}`]).toBe(2);
+  expect(state.reads[`my_active_phoenix_pass:${idA}`]).toBe(1);
+});
+
+test("account change disposes old reward deadlines", async ({ page }) => {
+  const state = await fixture(page),
+    now = Date.now();
+  state.keyExpires = new Date(now + 60_000).toISOString();
+  await page.clock.install({ time: now });
+  await open(page);
+  await expect(page.getByText(fixtureKey, { exact: true })).toBeVisible();
+  state.active = idB;
+  await page.evaluate(
+    ({ key, session }) => {
+      localStorage.setItem(key, JSON.stringify(session));
+      sessionStorage.setItem(`notif-skipped:${session.user.id}`, "1");
+      const channel = new BroadcastChannel(key);
+      channel.postMessage({ event: "SIGNED_IN", session });
+      channel.close();
+    },
+    { key, session: sessionFor(idB) },
+  );
+  await expect(rewards(page).getByText(/No active rewards were returned/)).toBeVisible();
+  await page.clock.fastForward(61_000);
+  expect(state.reads[`my_daily_key:${idA}`]).toBe(1);
+  expect(state.reads[`my_daily_key:${idB}`]).toBe(1);
+  expect(state.mutations).toEqual([]);
+});
+
+test("invalid expiry is a lookup failure rather than a usable reward", async ({ page }) => {
+  const state = await fixture(page);
+  state.keyExpires = "fixture-invalid-date";
+  await open(page);
+  await expect(
+    rewards(page).getByRole("button", { name: "Retry reward lookup", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(fixtureKey, { exact: true })).toHaveCount(0);
+  state.keyExpires = new Date(Date.now() + 86400_000).toISOString();
+  await rewards(page).getByRole("button", { name: "Retry reward lookup", exact: true }).click();
+  await expect(page.getByText(fixtureKey, { exact: true })).toBeVisible();
+  expect(state.reads[`my_active_phoenix_pass:${idA}`]).toBe(1);
+});
+
+test("thirty-day deadlines are chunked without an overflowing immediate timer", async ({
+  page,
+}) => {
+  const state = await fixture(page),
+    now = Date.now(),
+    duration = 30 * 86400_000;
+  state.passExpires = new Date(now + duration).toISOString();
+  state.keyExpires = new Date(now + 50 * 86400_000).toISOString();
+  await page.clock.install({ time: now });
+  await open(page);
+  await expect(
+    rewards(page).getByText("You have a Phoenix Pass ready!", { exact: true }),
+  ).toBeVisible();
+  await page.clock.fastForward(2_147_483_647);
+  expect(state.reads[`my_active_phoenix_pass:${idA}`]).toBe(1);
+  state.pass = false;
+  await page.clock.fastForward(duration - 2_147_483_647 + 2);
+  await expect(
+    rewards(page).getByText("You have a Phoenix Pass ready!", { exact: true }),
+  ).toHaveCount(0);
+  await expect.poll(() => state.reads[`my_active_phoenix_pass:${idA}`]).toBe(2);
+  expect(state.reads[`my_daily_key:${idA}`]).toBe(1);
   expect(state.mutations).toEqual([]);
 });

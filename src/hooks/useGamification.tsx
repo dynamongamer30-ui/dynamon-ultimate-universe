@@ -13,6 +13,12 @@ import { useAuth } from "./useAuth";
 import { toast } from "sonner";
 
 export type XPState = { xp: number; level: number };
+const validXP = (value: XPState | null | undefined): value is XPState =>
+  !!value &&
+  Number.isSafeInteger(value.xp) &&
+  value.xp >= 0 &&
+  Number.isSafeInteger(value.level) &&
+  value.level >= 1;
 export type StreakState = { current: number; longest: number };
 const XP_LEVELS = (xp: number) => Math.max(1, Math.floor(Math.sqrt(xp / 50)) + 1);
 export const xpForLevel = (lvl: number) => 50 * (lvl - 1) ** 2;
@@ -31,6 +37,8 @@ type Ctx = {
   achievementStatus: AchievementStatus;
   loading: boolean;
   readError: boolean;
+  xpConfirmationError: boolean;
+  xpConfirming: boolean;
   checkInStatus: CheckInStatus;
   refresh: () => Promise<void>;
   award: (
@@ -49,6 +57,8 @@ type Scope = {
   xpRevision: number;
   streakRevision: number;
   achievementRevision: number;
+  awards: Promise<void>;
+  xpKnown?: XPState;
   confirmedDay?: string;
   pending?: Promise<boolean>;
 };
@@ -84,6 +94,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       xpRevision: 0,
       streakRevision: 0,
       achievementRevision: 0,
+      awards: Promise.resolve(),
     }),
     [id],
   );
@@ -94,6 +105,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     ...empty,
     loading: !!id,
     readError: false,
+    xpConfirmationError: false,
+    xpConfirming: false,
     achievementStatus: (id ? "loading" : "idle") as AchievementStatus,
     checkInStatus: "idle" as CheckInStatus,
   });
@@ -109,6 +122,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
               ...empty,
               loading: !!id,
               readError: false,
+              xpConfirmationError: false,
+              xpConfirming: false,
               achievementStatus: (id ? "loading" : "idle") as AchievementStatus,
               checkInStatus: "idle" as CheckInStatus,
             }),
@@ -125,6 +140,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         ...empty,
         loading: false,
         readError: false,
+        xpConfirmationError: false,
+        xpConfirming: false,
         achievementStatus: "idle",
         checkInStatus: "idle",
       });
@@ -167,12 +184,16 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         a.data.every(
           (row) => row && typeof row.achievement_key === "string" && row.achievement_key.length > 0,
         );
+      const xpValid = !x.error && (x.data === null || validXP(x.data));
       const update: Partial<typeof state> = {
         loading: false,
-        readError: !!(x.error || s.error || !earnedValid),
+        readError: !!(!xpValid || s.error || !earnedValid),
       };
-      if (!x.error && xpRevision === scope.xpRevision)
+      if (xpValid && xpRevision === scope.xpRevision) {
         update.xp = x.data ? { xp: x.data.xp, level: x.data.level } : empty.xp;
+        scope.xpKnown = update.xp;
+        update.xpConfirmationError = false;
+      }
       if (!s.error && streakRevision === scope.streakRevision)
         update.streak = s.data
           ? { current: s.data.current_streak, longest: s.data.longest_streak }
@@ -204,39 +225,80 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   }, [scope, refresh]);
 
   const award = useCallback(
-    async (
+    (
       amount: number,
       label?: string,
       eventKey?: "rating" | "mod_like" | "favorite",
       targetKey?: string,
     ) => {
-      if (!id || !eventKey || !targetKey || !live()) return;
-      try {
-        const { data, error } = await bounded(scope, (signal) =>
-          supabase
-            .rpc("record_engagement", { _event_key: eventKey, _target_key: targetKey })
-            .abortSignal(signal)
-            .retry(false),
-        );
+      if (!id || !eventKey || !targetKey || !live()) return Promise.resolve();
+      const confirm = async () => {
         if (!live()) return;
-        if (error) {
-          console.error("Failed to award XP:", error);
-          return;
-        }
-        const row = data?.[0];
-        if (!row || !Number.isFinite(row.xp) || !Number.isFinite(row.level)) return;
         scope.xpRevision++;
-        if (row.awarded === true) scope.achievementRevision++;
-        patch({
-          xp: { xp: row.xp, level: row.level },
-          ...(row.awarded === true ? { achievementStatus: "stale" as const } : {}),
-        });
-        if (row.awarded && row.leveled_up)
-          toast.success(`⚡ Level up — you're now Level ${row.level}!`);
-        else if (row.awarded && label) toast(`+${amount} XP · ${label}`, { duration: 1500 });
-      } catch {
-        /* The engagement action can already be saved; do not invent an XP award. */
-      }
+        patch({ xpConfirming: true });
+        let acknowledged = false;
+        try {
+          const result = await bounded(scope, async (signal) => {
+            const { data, error } = await supabase
+              .rpc("record_engagement", { _event_key: eventKey, _target_key: targetKey })
+              .abortSignal(signal)
+              .retry(false);
+            if (!live()) return null;
+            const row = data?.[0];
+            if (
+              error ||
+              !Array.isArray(data) ||
+              data.length !== 1 ||
+              !validXP(row) ||
+              typeof row.awarded !== "boolean" ||
+              typeof row.leveled_up !== "boolean"
+            )
+              throw new Error("award_unconfirmed");
+            acknowledged = true;
+            if (row.awarded) {
+              scope.achievementRevision++;
+              patch({ achievementStatus: "stale" });
+            }
+            // The RPC's initial XP row can precede achievement bonuses. Read the final total.
+            const total = await supabase
+              .from("user_xp")
+              .select("xp, level")
+              .eq("user_id", id)
+              .abortSignal(signal)
+              .maybeSingle()
+              .retry(false);
+            if (total.error || !validXP(total.data)) throw new Error("xp_unconfirmed");
+            return { row, total: total.data };
+          });
+          if (!live() || !result) return;
+          const previous = scope.xpKnown;
+          const confirmed = { xp: result.total.xp, level: result.total.level };
+          scope.xpKnown = confirmed;
+          scope.xpRevision++;
+          patch({ xp: confirmed, xpConfirmationError: false });
+          const leveledUp = previous
+            ? confirmed.level > previous.level
+            : result.row.leveled_up && confirmed.level >= result.row.level;
+          if (result.row.awarded && leveledUp)
+            toast.success(`⚡ Level up — you're now Level ${confirmed.level}!`);
+          else if (result.row.awarded && label)
+            toast(`+${amount} XP · ${label}`, { duration: 1500 });
+        } catch {
+          if (!live()) return;
+          scope.xpRevision++;
+          if (!acknowledged) scope.achievementRevision++;
+          patch({
+            xpConfirmationError: true,
+            ...(!acknowledged ? { achievementStatus: "stale" as const } : {}),
+          });
+        } finally {
+          if (live()) patch({ xpConfirming: false });
+        }
+      };
+      // Serialize only confirmations, retaining the server's own totals and reset behavior.
+      const pending = scope.awards.then(confirm, confirm);
+      scope.awards = pending.catch(() => {});
+      return pending;
     },
     [id, live, patch, scope],
   );
@@ -298,6 +360,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           ...empty,
           loading: !!id,
           readError: false,
+          xpConfirmationError: false,
+          xpConfirming: false,
           achievementStatus: (id ? "loading" : "idle") as AchievementStatus,
           checkInStatus: "idle" as CheckInStatus,
         };
@@ -310,6 +374,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         achievementStatus: visible.achievementStatus,
         loading: visible.loading,
         readError: visible.readError,
+        xpConfirmationError: visible.xpConfirmationError,
+        xpConfirming: visible.xpConfirming,
         checkInStatus: visible.checkInStatus,
         refresh,
         award,
@@ -324,6 +390,8 @@ const NOOP: Ctx = {
   ...empty,
   loading: false,
   readError: false,
+  xpConfirmationError: false,
+  xpConfirming: false,
   achievementStatus: "idle",
   checkInStatus: "idle",
   refresh: async () => {},

@@ -82,7 +82,7 @@ function Rewards() {
           points={[
             "Delivered instantly to your Notifications",
             "Copy-paste ready — no steps to complete",
-            "Yours to keep once you’ve collected it",
+            "Collect from Notifications within 24 hours of winning",
           ]}
         />
         <PrizeCard
@@ -96,7 +96,7 @@ function Rewards() {
           points={[
             "Skips the follow / download step entirely",
             "Works on any mod on the site",
-            "Single-use — spend it within 24 hours",
+            "Claim within 24 hours; spend within 30 days of claiming",
           ]}
         />
       </section>
@@ -125,7 +125,7 @@ function Rewards() {
           <Step
             icon={<Gift className="h-5 w-5" />}
             title="Collect in 24h"
-            text="Won something? Grab it within 24 hours — a Daily Key from your notifications, a Phoenix Pass on any mod page."
+            text="Open the winning notification to collect your prize within 24 hours. A claimed Phoenix Pass has a 30-day spending window."
           />
         </div>
       </section>
@@ -140,7 +140,7 @@ function Rewards() {
             "You’re entered automatically just by having an account — nothing to sign up for.",
             "Keys and passes are separate prizes. A Daily Key can’t be used as a Phoenix Pass, and vice-versa.",
             "Each day, a key winner won’t also win a pass that same day — the two winner lists don’t overlap.",
-            "A Phoenix Pass is single-use and expires 24 hours after you win it.",
+            "Claim a won Phoenix Pass within 24 hours. Once claimed, use it within 30 days.",
             "Winners rotate — recent winners are skipped so more people get a turn.",
             "One identity per registered account decides who wins.",
           ].map((t) => (
@@ -186,13 +186,19 @@ function Rewards() {
 }
 
 function AccountRewards() {
-  const { pass, dailyKey } = useDailyRewards();
+  const { pass, dailyKey, passExpired, keyExpired } = useDailyRewards();
   const loading = pass.isFetching || dailyKey.isFetching;
   const keyUnavailable = !!(dailyKey.data?.claimed && !dailyKey.data.key);
-  const failed = !!(pass.error || dailyKey.error || keyUnavailable);
+  const failed = !!(
+    pass.error ||
+    dailyKey.error ||
+    keyUnavailable ||
+    (!pass.isFetching && passExpired) ||
+    (!dailyKey.isFetching && keyExpired)
+  );
   const retry = () => {
-    if (pass.error) void pass.refetch();
-    if (dailyKey.error || keyUnavailable) void dailyKey.refetch();
+    if (pass.error || passExpired) void pass.refetch();
+    if (dailyKey.error || keyUnavailable || keyExpired) void dailyKey.refetch();
   };
   return (
     <section aria-label="Your rewards" aria-busy={loading}>
@@ -219,11 +225,19 @@ function AccountRewards() {
           </button>
         </div>
       )}
-      {!dailyKey.isFetching && !dailyKey.error && dailyKey.data?.claimed && dailyKey.data.key && (
-        <DailyKeyCard key={dailyKey.data.id + dailyKey.data.key} value={dailyKey.data.key} />
-      )}
+      {!dailyKey.isFetching &&
+        !dailyKey.error &&
+        !keyExpired &&
+        dailyKey.data?.claimed &&
+        dailyKey.data.key && (
+          <DailyKeyCard
+            key={dailyKey.data.id + dailyKey.data.key}
+            value={dailyKey.data.key}
+            expiresAt={dailyKey.data.expires_at}
+          />
+        )}
       {/* Active Phoenix Pass banner */}
-      {!pass.isFetching && !pass.error && pass.data && (
+      {!pass.isFetching && !pass.error && !passExpired && pass.data && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -263,16 +277,20 @@ function AccountRewards() {
           announcements.
         </p>
       )}
-      {!dailyKey.isFetching && !dailyKey.error && dailyKey.data && !dailyKey.data.claimed && (
-        <p className="mt-6 rounded-2xl border border-border bg-card p-5 text-sm">
-          A Daily Key is waiting in Notifications. Open the winning notification to collect it.
-        </p>
-      )}
+      {!dailyKey.isFetching &&
+        !dailyKey.error &&
+        !keyExpired &&
+        dailyKey.data &&
+        !dailyKey.data.claimed && (
+          <p className="mt-6 rounded-2xl border border-border bg-card p-5 text-sm">
+            A Daily Key is waiting in Notifications. Open the winning notification to collect it.
+          </p>
+        )}
     </section>
   );
 }
 
-function DailyKeyCard({ value }: { value: string }) {
+function DailyKeyCard({ value, expiresAt }: { value: string; expiresAt: string }) {
   const [copied, setCopied] = useState(false);
   const active = useRef(true);
   const reset = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -285,6 +303,10 @@ function DailyKeyCard({ value }: { value: string }) {
   }, []);
   const copy = async () => {
     try {
+      if (Date.parse(expiresAt) <= Date.now()) {
+        toast.error("This reward lookup has expired. Refresh your rewards.");
+        return;
+      }
       if (!navigator.clipboard) throw new Error("Clipboard unavailable");
       await navigator.clipboard.writeText(value);
       if (!active.current) return;

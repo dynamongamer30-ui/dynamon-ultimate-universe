@@ -45,7 +45,14 @@ export function Header() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { profile } = useProfile();
-  const { xp, streak } = useGamification();
+  const {
+    xp,
+    streak,
+    loading: progressLoading,
+    readError: progressError,
+    xpConfirming,
+    xpConfirmationError,
+  } = useGamification();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchButtonRef = useRef<HTMLButtonElement>(null);
@@ -255,7 +262,12 @@ export function Header() {
                       onClick={() => setMenuOpen(false)}
                       className="touch-target flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-card/60"
                     >
-                      <Trophy className="h-4 w-4" /> Achievements · Lv {xp.level}
+                      <Trophy className="h-4 w-4" /> Achievements · Lv{" "}
+                      {progressLoading || xpConfirming
+                        ? "…"
+                        : progressError || xpConfirmationError
+                          ? "—"
+                          : xp.level}
                     </Link>
                     {profile?.is_owner && (
                       <>
