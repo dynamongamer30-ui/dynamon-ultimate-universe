@@ -1,10 +1,10 @@
-# Subscription ownership policies — review required
+# Subscription ownership policies — approved and applied
 
-Status: PREPARED, NOT APPLIED. Project dfxcpxzylyycrirtnkof. Read-only catalog verification on 24 October 2026.
+Status: APPROVED AND APPLIED on 24 October 2026. Project dfxcpxzylyycrirtnkof. Migration version 20261024031852. Original review and execution evidence follow.
 
-## Proven gap
+## Original gap before remediation
 
-public.mod_subscribers has RLS enabled. Authenticated SELECT, UPDATE and DELETE table grants already exist. Its only policies are subs_insert_own (authenticated INSERT, auth.uid() = user_id) and subs_select_self_or_owner (SELECT of own row or owner read). No UPDATE or DELETE policy exists. Repeating an upsert for an existing row can be denied; a delete can affect zero visible rows. The previous UI did not verify absence before reporting success. No production subscriber records were read or modified for this diagnosis.
+At review time, public.mod_subscribers had RLS enabled. Authenticated SELECT, UPDATE and DELETE table grants already exist. Its only policies are subs_insert_own (authenticated INSERT, auth.uid() = user_id) and subs_select_self_or_owner (SELECT of own row or owner read). No UPDATE or DELETE policy existed. Repeating an upsert for an existing row can be denied; a delete can affect zero visible rows. The previous UI did not verify absence before reporting success. No production subscriber records were read or modified for this diagnosis.
 
 The client fix confirms a returned current-user ID for subscription/preference upserts, verifies absence after unsubscribe and marks asked_at complete only after the subscription step succeeds. A partial result retains choices and explicitly asks for retry; two client calls are not presented as a transaction. Tests intercept all subscription writes locally. These safeguards work before a policy change, but cannot supply missing server authorization.
 
@@ -40,6 +40,16 @@ After application: inspect pg_policies and table grants, verify both predicates 
 
 ## Approval boundary
 
-The master engineering request says: "However, do not autonomously perform destructive or irreversible actions involving production data, secrets, authorization policies, billing changes, domain deletion, or unrelated infrastructure." This is a production authorization change, so it remains unapplied pending explicit approval. The previous grant-only XP approval does not cover subscription policies.
+The master engineering request says: "However, do not autonomously perform destructive or irreversible actions involving production data, secrets, authorization policies, billing changes, domain deletion, or unrelated infrastructure." This production authorization change was applied only after the user explicitly approved the reviewed own-row policies. The previous grant-only XP approval does not cover subscription policies.
 
 The ownership pattern follows [Supabase row-level security guidance](https://supabase.com/docs/guides/database/postgres/row-level-security). Existing UPDATE/DELETE grants alone do not provide row access without policies. Supabase's current changelog index and the PostgreSQL 15.19/17.11 release notice were reviewed; this proposal does not involve extension indexes, encrypted data or custom operators.
+
+## Approved application — 24 October 2026
+
+The user explicitly approved the reviewed own-row policies. Two fresh catalog checks matched the reviewed pre-change state before execution. Supabase apply_migration succeeded for subscription_own_row_update_delete, recording version 20261024031852. The exact approved SQL is retained at supabase/migrations/20261024031852_subscription_own_row_update_delete.sql. Official cached CLI 2.122.0 generated the initial file as 20261024031810; after the migration API assigned version 20261024031852, the uncommitted filename was aligned to that actual server-history version. No timestamp was invented and no existing migration was modified. Registry-download attempts failed before the cached official CLI was found; those attempts made no project dependency change.
+
+Post-apply catalog verification shows four policies: the original INSERT-own and SELECT-self-or-owner definitions are unchanged, plus subs_update_own (UPDATE USING and WITH CHECK both equal auth.uid() = user_id) and subs_delete_own (DELETE USING auth.uid() = user_id). Both new rules target only authenticated. RLS stays enabled and the existing SELECT/UPDATE/DELETE grants remain unchanged. Applying these definitions executed no INSERT, UPDATE or DELETE against subscription/preference records. No actual production subscriber mutation was used as a test.
+
+The security advisor reports the same findings before/after when observation timestamps are excluded. The pre-existing groups remain: five RLS-enabled tables without policies ([advisor 0008](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)), 25 anonymous-role callable security-definer functions ([advisor 0028](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable)), 28 authenticated-role callable security-definer functions ([advisor 0029](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable)) and one leaked-password-protection warning ([password guidance](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)). These are retained for the broader hardening review; this approval did not authorize changing unrelated functions, tables or Auth configuration.
+
+The existing 32 subscription/account-cache fixture checks and eight responsive/public checks remain the client evidence from the preceding unchanged application release. They are not represented as live database policy tests. This migration changes only authorization definitions. Fresh public rollout checks follow publication; a real subscription mutation remains unexercised.
