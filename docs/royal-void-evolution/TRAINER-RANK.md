@@ -34,4 +34,10 @@ All synthetic progress, check-in and completion data is localhost-only with Supa
 
 ## Remaining project scope
 
-Trainer Rank client state is one Phase 19 increment. Broader progression response ordering/expiry, durable reward/download receipts and authorized live mutation/OAuth/device checks remain. The 37-entry roadmap currently has 15 entries marked Partial (including capacity certification), a generator phase pending broader work and an APK/device gate blocked; other verified baseline/increment labels are not final certification. Remaining work also spans owner controls, efficiency/performance/quota evidence, accessibility/visual/SEO/PWA coverage and final hardening/reporting. Phase numbers do not measure percentage completion.
+Trainer Rank client state is one Phase 19 increment. Achievement catalog/earned-badge failure states, broader progression response ordering/expiry, durable reward/download receipts and authorized live mutation/OAuth/device checks remain. The 37-entry roadmap currently has 15 entries marked Partial (including capacity certification), a generator phase pending broader work and an APK/device gate blocked; other verified baseline/increment labels are not final certification. Remaining work also spans owner controls, efficiency/performance/quota evidence, accessibility/visual/SEO/PWA coverage and final hardening/reporting. Phase numbers do not measure percentage completion.
+
+## Application and public rollout verified
+
+Application commit `1684437f3674b1616295739660a449cbcc59c138`, tree `300dfb0e72f8a31dbda6f68715ebc9fa4114c59f`, is on main. Automatic Cloudflare build `7231545d-be33-4d65-bd36-116646d176de` succeeded. Deployment `b3a0fff5-6cdd-4525-b1fc-ee6a837a43c1`, version `aa41f363-99fc-42bd-b31d-fff0cbbb3764`, serves 100%.
+
+Four fresh live signed-out checks pass in 39.4 seconds across Chrome phone/tablet/desktop and WebKit. Each visits home, achievements and rewards with visible headings/document fit, no runtime exception and no private progression/check-in/award/Trainer Rank catalog/progress/claim request. The public test's request guard now includes the new rank sources. Logs/screenshots use `trainer-live-public` in the external audit directory. No authenticated production rank lookup or award is claimed. This ladder client-state increment is delivered; full Phase 19 and the wider roadmap remain open.
