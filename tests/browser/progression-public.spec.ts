@@ -9,7 +9,7 @@ test("signed-out pages make no private progression reads or mutations", async ({
     const url = new URL(request.url());
     if (
       url.hostname.endsWith(".supabase.co") &&
-      /\/(user_xp|user_streaks|user_achievements|touch_streak|record_engagement)$/.test(
+      /\/(user_xp|user_streaks|user_achievements|touch_streak|record_engagement|trainer_levels|my_trainer_progress|user_trainer_progress|claim_trainer_level)$/.test(
         url.pathname,
       )
     )
