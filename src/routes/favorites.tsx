@@ -21,7 +21,7 @@ export const Route = createFileRoute("/favorites")({
 function FavoritesPage() {
   const { user } = useAuth();
   const { mods } = useSiteSettings();
-  const { slugs, loading, error, refresh } = useFavorites();
+  const { slugs, loading, error, refresh, updating } = useFavorites();
 
   const favs = mods.filter((m) => slugs.includes(m.slug));
 
@@ -63,6 +63,10 @@ function FavoritesPage() {
             Try again
           </button>
         </div>
+      ) : favs.length === 0 && updating ? (
+        <p role="status" className="mt-10 rounded-2xl border border-border bg-card p-8">
+          Updating your vault…
+        </p>
       ) : favs.length === 0 ? (
         <div className="mt-10 flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border bg-card/30 p-12 text-center">
           <span

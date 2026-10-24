@@ -87,7 +87,7 @@ test("account reads are shared, failed saves roll back and sign-out clears priva
         if (rejectDelete) {
           status = 403;
           data = { message: "Fixture write denied" };
-        }
+        } else data = [{ mod_slug: "fire-phoenix" }];
       }
     } else if (url.pathname.endsWith("/notifications")) {
       reads.inbox++;

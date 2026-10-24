@@ -9,10 +9,11 @@ import { toast } from "sonner";
 
 export function FavoriteButton({ slug, className = "" }: { slug: string; className?: string }) {
   const { user } = useAuth();
-  const { has, toggle } = useFavorites();
+  const { has, toggle, isPending, loading, error } = useFavorites();
   const { award } = useGamification();
   const navigate = useNavigate();
   const fav = has(slug);
+  const busy = isPending(slug);
   return (
     <motion.button
       whileTap={{ scale: 0.9 }}
@@ -35,7 +36,10 @@ export function FavoriteButton({ slug, className = "" }: { slug: string; classNa
       aria-label={fav ? "Remove bookmark" : "Bookmark"}
       type="button"
       aria-pressed={fav}
-      className={`touch-target grid place-items-center rounded-full border border-border bg-card/60 transition-colors ${fav ? "text-amber-300 border-amber-400/40" : "text-muted-foreground hover:text-foreground"} ${className}`}
+      aria-busy={busy}
+      disabled={!!user && (busy || loading || !!error)}
+      title={error ? "Open My favorites to retry loading your vault" : undefined}
+      className={`touch-target grid place-items-center rounded-full border border-border bg-card/60 transition-colors disabled:opacity-60 ${fav ? "text-amber-300 border-amber-400/40" : "text-muted-foreground hover:text-foreground"} ${className}`}
     >
       <Bookmark className={`h-4 w-4 ${fav ? "fill-amber-300" : ""}`} />
     </motion.button>
