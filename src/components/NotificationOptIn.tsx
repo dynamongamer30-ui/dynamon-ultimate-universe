@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { playClick, playSuccess } from "@/lib/sound";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 
+import { OPEN_UPDATE_PREFERENCES } from "@/lib/updatePreferences";
+
 export function NotificationOptIn() {
   const { user } = useAuth();
   return user ? <AccountPreferences key={user.id} user={user} /> : null;
@@ -20,10 +22,14 @@ function AccountPreferences({ user }: { user: User }) {
   const [push, setPush] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  const [request, setRequest] = useState(0);
+  const [loadState, setLoadState] = useState<"ready" | "loading" | "error">("ready");
+  const readController = useRef<AbortController | null>(null);
   const locked = useRef(false);
   const active = useRef(true);
   const skip = () => {
     if (locked.current) return;
+    readController.current?.abort();
     try {
       sessionStorage.setItem(`notif-skipped:${user.id}`, "1");
     } catch {
@@ -45,12 +51,25 @@ function AccountPreferences({ user }: { user: User }) {
   }, [busy, dialogRef]);
 
   useEffect(() => {
-    setOpen(false);
+    const show = () => {
+      if (locked.current) return;
+      setError(false);
+      setLoadState("loading");
+      setOpen(true);
+      setRequest((value) => value + 1);
+    };
+    window.addEventListener(OPEN_UPDATE_PREFERENCES, show);
+    return () => window.removeEventListener(OPEN_UPDATE_PREFERENCES, show);
+  }, []);
+
+  useEffect(() => {
+    const manual = request > 0;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const controller = new AbortController();
+    readController.current = controller;
     try {
-      if (sessionStorage.getItem(`notif-skipped:${user.id}`)) return;
+      if (!manual && sessionStorage.getItem(`notif-skipped:${user.id}`)) return;
     } catch {
       /* Optional storage. */
     }
@@ -58,13 +77,22 @@ function AccountPreferences({ user }: { user: User }) {
     (async () => {
       const { data, error } = await supabase
         .from("notification_prefs")
-        .select("asked_at")
+        .select("asked_at,email_opt_in,push_opt_in")
         .eq("user_id", user.id)
         .abortSignal(controller.signal)
         .maybeSingle()
         .retry(false);
       clearTimeout(deadline);
-      if (!cancelled && !error && !data?.asked_at) {
+      if (cancelled) return;
+      if (error) {
+        if (manual) setLoadState("error");
+        return;
+      }
+      if (controller.signal.aborted) return;
+      setEmail(data?.email_opt_in ?? true);
+      setPush(data?.push_opt_in ?? true);
+      setLoadState("ready");
+      if (!manual && !data?.asked_at) {
         const skipKey = `notif-skipped:${user.id}`;
         let skipped = false;
         try {
@@ -79,6 +107,7 @@ function AccountPreferences({ user }: { user: User }) {
       }
     })().catch(() => {
       clearTimeout(deadline);
+      if (!cancelled && manual) setLoadState("error");
     });
     return () => {
       cancelled = true;
@@ -86,10 +115,10 @@ function AccountPreferences({ user }: { user: User }) {
       clearTimeout(deadline);
       controller.abort();
     };
-  }, [user.id]);
+  }, [user.id, request]);
 
   const save = async () => {
-    if (locked.current) return;
+    if (locked.current || loadState !== "ready") return;
     locked.current = true;
     setBusy(true);
     setError(false);
@@ -178,7 +207,7 @@ function AccountPreferences({ user }: { user: User }) {
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
-                aria-busy={busy}
+                aria-busy={busy || loadState === "loading"}
                 aria-labelledby="notification-opt-in-title"
                 tabIndex={-1}
                 className="modal-panel relative w-full max-w-md rounded-3xl glass shadow-elev"
@@ -205,7 +234,33 @@ function AccountPreferences({ user }: { user: User }) {
                   <p className="mt-2 text-sm text-muted-foreground">
                     Choose your update preferences. Save to confirm your choices.
                   </p>
-                  <fieldset disabled={busy} className="mt-6 min-w-0 space-y-3">
+                  {loadState === "loading" && (
+                    <p role="status" className="mt-4 text-sm">
+                      Loading saved preferences…
+                    </p>
+                  )}
+                  {loadState === "error" && (
+                    <div className="mt-4 space-y-2">
+                      <p role="alert">
+                        Could not load your saved preferences. Retry to view your choices.
+                      </p>
+                      <button
+                        type="button"
+                        className="touch-target rounded-full border border-border px-4 py-2"
+                        onClick={() => {
+                          setLoadState("loading");
+                          setRequest((value) => value + 1);
+                        }}
+                      >
+                        Retry loading preferences
+                      </button>
+                    </div>
+                  )}
+                  <fieldset
+                    hidden={loadState !== "ready"}
+                    disabled={busy || loadState !== "ready"}
+                    className="mt-6 min-w-0 space-y-3"
+                  >
                     <legend className="sr-only">Update preferences</legend>
                     <Toggle
                       icon={<Mail className="h-4 w-4" />}
@@ -243,7 +298,7 @@ function AccountPreferences({ user }: { user: User }) {
                         playClick();
                         save();
                       }}
-                      disabled={busy}
+                      disabled={busy || loadState !== "ready"}
                       className="flex-[1.4] rounded-full px-4 py-2.5 text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-60"
                       style={{ background: "var(--gradient-primary)" }}
                     >

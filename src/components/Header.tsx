@@ -28,6 +28,8 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { FeedbackPreferences } from "@/components/FeedbackPreferences";
 import { WebsiteThemeSelector } from "@/components/WebsiteThemeSelector";
 
+import { OPEN_UPDATE_PREFERENCES } from "@/lib/updatePreferences";
+
 const nav = [
   { to: "/", label: "Home" },
   { to: "/mods", label: "Mods" },
@@ -230,6 +232,17 @@ export function Header() {
                     >
                       <Bell className="h-4 w-4" /> Notifications
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        menuRef.current?.querySelector("button")?.focus();
+                        window.dispatchEvent(new Event(OPEN_UPDATE_PREFERENCES));
+                      }}
+                      className="touch-target flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-card/60"
+                    >
+                      <Settings className="h-4 w-4" /> Update preferences
+                    </button>
                     <Link
                       to="/rewards"
                       onClick={() => setMenuOpen(false)}

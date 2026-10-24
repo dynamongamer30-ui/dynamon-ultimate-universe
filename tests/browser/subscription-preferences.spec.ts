@@ -55,6 +55,9 @@ async function fixture(page: Page) {
     id,
     reads: 0,
     denyRead: false,
+    holdRead: false,
+    releaseRead: undefined as undefined | (() => void),
+    saved: null as Record<string, unknown> | null,
     order: [] as string[],
     subscriberWrites: [] as { method: string; body: unknown }[],
     prefs: [] as Record<string, unknown>[],
@@ -85,7 +88,12 @@ async function fixture(page: Page) {
     else if (url.pathname.endsWith("/notification_prefs")) {
       if (request.method() === "GET") {
         state.reads++;
-        data = null;
+        const snapshot = state.saved;
+        if (state.holdRead)
+          await new Promise<void>((resolve) => {
+            state.releaseRead = resolve;
+          });
+        data = snapshot;
         if (state.denyRead) {
           status = 503;
           data = { message: "Fixture read failed" };
@@ -96,7 +104,10 @@ async function fixture(page: Page) {
         if (state.prefsMode === "deny") {
           status = 403;
           data = { message: "Fixture denied" };
-        } else data = state.prefsMode === "empty" ? [] : [{ user_id: id }];
+        } else {
+          data = state.prefsMode === "empty" ? [] : [{ user_id: id }];
+          if (state.prefsMode === "allow") state.saved = request.postDataJSON();
+        }
       }
     } else if (url.pathname.endsWith("/mod_subscribers")) {
       if (request.method() === "GET") data = state.exists ? { user_id: id } : null;
@@ -266,7 +277,7 @@ test("a failed preference read does not open the opt-in prompt or retry automati
   await page.goto("/auth", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.documentElement.dataset.siteSettingsReady === "true");
   await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible();
-  await expect.poll(() => state.reads).toBe(1);
+  await expect.poll(() => state.reads, { timeout: 15000 }).toBe(1);
   await page.clock.runFor(12_000);
   await expect(
     page.getByRole("dialog", { name: "Get notified on new mods", exact: true }),
@@ -298,7 +309,8 @@ test("preference error and actions remain usable across narrow and wide viewport
     [1920, 1080],
   ]) {
     await page.setViewportSize({ width, height });
-    await save.scrollIntoViewIfNeeded();
+    // Resize only needs scrolling; WebKit's stability wait can consume the whole matrix budget.
+    await save.evaluate((node) => node.scrollIntoView({ block: "nearest", behavior: "instant" }));
     await expect(save).toBeInViewport({ ratio: 1 });
     expect(
       await dialog.evaluate((node) => {
@@ -316,4 +328,101 @@ test("preference error and actions remain usable across narrow and wide viewport
   await expect(dialog).toHaveCount(0);
   expect(state.subscriberWrites).toHaveLength(1);
   expect(state.prefs).toHaveLength(1);
+});
+
+async function manage(page: Page) {
+  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page.getByRole("button", { name: "Update preferences", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Get notified on new mods", exact: true });
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+test("account entry restores saved false choices and returns focus without writes", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  state.saved = { asked_at: "2026-10-01T00:00:00Z", email_opt_in: false, push_opt_in: false };
+  await page.goto("/auth");
+  await expect.poll(() => state.reads, { timeout: 15000 }).toBe(1);
+  const dialog = await manage(page);
+  await expect(dialog.getByRole("button", { name: /Email me/ })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(dialog.getByRole("button", { name: /Browser notification/ })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeFocused();
+  expect(state.subscriberWrites).toHaveLength(0);
+  expect(state.prefs).toHaveLength(0);
+  expect(
+    await page.evaluate(() => (window as unknown as { permissionCalls: number }).permissionCalls),
+  ).toBe(0);
+});
+
+test("manual failed read blocks save until retry and reopens confirmed choices", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  const prompt = await open(page);
+  await prompt.getByRole("button", { name: "Maybe later" }).click();
+  state.denyRead = true;
+  const dialog = await manage(page);
+  await expect(dialog.getByRole("alert")).toContainText("Could not load");
+  await expect(
+    dialog.getByRole("button", { name: "Save preferences", exact: true }),
+  ).toBeDisabled();
+  expect(state.subscriberWrites).toHaveLength(0);
+  state.denyRead = false;
+  state.saved = { asked_at: "2026-10-01T00:00:00Z", email_opt_in: false, push_opt_in: false };
+  await dialog.getByRole("button", { name: "Retry loading preferences" }).click();
+  await expect(dialog.getByRole("button", { name: /Email me/ })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await dialog.getByRole("button", { name: "Save preferences", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await manage(page);
+  await expect(dialog.getByRole("button", { name: /Email me/ })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(dialog.getByRole("button", { name: /Browser notification/ })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  expect(state.prefs).toHaveLength(1);
+  await dialog.getByRole("button", { name: "Close notification preferences" }).click();
+});
+
+test("loading can close safely and a late read cannot overwrite the reopened draft", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  state.saved = { asked_at: "2026-10-01T00:00:00Z", email_opt_in: true, push_opt_in: true };
+  await page.goto("/auth");
+  await expect.poll(() => state.reads, { timeout: 15000 }).toBe(1);
+  state.holdRead = true;
+  const dialog = await manage(page);
+  await expect(dialog.getByRole("status")).toContainText("Loading saved preferences");
+  await expect(
+    dialog.getByRole("button", { name: "Save preferences", exact: true }),
+  ).toBeDisabled();
+  await expect.poll(() => !!state.releaseRead).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  state.holdRead = false;
+  state.saved = { asked_at: "2026-10-01T00:00:00Z", email_opt_in: false, push_opt_in: false };
+  await manage(page);
+  const email = dialog.getByRole("button", { name: /Email me/ });
+  await expect(email).toHaveAttribute("aria-pressed", "false");
+  state.releaseRead?.();
+  await expect(email).toHaveAttribute("aria-pressed", "false");
+  await dialog.getByRole("button", { name: "Close notification preferences" }).click();
+  expect(state.subscriberWrites).toHaveLength(0);
+  expect(state.prefs).toHaveLength(0);
 });

@@ -24,6 +24,9 @@ test("signed-out account routes show sign-in without private reads or setup writ
   await expect(page.getByRole("button", { name: /Google/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Google/ })).toBeInViewport({ ratio: 1 });
   await expect(page.getByRole("region", { name: "Account access" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Update preferences", exact: true })).toHaveCount(
+    0,
+  );
   await expect(
     page.getByRole("dialog", { name: "Get notified on new mods", exact: true }),
   ).toHaveCount(0);

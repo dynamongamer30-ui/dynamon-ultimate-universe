@@ -1,6 +1,6 @@
 # Execution map — 24 October 2026
 
-Current workstream: **Phase 18 favorites/subscriptions — preference-management journey next**. The client reliability release is live and the reviewed own-row UPDATE/DELETE policies were explicitly approved and applied as migration 20261024031852. Live catalog checks confirm ownership guards, unchanged existing rules/grants and no new advisor findings. No production subscription was changed for QA. Broader settings access, real mutation and fresh OAuth/device gates remain.
+Current workstream: **Phase 18 favorites/subscriptions — preference-management entry validated; rollout next**. The client reliability release is live and the reviewed own-row UPDATE/DELETE policies were explicitly approved and applied as migration 20261024031852. Live catalog checks confirm ownership guards, unchanged existing rules/grants and no new advisor findings. No production subscription was changed for QA. The account-menu entry now reopens saved choices with loading/error/retry handling; local validation passes and rollout is next. Real mutation and fresh OAuth/device gates remain.
 
 This table describes progress, not final phase certification. Work has followed verified dependencies: tooling and themes first, then proven security, browser reliability and account/query defects. A later phase number does not imply every earlier phase is complete.
 
