@@ -23,10 +23,12 @@ export const xpToNext = (xp: number) => {
   return { level: l, base, next, progress: Math.min(1, (xp - base) / Math.max(1, next - base)) };
 };
 type CheckInStatus = "idle" | "pending" | "error" | "success";
+type AchievementStatus = "idle" | "loading" | "error" | "success" | "stale";
 type Ctx = {
   xp: XPState;
   streak: StreakState;
   achievements: string[];
+  achievementStatus: AchievementStatus;
   loading: boolean;
   readError: boolean;
   checkInStatus: CheckInStatus;
@@ -46,6 +48,7 @@ type Scope = {
   read: number;
   xpRevision: number;
   streakRevision: number;
+  achievementRevision: number;
   confirmedDay?: string;
   pending?: Promise<boolean>;
 };
@@ -73,7 +76,15 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const id = user?.id;
   const scope = useMemo<Scope>(
-    () => ({ id, active: true, controllers: new Set(), read: 0, xpRevision: 0, streakRevision: 0 }),
+    () => ({
+      id,
+      active: true,
+      controllers: new Set(),
+      read: 0,
+      xpRevision: 0,
+      streakRevision: 0,
+      achievementRevision: 0,
+    }),
     [id],
   );
   const current = useRef(scope);
@@ -83,6 +94,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     ...empty,
     loading: !!id,
     readError: false,
+    achievementStatus: (id ? "loading" : "idle") as AchievementStatus,
     checkInStatus: "idle" as CheckInStatus,
   });
   const live = useCallback(() => scope.active && current.current === scope, [scope]);
@@ -97,6 +109,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
               ...empty,
               loading: !!id,
               readError: false,
+              achievementStatus: (id ? "loading" : "idle") as AchievementStatus,
               checkInStatus: "idle" as CheckInStatus,
             }),
         ...update,
@@ -108,13 +121,20 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     if (!live()) return;
     if (!id) {
-      patch({ ...empty, loading: false, readError: false, checkInStatus: "idle" });
+      patch({
+        ...empty,
+        loading: false,
+        readError: false,
+        achievementStatus: "idle",
+        checkInStatus: "idle",
+      });
       return;
     }
     const read = ++scope.read,
       xpRevision = scope.xpRevision,
-      streakRevision = scope.streakRevision;
-    patch({ loading: true, readError: false });
+      streakRevision = scope.streakRevision,
+      achievementRevision = scope.achievementRevision;
+    patch({ loading: true, readError: false, achievementStatus: "loading" });
     try {
       const [x, s, a] = await bounded(scope, (signal) =>
         Promise.all([
@@ -141,9 +161,15 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         ]),
       );
       if (!live() || read !== scope.read) return;
+      const earnedValid =
+        !a.error &&
+        Array.isArray(a.data) &&
+        a.data.every(
+          (row) => row && typeof row.achievement_key === "string" && row.achievement_key.length > 0,
+        );
       const update: Partial<typeof state> = {
         loading: false,
-        readError: !!(x.error || s.error || a.error),
+        readError: !!(x.error || s.error || !earnedValid),
       };
       if (!x.error && xpRevision === scope.xpRevision)
         update.xp = x.data ? { xp: x.data.xp, level: x.data.level } : empty.xp;
@@ -151,10 +177,21 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         update.streak = s.data
           ? { current: s.data.current_streak, longest: s.data.longest_streak }
           : empty.streak;
-      if (!a.error) update.achievements = (a.data ?? []).map((row) => row.achievement_key);
+      if (achievementRevision === scope.achievementRevision) {
+        update.achievementStatus = earnedValid ? "success" : "error";
+        if (earnedValid)
+          update.achievements = [...new Set(a.data!.map((row) => row.achievement_key))];
+      }
       patch(update);
     } catch {
-      if (read === scope.read) patch({ loading: false, readError: true });
+      if (read === scope.read)
+        patch({
+          loading: false,
+          readError: true,
+          ...(achievementRevision === scope.achievementRevision
+            ? { achievementStatus: "error" as const }
+            : {}),
+        });
     }
   }, [id, live, patch, scope]);
   useEffect(() => {
@@ -189,7 +226,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         const row = data?.[0];
         if (!row || !Number.isFinite(row.xp) || !Number.isFinite(row.level)) return;
         scope.xpRevision++;
-        patch({ xp: { xp: row.xp, level: row.level } });
+        if (row.awarded === true) scope.achievementRevision++;
+        patch({
+          xp: { xp: row.xp, level: row.level },
+          ...(row.awarded === true ? { achievementStatus: "stale" as const } : {}),
+        });
         if (row.awarded && row.leveled_up)
           toast.success(`⚡ Level up — you're now Level ${row.level}!`);
         else if (row.awarded && label) toast(`+${amount} XP · ${label}`, { duration: 1500 });
@@ -253,13 +294,20 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const visible =
     state.scope === scope
       ? state
-      : { ...empty, loading: !!id, readError: false, checkInStatus: "idle" as CheckInStatus };
+      : {
+          ...empty,
+          loading: !!id,
+          readError: false,
+          achievementStatus: (id ? "loading" : "idle") as AchievementStatus,
+          checkInStatus: "idle" as CheckInStatus,
+        };
   return (
     <GamificationCtx.Provider
       value={{
         xp: visible.xp,
         streak: visible.streak,
         achievements: visible.achievements,
+        achievementStatus: visible.achievementStatus,
         loading: visible.loading,
         readError: visible.readError,
         checkInStatus: visible.checkInStatus,
@@ -276,6 +324,7 @@ const NOOP: Ctx = {
   ...empty,
   loading: false,
   readError: false,
+  achievementStatus: "idle",
   checkInStatus: "idle",
   refresh: async () => {},
   award: async () => {},
