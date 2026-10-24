@@ -51,6 +51,8 @@ async function fixture(page: Page) {
     denyConfirmation: false,
     bonus: false,
     failFirst: false,
+    missingXP: false,
+    backfilled: false,
     xpReads: 0,
   };
   await page.route("**/*.supabase.co/**", async (route) => {
@@ -79,6 +81,7 @@ async function fixture(page: Page) {
       const value = who === idA ? state.xp : state.xpB;
       state.events.push(`xp:${value}`);
       body = { xp: value, level: value >= 200 ? 3 : value >= 50 ? 2 : 1 };
+      if (state.missingXP || state.backfilled) body = null;
       if (state.denyConfirmation && state.receipts.length) {
         status = 503;
         body = { message: "Fixture confirmation denied" };
@@ -113,10 +116,11 @@ async function fixture(page: Page) {
       const number = state.receipts.length + 1;
       state.receipts.push({ user: who, args: req.postDataJSON() });
       state.events.push(`award:${number}`);
-      state.xp = state.bonus || number > 1 ? 200 : 50;
+      state.xp = state.backfilled ? 0 : state.bonus || number > 1 ? 200 : 50;
       body = [
         { xp: number > 1 ? 200 : 50, level: number > 1 ? 3 : 2, leveled_up: true, awarded: true },
       ];
+      if (state.backfilled) body = [{ xp: 0, level: 1, leveled_up: false, awarded: false }];
       if (number === 1 && state.failFirst) {
         status = 503;
         body = { message: "Fixture lost receipt" };
@@ -271,5 +275,37 @@ test("a fresh authoritative lookup can accept a lower legitimate total", async (
   state.xp = 50;
   await page.getByRole("button", { name: "Refresh earned badges", exact: true }).click();
   await expect(level(page).getByText("Lv 2", { exact: true })).toHaveCount(1);
+  expect(state.receipts).toHaveLength(1);
+});
+
+test("a backfilled event with no XP row confirms zero without a false recovery error", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  state.backfilled = true;
+  await open(page);
+  await bookmark(page, /Fire Phoenix/);
+  await expect.poll(() => state.xpReads).toBe(2);
+  await achievements(page);
+  await expect(level(page).getByText("Lv 1", { exact: true })).toBeVisible();
+  await expect(level(page).getByText("0 / 50 XP", { exact: true })).toBeVisible();
+  await expect(
+    level(page).getByRole("button", { name: "Retry XP lookup", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText(/Level up —|\+5 XP/)).toHaveCount(0);
+  expect(state.receipts).toHaveLength(1);
+});
+
+test("a newly awarded event still requires a real XP row", async ({ page }) => {
+  const state = await fixture(page);
+  state.missingXP = true;
+  await open(page);
+  await bookmark(page, /Fire Phoenix/);
+  await achievements(page);
+  await expect(
+    level(page).getByRole("button", { name: "Retry XP lookup", exact: true }),
+  ).toBeVisible();
+  await expect(level(page).getByText("XP unavailable", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Level up —/)).toHaveCount(0);
   expect(state.receipts).toHaveLength(1);
 });

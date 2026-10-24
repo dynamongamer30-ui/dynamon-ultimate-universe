@@ -267,8 +267,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
               .abortSignal(signal)
               .maybeSingle()
               .retry(false);
-            if (total.error || !validXP(total.data)) throw new Error("xp_unconfirmed");
-            return { row, total: total.data };
+            // Historical ledger backfills can acknowledge an old event without an XP row.
+            // A newly awarded event must have created one in the same server transaction.
+            const confirmedTotal = total.data === null && !row.awarded ? empty.xp : total.data;
+            if (total.error || !validXP(confirmedTotal)) throw new Error("xp_unconfirmed");
+            return { row, total: confirmedTotal };
           });
           if (!live() || !result) return;
           const previous = scope.xpKnown;
