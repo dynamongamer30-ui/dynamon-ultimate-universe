@@ -3,18 +3,22 @@ import { Zap } from "lucide-react";
 import { useGamification, xpToNext } from "@/hooks/useGamification";
 
 export function LevelBadge({ compact = false }: { compact?: boolean }) {
-  const { xp } = useGamification();
+  const { xp, loading, readError } = useGamification();
   const { level, base, next, progress } = xpToNext(xp.xp);
 
   if (compact) {
     return (
       <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
-        <Zap className="h-3 w-3" /> Lv {level}
+        <Zap className="h-3 w-3" /> Lv {loading ? "…" : readError ? "—" : level}
       </div>
     );
   }
   return (
-    <div className="rounded-2xl border border-border bg-card/60 p-4">
+    <div
+      role="region"
+      aria-label="Trainer level"
+      className="rounded-2xl border border-border bg-card/60 p-4"
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span
@@ -41,6 +45,11 @@ export function LevelBadge({ compact = false }: { compact?: boolean }) {
           style={{ background: "var(--gradient-primary)" }}
         />
       </div>
+      {readError && (
+        <p role="alert" className="mt-3 text-sm">
+          Could not finish loading your progress.
+        </p>
+      )}
     </div>
   );
 }
