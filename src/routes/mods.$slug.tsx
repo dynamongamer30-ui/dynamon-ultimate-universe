@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   Check,
@@ -116,7 +116,17 @@ function ModDetail() {
   const [chooseOpen, setChooseOpen] = useState(false);
   const [gateOpen, setGateOpen] = useState(false);
   // Phoenix Pass redemption modal state (null = closed).
-  const [passOpen, setPassOpen] = useState(false);
+  const [passOpen, setPassOpen] = useState<string | null>(null);
+  const passIdentity = JSON.stringify([user?.id, mod.slug]);
+  const currentPassIdentity = useRef(passIdentity);
+  currentPassIdentity.current = passIdentity;
+  const passAttempts = useRef(new Map<string, { uncertain: boolean }>());
+  const passAttempt = useMemo(() => {
+    const attempt = passAttempts.current.get(passIdentity) ?? { uncertain: false };
+    passAttempts.current.set(passIdentity, attempt);
+    return attempt;
+  }, [passIdentity]);
+  useEffect(() => setPassOpen(null), [passIdentity]);
 
   // Only check whether a link is configured — never decrypt it here.
   // The plaintext/ciphertext link is now only ever revealed through
@@ -479,21 +489,24 @@ function ModDetail() {
           }}
           onUsePass={() => {
             setChooseOpen(false);
-            setPassOpen(true);
+            setPassOpen(passIdentity);
           }}
           onClose={() => setChooseOpen(false)}
         />
       )}
 
-      {passOpen && (
+      {user && passOpen === passIdentity && (
         <PhoenixPassModal
+          key={passIdentity}
+          attempt={passAttempt}
+          isCurrent={() => currentPassIdentity.current === passIdentity}
           modName={blendedMod.name}
           slug={mod.slug}
           onNoPass={() => {
-            setPassOpen(false);
+            setPassOpen(null);
             navigate({ to: "/rewards" });
           }}
-          onClose={() => setPassOpen(false)}
+          onClose={() => setPassOpen(null)}
         />
       )}
 
@@ -674,12 +687,17 @@ function ModalShell({
   label,
   onClose,
   children,
+  dismissible = true,
 }: {
   label: string;
   onClose: () => void;
   children: ReactNode;
+  dismissible?: boolean;
 }) {
-  const dialogRef = useDialogFocus(true, onClose);
+  const dismiss = () => {
+    if (dismissible) onClose();
+  };
+  const dialogRef = useDialogFocus(true, dismiss);
   return (
     <div
       ref={dialogRef}
@@ -688,7 +706,7 @@ function ModalShell({
       aria-label={label}
       tabIndex={-1}
       className="modal-frame fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={dismiss}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -697,9 +715,10 @@ function ModalShell({
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={onClose}
+          onClick={dismiss}
+          disabled={!dismissible}
           aria-label="Close"
-          className="absolute right-4 top-4 rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="touch-target absolute right-2 top-2 rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"
         >
           <X className="h-4 w-4" />
         </button>
@@ -793,88 +812,192 @@ function PhoenixPassModal({
   slug,
   onNoPass,
   onClose,
+  attempt,
+  isCurrent,
 }: {
   modName: string;
   slug: string;
   onNoPass: () => void;
   onClose: () => void;
+  attempt: { uncertain: boolean };
+  isCurrent: () => boolean;
 }) {
   const [step, setStep] = useState<PassStep>("checking");
   const [passId, setPassId] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [link, setLink] = useState("");
   const [errMsg, setErrMsg] = useState("");
-  const checked = useRef(false);
-
-  // Loose cast: these RPCs aren't in the generated Supabase types yet.
-  // IMPORTANT: must .bind(supabase) or calling this later throws
-  // "Cannot read properties of undefined (reading 'rest')" — extracting a
-  // Supabase client method into a plain variable loses its `this` binding.
-  const rpc = supabase.rpc.bind(supabase) as unknown as (
-    fn: string,
-    args?: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  const [lookupRetry, setLookupRetry] = useState(0);
+  const [lookupFailed, setLookupFailed] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const active = useRef(true);
+  const submitted = useRef(false);
+  const redeeming = useRef(false);
+  const redemption = useRef<AbortController | null>(null);
+  const callbacks = useRef({ onNoPass, isCurrent });
+  callbacks.current = { onNoPass, isCurrent };
+  const valid = () => active.current && callbacks.current.isCurrent();
+  const uncertainMessage =
+    "We couldn't confirm the download. Your pass may already have been spent. Check Rewards before spending another pass; contact support if the download is missing.";
 
   useEffect(() => {
-    if (checked.current) return;
-    checked.current = true;
+    active.current = true;
+    return () => {
+      active.current = false;
+      redemption.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (attempt.uncertain) {
+      setErrMsg(uncertainMessage);
+      setStep("error");
+      return;
+    }
+    const controller = new AbortController();
+    let disposed = false;
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    setStep("checking");
+    setLookupFailed(false);
     (async () => {
       try {
-        const { data, error } = await rpc("my_active_phoenix_pass");
-        if (error) throw new Error("check_failed");
-        const rows = (data as Array<{ id: string; expires_at: string }> | null) || [];
-        const pass = rows[0];
-        if (!pass) {
-          onNoPass();
+        const { data, error } = await supabase
+          .rpc("my_active_phoenix_pass")
+          .abortSignal(controller.signal)
+          .retry(false);
+        if (disposed || !valid()) return;
+        if (error || !Array.isArray(data)) throw new Error("check_failed");
+        if (data.length === 0) {
+          callbacks.current.onNoPass();
+          return;
+        }
+        const pass = data[0];
+        if (
+          !pass ||
+          typeof pass.id !== "string" ||
+          !pass.id ||
+          typeof pass.expires_at !== "string" ||
+          !Number.isFinite(Date.parse(pass.expires_at))
+        )
+          throw new Error("check_failed");
+        if (Date.parse(pass.expires_at) <= Date.now()) {
+          callbacks.current.onNoPass();
           return;
         }
         setPassId(pass.id);
         setExpiresAt(pass.expires_at);
         setStep("confirm");
       } catch {
+        if (disposed || !valid()) return;
         setErrMsg("We couldn’t check your passes. Please try again.");
+        setLookupFailed(true);
         setStep("error");
+      } finally {
+        clearTimeout(timer);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => {
+      disposed = true;
+      clearTimeout(timer);
+      controller.abort();
+    };
+    // Request identity is fixed by the parent's account/slug-keyed mount.
+  }, [attempt, lookupRetry]);
 
   const redeem = async () => {
-    if (!passId) return;
+    if (!valid() || !passId || submitted.current || attempt.uncertain) return;
+    if (!expiresAt || Date.parse(expiresAt) <= Date.now()) {
+      setErrMsg("This pass has expired. Check Rewards for your available passes.");
+      setStep("error");
+      return;
+    }
+    submitted.current = true;
+    redeeming.current = true;
+    attempt.uncertain = true;
     setStep("redeeming");
+    const controller = new AbortController();
+    redemption.current = controller;
+    const timer = setTimeout(() => controller.abort(), 10_000);
     try {
-      const { data, error } = await rpc("redeem_phoenix_pass", { p_pass_id: passId, p_slug: slug });
-      if (error) throw new Error("redeem_failed");
+      const { data, error } = await supabase
+        .rpc("redeem_phoenix_pass", { p_pass_id: passId, p_slug: slug })
+        .abortSignal(controller.signal)
+        .retry(false);
+      if (!valid()) return;
+      if (error || !data || typeof data !== "object" || Array.isArray(data))
+        throw new Error(uncertainMessage);
       const res = data as {
         ok?: boolean;
         error?: string;
         link?: string;
         encrypted?: boolean;
       } | null;
-      if (!res || !res.ok || !res.link) {
+      if (res?.ok === false) {
         const map: Record<string, string> = {
           invalid_slug: "This mod can’t be unlocked with a pass right now.",
           no_link: "This mod doesn’t have a download ready yet.",
           invalid_or_used_pass:
             "That pass is no longer valid — it may have expired or already been used.",
         };
-        throw new Error(map[res?.error || ""] || "We couldn’t redeem your pass. Please try again.");
+        const message = map[res.error || ""];
+        if (message) attempt.uncertain = false;
+        throw new Error(message || uncertainMessage);
       }
+      if (
+        res?.ok !== true ||
+        typeof res.link !== "string" ||
+        !res.link ||
+        typeof res.encrypted !== "boolean"
+      )
+        throw new Error(uncertainMessage);
       let out = res.link;
       if (res.encrypted) {
         try {
           out = Cipher.decrypt(res.link);
         } catch {
-          throw new Error("We couldn’t read the download link. Please try again.");
+          throw new Error(uncertainMessage);
         }
       }
-      if (!out) throw new Error("No download link available.");
+      // Accept absolute web downloads only, including after decryption.
+      let destination: URL;
+      try {
+        destination = new URL(out);
+      } catch {
+        throw new Error(uncertainMessage);
+      }
+      if (
+        !["https:", "http:"].includes(destination.protocol) ||
+        destination.username ||
+        destination.password
+      )
+        throw new Error(uncertainMessage);
+      attempt.uncertain = false;
       setLink(out);
       setStep("done");
       playClick();
     } catch (e) {
+      if (!valid()) return;
       setErrMsg(e instanceof Error ? e.message : "Something went wrong.");
       setStep("error");
+    } finally {
+      clearTimeout(timer);
+      redeeming.current = false;
+    }
+  };
+
+  const close = () => {
+    if (!redeeming.current) onClose();
+  };
+  const copyLink = async () => {
+    try {
+      if (!navigator.clipboard) throw new Error("clipboard_unavailable");
+      await navigator.clipboard.writeText(link);
+      if (valid()) {
+        setCopyFailed(false);
+        toast.success("Link copied");
+      }
+    } catch {
+      if (valid()) setCopyFailed(true);
     }
   };
 
@@ -888,7 +1011,11 @@ function PhoenixPassModal({
     : "";
 
   return (
-    <ModalShell label={`Use a Phoenix Pass for ${modName}`} onClose={onClose}>
+    <ModalShell
+      label={`Use a Phoenix Pass for ${modName}`}
+      onClose={close}
+      dismissible={step !== "redeeming"}
+    >
       {step === "checking" ? (
         <div className="py-6 text-center">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-amber-300" />
@@ -909,21 +1036,24 @@ function PhoenixPassModal({
           {expiryLabel && <p className="mt-3 text-xs text-amber-300/90">Expires {expiryLabel}</p>}
           <button
             onClick={redeem}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-amber-950 transition hover:brightness-110"
+            className="touch-target mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-amber-950 transition hover:brightness-110"
           >
             <Sparkles className="h-4 w-4" /> Unlock now
           </button>
           <button
-            onClick={onClose}
-            className="mt-2 inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
+            onClick={close}
+            className="touch-target mt-2 inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
           >
             Not yet
           </button>
         </div>
       ) : step === "redeeming" ? (
-        <div className="py-6 text-center">
+        <div className="py-6 text-center" role="status" aria-live="polite">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-amber-300" />
           <p className="mt-4 text-sm text-muted-foreground">Redeeming your pass…</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Keep this window open while we confirm your download.
+          </p>
         </div>
       ) : step === "done" ? (
         <div className="text-center">
@@ -942,31 +1072,53 @@ function PhoenixPassModal({
             target="_blank"
             rel="noopener noreferrer"
             onClick={playClick}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground glow-primary transition hover:brightness-110"
+            className="touch-target mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground glow-primary transition hover:brightness-110"
           >
             <ExternalLink className="h-4 w-4" /> Open download link
           </a>
           <button
-            onClick={() => {
-              navigator.clipboard
-                ?.writeText(link)
-                .then(() => toast.success("Link copied"))
-                .catch(() => {});
-            }}
-            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold transition hover:border-primary/40"
+            onClick={copyLink}
+            className="touch-target mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold transition hover:border-primary/40"
           >
             <Copy className="h-4 w-4" /> Copy link
           </button>
+          {copyFailed && (
+            <p role="status" className="mt-3 text-sm text-muted-foreground">
+              Copy isn't available. Use the download link above, or copy its address from your
+              browser.
+            </p>
+          )}
         </div>
       ) : (
         <div className="text-center">
           <h3 className="mt-1 font-display text-xl font-extrabold uppercase tracking-tight text-balance text-destructive">
             Couldn&apos;t use your pass
           </h3>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">{errMsg}</p>
+          <p
+            role="alert"
+            className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty"
+          >
+            {errMsg}
+          </p>
+          {lookupFailed ? (
+            <button
+              type="button"
+              onClick={() => setLookupRetry((value) => value + 1)}
+              className="touch-target mt-4 w-full rounded-xl border border-border px-4 py-3 text-sm font-semibold"
+            >
+              Retry pass lookup
+            </button>
+          ) : (
+            <Link
+              to="/rewards"
+              className="touch-target mt-4 inline-flex w-full items-center justify-center rounded-xl border border-border px-4 py-3 text-sm font-semibold"
+            >
+              Check Rewards
+            </Link>
+          )}
           <button
-            onClick={onClose}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold transition hover:border-primary/40"
+            onClick={close}
+            className="touch-target mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold transition hover:border-primary/40"
           >
             Close
           </button>
