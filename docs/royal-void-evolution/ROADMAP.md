@@ -1,6 +1,6 @@
 # Execution map — 24 October 2026
 
-Current workstream: **Phase 19 — check-in recovery and progression state delivered**. Completion markers now require a valid streak acknowledgment, failures have explicit retry, and account/request guards prevent stale progress/award responses. All 52 local browser checks, four retry-layout repeats, TypeScript/build and 31 Node tests pass. New authenticated live validation remains unavailable; four signed-out live checks pass across three public routes. Claims, pass consumption, trainer-rank state and real mutation/OAuth/device gates remain.
+Current workstream: **Phase 19 — notification claim reliability implemented; rollout verification pending**. Claim sessions now isolate account/search state, reject duplicate submissions, bound requests without automatic replay, validate success payloads and direct uncertain results to a status check. All 48 local claim checks, TypeScript/build and 31 Node tests pass. See [CLAIMS.md](CLAIMS.md). Prior check-in/reward lookup releases remain delivered. Pass consumption, Tesla campaign claims, trainer-rank state, durable replay recovery and real mutation/OAuth/device gates remain; fresh authenticated live validation is still unavailable.
 
 This table describes progress, not final phase certification. Work has followed verified dependencies: tooling and themes first, then proven security, browser reliability and account/query defects. A later phase number does not imply every earlier phase is complete.
 

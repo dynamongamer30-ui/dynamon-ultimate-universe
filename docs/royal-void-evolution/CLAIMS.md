@@ -1,0 +1,23 @@
+# Notification claim reliability — 24 October 2026
+
+The `/claim` route handles notification daily-key and Phoenix Pass claims, next Trainer Rank rewards, and display of previously granted keys. Before this increment it treated every error as “Reward claimed,” accepted incomplete success payloads, allowed overlapping submissions, and retained request/results across account or search changes. Clipboard rejection was silent and long keys could stretch the card.
+
+The route now mounts a claim session for the current account, kind, reward reference and label. A synchronous submission fence stops repeated clicks before React updates the button. Requests use the generated RPC types, a ten-second abort deadline and explicit SDK `retry(false)`. Account/search disposal aborts outstanding work; an identity guard also rejects late results before state, success sound or clipboard feedback. Copy timers are cleaned up. The existing Tesla campaign child route remains separate.
+
+A success card requires a recognized acknowledgment: a nonempty key, a valid pass expiry, or a positive integer Trainer Rank with a supported reward kind and its required key. Errors keep the “Claim your reward” heading. A pass claim displays the returned expiry; Trainer Rank pass rewards point to Rewards for expiry because that RPC does not return it. Long keys wrap, and clipboard failure offers manual selection/copy. Missing reward identifiers send no mutation.
+
+## Uncertain responses and recovery
+
+The repository's `claim_trainer_level()` locks the caller's progress and advances to the next eligible level. A second successful call can therefore grant another level. `claim_phoenix_pass(id)` changes an unclaimed pass once; a repeat can return `invalid_or_expired` even after the first claim succeeded. `claim_daily_key(id)` returns the same eligible key, but uses a different contract. These source definitions informed the conservative client behavior; this is not certification of production concurrency or rollback.
+
+Once a claim is submitted, this mounted claim session offers no replay button, including after timeout, transport failure or malformed success. It directs the user to Rewards and Notifications to inspect the result. An abort stops waiting in the browser; it does not prove that the server rolled back. This fence is local to the mounted session, not a durable cross-tab or server idempotency guarantee. Reloading/reopening the route can start another explicit claim. A durable target-specific Trainer Rank receipt/recovery contract remains follow-up work.
+
+## Validation and boundaries
+
+All 40 checks in the main local matrix pass in 3.3 minutes across Chrome phone/tablet/desktop and WebKit: nine synthetic claim cases plus one signed-out four-route case per project. Eight additional checks pass in 56 seconds, covering valid Trainer Rank key/pass acknowledgments and 320/1440-pixel layouts with document fit and at least 44-pixel copy targets. The narrow fixture screenshot was visually reviewed. TypeScript, the production build and all 31 existing Node tests pass; lint has zero errors and the same 12 existing Fast Refresh warnings. Generated sitemap output was restored. Logs and synthetic screenshots use the `claims-*` prefix in the external audit directory. Public rollout verification follows.
+
+Synthetic claim tests are guarded to localhost, and all Supabase traffic is intercepted. Public tests use fresh signed-out contexts and only synthetic URL values. No real key is copied, reward claimed, pass consumed or production record edited for QA. No database definition, grant, policy, award amount or notification/native contract changes.
+
+The initial local run caught a React `ref` prop collision introduced while extracting the session component. It was corrected to the explicit `rewardRef` prop before the full matrix was restarted. Failed/interrupted logs remain in the external audit directory. Development component-tagger hydration warnings and the existing Firefox Windows launch limitation remain recorded.
+
+Open scope: the Phoenix Pass consumption modal, Tesla campaign's automatic authenticated claim path, Trainer Rank component account state, reward expiry refresh, cross-tab/server replay guarantees, and fresh authorized live mutation/OAuth/device coverage. Existing granted-key URLs still carry the key in their query string; this increment preserves that notification contract and does not establish independent ownership of a supplied URL value. Authenticated live browser tooling is still unavailable, so intercepted fixture evidence must not be described as live account validation. Full Phase 19 and the wider roadmap remain open.

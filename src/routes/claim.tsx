@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, Outlet, useRouterState, useSearch } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { Feather, Gift, KeyRound, Copy, Check, Loader2, PartyPopper, Trophy } from "lucide-react";
@@ -30,120 +30,173 @@ export const Route = createFileRoute("/claim")({
   component: ClaimPage,
 });
 
-// These RPCs aren't in the generated Supabase types yet; call loosely.
-// IMPORTANT: .bind(supabase) — a plain variable extraction loses `this`.
-const looseRpc = supabase.rpc.bind(supabase) as unknown as (
-  fn: string,
-  args?: Record<string, unknown>,
-) => Promise<{ data: unknown; error: { message: string } | null }>;
-
 type Result =
   | { kind: "key"; key: string; title: string }
   | { kind: "pass"; expiresAt: string; title: string }
   | { kind: "error"; message: string };
 
+const uncertainMessage =
+  "We couldn't confirm the result. Your reward may already have been claimed. Check Rewards and Notifications before starting another claim.";
+
 function ClaimPage() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { user } = useAuth();
-  const { kind, ref, label } = useSearch({ from: "/claim" }) as ClaimSearch;
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<Result | null>(
-    kind === "granted_key" && ref ? { kind: "key", key: ref, title: label || "Your key" } : null,
-  );
-  const [copied, setCopied] = useState(false);
+  const search = useSearch({ from: "/claim" }) as ClaimSearch;
+  const identity = JSON.stringify([user?.id, search.kind, search.ref, search.label]);
+  const current = useRef(identity);
+  current.current = identity;
 
   if (pathname === "/claim/tesla") return <Outlet />;
+  return (
+    <ClaimSession
+      key={identity}
+      kind={search.kind}
+      rewardRef={search.ref}
+      label={search.label}
+      signedIn={!!user}
+      isCurrent={() => current.current === identity}
+    />
+  );
+}
 
-  const copy = (text: string) => {
-    navigator.clipboard
-      ?.writeText(text)
-      .then(() => {
+function ClaimSession({
+  kind,
+  rewardRef: ref,
+  label,
+  signedIn,
+  isCurrent,
+}: Omit<ClaimSearch, "ref"> & {
+  rewardRef: string;
+  signedIn: boolean;
+  isCurrent: () => boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<Result | null>(
+    signedIn && kind === "granted_key" && ref
+      ? { kind: "key", key: ref, title: label || "Your key" }
+      : null,
+  );
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+  const submitted = useRef(false);
+  const active = useRef(true);
+  const controller = useRef<AbortController | null>(null);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+      controller.current?.abort();
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    };
+  }, []);
+  const valid = () => active.current && isCurrent();
+
+  const copy = async (text: string) => {
+    try {
+      if (!navigator.clipboard) throw new Error("clipboard_unavailable");
+      await navigator.clipboard.writeText(text);
+      if (valid()) {
+        setCopyError(false);
         setCopied(true);
         toast.success("Copied");
-        setTimeout(() => setCopied(false), 1800);
-      })
-      .catch(() => {});
+        if (copyTimer.current) clearTimeout(copyTimer.current);
+        copyTimer.current = setTimeout(() => setCopied(false), 1800);
+      }
+    } catch {
+      if (valid()) {
+        setCopied(false);
+        setCopyError(true);
+      }
+    }
   };
 
   const claim = async () => {
+    // Keep the fence after any submission: a lost response can still have committed.
+    // In particular, replaying claim_trainer_level can advance a different level.
+    if (!signedIn || !valid() || submitted.current || result || !kind || kind === "granted_key")
+      return;
+    if (kind !== "trainer_level" && !ref) return;
+    submitted.current = true;
     setBusy(true);
+    const request = new AbortController();
+    controller.current = request;
+    const timer = setTimeout(() => request.abort(), 10_000);
     try {
+      const { data, error } = await (
+        kind === "trainer_level"
+          ? supabase.rpc("claim_trainer_level")
+          : kind === "phoenix_pass"
+            ? supabase.rpc("claim_phoenix_pass", { p_id: ref })
+            : supabase.rpc("claim_daily_key", { p_id: ref })
+      )
+        .abortSignal(request.signal)
+        .retry(false);
+      if (!valid()) return;
+      if (error || !data || typeof data !== "object" || Array.isArray(data))
+        throw new Error("unconfirmed");
+      const res = data as {
+        ok?: boolean;
+        error?: string;
+        level?: number;
+        reward_kind?: string;
+        key?: string;
+        expires_at?: string;
+      };
+      if (res.ok !== true) {
+        const messages: Record<string, string> = {
+          no_next_level: "You've already claimed every level — nothing left to claim!",
+          not_enough_days: "You're not there yet — keep your login streak going.",
+          not_signed_in: "Sign in again to check this reward.",
+          invalid_or_expired:
+            "This pass is unavailable to claim. It may already be active or its claim window may have passed. Check Rewards for your active pass.",
+          not_a_winner: "This key isn't available to claim — it may have expired.",
+        };
+        setResult({ kind: "error", message: messages[res.error || ""] || uncertainMessage });
+        return;
+      }
       if (kind === "trainer_level") {
-        const { data, error } = await looseRpc("claim_trainer_level");
-        if (error) throw new Error("claim_failed");
-        const res = data as {
-          ok?: boolean;
-          error?: string;
-          level?: number;
-          reward_kind?: string;
-          key?: string;
-        } | null;
-        if (!res?.ok) {
-          const map: Record<string, string> = {
-            no_next_level: "You've already claimed every level — nothing left to claim!",
-            not_enough_days: "You're not there yet — keep your login streak going.",
-          };
-          setResult({
-            kind: "error",
-            message: map[res?.error || ""] || "Couldn't claim this level. Please try again.",
-          });
-          return;
-        }
-        playClick();
+        if (!Number.isInteger(res.level) || res.level! < 1) throw new Error("unconfirmed");
         if (res.reward_kind === "phoenix_pass") {
           setResult({
             kind: "pass",
             expiresAt: "",
             title: `Trainer Level ${res.level}: Phoenix Pass`,
           });
-        } else {
+        } else if (
+          ["trainer_dg_key", "trainer_vip_key"].includes(res.reward_kind || "") &&
+          typeof res.key === "string" &&
+          res.key.trim()
+        ) {
           setResult({
             kind: "key",
-            key: res.key || "",
+            key: res.key,
             title: `Trainer Level ${res.level}: ${res.reward_kind === "trainer_vip_key" ? "VIP Key" : "DG Key"}`,
           });
-        }
+        } else throw new Error("unconfirmed");
+        playClick();
         return;
       }
 
       if (kind === "phoenix_pass") {
-        const { data, error } = await looseRpc("claim_phoenix_pass", { p_id: ref });
-        if (error) throw new Error("claim_failed");
-        const res = data as { ok?: boolean; error?: string; expires_at?: string } | null;
-        if (!res?.ok) {
-          setResult({
-            kind: "error",
-            message:
-              res?.error === "invalid_or_expired"
-                ? "This pass can't be claimed — the 24-hour window may have passed."
-                : "Couldn't claim your pass. Please try again.",
-          });
-          return;
-        }
+        if (typeof res.expires_at !== "string" || !Number.isFinite(Date.parse(res.expires_at)))
+          throw new Error("unconfirmed");
         playClick();
         setResult({ kind: "pass", expiresAt: res.expires_at || "", title: "Phoenix Pass" });
         return;
       }
 
       if (kind === "daily_key") {
-        const { data, error } = await looseRpc("claim_daily_key", { p_id: ref });
-        if (error) throw new Error("claim_failed");
-        const res = data as { ok?: boolean; error?: string; key?: string } | null;
-        if (!res?.ok || !res.key) {
-          setResult({
-            kind: "error",
-            message: "This key isn't available to claim — it may have expired.",
-          });
-          return;
-        }
+        if (typeof res.key !== "string" || !res.key.trim()) throw new Error("unconfirmed");
         playClick();
         setResult({ kind: "key", key: res.key, title: "Daily Key" });
         return;
       }
     } catch {
-      setResult({ kind: "error", message: "Something went wrong. Please try again." });
+      if (valid()) setResult({ kind: "error", message: uncertainMessage });
     } finally {
-      setBusy(false);
+      clearTimeout(timer);
+      if (valid()) setBusy(false);
     }
   };
 
@@ -160,19 +213,21 @@ function ClaimPage() {
           id="claim-title"
           className="mt-3 font-display text-4xl font-black uppercase tracking-tight sm:text-5xl"
         >
-          {result ? "Reward claimed" : "Claim your reward"}
+          {result?.kind === "key" || result?.kind === "pass"
+            ? "Reward claimed"
+            : "Claim your reward"}
         </h1>
       </header>
 
       <div className="mx-auto mt-8 max-w-md">
-        {!user ? (
+        {!signedIn ? (
           <div className="rounded-2xl border border-dashed border-border bg-card/30 p-8 text-center text-muted-foreground">
             <Link to="/auth" className="font-semibold text-primary hover:underline">
               Sign in
             </Link>{" "}
             to claim this.
           </div>
-        ) : !kind ? (
+        ) : !kind || (kind !== "trainer_level" && !ref) ? (
           <div className="rounded-2xl border border-dashed border-border bg-card/30 p-8 text-center text-muted-foreground">
             Nothing to claim here — open this page from a reward notification.
           </div>
@@ -185,7 +240,7 @@ function ClaimPage() {
             <PartyPopper className="mx-auto h-8 w-8 text-primary" />
             <p className="mt-3 font-display text-lg font-bold">{result.title}</p>
             <div className="mt-4 flex items-center gap-2">
-              <code className="flex-1 select-all rounded-lg border border-border bg-background/60 px-3 py-3 text-center font-mono text-sm font-bold tracking-wider">
+              <code className="min-w-0 flex-1 select-all break-all rounded-lg border border-border bg-background/60 px-3 py-3 text-center font-mono text-sm font-bold tracking-wider">
                 {result.key}
               </code>
               <button
@@ -201,6 +256,11 @@ function ClaimPage() {
                 )}
               </button>
             </div>
+            {copyError && (
+              <p role="status" className="mt-3 text-sm text-muted-foreground">
+                Copy isn't available. Select the key above and copy it manually.
+              </p>
+            )}
             <p className="mt-3 text-xs text-muted-foreground">
               Paste this key into the app to activate it.
             </p>
@@ -214,7 +274,10 @@ function ClaimPage() {
             <Feather className="mx-auto h-8 w-8 text-amber-300" />
             <p className="mt-3 font-display text-lg font-bold">{result.title} claimed 🔥</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Good for 30 days — use it on any mod's download page.
+              {result.expiresAt
+                ? `Expires ${new Date(result.expiresAt).toLocaleString()}. `
+                : "Check Rewards for your pass expiry. "}
+              Use it on a mod's download page.
             </p>
             <Link
               to="/mods"
@@ -230,16 +293,12 @@ function ClaimPage() {
             className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6 text-center"
           >
             <p className="text-sm text-destructive">{result.message}</p>
-            <button
-              type="button"
-              onClick={() => {
-                setResult(null);
-                setCopied(false);
-              }}
+            <Link
+              to="/rewards"
               className="touch-target mt-4 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-card/60"
             >
-              Try again
-            </button>
+              Check Rewards
+            </Link>
           </div>
         ) : (
           <div className="rounded-2xl border border-border bg-card/40 p-6 text-center">
