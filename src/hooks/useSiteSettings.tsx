@@ -98,6 +98,7 @@ type Ctx = {
   mods: Mod[]; // merged + visible
   allMods: Mod[]; // merged including hidden
   refresh: () => Promise<void>;
+  featuredSlug: string | null;
 };
 
 const C = createContext<Ctx>({
@@ -111,6 +112,7 @@ const C = createContext<Ctx>({
   mods: baseMods,
   allMods: baseMods,
   refresh: async () => {},
+  featuredSlug: null,
 });
 
 function applyOverride(
@@ -277,6 +279,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         mods,
         allMods,
         refresh,
+        featuredSlug,
         websiteAppearance,
       }}
     >

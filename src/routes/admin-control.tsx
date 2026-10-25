@@ -41,6 +41,7 @@ import { mods as baseMods } from "@/lib/mods";
 import { Cipher } from "@/lib/cipher";
 import { toast } from "sonner";
 import { WebsiteAppearanceEditor } from "@/components/WebsiteAppearanceEditor";
+import { useOwnerMutation } from "@/hooks/useOwnerMutation";
 
 export const Route = createFileRoute("/admin-control")({
   ssr: false,
@@ -106,7 +107,7 @@ function ControlPanel() {
         </Link>
       </div>
       <header className="mt-4 edge-light rounded-2xl glass p-6 sm:p-10">
-        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-300">
+        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-ink">
           <Shield className="h-3.5 w-3.5" /> Owner Control Panel
         </p>
         <h1 className="mt-3 font-display text-3xl font-black uppercase tracking-tight sm:text-4xl">
@@ -189,12 +190,17 @@ function ControlPanel() {
 }
 
 // ---------- Generic settings save helper ----------
-async function saveSetting(key: string, value: unknown) {
-  const { error } = await supabase.from("site_settings").upsert({ key, value: value as never });
-  if (error) {
-    toast.error(error.message);
-    return false;
-  }
+async function saveSetting(key: string, value: unknown, signal: AbortSignal) {
+  const { data, error } = await supabase
+    .from("site_settings")
+    .upsert({ key, value: value as never })
+    .select("key")
+    .abortSignal(signal)
+    .maybeSingle()
+    .retry(false);
+  if (signal.aborted) throw new Error("Save was not confirmed");
+  if (error) throw new Error(error.message);
+  if (data?.key !== key) throw new Error("Save was not confirmed. Your draft is retained.");
   toast.success("Saved");
   return true;
 }
@@ -622,13 +628,18 @@ function SecurityEditor() {
 // ---------- Branding ----------
 function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: () => void }) {
   const [v, setV] = useState<SiteBranding>(initial);
-  const [saving, setSaving] = useState(false);
+  const { saving, error, run } = useOwnerMutation();
   const f =
     <K extends keyof SiteBranding>(k: K) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setV({ ...v, [k]: e.target.value } as SiteBranding);
   return (
-    <Card title="Branding & Hero copy" desc="Site identity, hero headline, subtitle and CTAs.">
+    <Card
+      saving={saving}
+      error={error}
+      title="Branding & Hero copy"
+      desc="Site identity, hero headline, subtitle and CTAs."
+    >
       <Grid>
         <Field label="Site name">
           <input value={v.siteName} onChange={f("siteName")} className={inp} />
@@ -664,11 +675,12 @@ function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: 
       <SaveRow
         saving={saving}
         onReset={() => setV(DEFAULT_BRANDING)}
-        onSave={async () => {
-          setSaving(true);
-          if (await saveSetting("branding", v)) onSaved();
-          setSaving(false);
-        }}
+        onSave={() =>
+          void run(async (signal) => {
+            await saveSetting("branding", v, signal);
+            onSaved();
+          })
+        }
       />
     </Card>
   );
@@ -677,9 +689,11 @@ function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: 
 // ---------- Announcement ----------
 function AnnouncementEditor({ initial, onSaved }: { initial: Announcement; onSaved: () => void }) {
   const [v, setV] = useState<Announcement>(initial);
-  const [saving, setSaving] = useState(false);
+  const { saving, error, run } = useOwnerMutation();
   return (
     <Card
+      saving={saving}
+      error={error}
       title="Top announcement bar"
       desc="Show a global banner above every page. Use it for new drops, maintenance or events."
     >
@@ -723,11 +737,12 @@ function AnnouncementEditor({ initial, onSaved }: { initial: Announcement; onSav
       <SaveRow
         saving={saving}
         onReset={() => setV(DEFAULT_ANNOUNCEMENT)}
-        onSave={async () => {
-          setSaving(true);
-          if (await saveSetting("announcement", v)) onSaved();
-          setSaving(false);
-        }}
+        onSave={() =>
+          void run(async (signal) => {
+            await saveSetting("announcement", v, signal);
+            onSaved();
+          })
+        }
       />
     </Card>
   );
@@ -736,9 +751,11 @@ function AnnouncementEditor({ initial, onSaved }: { initial: Announcement; onSav
 // ---------- Socials ----------
 function SocialsEditor({ initial, onSaved }: { initial: Socials; onSaved: () => void }) {
   const [v, setV] = useState<Socials>(initial);
-  const [saving, setSaving] = useState(false);
+  const { saving, error, run } = useOwnerMutation();
   return (
     <Card
+      saving={saving}
+      error={error}
       title="Social channels"
       desc="Update these any time — every page reflects the change instantly."
     >
@@ -775,11 +792,12 @@ function SocialsEditor({ initial, onSaved }: { initial: Socials; onSaved: () => 
       <SaveRow
         saving={saving}
         onReset={() => setV(DEFAULT_SOCIALS)}
-        onSave={async () => {
-          setSaving(true);
-          if (await saveSetting("socials", v)) onSaved();
-          setSaving(false);
-        }}
+        onSave={() =>
+          void run(async (signal) => {
+            await saveSetting("socials", v, signal);
+            onSaved();
+          })
+        }
       />
     </Card>
   );
@@ -787,21 +805,16 @@ function SocialsEditor({ initial, onSaved }: { initial: Socials; onSaved: () => 
 
 // ---------- Featured ----------
 function FeaturedEditor({ onSaved }: { onSaved: () => void }) {
-  const [slug, setSlug] = useState<string>("");
-  const [saving, setSaving] = useState(false);
-  useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", "featured")
-      .maybeSingle()
-      .then(({ data }) => {
-        const v = data?.value as { slug?: string } | undefined;
-        setSlug(v?.slug ?? "");
-      });
-  }, []);
+  const { featuredSlug } = useSiteSettings();
+  const [slug, setSlug] = useState(featuredSlug ?? "");
+  const { saving, error, run } = useOwnerMutation();
   return (
-    <Card title="Featured mod" desc="Pinned to the top of the vault and shown as the hero card.">
+    <Card
+      saving={saving}
+      error={error}
+      title="Featured mod"
+      desc="Pinned to the top of the vault and shown as the hero card."
+    >
       <Field label="Mod">
         <ThemedSelect
           value={slug === "" ? "__auto__" : slug}
@@ -817,11 +830,12 @@ function FeaturedEditor({ onSaved }: { onSaved: () => void }) {
       <SaveRow
         saving={saving}
         onReset={() => setSlug("")}
-        onSave={async () => {
-          setSaving(true);
-          if (await saveSetting("featured", { slug })) onSaved();
-          setSaving(false);
-        }}
+        onSave={() =>
+          void run(async (signal) => {
+            await saveSetting("featured", { slug }, signal);
+            onSaved();
+          })
+        }
       />
     </Card>
   );
@@ -903,74 +917,138 @@ function ModRowEditor({
     hidden: existing?.hidden ?? false,
     featured: existing?.featured ?? false,
   });
-  const [saving, setSaving] = useState(false);
+  const { saving, error, run } = useOwnerMutation();
+  const confirming = useRef(false);
 
-  const save = async () => {
-    setSaving(true);
-    let changelog: unknown = null;
-    if (v.changelog.trim()) {
-      try {
-        changelog = JSON.parse(v.changelog);
-      } catch {
-        toast.error("Changelog JSON is invalid");
-        setSaving(false);
-        return;
+  const save = () =>
+    run(async (signal) => {
+      let changelog: unknown = null;
+      if (v.changelog.trim()) {
+        try {
+          changelog = JSON.parse(v.changelog);
+        } catch {
+          throw new Error("Changelog JSON is invalid. Your draft is retained.");
+        }
       }
-    }
-    const features = v.features
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const payload = {
-      slug,
-      name: v.name || null,
-      tagline: v.tagline || null,
-      description: v.description || null,
-      version: v.version || null,
-      size: v.size || null,
-      updated_date: v.updated_date || null,
-      youtube_id: v.youtube_id || null,
-      features: features.length ? features : null,
-      changelog,
-      downloads_absolute: v.downloads_absolute === "" ? null : Number(v.downloads_absolute),
-      likes_absolute: v.likes_absolute === "" ? null : Number(v.likes_absolute),
-      seed_rating_points: v.seed_rating_points === "" ? null : Number(v.seed_rating_points),
-      seed_rating_count: v.seed_rating_count === "" ? null : Number(v.seed_rating_count),
-      seed_review_likes: v.seed_review_likes === "" ? null : Number(v.seed_review_likes),
-      download_url: v.download_url || null,
-      // Encrypt the MEGA + Follow links so the ciphertext (not the raw URL) is
-      // what's stored and shipped to the public site.
-      mega_enc: v.mega.trim() ? Cipher.encrypt(v.mega.trim()) : null,
-      follow_enc: v.follow.trim() ? Cipher.encrypt(v.follow.trim()) : null,
-      hidden: v.hidden,
-      featured: v.featured,
-    };
-    const { error } = await supabase.from("mod_overrides").upsert(payload as never);
-    if (error) toast.error(error.message);
-    else {
+      if (
+        changelog !== null &&
+        (!Array.isArray(changelog) ||
+          !changelog.every(
+            (entry) =>
+              entry &&
+              typeof entry.version === "string" &&
+              typeof entry.date === "string" &&
+              Array.isArray(entry.notes) &&
+              entry.notes.every((note: unknown) => typeof note === "string"),
+          ))
+      )
+        throw new Error(
+          "Changelog must be a list of versions, dates and note lists. Your draft is retained.",
+        );
+      const features = v.features
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const payload = {
+        slug,
+        name: v.name || null,
+        tagline: v.tagline || null,
+        description: v.description || null,
+        version: v.version || null,
+        size: v.size || null,
+        updated_date: v.updated_date || null,
+        youtube_id: v.youtube_id || null,
+        features: features.length ? features : null,
+        changelog,
+        downloads_absolute: v.downloads_absolute === "" ? null : Number(v.downloads_absolute),
+        likes_absolute: v.likes_absolute === "" ? null : Number(v.likes_absolute),
+        seed_rating_points: v.seed_rating_points === "" ? null : Number(v.seed_rating_points),
+        seed_rating_count: v.seed_rating_count === "" ? null : Number(v.seed_rating_count),
+        seed_review_likes: v.seed_review_likes === "" ? null : Number(v.seed_review_likes),
+        download_url: v.download_url || null,
+        // Encrypt the MEGA + Follow links so the ciphertext (not the raw URL) is
+        // what's stored and shipped to the public site.
+        mega_enc: v.mega.trim() ? Cipher.encrypt(v.mega.trim()) : null,
+        follow_enc: v.follow.trim() ? Cipher.encrypt(v.follow.trim()) : null,
+        hidden: v.hidden,
+        featured: v.featured,
+      };
+      for (const key of [
+        "downloads_absolute",
+        "likes_absolute",
+        "seed_rating_count",
+        "seed_review_likes",
+      ] as const) {
+        const count = payload[key];
+        if (count !== null && (!Number.isSafeInteger(count) || count < 0))
+          throw new Error("Counts must be non-negative whole numbers. Your draft is retained.");
+      }
+      if (
+        payload.seed_rating_points !== null &&
+        (!Number.isFinite(payload.seed_rating_points) || payload.seed_rating_points < 0)
+      )
+        throw new Error("Rating points must be a non-negative number. Your draft is retained.");
+      const { data, error } = await supabase
+        .from("mod_overrides")
+        .upsert(payload as never)
+        .select("slug")
+        .abortSignal(signal)
+        .maybeSingle()
+        .retry(false);
+      if (signal.aborted) throw new Error("Save was not confirmed");
+      if (error) throw new Error(error.message);
+      if (data?.slug !== slug)
+        throw new Error("Mod save was not confirmed. Your draft is retained.");
       toast.success("Mod saved");
       onSaved();
-    }
-    setSaving(false);
-  };
+    });
 
   const clear = async () => {
-    if (
-      !(await confirm({
-        title: "Reset mod",
-        description: "Reset this mod to defaults?",
-        confirmText: "Reset",
-        danger: true,
-      }))
-    )
-      return;
-    await supabase.from("mod_overrides").delete().eq("slug", slug);
-    toast.success("Reset");
-    onSaved();
+    if (saving || confirming.current) return;
+    confirming.current = true;
+    try {
+      if (
+        !(await confirm({
+          title: "Reset mod",
+          description: "Reset this mod to defaults?",
+          confirmText: "Reset",
+          danger: true,
+        }))
+      )
+        return;
+      await run(async (signal) => {
+        const { data, error } = await supabase
+          .from("mod_overrides")
+          .delete()
+          .eq("slug", slug)
+          .select("slug")
+          .abortSignal(signal)
+          .maybeSingle()
+          .retry(false);
+        if (signal.aborted) throw new Error("Reset was not confirmed");
+        if (error) throw new Error(error.message);
+        if (data?.slug !== slug)
+          throw new Error("Reset was not confirmed. Check the saved mod before trying again.");
+        toast.success("Reset");
+        onSaved();
+      });
+    } finally {
+      confirming.current = false;
+    }
   };
 
   return (
-    <div className="border-t border-border/60 bg-background/30 p-5">
+    <fieldset
+      disabled={saving}
+      aria-busy={saving}
+      className="min-w-0 border-t border-border/60 bg-background/30 p-5"
+    >
+      <legend className="sr-only">Edit {base.name}</legend>
+      {error && (
+        <p role="alert" className="mb-4 break-words text-sm text-destructive">
+          {error}
+        </p>
+      )}
       <div className="mb-3 flex flex-wrap gap-4 text-sm">
         <label className="inline-flex items-center gap-2">
           <input
@@ -1194,7 +1272,7 @@ function ModRowEditor({
           Save mod
         </button>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -1293,10 +1371,14 @@ function Card({
   title,
   desc,
   children,
+  saving = false,
+  error,
 }: {
   title: string;
   desc?: string;
   children: React.ReactNode;
+  saving?: boolean;
+  error?: string | null;
 }) {
   return (
     <section className="edge-light rounded-2xl glass p-6 sm:p-8">
@@ -1305,7 +1387,15 @@ function Card({
         {title}
       </h2>
       {desc && <p className="mt-1 text-sm text-muted-foreground">{desc}</p>}
-      <div className="mt-6 space-y-4">{children}</div>
+      {error && (
+        <p role="alert" className="mt-4 break-words text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <fieldset disabled={saving} aria-busy={saving} className="mt-6 min-w-0 space-y-4">
+        <legend className="sr-only">{title} settings</legend>
+        {children}
+      </fieldset>
     </section>
   );
 }
@@ -1335,6 +1425,7 @@ function SaveRow({
     <div className="mt-4 flex justify-end gap-2">
       <button
         onClick={onReset}
+        disabled={saving}
         className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
       >
         Reset defaults
