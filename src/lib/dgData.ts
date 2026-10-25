@@ -82,10 +82,15 @@ export interface ActivatedUser {
 
 type Row = { id: string; data: Record<string, unknown> };
 
-async function selectAll(table: string): Promise<Row[]> {
-  const { data, error } = await supabase.from(table as never).select("id,data");
+async function selectAll(table: string, signal?: AbortSignal): Promise<Row[]> {
+  const { data, error } = await supabase
+    .from(table as never)
+    .select("id,data")
+    .abortSignal(signal ?? AbortSignal.timeout(10000))
+    .retry(false);
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as Row[];
+  if (!Array.isArray(data)) throw new Error("Invalid management lookup response");
+  return data as unknown as Row[];
 }
 
 async function selectOne(table: string, id: string): Promise<Record<string, unknown> | null> {
@@ -93,6 +98,7 @@ async function selectOne(table: string, id: string): Promise<Record<string, unkn
     .from(table as never)
     .select("data")
     .eq("id", id)
+    .abortSignal(AbortSignal.timeout(10000))
     .maybeSingle();
   if (error) throw new Error(error.message);
   return (data as { data?: Record<string, unknown> } | null)?.data ?? null;
@@ -382,8 +388,8 @@ export async function listAccessTokens(): Promise<AccessToken[]> {
   }));
 }
 
-export async function listBannedDevices(): Promise<BannedDevice[]> {
-  const rows = await selectAll("banned_devices");
+export async function listBannedDevices(signal?: AbortSignal): Promise<BannedDevice[]> {
+  const rows = await selectAll("banned_devices", signal);
   return rows.map((r) => {
     // Prefer `time` (unix seconds). Fall back to legacy `at` (ms) if present.
     const timeSec = Number(r.data?.time ?? 0);

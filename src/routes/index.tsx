@@ -96,8 +96,8 @@ function Index() {
       {/* ── HERO ─────────────────────────────────────────── */}
       <section aria-labelledby="homepage-title" className="relative pt-4 sm:pt-10 lg:pt-14">
         <div className="hero-field">
-          <div className="grid gap-8 lg:grid-cols-[1.25fr_1fr] lg:items-center lg:gap-12">
-            <div>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.25fr_1fr] lg:items-center lg:gap-12">
+            <div className="min-w-0">
               <motion.p
                 initial={reducedMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -166,7 +166,7 @@ function Index() {
               initial={reducedMotion ? false : { opacity: 1, scale: 0.94, rotate: 1 }}
               animate={{ opacity: 1, scale: 1, rotate: 0 }}
               transition={reducedMotion ? { duration: 0 } : { ...spring, delay: 0.1 }}
-              className="relative mx-auto w-full max-w-md"
+              className="relative mx-auto min-w-0 w-full max-w-md"
             >
               <Link
                 to="/mods/$slug"
@@ -192,7 +192,7 @@ function Index() {
                   />
                 </div>
                 <div className="relative p-5">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-black uppercase tracking-widest text-primary-foreground">
                       <TrendingUp className="h-3 w-3" /> Featured build
                     </div>
@@ -203,7 +203,7 @@ function Index() {
                   <p className="mt-3 font-display text-2xl font-extrabold uppercase tracking-tight">
                     {top.name}
                   </p>
-                  <div className="mt-1 flex items-center justify-between">
+                  <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-muted-foreground">
                       v{top.version} · {formatCount(top.downloads)}+ downloads
                     </p>

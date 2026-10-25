@@ -11,7 +11,13 @@ test("signed-out owner routes expose no management data or mutations", async ({ 
     )
       privateRequests.push(url.pathname);
   });
-  for (const route of ["/admin", "/admin-keys"]) {
+  for (const route of [
+    "/admin",
+    "/admin-keys",
+    "/admin-control",
+    "/admin-loader",
+    "/admin-notifications",
+  ]) {
     await page.goto(route, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Owner sign-in", exact: true })).toBeVisible({
       timeout: 20000,

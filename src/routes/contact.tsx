@@ -27,8 +27,8 @@ function Contact() {
   };
   return (
     <PageShell>
-      <section className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
-        <div className="route-hero">
+      <section className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <div className="route-hero min-w-0">
           <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink">
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Get in touch
@@ -47,8 +47,8 @@ function Contact() {
           </div>
         </div>
 
-        <form onSubmit={submit} className="edge-light rounded-2xl glass p-6 sm:p-8">
-          <div className="grid gap-4 sm:grid-cols-2">
+        <form onSubmit={submit} className="edge-light min-w-0 rounded-2xl glass p-6 sm:p-8">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="contact-name" className="sr-only">
                 Your name

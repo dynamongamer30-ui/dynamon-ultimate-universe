@@ -1,5 +1,7 @@
+import { useOwnerResource } from "@/hooks/useOwnerResource";
+import { useOwnerMutation } from "@/hooks/useOwnerMutation";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Loader2,
   RefreshCw,
@@ -26,10 +28,9 @@ import {
   uploadPayload,
   banDevice,
   unbanDevice,
-  type ListDevicesResult,
   type UploadPayloadArgs,
 } from "@/lib/dgWorker";
-import { listBannedDevices, type BannedDevice } from "@/lib/dgData";
+import { listBannedDevices } from "@/lib/dgData";
 import { useConfirm } from "@/hooks/useConfirm";
 
 export const Route = createFileRoute("/admin-loader")({
@@ -60,7 +61,10 @@ function LoaderShell() {
   const [adminKey, setKey] = useState<string>(getAdminKey());
 
   const saveKey = (k: string) => {
-    setAdminKey(k);
+    if (!setAdminKey(k)) {
+      toast.error("Could not save the admin key in this browser session.");
+      return;
+    }
     setKey(k);
     toast.success("Admin key saved for this session");
   };
@@ -121,6 +125,7 @@ function AdminKeyCard({ current, onSave }: { current: string; onSave: (k: string
       <div className="flex gap-2">
         <Input
           type="password"
+          aria-label="License Worker admin key"
           placeholder="Paste admin key"
           value={v}
           onChange={(e) => setV(e.target.value)}
@@ -133,7 +138,7 @@ function AdminKeyCard({ current, onSave }: { current: string; onSave: (k: string
           Save
         </Button>
         {current && (
-          <Button variant="outline" onClick={() => onSave("")}>
+          <Button variant="outline" aria-label="Clear admin key" onClick={() => onSave("")}>
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
@@ -144,28 +149,11 @@ function AdminKeyCard({ current, onSave }: { current: string; onSave: (k: string
 
 // ---------- 1) Devices ----------
 
-function DevicesPanel({ onAuthFail }: { onAuthFail: () => void }) {
-  const [data, setData] = useState<ListDevicesResult | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const reload = async () => {
-    setLoading(true);
-    try {
-      const r = await listDevices();
-      setData(r);
-    } catch (e) {
-      const msg = (e as Error).message;
-      if (/401|403|unauthor|forbidden/i.test(msg)) {
-        toast.error("Admin key rejected — re-enter it");
-        onAuthFail();
-      } else toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    reload(); /* eslint-disable-next-line */
-  }, []);
+function DevicesPanel(_props: { onAuthFail: () => void }) {
+  const resource = useOwnerResource(useCallback((signal: AbortSignal) => listDevices(signal), []));
+  const data = resource.data,
+    loading = resource.loading,
+    reload = resource.reload;
 
   return (
     <div className="rounded-2xl border border-border bg-card/60 p-5">
@@ -195,7 +183,11 @@ function DevicesPanel({ onAuthFail }: { onAuthFail: () => void }) {
         </Button>
       </div>
 
-      {!data ? (
+      {resource.error ? (
+        <p role="alert" className="break-words text-sm text-destructive">
+          {resource.error} Use Refresh to retry.
+        </p>
+      ) : !data ? (
         <div className="flex justify-center py-8">
           <Loader2 className="h-5 w-5 animate-spin text-primary-ink" />
         </div>
@@ -267,12 +259,29 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
     min_client: 3,
     meta_sig_b64: "",
   });
-  const [busy, setBusy] = useState(false);
+  const mutation = useOwnerMutation();
+  const busy = mutation.saving;
+  const fileRevision = useRef(0);
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
 
   const upd = (k: keyof UploadPayloadArgs, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const readFileTo = async (k: keyof UploadPayloadArgs, file: File) => {
-    const text = (await file.text()).trim();
+    const revision = ++fileRevision.current;
+    let text: string;
+    try {
+      text = (await file.text()).trim();
+    } catch {
+      if (active.current) toast.error("Could not read this file. Your draft is unchanged.");
+      return;
+    }
+    if (!active.current || revision !== fileRevision.current || busy) return;
     if (file.name.toLowerCase().endsWith(".json")) {
       try {
         const payload = JSON.parse(text) as Partial<Record<keyof UploadPayloadArgs, unknown>>;
@@ -324,23 +333,23 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
     for (const k of Object.keys(form) as (keyof UploadPayloadArgs)[]) {
       if (!String(form[k]).trim()) return toast.error(`Missing ${k}`);
     }
-    setBusy(true);
-    try {
-      const r = await uploadPayload(form);
-      toast.success(`Uploaded build ${form.build}`);
-      void r;
-    } catch (err) {
-      const msg = (err as Error).message;
-      if (/401|403|unauthor|forbidden/i.test(msg)) {
-        toast.error("Admin key rejected — re-enter it");
-        onAuthFail();
-      } else toast.error(msg);
-    } finally {
-      setBusy(false);
-    }
+    await mutation.run(async (signal) => {
+      try {
+        const r = await uploadPayload(form, signal);
+        toast.success(`Uploaded build ${form.build}`);
+        void r;
+      } catch (err) {
+        const msg = (err as Error).message;
+        if (/401|403|unauthor|forbidden/i.test(msg)) {
+          toast.error("Admin key rejected — re-enter it");
+          onAuthFail();
+        }
+        throw err;
+      }
+    });
   };
 
-  const Field = ({
+  const field = ({
     k,
     label,
     rows = 3,
@@ -356,12 +365,18 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
           <FileUp className="h-3 w-3" /> Load file
           <input
             type="file"
+            aria-label={`Load ${label}`}
             className="hidden"
-            onChange={(e) => e.target.files?.[0] && readFileTo(k, e.target.files[0])}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void readFileTo(k, file);
+              e.target.value = "";
+            }}
           />
         </label>
       </div>
       <Textarea
+        aria-label={label}
         rows={rows}
         value={String(form[k])}
         onChange={(e) => upd(k, e.target.value)}
@@ -377,40 +392,49 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
         Pushes a new encrypted build to <code className="font-mono">/admin/upload-payload</code>.
       </p>
 
-      <form onSubmit={submit} className="grid gap-4">
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground">Build</label>
-          <Input
-            className="mt-1"
-            placeholder="e.g. 42 or 1.2.3"
-            value={String(form.build)}
-            onChange={(e) => upd("build", e.target.value)}
-          />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field k="ct_b64" label="ct_b64 (ciphertext)" rows={4} />
-          <Field k="iv_b64" label="iv_b64" rows={4} />
-          <Field k="sig_b64" label="sig_b64" rows={4} />
-          <Field k="key_b64" label="key_b64" rows={4} />
-        </div>
-        <Field k="ct_sha" label="ct_sha (hex)" rows={2} />
-        <Field k="meta_sig_b64" label="Metadata signature (meta_sig_b64)" rows={2} />
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field k="protocol" label="Protocol (2)" rows={1} />
-          <Field k="min_client" label="Minimum client (3)" rows={1} />
-          <Field k="issued" label="Issued (Unix seconds)" rows={1} />
-        </div>
+      {mutation.error && (
+        <p role="alert" className="mb-4 break-words text-sm text-destructive">
+          {mutation.error}
+        </p>
+      )}
+      <form onSubmit={submit}>
+        <fieldset disabled={busy} aria-busy={busy} className="grid min-w-0 gap-4">
+          <legend className="sr-only">OTA payload upload</legend>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Build</label>
+            <Input
+              className="mt-1"
+              placeholder="e.g. 42 or 1.2.3"
+              aria-label="Payload build"
+              value={String(form.build)}
+              onChange={(e) => upd("build", e.target.value)}
+            />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {field({ k: "ct_b64", label: "ct_b64 (ciphertext)", rows: 4 })}
+            {field({ k: "iv_b64", label: "iv_b64", rows: 4 })}
+            {field({ k: "sig_b64", label: "sig_b64", rows: 4 })}
+            {field({ k: "key_b64", label: "key_b64", rows: 4 })}
+          </div>
+          {field({ k: "ct_sha", label: "ct_sha (hex)", rows: 2 })}
+          {field({ k: "meta_sig_b64", label: "Metadata signature (meta_sig_b64)", rows: 2 })}
+          <div className="grid gap-4 sm:grid-cols-3">
+            {field({ k: "protocol", label: "Protocol (2)", rows: 1 })}
+            {field({ k: "min_client", label: "Minimum client (3)", rows: 1 })}
+            {field({ k: "issued", label: "Issued (Unix seconds)", rows: 1 })}
+          </div>
 
-        <div className="flex justify-end">
-          <Button type="submit" disabled={busy} style={{ background: "var(--gradient-primary)" }}>
-            {busy ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="mr-2 h-4 w-4" />
-            )}
-            Upload payload
-          </Button>
-        </div>
+          <div className="flex justify-end">
+            <Button type="submit" disabled={busy} style={{ background: "var(--gradient-primary)" }}>
+              {busy ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              Upload payload
+            </Button>
+          </div>
+        </fieldset>
       </form>
     </div>
   );
@@ -420,27 +444,18 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
 
 function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
   const confirm = useConfirm();
+  const confirming = useRef(false);
   const [banFp, setBanFp] = useState("");
   const [banReason, setBanReason] = useState("");
   const [unbanFp, setUnbanFp] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [banned, setBanned] = useState<BannedDevice[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const reload = async () => {
-    setLoading(true);
-    try {
-      setBanned(await listBannedDevices());
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    reload();
-  }, []);
-
+  const mutation = useOwnerMutation();
+  const busy = mutation.saving;
+  const resource = useOwnerResource(
+    useCallback((signal: AbortSignal) => listBannedDevices(signal), []),
+  );
+  const banned = resource.data ?? [],
+    loading = resource.loading,
+    reload = resource.reload;
   const handleErr = (e: unknown) => {
     const msg = (e as Error).message;
     if (/401|403|unauthor|forbidden/i.test(msg)) {
@@ -454,49 +469,61 @@ function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
     const fp = banFp.trim();
     const reason = banReason.trim();
     if (!fp || !reason) return toast.error("Fingerprint and reason are required");
-    if (
-      !(await confirm({
-        title: "Ban device",
-        description: `Ban device\n${fp}\nReason: ${reason}`,
-        confirmText: "Ban",
-        danger: true,
-      }))
-    )
-      return;
-    setBusy(true);
+    if (busy || confirming.current) return;
+    confirming.current = true;
     try {
-      await banDevice(fp, reason);
-      toast.success("Banned");
-      setBanFp("");
-      setBanReason("");
-      await reload();
-    } catch (e2) {
-      handleErr(e2);
+      if (
+        !(await confirm({
+          title: "Ban device",
+          description: `Ban device\n${fp}\nReason: ${reason}`,
+          confirmText: "Ban",
+          danger: true,
+        }))
+      )
+        return;
+      await mutation.run(async (signal) => {
+        try {
+          await banDevice(fp, reason, signal);
+          toast.success("Banned");
+          setBanFp("");
+          setBanReason("");
+          reload();
+        } catch (e2) {
+          handleErr(e2);
+          throw e2;
+        }
+      });
     } finally {
-      setBusy(false);
+      confirming.current = false;
     }
   };
 
   const doUnban = async (fp: string) => {
     if (!fp) return;
-    if (
-      !(await confirm({
-        title: "Unban device",
-        description: `Unban ${fp}?`,
-        confirmText: "Unban",
-      }))
-    )
-      return;
-    setBusy(true);
+    if (busy || confirming.current) return;
+    confirming.current = true;
     try {
-      await unbanDevice(fp);
-      toast.success("Unbanned");
-      setUnbanFp("");
-      await reload();
-    } catch (e) {
-      handleErr(e);
+      if (
+        !(await confirm({
+          title: "Unban device",
+          description: `Unban ${fp}?`,
+          confirmText: "Unban",
+        }))
+      )
+        return;
+      await mutation.run(async (signal) => {
+        try {
+          await unbanDevice(fp, signal);
+          toast.success("Unbanned");
+          setUnbanFp("");
+          reload();
+        } catch (e) {
+          handleErr(e);
+          throw e;
+        }
+      });
     } finally {
-      setBusy(false);
+      confirming.current = false;
     }
   };
 
@@ -517,7 +544,13 @@ function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      {mutation.error && (
+        <p role="alert" className="mb-4 break-words text-sm text-destructive">
+          {mutation.error}
+        </p>
+      )}
+      <fieldset disabled={busy} aria-busy={busy} className="grid min-w-0 gap-4 md:grid-cols-2">
+        <legend className="sr-only">Device ban management</legend>
         <form onSubmit={doBan} className="rounded-xl border border-red-400/20 bg-red-400/5 p-4">
           <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-red-200">
             <Ban className="h-4 w-4" />
@@ -525,12 +558,14 @@ function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
           </h4>
           <Input
             placeholder="Fingerprint"
+            aria-label="Device fingerprint"
             value={banFp}
             onChange={(e) => setBanFp(e.target.value)}
             className="mb-2 font-mono text-xs"
           />
           <Input
             placeholder="Reason"
+            aria-label="Ban reason"
             value={banReason}
             onChange={(e) => setBanReason(e.target.value)}
             className="mb-3"
@@ -558,6 +593,7 @@ function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
           </h4>
           <Input
             placeholder="Fingerprint"
+            aria-label="Device fingerprint"
             value={unbanFp}
             onChange={(e) => setUnbanFp(e.target.value)}
             className="mb-3 font-mono text-xs"
@@ -571,7 +607,7 @@ function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
             Unban
           </Button>
         </form>
-      </div>
+      </fieldset>
 
       <div className="mt-6">
         <h4 className="mb-2 text-sm font-bold">Banned devices</h4>

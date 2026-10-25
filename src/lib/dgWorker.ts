@@ -29,13 +29,14 @@ export function getAdminKey(): string {
     return "";
   }
 }
-export function setAdminKey(key: string): void {
-  if (typeof window === "undefined") return;
+export function setAdminKey(key: string): boolean {
+  if (typeof window === "undefined") return false;
   try {
     if (key) window.sessionStorage.setItem(ADMIN_KEY_STORAGE, key);
     else window.sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+    return getAdminKey() === key;
   } catch {
-    /* ignore */
+    return false;
   }
 }
 export function requireAdminKey(): string {
@@ -161,15 +162,24 @@ async function adminFetch(path: string, init: RequestInit = {}): Promise<Respons
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  return fetch(`${LICENSE_WORKER_URL}${path}`, { ...init, headers });
+  const signal = init.signal
+    ? AbortSignal.any([init.signal, AbortSignal.timeout(10000)])
+    : AbortSignal.timeout(10000);
+  return fetch(`${LICENSE_WORKER_URL}${path}`, { ...init, headers, signal });
 }
 
 async function adminJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await adminFetch(path, init);
   const body = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) {
-    throw new Error((body as { error?: string }).error || `http_${res.status}`);
+    throw new Error(
+      body && typeof body === "object" && typeof body.error === "string"
+        ? body.error
+        : `http_${res.status}`,
+    );
   }
+  if (init.method === "POST" && (!body || (body as { ok?: unknown }).ok !== true))
+    throw new Error("Change was not confirmed. Check the current state before trying again.");
   return body as T;
 }
 
@@ -186,7 +196,10 @@ export interface UploadPayloadArgs {
   meta_sig_b64: string;
 }
 
-export async function uploadPayload(args: UploadPayloadArgs): Promise<{ ok: boolean }> {
+export async function uploadPayload(
+  args: UploadPayloadArgs,
+  signal?: AbortSignal,
+): Promise<{ ok: boolean }> {
   const protocol = Number(args.protocol);
   const issued = Number(args.issued);
   const minClient = Number(args.min_client);
@@ -204,21 +217,28 @@ export async function uploadPayload(args: UploadPayloadArgs): Promise<{ ok: bool
   }
   return adminJson("/admin/upload-payload", {
     method: "POST",
+    signal,
     body: JSON.stringify({ ...args, protocol, issued, min_client: minClient }),
   });
 }
 
-export async function banDevice(fp: string, reason: string): Promise<{ ok: boolean }> {
+export async function banDevice(
+  fp: string,
+  reason: string,
+  signal?: AbortSignal,
+): Promise<{ ok: boolean }> {
   return adminJson("/admin/ban", {
     method: "POST",
     body: JSON.stringify({ fp, reason }),
+    signal,
   });
 }
 
-export async function unbanDevice(fp: string): Promise<{ ok: boolean }> {
+export async function unbanDevice(fp: string, signal?: AbortSignal): Promise<{ ok: boolean }> {
   return adminJson("/admin/unban", {
     method: "POST",
     body: JSON.stringify({ fp }),
+    signal,
   });
 }
 
@@ -232,6 +252,14 @@ export interface ListDevicesResult {
   presence_disabled?: boolean;
 }
 
-export async function listDevices(): Promise<ListDevicesResult> {
-  return adminJson<ListDevicesResult>("/admin/list", { method: "GET" });
+export async function listDevices(signal?: AbortSignal): Promise<ListDevicesResult> {
+  const value = await adminJson<ListDevicesResult>("/admin/list", { method: "GET", signal });
+  if (
+    !value ||
+    !Array.isArray(value.active) ||
+    value.active.some((row) => typeof row?.fp !== "string") ||
+    !["string", "number"].includes(typeof value.current_build)
+  )
+    throw new Error("Device response was not valid. Refresh to try again.");
+  return value;
 }

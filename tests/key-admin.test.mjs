@@ -56,6 +56,14 @@ const client = {
       select() {
         return query;
       },
+      abortSignal(signal) {
+        assert.ok(signal instanceof AbortSignal);
+        return query;
+      },
+      retry(value) {
+        assert.equal(value, false);
+        return query;
+      },
       eq(k, v) {
         filters[k] = v;
         return query;

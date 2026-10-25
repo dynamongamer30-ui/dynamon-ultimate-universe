@@ -1,5 +1,8 @@
+import { useOwnerResource } from "@/hooks/useOwnerResource";
+import { useOwnerMutation } from "@/hooks/useOwnerMutation";
+import { useConfirm } from "@/hooks/useConfirm";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Bell, Send, Trash2, Loader2, ArrowLeft, Pencil, Check, X } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { OwnerGate } from "@/components/OwnerGate";
@@ -37,89 +40,91 @@ function AdminNotificationsRoute() {
 }
 
 function AdminNotifications() {
-  const [items, setItems] = useState<AppNotification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const resource = useOwnerResource(
+    useCallback((signal: AbortSignal) => listNotifications(signal), []),
+  );
+  const items = resource.data ?? [];
+  const loading = resource.loading;
+  const mutation = useOwnerMutation();
+  const sending = mutation.saving,
+    savingEdit = mutation.saving;
+  const confirm = useConfirm();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [sending, setSending] = useState(false);
+  const [draftId, setDraftId] = useState(() => crypto.randomUUID());
+  const [uncertain, setUncertain] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
-  const [savingEdit, setSavingEdit] = useState(false);
-
-  const reload = async () => {
-    setLoading(true);
-    try {
-      setItems(await listNotifications());
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    reload();
-  }, []);
-
-  const send = async () => {
-    if (!title.trim() || !body.trim()) {
-      toast.error("Add a title and message first.");
-      return;
-    }
-    setSending(true);
-    try {
-      await createNotification(title.trim(), body.trim());
-      toast.success("Notification sent to all signed-in users");
-      setTitle("");
-      setBody("");
-      await reload();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const remove = async (id: string) => {
-    try {
-      await deleteNotification(id);
-      setItems((p) => p.filter((n) => n.id !== id));
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  };
-
-  const startEdit = (n: AppNotification) => {
-    setEditingId(n.id);
-    setEditTitle(n.title);
-    setEditBody(n.body);
-  };
-
   const cancelEdit = () => {
+    if (mutation.saving) return;
     setEditingId(null);
     setEditTitle("");
     setEditBody("");
   };
-
-  const saveEdit = async (id: string) => {
-    if (!editTitle.trim() || !editBody.trim()) {
-      toast.error("Add a title and message first.");
+  const send = () =>
+    mutation.run(async (signal) => {
+      if (!title.trim() || !body.trim()) throw new Error("Add a title and message first.");
+      if (uncertain || resource.loading || resource.error) return;
+      try {
+        const result = await createNotification(title.trim(), body.trim(), signal, draftId);
+        resource.setData((current) => [
+          result,
+          ...(current ?? []).filter((row) => row.id !== result.id),
+        ]);
+        setTitle("");
+        setBody("");
+        setDraftId(crypto.randomUUID());
+        toast.success("Notification created");
+      } catch (error) {
+        setUncertain(true);
+        throw error;
+      }
+    });
+  const checkSent = () =>
+    mutation.run(async (signal) => {
+      const rows = await listNotifications(signal);
+      if (signal.aborted) return;
+      resource.setData(rows);
+      if (rows.some((row) => row.id === draftId)) {
+        setTitle("");
+        setBody("");
+        setDraftId(crypto.randomUUID());
+        toast.success("Notification confirmed in sent list");
+      }
+      setUncertain(false);
+    });
+  const remove = async (id: string) => {
+    if (
+      mutation.saving ||
+      !(await confirm({
+        title: "Delete notification",
+        description: "Remove this notification from the shared list?",
+        confirmText: "Delete",
+        danger: true,
+      }))
+    )
       return;
-    }
-    setSavingEdit(true);
-    try {
-      await updateNotification(id, editTitle.trim(), editBody.trim());
-      setItems((p) =>
-        p.map((n) => (n.id === id ? { ...n, title: editTitle.trim(), body: editBody.trim() } : n)),
-      );
-      toast.success("Notification updated");
-      cancelEdit();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setSavingEdit(false);
-    }
+    await mutation.run(async (signal) => {
+      await deleteNotification(id, signal);
+      resource.setData((rows) => (rows ?? []).filter((row) => row.id !== id));
+      toast.success("Notification deleted");
+    });
   };
+  const startEdit = (row: AppNotification) => {
+    if (mutation.saving) return;
+    setEditingId(row.id);
+    setEditTitle(row.title);
+    setEditBody(row.body);
+  };
+  const saveEdit = (id: string) =>
+    mutation.run(async (signal) => {
+      if (!editTitle.trim() || !editBody.trim()) throw new Error("Add a title and message first.");
+      const result = await updateNotification(id, editTitle.trim(), editBody.trim(), signal);
+      resource.setData((rows) => (rows ?? []).map((row) => (row.id === id ? result : row)));
+      setEditingId(null);
+      toast.success("Notification updated");
+    });
 
   return (
     <PageShell>
@@ -145,7 +150,43 @@ function AdminNotifications() {
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+      {mutation.error && (
+        <p role="alert" className="mb-4 break-words text-sm text-destructive">
+          {mutation.error}
+        </p>
+      )}
+      {resource.error && (
+        <div role="alert" className="mb-4">
+          <p>{resource.error}</p>
+          <button
+            className="touch-target rounded-xl border border-border px-4"
+            onClick={resource.reload}
+            disabled={loading}
+          >
+            Retry sent notifications
+          </button>
+        </div>
+      )}
+      {uncertain && (
+        <div className="mb-4">
+          <p role="status">
+            Creation needs confirmation. Check the sent list before sending again.
+          </p>
+          <button
+            className="touch-target rounded-xl border border-border px-4"
+            disabled={sending}
+            onClick={() => void checkSent()}
+          >
+            Check sent notifications
+          </button>
+        </div>
+      )}
+      <fieldset
+        disabled={mutation.saving}
+        aria-busy={mutation.saving}
+        className="grid min-w-0 gap-6 lg:grid-cols-[1fr_1.2fr]"
+      >
+        <legend className="sr-only">Notification management</legend>
         {/* Compose */}
         <div className="rounded-2xl border border-border bg-card/60 p-5">
           <h2 className="mb-4 font-display text-lg font-bold">Compose</h2>
@@ -155,8 +196,10 @@ function AdminNotifications() {
             </span>
             <input
               value={title}
+              disabled={uncertain || !!resource.error || loading}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={120}
+              aria-label="Notification title"
               placeholder="e.g. New mod dropped!"
               className="w-full rounded-md border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-primary"
             />
@@ -167,9 +210,11 @@ function AdminNotifications() {
             </span>
             <textarea
               value={body}
+              disabled={uncertain || !!resource.error || loading}
               onChange={(e) => setBody(e.target.value)}
               rows={5}
               maxLength={1000}
+              aria-label="Notification message"
               placeholder="Write your announcement…"
               className="w-full resize-y rounded-md border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-primary"
             />
@@ -177,7 +222,7 @@ function AdminNotifications() {
           <div className="mt-5 flex justify-end">
             <button
               onClick={send}
-              disabled={sending}
+              disabled={sending || uncertain || loading || !!resource.error}
               className="press inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
               style={{ background: "var(--gradient-primary)" }}
             >
@@ -193,9 +238,13 @@ function AdminNotifications() {
 
         {/* Sent list */}
         <div className="rounded-2xl border border-border bg-card/60 p-5">
-          <h2 className="mb-4 font-display text-lg font-bold">Sent ({items.length})</h2>
+          <h2 className="mb-4 font-display text-lg font-bold">
+            Sent ({resource.error ? "unavailable" : items.length})
+          </h2>
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : resource.error ? (
+            <p className="text-sm">Sent notifications are unavailable.</p>
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nothing sent yet.</p>
           ) : (
@@ -207,6 +256,7 @@ function AdminNotifications() {
                       <input
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
+                        aria-label="Edit notification title"
                         maxLength={120}
                         placeholder="Title"
                         className="w-full rounded-md border border-border bg-background/60 px-3 py-2 text-sm font-semibold outline-none focus:border-primary"
@@ -214,6 +264,7 @@ function AdminNotifications() {
                       <textarea
                         value={editBody}
                         onChange={(e) => setEditBody(e.target.value)}
+                        aria-label="Edit notification message"
                         rows={4}
                         maxLength={1000}
                         placeholder="Message"
@@ -245,7 +296,7 @@ function AdminNotifications() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{n.title}</p>
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                        <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">
                           {n.body}
                         </p>
                         <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground/70">
@@ -275,7 +326,7 @@ function AdminNotifications() {
             </ul>
           )}
         </div>
-      </div>
+      </fieldset>
     </PageShell>
   );
 }

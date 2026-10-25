@@ -335,6 +335,12 @@ h4,
   font-family: var(--font-display);
   letter-spacing: -0.03em;
 }
+h1,
+h2,
+h3,
+h4 {
+  overflow-wrap: anywhere;
+}
 
 ::selection {
   background: oklch(0.62 0.22 302 / 0.46);

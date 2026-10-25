@@ -52,7 +52,18 @@ export async function listNotifications(signal?: AbortSignal): Promise<AppNotifi
     .abortSignal(signal ?? AbortSignal.timeout(10000))
     .retry(false);
   if (error) throw new Error(error.message);
-  if (!Array.isArray(data)) throw new Error("Invalid notification response");
+  if (
+    !Array.isArray(data) ||
+    data.some(
+      (row) =>
+        !row ||
+        typeof row.id !== "string" ||
+        typeof row.title !== "string" ||
+        typeof row.body !== "string" ||
+        !Number.isFinite(Date.parse(row.created_at)),
+    )
+  )
+    throw new Error("Invalid notification response");
   return data as AppNotification[];
 }
 
@@ -78,17 +89,66 @@ export async function markRead(ids: string[], userId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-export async function createNotification(title: string, body: string): Promise<void> {
-  const { error } = await supabase.from("notifications").insert({ title, body });
+export async function createNotification(
+  title: string,
+  body: string,
+  signal?: AbortSignal,
+  id?: string,
+): Promise<AppNotification> {
+  const { data, error } = await supabase
+    .from("notifications")
+    .insert({ title, body, ...(id ? { id } : {}) })
+    .select("id,title,body,created_at,reward_kind,reward_ref,burn_after_read")
+    .abortSignal(signal ?? AbortSignal.timeout(10000))
+    .maybeSingle()
+    .retry(false);
   if (error) throw new Error(error.message);
+  if (
+    signal?.aborted ||
+    !data ||
+    typeof data.id !== "string" ||
+    (id && data.id !== id) ||
+    data.title !== title ||
+    data.body !== body
+  )
+    throw new Error(
+      "Notification creation was not confirmed. Check the sent list before sending again.",
+    );
+  return data as AppNotification;
 }
 
-export async function updateNotification(id: string, title: string, body: string): Promise<void> {
-  const { error } = await supabase.from("notifications").update({ title, body }).eq("id", id);
+export async function updateNotification(
+  id: string,
+  title: string,
+  body: string,
+  signal?: AbortSignal,
+): Promise<AppNotification> {
+  const { data, error } = await supabase
+    .from("notifications")
+    .update({ title, body })
+    .eq("id", id)
+    .select("id,title,body,created_at,reward_kind,reward_ref,burn_after_read")
+    .abortSignal(signal ?? AbortSignal.timeout(10000))
+    .maybeSingle()
+    .retry(false);
   if (error) throw new Error(error.message);
+  if (signal?.aborted || !data || data.id !== id || data.title !== title || data.body !== body)
+    throw new Error("Notification update was not confirmed. Your draft is retained.");
+  return data as AppNotification;
 }
 
-export async function deleteNotification(id: string): Promise<void> {
-  const { error } = await supabase.from("notifications").delete().eq("id", id);
+export async function deleteNotification(id: string, signal?: AbortSignal): Promise<void> {
+  const { data, error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("id", id)
+    .select("id")
+    .abortSignal(signal ?? AbortSignal.timeout(10000))
+    .maybeSingle()
+    .retry(false);
   if (error) throw new Error(error.message);
+  if (signal?.aborted || data?.id !== id)
+    throw new Error(
+      "Notification removal was not confirmed. Refresh the sent list to check its status.",
+    );
 }

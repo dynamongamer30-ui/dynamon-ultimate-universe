@@ -77,10 +77,7 @@ export function OwnerGate({ children }: { children: ReactNode }) {
     return (
       <PageShell>
         <div className="mx-auto max-w-md rounded-3xl glass p-8 text-center">
-          <div
-            className="mx-auto grid h-14 w-14 place-items-center rounded-2xl text-primary-foreground"
-            style={{ background: "linear-gradient(135deg,#f59e0b,#f97316)" }}
-          >
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary text-primary-foreground">
             <Shield className="h-7 w-7" />
           </div>
           <h1 className="mt-5 font-display text-2xl font-extrabold">Owner sign-in</h1>

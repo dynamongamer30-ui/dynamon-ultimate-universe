@@ -101,3 +101,68 @@ test("aborted generation is not replayed or described as a definite failed write
   });
   assert.equal(calls, 1);
 });
+
+test("admin mutations require an explicit successful Worker acknowledgement", async () => {
+  const previousWindow = globalThis.window;
+  globalThis.window = { sessionStorage: { getItem: () => "LOCAL-ADMIN-FIXTURE" } };
+  try {
+    for (const body of [{}, { ok: false }, null]) {
+      globalThis.fetch = async () => Response.json(body);
+      await assert.rejects(client.banDevice("LOCAL-FP", "local reason"), /not confirmed/);
+    }
+    globalThis.fetch = async () => Response.json({ active: null, current_build: "local" });
+    await assert.rejects(client.listDevices(), /not valid/);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
+test("admin payloads retain the signed wire fields and include bounded cancellation", async () => {
+  const previousWindow = globalThis.window;
+  globalThis.window = { sessionStorage: { getItem: () => "LOCAL-ADMIN-FIXTURE" } };
+  try {
+    const payload = {
+      build: "LOCAL",
+      ct_b64: "local",
+      iv_b64: "local",
+      sig_b64: "local",
+      key_b64: "local",
+      ct_sha: "local",
+      protocol: 2,
+      min_client: 3,
+      issued: Math.floor(Date.now() / 1000),
+      meta_sig_b64: "local",
+    };
+    globalThis.fetch = async (url, init) => {
+      assert.equal(url, "/admin/upload-payload");
+      assert.equal(init.headers.get("X-Admin"), "LOCAL-ADMIN-FIXTURE");
+      assert.deepEqual(JSON.parse(init.body), payload);
+      assert.ok(init.signal instanceof AbortSignal);
+      return Response.json({ ok: true });
+    };
+    assert.deepEqual(await client.uploadPayload(payload), { ok: true });
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
+test("blocked session storage cannot claim an admin key was saved", () => {
+  const previousWindow = globalThis.window;
+  globalThis.window = {
+    sessionStorage: {
+      setItem: () => {
+        throw Error("blocked");
+      },
+      getItem: () => null,
+    },
+  };
+  try {
+    assert.equal(client.setAdminKey("LOCAL"), false);
+    assert.throws(() => client.requireAdminKey(), /not set/);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});

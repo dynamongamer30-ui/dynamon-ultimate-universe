@@ -32,6 +32,7 @@ import {
   type ModOverride,
 } from "@/hooks/useSiteSettings";
 import { OwnerAvatarsEditor } from "@/components/OwnerAvatarsEditor";
+import { OwnerAccountsEditor, OwnerTimingEditor } from "@/components/OwnerConfigurationEditors";
 import { useConfirm } from "@/hooks/useConfirm";
 import { mods as baseMods } from "@/lib/mods";
 import { Cipher } from "@/lib/cipher";
@@ -172,8 +173,8 @@ function ControlPanel() {
             {tab === "mods" && <ModsEditor overrides={overrides} onSaved={refresh} />}
             {tab === "security" && (
               <>
-                <SecurityEditor />
-                <AccountsEditor />
+                <OwnerTimingEditor />
+                <OwnerAccountsEditor />
               </>
             )}
             {tab === "avatars" && <OwnerAvatarsEditor />}
@@ -199,187 +200,6 @@ async function saveSetting(key: string, value: unknown, signal: AbortSignal) {
   if (data?.key !== key) throw new Error("Save was not confirmed. Your draft is retained.");
   toast.success("Saved");
   return true;
-}
-
-// app_config uses a different shape (id/data) than site_settings (key/value) —
-// this is where redeem_secure_session reads {timer, minTimer} from at runtime.
-async function saveAppConfig(id: string, data: unknown) {
-  const { error } = await supabase.from("app_config").upsert({ id, data: data as never });
-  if (error) {
-    toast.error(error.message);
-    return false;
-  }
-  toast.success("Saved");
-  return true;
-}
-
-const DEFAULT_SECURITY = { timer: 900, minTimer: 45 };
-type SecurityConfig = { timer: number; minTimer: number };
-
-function AccountsEditor() {
-  const [enabled, setEnabled] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [totalUsers, setTotalUsers] = useState<number | null>(null);
-  const [inactive30d, setInactive30d] = useState<number | null>(null);
-
-  const load = async () => {
-    setLoading(true);
-    const [{ data: cfg }, { data: stats }] = await Promise.all([
-      supabase.from("app_config").select("data").eq("id", "AccountDeletion").maybeSingle(),
-      (
-        supabase as unknown as {
-          rpc: (
-            fn: string,
-          ) => Promise<{ data: { total_users: number; inactive_30d: number }[] | null }>;
-        }
-      ).rpc("admin_account_stats"),
-    ]);
-    const d = cfg?.data as { enabled?: boolean } | undefined;
-    setEnabled(d?.enabled !== false);
-    const row = stats?.[0];
-    setTotalUsers(row?.total_users ?? null);
-    setInactive30d(row?.inactive_30d ?? null);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  if (loading)
-    return (
-      <Card title="Accounts">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </Card>
-    );
-
-  return (
-    <Card
-      title="Accounts"
-      desc="Signed-up users, and whether inactive accounts (30+ days with no visit or sign-in) get auto-deleted."
-    >
-      <Grid>
-        <Field label="Total signed-up users">
-          <div className={`${inp} flex items-center font-mono text-lg font-bold text-primary-ink`}>
-            {totalUsers}
-          </div>
-        </Field>
-        <Field label="Inactive 30+ days (would be deleted)">
-          <div
-            className={`${inp} flex items-center font-mono text-lg font-bold ${inactive30d ? "text-amber-400" : "text-muted-foreground"}`}
-          >
-            {inactive30d}
-          </div>
-        </Field>
-      </Grid>
-
-      <label className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-border bg-card/40 p-4">
-        <div>
-          <p className="text-sm font-semibold">Auto-delete inactive accounts</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            When on, accounts with no visit or sign-in for 30 days are removed automatically every
-            night. Turn this off before going offline for a while so no one's data gets deleted
-            while you're away.
-          </p>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={enabled}
-          onClick={() => setEnabled((v) => !v)}
-          className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-border"}`}
-        >
-          <span
-            className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`}
-          />
-        </button>
-      </label>
-
-      <SaveRow
-        saving={saving}
-        onReset={load}
-        onSave={async () => {
-          setSaving(true);
-          await saveAppConfig("AccountDeletion", { enabled });
-          setSaving(false);
-          toast.success(enabled ? "Auto-deletion is ON" : "Auto-deletion is PAUSED");
-        }}
-      />
-    </Card>
-  );
-}
-
-function SecurityEditor() {
-  const [v, setV] = useState<SecurityConfig>(DEFAULT_SECURITY);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    supabase
-      .from("app_config")
-      .select("data")
-      .eq("id", "Security")
-      .maybeSingle()
-      .then(({ data }) => {
-        const d = data?.data as Partial<SecurityConfig> | undefined;
-        if (d) setV({ ...DEFAULT_SECURITY, ...d });
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading)
-    return (
-      <Card title="Unlock timing">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </Card>
-    );
-
-  return (
-    <Card
-      title="Unlock timing"
-      desc="Controls the /unlock page for every mod. Minimum = shortest time a real user can take to reach the page (below this, it's flagged as fake and rejected). Maximum = how long a session token stays valid before it expires."
-    >
-      <Grid>
-        <Field label="Minimum time (seconds)">
-          <input
-            type="number"
-            min={0}
-            value={v.minTimer}
-            onChange={(e) => setV({ ...v, minTimer: Number(e.target.value) })}
-            className={inp}
-          />
-        </Field>
-        <Field label="Maximum time (seconds)">
-          <input
-            type="number"
-            min={0}
-            value={v.timer}
-            onChange={(e) => setV({ ...v, timer: Number(e.target.value) })}
-            className={inp}
-          />
-        </Field>
-      </Grid>
-      {v.minTimer >= v.timer && (
-        <p className="text-xs font-semibold text-red-400">
-          Minimum must be less than maximum, or every session will fail.
-        </p>
-      )}
-      <SaveRow
-        saving={saving}
-        onReset={() => setV(DEFAULT_SECURITY)}
-        onSave={async () => {
-          if (v.minTimer >= v.timer) {
-            toast.error("Minimum must be less than maximum.");
-            return;
-          }
-          setSaving(true);
-          await saveAppConfig("Security", v);
-          setSaving(false);
-        }}
-      />
-    </Card>
-  );
 }
 
 // ---------- Branding ----------

@@ -19,7 +19,10 @@ export function usePerspectiveTilt<T extends HTMLElement>() {
 
     const paint = () => {
       frame = 0;
-      if (!enabled()) return;
+      if (!enabled()) {
+        stop();
+        return;
+      }
       currentX += (targetX - currentX) * 0.08;
       currentY += (targetY - currentY) * 0.08;
       element.style.setProperty("--card-tilt-x", `${currentY}deg`);
