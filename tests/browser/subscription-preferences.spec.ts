@@ -234,6 +234,12 @@ test("dismissal skips the prompt for this session without writes or a permission
 }) => {
   const state = await fixture(page);
   const dialog = await open(page);
+  expect(
+    await dialog.evaluate((node) => ({
+      opacity: getComputedStyle(node).opacity,
+      transform: getComputedStyle(node).transform,
+    })),
+  ).toEqual({ opacity: "1", transform: "none" });
   await dialog.getByRole("button", { name: "Maybe later", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await page.reload({ waitUntil: "domcontentloaded" });

@@ -157,6 +157,14 @@ test("recommendations share collection reads, ignore unknown elements and surviv
   await home(page);
   await expect(rail(page).getByText(/Recommended from/)).toContainText("water");
   await expect(rail(page).getByRole("link")).toHaveCount(4);
+  // Reduced-motion cards must be readable even before scrolling into view.
+  expect(
+    await rail(page)
+      .getByRole("link")
+      .evaluateAll((links) =>
+        links.every((link) => getComputedStyle(link.parentElement!).opacity === "1"),
+      ),
+  ).toBe(true);
   await expect(rail(page)).not.toContainText("__proto__");
   await expect(rail(page)).not.toContainText("constructor");
   expect(state.reads).toEqual({

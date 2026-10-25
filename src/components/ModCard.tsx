@@ -1,5 +1,6 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { Link } from "@tanstack/react-router";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 
 import { Download, Heart, MessageSquare, Star, TrendingUp } from "lucide-react";
 import type { Mod } from "@/lib/mods";
@@ -26,7 +27,7 @@ export function ModCard({
   headingLevel?: "h2" | "h3";
 }) {
   const { user } = useAuth();
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useReducedMotionPreference();
   const navigate = useNavigate();
   const { award } = useGamification();
   const theme = elementTheme[mod.element];
@@ -78,6 +79,7 @@ export function ModCard({
   return (
     <motion.article
       initial={reducedMotion ? false : { opacity: 0, y: 30 }}
+      animate={reducedMotion ? { opacity: 1, y: 0 } : undefined}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={

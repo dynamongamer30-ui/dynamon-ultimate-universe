@@ -1,9 +1,11 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { motion } from "motion/react";
 import { Calendar, GitCommit } from "lucide-react";
 import type { Mod } from "@/lib/mods";
 import { formatReleaseDate } from "@/lib/releaseDate";
 
 export function ChangelogTimeline({ entries, glow }: { entries: Mod["changelog"]; glow: string }) {
+  const reducedMotion = useReducedMotionPreference();
   return (
     <div className="relative">
       <div
@@ -14,10 +16,11 @@ export function ChangelogTimeline({ entries, glow }: { entries: Mod["changelog"]
         {entries.map((c, i) => (
           <motion.li
             key={c.version}
-            initial={{ opacity: 0, x: -10 }}
+            initial={reducedMotion ? false : { opacity: 0, x: -10 }}
+            animate={reducedMotion ? { opacity: 1, x: 0 } : undefined}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: i * 0.06 }}
+            transition={reducedMotion ? { duration: 0 } : { delay: i * 0.06 }}
             className="relative pl-12"
           >
             <span

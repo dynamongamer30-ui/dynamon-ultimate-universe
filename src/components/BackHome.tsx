@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, Home } from "lucide-react";
@@ -5,6 +6,7 @@ import { playClick } from "@/lib/sound";
 
 /** Smooth back + home pills shown on every page (hidden on the home route). */
 export function BackHome() {
+  const reducedMotion = useReducedMotionPreference();
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   if (pathname === "/") return null;
@@ -17,9 +19,9 @@ export function BackHome() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -6 }}
+      initial={reducedMotion ? false : { opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
+      transition={{ duration: reducedMotion ? 0 : 0.35 }}
       className="mb-6 flex items-center gap-2"
     >
       <button

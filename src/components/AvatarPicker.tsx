@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Check, Loader2 } from "lucide-react";
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export function AvatarPicker({ value, onChange, gender }: Props) {
+  const reducedMotion = useReducedMotionPreference();
   const [pool, setPool] = useState<PoolAvatar[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -150,8 +152,9 @@ export function AvatarPicker({ value, onChange, gender }: Props) {
             />
             {selected && (
               <motion.div
-                initial={{ scale: 0 }}
+                initial={reducedMotion ? false : { scale: 0 }}
                 animate={{ scale: 1 }}
+                transition={reducedMotion ? { duration: 0 } : undefined}
                 className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full text-primary-foreground"
                 style={{ background: "var(--gradient-primary)" }}
               >

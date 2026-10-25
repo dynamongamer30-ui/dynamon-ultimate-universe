@@ -161,6 +161,18 @@ async function account(page: Page, setup = false, email = "fixture@example.test"
   return state;
 }
 
+test("reduced motion shows the selected avatar immediately without saving a profile", async ({
+  page,
+}) => {
+  const state = await account(page, false);
+  await ready(page, "/profile");
+  const selected = page.getByRole("button", { name: "Fixture hero", exact: true });
+  await expect(selected).toHaveAttribute("aria-pressed", "true");
+  const indicator = selected.locator("div");
+  expect(await indicator.evaluate((node) => getComputedStyle(node).transform)).toBe("none");
+  expect(state.saves).toEqual([]);
+});
+
 test("profile keeps long identity details and editable controls inside narrow and wide layouts", async ({
   page,
 }, info) => {

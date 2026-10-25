@@ -176,6 +176,16 @@ test("confirmed badge ownership shares existing reads across auth refresh and fo
   const state = await fixture(page);
   await open(page);
   await expect(pioneer(page).getByText("Earned", { exact: true })).toBeVisible();
+  expect(
+    await badges(page)
+      .locator("article")
+      .evaluateAll((cards) =>
+        cards.every(
+          (card) =>
+            getComputedStyle(card).opacity === "1" && getComputedStyle(card).transform === "none",
+        ),
+      ),
+  ).toBe(true);
   await expect(badges(page).getByText("1 / 2 badges earned", { exact: true })).toBeVisible();
   await switchAccount(page, state, idA);
   await page.evaluate(() => {

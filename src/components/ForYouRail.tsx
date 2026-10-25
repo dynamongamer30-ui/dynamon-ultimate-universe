@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { Link } from "@tanstack/react-router";
@@ -10,6 +11,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useLikes } from "@/hooks/useLikes";
 
 export function ForYouRail() {
+  const reducedMotion = useReducedMotionPreference();
   const { user } = useAuth();
   const { mods } = useSiteSettings();
   const userId = user?.id;
@@ -119,10 +121,11 @@ export function ForYouRail() {
             return (
               <motion.div
                 key={s.mod.slug}
-                initial={{ opacity: 0, y: 16 }}
+                initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+                animate={reducedMotion ? { opacity: 1, y: 0 } : undefined}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
+                transition={reducedMotion ? { duration: 0 } : { delay: i * 0.05 }}
               >
                 <Link
                   to="/mods/$slug"

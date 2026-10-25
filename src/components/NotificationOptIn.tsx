@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { User } from "@supabase/supabase-js";
@@ -17,6 +18,7 @@ export function NotificationOptIn() {
 }
 
 function AccountPreferences({ user }: { user: User }) {
+  const reducedMotion = useReducedMotionPreference();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(true);
   const [push, setPush] = useState(true);
@@ -193,17 +195,19 @@ function AccountPreferences({ user }: { user: User }) {
         <AnimatePresence>
           {open && (
             <motion.div
-              initial={{ opacity: 0 }}
+              initial={reducedMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={reducedMotion ? { duration: 0 } : undefined}
               className="modal-frame fixed inset-0 z-[100] grid place-items-center bg-background/70 backdrop-blur-sm"
               onClick={skip}
             >
               <motion.div
                 ref={dialogRef}
-                initial={{ scale: 0.94, y: 20, opacity: 0 }}
+                initial={reducedMotion ? false : { scale: 0.94, y: 20, opacity: 0 }}
                 animate={{ scale: 1, y: 0, opacity: 1 }}
                 exit={{ scale: 0.94, opacity: 0 }}
+                transition={reducedMotion ? { duration: 0 } : undefined}
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"

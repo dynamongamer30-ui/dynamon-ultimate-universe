@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useRouterState } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { Lock, Zap } from "lucide-react";
@@ -21,6 +22,7 @@ export function AchievementCollection() {
 }
 
 function AccountAchievements() {
+  const reducedMotion = useReducedMotionPreference();
   const catalog = useAchievementCatalog();
   const { achievements, achievementStatus, refresh } = useGamification();
   const known = achievementStatus === "success";
@@ -101,9 +103,9 @@ function AccountAchievements() {
               <motion.article
                 key={a.key}
                 aria-label={a.name}
-                initial={{ opacity: 0, y: 12 }}
+                initial={reducedMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
+                transition={reducedMotion ? { duration: 0 } : { delay: i * 0.03 }}
                 className={`relative min-w-0 overflow-hidden rounded-3xl border p-5 ${owned ? "border-amber-400/40 bg-amber-500/5" : "border-border bg-card/40"}`}
               >
                 <div
