@@ -13,19 +13,36 @@ export function FeedbackPreferences() {
   const { preference, setPreference } = useFeedbackPreferences();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const current = options.find((option) => option.value === preference) ?? options[0];
 
   useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => {
+    const onPointerDown = (event: Event) => {
       if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
+    document.addEventListener("focusin", onPointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("focusin", onPointerDown);
+    };
   }, []);
 
   return (
-    <div ref={ref} className="relative">
+    <div
+      ref={ref}
+      className="relative shrink-0"
+      onKeyDown={(event) => {
+        if (open && event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(false);
+          trigger.current?.focus();
+        }
+      }}
+    >
       <button
+        ref={trigger}
         type="button"
         className="touch-target press grid place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-[color,border-color,box-shadow] hover:border-primary/55 hover:text-foreground"
         aria-label={`Feedback preference: ${current.label}`}
@@ -44,7 +61,7 @@ export function FeedbackPreferences() {
           id="feedback-preferences-panel"
           role="dialog"
           aria-label="Feedback preferences"
-          className="absolute right-0 z-[var(--z-popover)] mt-2 w-[min(18rem,calc(100vw-1.5rem))] rounded-2xl border border-border/70 bg-card p-3 shadow-elev glass-l3"
+          className="feedback-popover right-0 z-[var(--z-popover)] mt-2 w-[min(18rem,calc(100vw-1.5rem))] rounded-2xl border border-border/70 bg-card p-3 shadow-elev glass-l3"
         >
           <div className="flex items-start justify-between gap-3 px-1 pb-2">
             <div>
@@ -71,7 +88,7 @@ export function FeedbackPreferences() {
                   <span className="block text-xs text-muted-foreground">{option.description}</span>
                 </span>
                 {preference === option.value && (
-                  <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                  <Check className="h-4 w-4 shrink-0 text-primary-ink" aria-hidden="true" />
                 )}
               </button>
             ))}

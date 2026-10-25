@@ -564,7 +564,7 @@ export function CommentsPanel({
             type="button"
             onClick={() => void loadReplies(c.id)}
             disabled={pendingActions.has("replies:" + c.id)}
-            className="touch-target mt-3 rounded-full border border-border px-4 py-2 text-xs font-semibold text-primary disabled:opacity-50"
+            className="touch-target mt-3 rounded-full border border-border px-4 py-2 text-xs font-semibold text-primary-ink disabled:opacity-50"
           >
             {pendingActions.has("replies:" + c.id)
               ? "Loading replies…"
@@ -587,7 +587,7 @@ export function CommentsPanel({
     <section id="comments" aria-labelledby="community-title" className="mt-14 scroll-mt-24">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary-ink">
             Community layer
           </p>
           <h2
@@ -605,7 +605,7 @@ export function CommentsPanel({
           <button
             type="button"
             onClick={load}
-            className="touch-target rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10"
+            className="touch-target rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary/10"
           >
             Retry community
           </button>
@@ -641,7 +641,7 @@ export function CommentsPanel({
           <h3 className="font-display text-xl font-bold">Leave a review</h3>
           {!user ? (
             <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/40 p-5 text-sm text-muted-foreground">
-              <Link to="/auth" className="font-semibold text-primary hover:underline">
+              <Link to="/auth" className="font-semibold text-primary-ink hover:underline">
                 Sign in
               </Link>{" "}
               to leave a review and like other trainers' comments.
@@ -649,7 +649,7 @@ export function CommentsPanel({
           ) : !profile ? (
             <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/40 p-5 text-sm text-muted-foreground">
               Finish your{" "}
-              <Link to="/auth" className="font-semibold text-primary hover:underline">
+              <Link to="/auth" className="font-semibold text-primary-ink hover:underline">
                 trainer profile
               </Link>{" "}
               to post a review.
@@ -782,7 +782,7 @@ export function CommentsPanel({
                 <button
                   type="button"
                   onClick={load}
-                  className="touch-target mt-4 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10"
+                  className="touch-target mt-4 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary/10"
                 >
                   Try again
                 </button>
@@ -808,7 +808,7 @@ export function CommentsPanel({
                 <button
                   type="button"
                   onClick={() => void reactions.retry()}
-                  className="touch-target font-semibold text-primary hover:underline"
+                  className="touch-target font-semibold text-primary-ink hover:underline"
                 >
                   Retry reactions
                 </button>

@@ -45,7 +45,7 @@ function Rewards() {
           className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl"
           aria-hidden
         />
-        <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
+        <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink">
           <span className="inline-block h-px w-8 bg-primary" aria-hidden />
           Daily rewards
         </p>
@@ -73,7 +73,7 @@ function Rewards() {
         </h2>
         <PrizeCard
           icon={<KeyRound className="h-6 w-6" />}
-          accent="text-primary"
+          accent="text-primary-ink"
           ring="border-primary/30"
           glow="from-primary/10 to-transparent"
           eyebrow="3 winners daily"
@@ -145,7 +145,7 @@ function Rewards() {
             "One identity per registered account decides who wins.",
           ].map((t) => (
             <li key={t} className="flex items-start gap-2">
-              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary-ink" />
               <span>{t}</span>
             </li>
           ))}
@@ -219,7 +219,7 @@ function AccountRewards() {
             type="button"
             onClick={retry}
             disabled={loading}
-            className="touch-target mt-3 rounded-full border border-border px-4 py-2 text-primary disabled:opacity-60"
+            className="touch-target mt-3 rounded-full border border-border px-4 py-2 text-primary-ink disabled:opacity-60"
           >
             {loading ? "Retrying rewards…" : "Retry reward lookup"}
           </button>
@@ -327,7 +327,7 @@ function DailyKeyCard({ value, expiresAt }: { value: string; expiresAt: string }
     >
       <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary-ink">
             <KeyRound className="h-5 w-5" />
           </span>
           <div>
@@ -412,7 +412,7 @@ function PrizeCard({
 function Step({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
   return (
     <div className="rounded-2xl glass p-5">
-      <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/15 text-primary">
+      <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/15 text-primary-ink">
         {icon}
       </div>
       <p className="mt-3 font-display text-sm font-bold uppercase tracking-wide">{title}</p>

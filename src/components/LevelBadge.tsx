@@ -10,7 +10,7 @@ export function LevelBadge({ compact = false }: { compact?: boolean }) {
 
   if (compact) {
     return (
-      <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+      <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary-ink">
         <Zap className="h-3 w-3" /> Lv {busy ? "…" : unavailable ? "—" : level}
       </div>
     );

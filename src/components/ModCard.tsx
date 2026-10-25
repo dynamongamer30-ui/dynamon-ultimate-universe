@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 
 import { Download, Heart, MessageSquare, Star, TrendingUp } from "lucide-react";
 import type { Mod } from "@/lib/mods";
@@ -26,6 +26,7 @@ export function ModCard({
   headingLevel?: "h2" | "h3";
 }) {
   const { user } = useAuth();
+  const reducedMotion = useReducedMotion();
   const navigate = useNavigate();
   const { award } = useGamification();
   const theme = elementTheme[mod.element];
@@ -76,10 +77,14 @@ export function ModCard({
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 30 }}
+      initial={reducedMotion ? false : { opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
-      transition={{ type: "spring", stiffness: 100, damping: 18, delay: index * 0.05 }}
+      transition={
+        reducedMotion
+          ? { duration: 0 }
+          : { type: "spring", stiffness: 100, damping: 18, delay: index * 0.05 }
+      }
       onMouseEnter={playHover}
       className="edge-light group relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-surface)] border border-border bg-card transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-primary/45"
       style={{ boxShadow: featured ? theme.glow : "var(--shadow-card)" }}
@@ -117,7 +122,7 @@ export function ModCard({
             <Star className="h-3 w-3 fill-gold text-gold" />
             {mod.baseRating.toFixed(1)}
           </span>
-          <span className="rounded-md bg-background/80 px-2 py-1 text-xs font-bold uppercase tracking-wider text-primary backdrop-blur-sm">
+          <span className="rounded-md bg-background/80 px-2 py-1 text-xs font-bold uppercase tracking-wider text-primary-ink backdrop-blur-sm">
             v{mod.version}
           </span>
         </div>
@@ -130,7 +135,7 @@ export function ModCard({
 
       <div className="relative flex flex-1 flex-col p-5 sm:p-6">
         <Link to="/mods/$slug" params={{ slug: mod.slug }} onMouseDown={playClick}>
-          <Heading className="font-display text-xl font-extrabold uppercase leading-tight tracking-tight transition-colors hover:text-primary">
+          <Heading className="font-display text-xl font-extrabold uppercase leading-tight tracking-tight transition-colors hover:text-primary-ink">
             {mod.name}
           </Heading>
         </Link>

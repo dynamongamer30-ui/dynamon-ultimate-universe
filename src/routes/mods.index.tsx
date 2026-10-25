@@ -116,7 +116,7 @@ function ModsPage() {
   return (
     <PageShell>
       <header aria-labelledby="mods-title" className="route-hero pt-4 sm:pt-8">
-        <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
+        <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink">
           <span className="inline-block h-px w-8 bg-primary" aria-hidden />
           The vault
         </p>
@@ -171,7 +171,7 @@ function ModsPage() {
                 aria-pressed={sort === s.id}
                 className={`press touch-target inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
                   sort === s.id
-                    ? "border-primary/60 bg-primary/10 text-primary"
+                    ? "border-primary/60 bg-primary/10 text-primary-ink"
                     : "border-border bg-card text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -267,7 +267,7 @@ function ModsPage() {
                 type="button"
                 aria-label={`Remove ${elementTheme[el].label} filter`}
                 onClick={() => toggleElement(el)}
-                className="touch-target inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
+                className="touch-target inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary-ink"
               >
                 {elementTheme[el].label}
                 <X className="h-3 w-3" aria-hidden="true" />

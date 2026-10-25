@@ -379,7 +379,7 @@ function KeysPanel() {
           <StatTile
             label="Activated"
             value={loading || loadError ? null : stats.activated}
-            icon={<Sparkles className="h-4 w-4 text-primary" />}
+            icon={<Sparkles className="h-4 w-4 text-primary-ink" />}
           />
           <StatTile
             label="Revoked"
@@ -438,7 +438,7 @@ function KeysPanel() {
                 <button
                   onClick={bulkExtend}
                   disabled={bulkBusy}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary-ink hover:bg-primary/10 disabled:opacity-50"
                 >
                   {bulkBusy ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -483,7 +483,7 @@ function KeysPanel() {
 
             {loading ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <Loader2 className="h-5 w-5 animate-spin text-primary-ink" />
               </div>
             ) : loadError ? (
               <p className="py-8 text-sm text-muted-foreground">
@@ -640,7 +640,7 @@ function useKeyActions(k: ValidKey) {
       : isExpired
         ? { label: "Expired", cls: "border-amber-400/40 text-amber-300" }
         : k.activated
-          ? { label: "Activated", cls: "border-primary/40 text-primary" }
+          ? { label: "Activated", cls: "border-primary/40 text-primary-ink" }
           : { label: "Active", cls: "border-green-400/40 text-green-300" };
 
   return { busy, copy, doExtend, doExtendCustom, doRevoke, doDelete, status };
@@ -706,7 +706,7 @@ function KeyCard({
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={copy}
-              className="truncate font-mono text-sm font-semibold text-primary"
+              className="truncate font-mono text-sm font-semibold text-primary-ink"
               title="Copy key"
             >
               {k.key}
@@ -756,7 +756,7 @@ function KeyRow({
       <td className="py-3 pr-3">
         <button
           onClick={copy}
-          className="font-mono text-sm text-primary hover:underline"
+          className="font-mono text-sm text-primary-ink hover:underline"
           title="Copy key"
         >
           {k.key}
@@ -806,7 +806,7 @@ function IconBtn({
       className={`touch-target inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition disabled:opacity-50 ${
         danger
           ? "border-red-400/30 text-red-300 hover:bg-red-400/10"
-          : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary"
+          : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary-ink"
       }`}
     >
       {children}
@@ -817,7 +817,7 @@ function IconBtn({
 function Countdown({ unixSec, pending = false }: { unixSec: number; pending?: boolean }) {
   const now = useContext(KeyClock) ?? nowSeconds();
   if (pending) return <span className="text-muted-foreground">Starts at first login</span>;
-  if (unixSec === 0) return <span className="text-primary">Lifetime</span>;
+  if (unixSec === 0) return <span className="text-primary-ink">Lifetime</span>;
   const diff = unixSec - now;
   if (diff <= 0) return <span className="text-amber-400">Expired</span>;
   const h = Math.floor(diff / 3600);
@@ -892,7 +892,7 @@ function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
       className="h-fit rounded-2xl border border-primary/20 bg-card/60 p-4 glow-primary"
     >
       <h3 className="mb-3 flex items-center gap-2 font-display text-base font-bold">
-        <Plus className="h-4 w-4 text-primary" /> Add manual key
+        <Plus className="h-4 w-4 text-primary-ink" /> Add manual key
       </h3>
       <p className="mb-3 text-xs text-muted-foreground">
         Writes one ValidKeys entry. Users normally generate keys through the worker gate.
@@ -942,7 +942,7 @@ function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
             type="button"
             key={p.l}
             onClick={() => setHours(p.h)}
-            className="touch-target rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-primary"
+            className="touch-target rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-primary-ink"
           >
             {p.l}
           </button>
@@ -1113,7 +1113,7 @@ function DevicesPanel() {
         <StatTile
           label="Total devices"
           value={rows.length}
-          icon={<Smartphone className="h-4 w-4 text-primary" />}
+          icon={<Smartphone className="h-4 w-4 text-primary-ink" />}
         />
         <StatTile
           label="Banned"
@@ -1183,7 +1183,7 @@ function DevicesPanel() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <Loader2 className="h-5 w-5 animate-spin text-primary-ink" />
           </div>
         ) : filtered.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
@@ -1232,7 +1232,7 @@ function DevicesPanel() {
                         <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">
                           {r.fingerprint.slice(0, 16)}…
                         </td>
-                        <td className="py-3 pr-3 font-mono text-xs text-primary">
+                        <td className="py-3 pr-3 font-mono text-xs text-primary-ink">
                           {String(r.Key ?? r.key ?? "—")}
                         </td>
                         <td className="py-3 pr-3 text-xs text-muted-foreground">
@@ -1308,7 +1308,7 @@ function DevicesPanel() {
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="truncate font-mono text-xs text-primary">
+                          <span className="truncate font-mono text-xs text-primary-ink">
                             {String(r.Key ?? r.key ?? "—")}
                           </span>
                           <span
@@ -1435,7 +1435,7 @@ function LocksPanel() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <Loader2 className="h-5 w-5 animate-spin text-primary-ink" />
           </div>
         ) : filtered.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">No locked devices.</p>
@@ -1565,7 +1565,7 @@ function ConfigPanel() {
   if (loading || !cfg) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <Loader2 className="h-5 w-5 animate-spin text-primary-ink" />
       </div>
     );
   }
@@ -1705,7 +1705,7 @@ function ConfigPanel() {
       {upd && (
         <div className="rounded-2xl border border-border bg-card/60 p-5 lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
-            <ArrowUpCircle className="h-5 w-5 text-primary" />
+            <ArrowUpCircle className="h-5 w-5 text-primary-ink" />
             <h3 className="font-display text-lg font-bold">App Update System</h3>
           </div>
 
@@ -1897,7 +1897,7 @@ function LogsPanel() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <Loader2 className="h-5 w-5 animate-spin text-primary-ink" />
         </div>
       ) : filtered.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">No logs.</p>
@@ -1918,7 +1918,7 @@ function LogsPanel() {
                   <td className="py-2 pr-3 text-xs text-muted-foreground">
                     {l.time ? new Date(l.time * 1000).toLocaleString() : "—"}
                   </td>
-                  <td className="py-2 pr-3 font-mono text-primary">{l.key}</td>
+                  <td className="py-2 pr-3 font-mono text-primary-ink">{l.key}</td>
                   <td className="py-2 pr-3 font-mono text-xs">{l.ip || "—"}</td>
                   <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">
                     {l.fingerprint ? l.fingerprint.slice(0, 16) + "…" : "—"}
@@ -1944,7 +1944,7 @@ const AX_BTN =
 const AX_GHOST =
   "inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:border-primary";
 const AX_CARD = "rounded-2xl border border-border bg-card/60 backdrop-blur p-4 sm:p-5 space-y-4";
-const AX_HEAD = "flex items-center gap-2 text-base sm:text-lg font-semibold text-primary";
+const AX_HEAD = "flex items-center gap-2 text-base sm:text-lg font-semibold text-primary-ink";
 
 function AxField(props: {
   label: string;
@@ -2049,7 +2049,7 @@ function AxAppConfig() {
         <div className={AX_HEAD}>
           <Settings2 className="h-5 w-5" /> App Config
         </div>
-        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <Loader2 className="h-5 w-5 animate-spin text-primary-ink" />
       </div>
     );
 
@@ -2081,7 +2081,7 @@ function AxAppConfig() {
           onChange={(v) => setText("BtnTutorial", v)}
         />
       </div>
-      <div className="flex items-center gap-2 pt-2 text-xs font-semibold text-primary/80">
+      <div className="flex items-center gap-2 pt-2 text-xs font-semibold text-primary-ink/80">
         <Link2 className="h-4 w-4" /> App Links
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -2119,7 +2119,7 @@ function AxAppConfig() {
           onChange={(v) => setLink("Whatsapp", v)}
         />
       </div>
-      <div className="pt-2 text-xs font-semibold text-primary/80">Generator API</div>
+      <div className="pt-2 text-xs font-semibold text-primary-ink/80">Generator API</div>
       <div className="grid gap-3 sm:grid-cols-2">
         <AxField
           label="API Base URL"

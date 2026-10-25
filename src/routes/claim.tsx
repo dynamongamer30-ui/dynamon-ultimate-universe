@@ -206,7 +206,7 @@ function ClaimSession({
         aria-labelledby="claim-title"
         className="route-hero edge-light rounded-2xl glass p-8 text-center sm:p-12"
       >
-        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
+        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-ink">
           <Gift className="h-3.5 w-3.5" /> Claim
         </p>
         <h1
@@ -222,7 +222,7 @@ function ClaimSession({
       <div className="mx-auto mt-8 max-w-md">
         {!signedIn ? (
           <div className="rounded-2xl border border-dashed border-border bg-card/30 p-8 text-center text-muted-foreground">
-            <Link to="/auth" className="font-semibold text-primary hover:underline">
+            <Link to="/auth" className="font-semibold text-primary-ink hover:underline">
               Sign in
             </Link>{" "}
             to claim this.
@@ -237,7 +237,7 @@ function ClaimSession({
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl border border-primary/40 bg-primary/5 p-6 text-center"
           >
-            <PartyPopper className="mx-auto h-8 w-8 text-primary" />
+            <PartyPopper className="mx-auto h-8 w-8 text-primary-ink" />
             <p className="mt-3 font-display text-lg font-bold">{result.title}</p>
             <div className="mt-4 flex items-center gap-2">
               <code className="min-w-0 flex-1 select-all break-all rounded-lg border border-border bg-background/60 px-3 py-3 text-center font-mono text-sm font-bold tracking-wider">
@@ -302,9 +302,9 @@ function ClaimSession({
           </div>
         ) : (
           <div className="rounded-2xl border border-border bg-card/40 p-6 text-center">
-            {kind === "trainer_level" && <Trophy className="mx-auto h-8 w-8 text-primary" />}
+            {kind === "trainer_level" && <Trophy className="mx-auto h-8 w-8 text-primary-ink" />}
             {kind === "phoenix_pass" && <Feather className="mx-auto h-8 w-8 text-amber-300" />}
-            {kind === "daily_key" && <KeyRound className="mx-auto h-8 w-8 text-primary" />}
+            {kind === "daily_key" && <KeyRound className="mx-auto h-8 w-8 text-primary-ink" />}
             <p className="mt-3 text-sm text-muted-foreground">
               {kind === "trainer_level"
                 ? "Claim your next Trainer Rank reward."

@@ -181,7 +181,7 @@ function AccountRank({ userId }: { userId: string }) {
                       <Feather className="h-4 w-4 shrink-0 text-amber-300" />
                     ) : (
                       <KeyRound
-                        className={`h-4 w-4 shrink-0 ${level.reward_kind === "trainer_vip_key" ? "text-fuchsia-300" : "text-primary"}`}
+                        className={`h-4 w-4 shrink-0 ${level.reward_kind === "trainer_vip_key" ? "text-fuchsia-300" : "text-primary-ink"}`}
                       />
                     )}
                     <span>{rewardLabel(level.reward_kind, level.reward_qty)}</span>

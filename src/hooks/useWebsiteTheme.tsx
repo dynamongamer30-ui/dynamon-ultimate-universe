@@ -4,7 +4,7 @@ import {
   DEFAULT_APPEARANCE,
   normalizeWebsiteAppearance,
   isWebsiteTheme,
-  PALETTE_KEYS,
+  websitePaletteTokens,
   WEBSITE_THEME_STORAGE,
   type WebsiteAppearance,
   type WebsiteThemeId,
@@ -48,11 +48,9 @@ export function WebsiteThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.websiteTheme = theme;
-    const palette = activeConfig.palettes[theme];
-    for (const key of PALETTE_KEYS) {
-      if (palette?.[key]) root.style.setProperty(`--theme-${key}`, palette[key]);
-      else root.style.removeProperty(`--theme-${key}`);
-    }
+    const palette = websitePaletteTokens(theme, activeConfig.palettes[theme]);
+    for (const [key, color] of Object.entries(palette))
+      root.style.setProperty(`--theme-${key}`, color);
     document
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute("content", getComputedStyle(root).getPropertyValue("--background").trim());

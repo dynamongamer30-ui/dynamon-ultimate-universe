@@ -41,7 +41,7 @@ function FavoritesPage() {
 
       {!user ? (
         <div className="mt-10 rounded-3xl border border-dashed border-border bg-card/30 p-10 text-center text-muted-foreground">
-          <Link to="/auth" className="font-semibold text-primary hover:underline">
+          <Link to="/auth" className="font-semibold text-primary-ink hover:underline">
             Sign in
           </Link>{" "}
           to start saving mods.
@@ -58,7 +58,7 @@ function FavoritesPage() {
           <button
             type="button"
             onClick={() => refresh()}
-            className="touch-target mt-3 text-primary underline"
+            className="touch-target mt-3 text-primary-ink underline"
           >
             Try again
           </button>
@@ -70,7 +70,7 @@ function FavoritesPage() {
       ) : favs.length === 0 ? (
         <div className="mt-10 flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border bg-card/30 p-12 text-center">
           <span
-            className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"
+            className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary-ink"
             style={{ boxShadow: "var(--shadow-glow)" }}
           >
             <Bookmark className="h-6 w-6" />
@@ -78,7 +78,10 @@ function FavoritesPage() {
           <p className="text-muted-foreground">
             No favorites yet. Tap the bookmark on any mod to save it here.
           </p>
-          <Link to="/mods" className="touch-target inline-flex items-center text-primary underline">
+          <Link
+            to="/mods"
+            className="touch-target inline-flex items-center text-primary-ink underline"
+          >
             Explore mods
           </Link>
         </div>

@@ -51,3 +51,66 @@ test("contrast uses WCAG relative luminance", () => {
   assert.equal(themes.contrastRatio("#ffffff", "#000000"), 21);
   assert.equal(themes.contrastRatio("#111111", "#111111"), 1);
 });
+
+test("built-in palettes match the supplied native menu, including neutral Royal Black", async () => {
+  const css = await readFile(new URL("../src/website-themes.css", import.meta.url), "utf8");
+  assert.deepEqual(
+    themes.WEBSITE_THEMES.map((theme) => theme.accent),
+    [
+      "#b4bbc4",
+      "#7c3aed",
+      "#f97316",
+      "#38bdf8",
+      "#22d3ee",
+      "#84cc16",
+      "#e0e7ff",
+      "#fde047",
+      "#e9d5ff",
+    ],
+  );
+  const black = themes.builtInWebsitePalette("royal-black");
+  assert.equal(black.background, "#08090c");
+  assert.equal(black.card, "#1b1e23");
+  assert.equal(black.elevated, "#111318");
+  assert.equal(black.text, "#f3f5f7");
+  assert.equal(black.muted, "#abb3bd");
+  assert.equal(black.accentEnd, "#e2e6eb");
+  for (const theme of themes.WEBSITE_THEMES) {
+    const selector =
+      theme.id === "royal-black" ? ":root" : `:root[data-website-theme="${theme.id}"]`;
+    const block = css.slice(
+      css.indexOf(selector + " {"),
+      css.indexOf("}", css.indexOf(selector + " {")),
+    );
+    for (const [key, value] of Object.entries(themes.websitePaletteTokens(theme.id)))
+      assert.ok(
+        block.includes(`--theme-${key}: ${value};`),
+        `${theme.id}/${key}: CSS and runtime agree`,
+      );
+  }
+});
+
+test("native accents, readable ink and both button gradient endpoints retain contrast", () => {
+  for (const theme of themes.WEBSITE_THEMES) {
+    const palette = themes.websitePaletteTokens(theme.id);
+    for (const bg of [palette.background, palette.card, palette.elevated]) {
+      for (const fg of [palette.text, palette.muted, palette.accentEnd])
+        assert.ok(themes.contrastRatio(bg, fg) >= 4.5, `${theme.id} ink`);
+    }
+    for (const bg of [palette.accent, palette.controlEnd])
+      assert.ok(themes.contrastRatio(bg, palette.onAccent) >= 4.5, `${theme.id} control`);
+    const normalized = themes.normalizeWebsiteAppearance({
+      schema: 1,
+      palettes: { [theme.id]: { accent: theme.accent } },
+    });
+    assert.equal(normalized.palettes[theme.id]?.accent, theme.accent);
+  }
+  assert.equal(themes.websitePaletteTokens("dark").onAccent, "#ffffff");
+  assert.equal(
+    themes.normalizeWebsiteAppearance({
+      schema: 1,
+      palettes: { "royal-black": { accentEnd: "#08090c" } },
+    }).palettes["royal-black"],
+    undefined,
+  );
+});

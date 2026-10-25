@@ -18,7 +18,7 @@ function Disclaimer() {
     <PageShell>
       <article className="prose prose-invert mx-auto max-w-3xl space-y-10">
         <header className="edge-light rounded-2xl glass p-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary-ink">
             Read this first
           </p>
           <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight">
@@ -30,13 +30,13 @@ function Disclaimer() {
             belong to their respective owners.
           </p>
           <p className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed text-foreground">
-            <span className="font-bold text-primary">In simple words: </span>This is a fan site. We
-            are not the company that made Dynamons World, and they don&apos;t run or approve this
+            <span className="font-bold text-primary-ink">In simple words: </span>This is a fan site.
+            We are not the company that made Dynamons World, and they don&apos;t run or approve this
             site. The game and its name belong to them.
           </p>
           <p className="mt-4 text-sm text-muted-foreground">
             For complete data-collection and account-information details, read our{" "}
-            <Link to="/privacy" className="text-primary hover:underline">
+            <Link to="/privacy" className="text-primary-ink hover:underline">
               Privacy Policy
             </Link>
             .
@@ -52,9 +52,9 @@ function Disclaimer() {
             channels.
           </p>
           <p className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed text-foreground">
-            <span className="font-bold text-primary">In simple words: </span>Using a mod can break
-            the game&apos;s rules, and that&apos;s your choice to make. Please also own the real
-            game and support the people who made it.
+            <span className="font-bold text-primary-ink">In simple words: </span>Using a mod can
+            break the game&apos;s rules, and that&apos;s your choice to make. Please also own the
+            real game and support the people who made it.
           </p>
         </section>
 
@@ -67,10 +67,10 @@ function Disclaimer() {
             social links open in their own platforms with their own privacy policies.
           </p>
           <p className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed text-foreground">
-            <span className="font-bold text-primary">In simple words: </span>We save your email and
-            the things you do here (like ratings and comments) so the site works. Nothing else. When
-            you tap a social link, that app&apos;s own rules apply, not ours. If you don&apos;t sign
-            in for 30 days, your account and its data are automatically deleted.
+            <span className="font-bold text-primary-ink">In simple words: </span>We save your email
+            and the things you do here (like ratings and comments) so the site works. Nothing else.
+            When you tap a social link, that app&apos;s own rules apply, not ours. If you don&apos;t
+            sign in for 30 days, your account and its data are automatically deleted.
           </p>
         </section>
 
@@ -82,9 +82,9 @@ function Disclaimer() {
             the work, and your contact information. We respond within 72 hours.
           </p>
           <p className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed text-foreground">
-            <span className="font-bold text-primary">In simple words: </span>If you own something
-            posted here and want it taken down, message us on the Contact page with the link and
-            proof it&apos;s yours. We reply within 3 days.
+            <span className="font-bold text-primary-ink">In simple words: </span>If you own
+            something posted here and want it taken down, message us on the Contact page with the
+            link and proof it&apos;s yours. We reply within 3 days.
           </p>
         </section>
       </article>

@@ -93,7 +93,7 @@ export function AvatarPicker({ value, onChange, gender }: Props) {
           type="button"
           onClick={retry}
           disabled={loading}
-          className="touch-target mt-2 rounded-lg border border-border px-3 py-2 font-semibold text-primary hover:bg-primary/10 disabled:opacity-60"
+          className="touch-target mt-2 rounded-lg border border-border px-3 py-2 font-semibold text-primary-ink hover:bg-primary/10 disabled:opacity-60"
         >
           Retry avatars
         </button>

@@ -63,7 +63,7 @@ function NotificationsPage() {
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
+            <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-ink">
               <Bell className="h-3.5 w-3.5" /> Inbox
             </p>
             <h1
@@ -75,7 +75,7 @@ function NotificationsPage() {
             <p className="mt-3 max-w-2xl text-muted-foreground">
               Announcements and updates from the Dynamon Universe team.
               {unreadCount > 0 && (
-                <span className="ml-2 font-semibold text-primary">{unreadCount} new</span>
+                <span className="ml-2 font-semibold text-primary-ink">{unreadCount} new</span>
               )}
             </p>
           </div>
@@ -106,7 +106,7 @@ function NotificationsPage() {
 
       {!user ? (
         <div className="mt-10 rounded-3xl border border-dashed border-border bg-card/30 p-10 text-center text-muted-foreground">
-          <Link to="/auth" className="font-semibold text-primary hover:underline">
+          <Link to="/auth" className="font-semibold text-primary-ink hover:underline">
             Sign in
           </Link>{" "}
           to view your notifications.
@@ -117,7 +117,7 @@ function NotificationsPage() {
           <button
             type="button"
             onClick={() => refresh()}
-            className="touch-target mt-3 text-primary underline"
+            className="touch-target mt-3 text-primary-ink underline"
           >
             Try again
           </button>
@@ -140,7 +140,7 @@ function NotificationsPage() {
       ) : visibleItems.length === 0 ? (
         <div className="mt-10 flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border bg-card/30 p-12 text-center">
           <span
-            className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"
+            className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary-ink"
             style={{ boxShadow: "var(--shadow-glow)" }}
           >
             <BellOff className="h-6 w-6" />
@@ -184,7 +184,7 @@ function NotificationsPage() {
                   )}
                   <div className="notification-copy min-w-0 flex-1">
                     {sender && (
-                      <p className="text-xs font-semibold text-primary">
+                      <p className="text-xs font-semibold text-primary-ink">
                         {sender.display_name || "Dynamon Gamer 07"}
                       </p>
                     )}

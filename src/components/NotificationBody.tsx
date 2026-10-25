@@ -38,7 +38,7 @@ export function NotificationBody({ text, className }: { text: string; className?
               }}
               aria-label={`Copy key ${keys[i]}`}
               title="Copy key"
-              className="touch-target mx-0.5 inline-flex select-text items-center break-all rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono font-bold text-primary"
+              className="touch-target mx-0.5 inline-flex select-text items-center break-all rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono font-bold text-primary-ink"
             >
               {keys[i]}
             </button>

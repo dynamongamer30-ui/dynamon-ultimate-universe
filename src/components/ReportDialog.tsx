@@ -128,7 +128,7 @@ export function ReportButton({
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex min-w-0 items-start gap-3">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary-ink">
                         <Flag className="h-5 w-5" aria-hidden />
                       </span>
                       <div className="min-w-0">

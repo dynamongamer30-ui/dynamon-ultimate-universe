@@ -34,7 +34,7 @@ export function Footer() {
               <li>
                 <Link
                   to="/"
-                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary-ink"
                 >
                   Home
                 </Link>
@@ -42,7 +42,7 @@ export function Footer() {
               <li>
                 <Link
                   to="/mods"
-                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary-ink"
                 >
                   All Mods
                 </Link>
@@ -50,7 +50,7 @@ export function Footer() {
               <li>
                 <Link
                   to="/about"
-                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary-ink"
                 >
                   About us
                 </Link>
@@ -58,7 +58,7 @@ export function Footer() {
               <li>
                 <Link
                   to="/contact"
-                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary-ink"
                 >
                   Contact
                 </Link>
@@ -66,7 +66,7 @@ export function Footer() {
               <li>
                 <Link
                   to="/auth"
-                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary-ink"
                 >
                   Sign in
                 </Link>
@@ -80,7 +80,7 @@ export function Footer() {
               <li>
                 <Link
                   to="/disclaimer"
-                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary-ink"
                 >
                   Disclaimer
                 </Link>
@@ -89,7 +89,7 @@ export function Footer() {
                 <Link
                   to="/disclaimer"
                   hash="legal"
-                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary-ink"
                 >
                   Terms of use
                 </Link>
@@ -97,7 +97,7 @@ export function Footer() {
               <li>
                 <Link
                   to="/privacy"
-                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary-ink"
                 >
                   Privacy policy
                 </Link>
@@ -106,7 +106,7 @@ export function Footer() {
                 <Link
                   to="/disclaimer"
                   hash="dmca"
-                  className="touch-target inline-flex items-center transition-colors hover:text-primary"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary-ink"
                 >
                   DMCA
                 </Link>
@@ -123,9 +123,9 @@ export function Footer() {
                     href={href}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="touch-target group inline-flex items-center gap-2.5 text-muted-foreground transition-colors hover:text-primary"
+                    className="touch-target group inline-flex items-center gap-2.5 text-muted-foreground transition-colors hover:text-primary-ink"
                   >
-                    <span className="grid h-7 w-7 place-items-center rounded-lg border border-border bg-card/60 transition-colors group-hover:border-primary/40 group-hover:text-primary">
+                    <span className="grid h-7 w-7 place-items-center rounded-lg border border-border bg-card/60 transition-colors group-hover:border-primary/40 group-hover:text-primary-ink">
                       <Icon className="h-3.5 w-3.5" />
                     </span>
                     {label}

@@ -49,7 +49,7 @@ export function ThemedSelect({
           <SelectItem
             key={o.value}
             value={o.value}
-            className="cursor-pointer focus:bg-primary/15 focus:text-primary data-[state=checked]:text-primary"
+            className="cursor-pointer focus:bg-primary/15 focus:text-primary-ink data-[state=checked]:text-primary-ink"
           >
             {o.label}
           </SelectItem>

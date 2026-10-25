@@ -81,7 +81,7 @@ export const Route = createFileRoute("/mods/$slug")({
       <div className="py-20 text-center">
         <h1 className="font-display text-3xl font-bold">Mod not found</h1>
         <p className="mt-2 text-muted-foreground">It might have been renamed or removed.</p>
-        <Link to="/mods" className="mt-6 inline-block text-primary hover:underline">
+        <Link to="/mods" className="mt-6 inline-block text-primary-ink hover:underline">
           Back to all mods
         </Link>
       </div>
@@ -206,7 +206,7 @@ function ModDetail() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
+          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink">
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Dynamons World · Mod APK
           </p>
@@ -257,7 +257,7 @@ function ModDetail() {
                     className="surface-l1 flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm"
                   >
                     <span
-                      className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-primary/15 text-primary"
+                      className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-primary/15 text-primary-ink"
                       aria-hidden="true"
                     >
                       <Check className="h-3.5 w-3.5" />
@@ -326,13 +326,13 @@ function ModDetail() {
         <div className="material-l1 rounded-[var(--radius-surface)] p-5 sm:p-6">
           <div className="flex items-start gap-3">
             <span
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary-ink"
               aria-hidden="true"
             >
               <ShieldCheck className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-ink">
                 Decision notes
               </p>
               <h2 id="safety-title" className="mt-1 font-display text-xl font-bold">
@@ -357,7 +357,9 @@ function ModDetail() {
           </ul>
         </div>
         <div className="material-l1 rounded-[var(--radius-surface)] p-5 sm:p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Compatibility</p>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-ink">
+            Compatibility
+          </p>
           <h2 className="mt-1 font-display text-xl font-bold">Release context</h2>
           <dl className="mt-5 space-y-3 text-sm">
             <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-3">
@@ -375,7 +377,7 @@ function ModDetail() {
           </dl>
           <Link
             to="/disclaimer"
-            className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline"
+            className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary-ink hover:underline"
           >
             <Shield className="h-4 w-4" /> Read safety notes
           </Link>
@@ -386,7 +388,9 @@ function ModDetail() {
       <section className="mt-14">
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary">Gameplay</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary-ink">
+              Gameplay
+            </p>
             <h2 className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight">
               Watch the {theme.label} build in action
             </h2>
@@ -627,7 +631,7 @@ function FollowGate({
 
         {step === "gate" ? (
           <div className="text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary-ink">
               <Lock className="h-6 w-6" />
             </div>
             <h3 className="mt-4 font-display text-xl font-extrabold uppercase tracking-tight text-balance">
@@ -657,7 +661,7 @@ function FollowGate({
           </div>
         ) : step === "verifying" ? (
           <div className="text-center py-4">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary-ink" />
             <p className="mt-4 text-sm text-muted-foreground">
               Starting your secure download session…
             </p>
@@ -742,7 +746,7 @@ function DownloadChoice({
   return (
     <ModalShell label={`Download ${modName}`} onClose={onClose}>
       <div className="text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary-ink">
           <Download className="h-6 w-6" />
         </div>
         <h3 className="mt-4 font-display text-xl font-extrabold uppercase tracking-tight text-balance">
@@ -1132,7 +1136,7 @@ function TrustSignal({ icon, label, value }: { icon: ReactNode; label: string; v
   return (
     <div className="material-l1 flex min-w-0 items-center gap-3 rounded-xl p-3">
       <span
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary-ink"
         aria-hidden="true"
       >
         {icon}

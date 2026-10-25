@@ -92,7 +92,7 @@ export function NotificationBell() {
               {!loading && !error && unreadCount > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="touch-target inline-flex items-center gap-1 rounded-lg px-2 text-xs font-medium text-primary hover:bg-primary/10 hover:underline"
+                  className="touch-target inline-flex items-center gap-1 rounded-lg px-2 text-xs font-medium text-primary-ink hover:bg-primary/10 hover:underline"
                 >
                   <Check className="h-3.5 w-3.5" /> Mark all read
                 </button>
@@ -109,7 +109,7 @@ export function NotificationBell() {
                 <button
                   type="button"
                   onClick={refresh}
-                  className="touch-target mt-3 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-card/60"
+                  className="touch-target mt-3 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-primary-ink hover:bg-card/60"
                 >
                   Try again
                 </button>
@@ -151,7 +151,7 @@ export function NotificationBell() {
                                   alt=""
                                   className="h-4 w-4 shrink-0 rounded-full object-cover"
                                 />
-                                <span className="text-xs font-medium text-primary">
+                                <span className="text-xs font-medium text-primary-ink">
                                   {sender.display_name || "Dynamon Gamer 07"}
                                 </span>
                               </div>
@@ -185,7 +185,7 @@ export function NotificationBell() {
             <Link
               to="/notifications"
               onClick={() => setOpen(false)}
-              className="block border-t border-border/60 px-4 py-3 text-center text-sm font-medium text-primary hover:bg-card/60"
+              className="block border-t border-border/60 px-4 py-3 text-center text-sm font-medium text-primary-ink hover:bg-card/60"
             >
               View all notifications
             </Link>

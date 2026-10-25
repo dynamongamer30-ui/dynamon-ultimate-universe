@@ -80,7 +80,7 @@ export function ForYouRail() {
     <section aria-labelledby="recommendations-title" aria-busy={working} className="mt-16">
       <div className="flex items-end justify-between">
         <div>
-          <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
+          <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-primary-ink">
             <Sparkles className="h-3 w-3" /> For You
           </p>
           <h2
@@ -103,7 +103,7 @@ export function ForYouRail() {
             type="button"
             onClick={retry}
             disabled={working}
-            className="touch-target mt-3 rounded-full border border-border px-4 py-2 text-primary disabled:opacity-60"
+            className="touch-target mt-3 rounded-full border border-border px-4 py-2 text-primary-ink disabled:opacity-60"
           >
             {working ? "Retrying recommendations…" : "Retry recommendations"}
           </button>
@@ -138,7 +138,7 @@ export function ForYouRail() {
                     className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-105"
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card to-transparent p-3">
-                    <p className="text-xs uppercase tracking-widest text-primary">{t.label}</p>
+                    <p className="text-xs uppercase tracking-widest text-primary-ink">{t.label}</p>
                     <p className="font-display text-sm font-bold leading-tight">{s.mod.name}</p>
                   </div>
                 </Link>

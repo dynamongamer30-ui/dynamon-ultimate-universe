@@ -107,7 +107,7 @@ function AdminKeyCard({ current, onSave }: { current: string; onSave: (k: string
   return (
     <div className="rounded-2xl border border-primary/20 bg-card/60 p-5 glow-primary">
       <div className="flex items-center gap-2">
-        <KeyRound className="h-4 w-4 text-primary" />
+        <KeyRound className="h-4 w-4 text-primary-ink" />
         <h3 className="font-display text-base font-bold">License Worker admin key</h3>
         {current && (
           <span className="ml-auto rounded-full border border-green-400/40 px-2 py-0.5 text-xs text-green-300">
@@ -175,7 +175,9 @@ function DevicesPanel({ onAuthFail }: { onAuthFail: () => void }) {
           {data && (
             <p className="text-xs text-muted-foreground">
               Current build:{" "}
-              <span className="font-mono text-primary">{String(data.current_build ?? "—")}</span>
+              <span className="font-mono text-primary-ink">
+                {String(data.current_build ?? "—")}
+              </span>
               {" · "}
               {data.presence_disabled
                 ? "Live tracking disabled"
@@ -195,7 +197,7 @@ function DevicesPanel({ onAuthFail }: { onAuthFail: () => void }) {
 
       {!data ? (
         <div className="flex justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <Loader2 className="h-5 w-5 animate-spin text-primary-ink" />
         </div>
       ) : data.active.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
@@ -350,7 +352,7 @@ function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
     <div>
       <div className="mb-1 flex items-center justify-between">
         <label className="text-xs font-semibold text-muted-foreground">{label}</label>
-        <label className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-primary">
+        <label className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-primary-ink">
           <FileUp className="h-3 w-3" /> Load file
           <input
             type="file"
@@ -575,7 +577,7 @@ function BanPanel({ onAuthFail }: { onAuthFail: () => void }) {
         <h4 className="mb-2 text-sm font-bold">Banned devices</h4>
         {loading ? (
           <div className="flex justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <Loader2 className="h-5 w-5 animate-spin text-primary-ink" />
           </div>
         ) : banned.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">No banned devices.</p>

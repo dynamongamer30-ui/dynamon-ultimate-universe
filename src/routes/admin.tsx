@@ -259,7 +259,7 @@ function AdminPage() {
           </Link>
           <Link
             to="/admin-notifications"
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold transition-colors hover:border-primary/40 hover:text-primary"
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold transition-colors hover:border-primary/40 hover:text-primary-ink"
           >
             <Bell className="h-4 w-4" /> Send Notifications
           </Link>

@@ -50,7 +50,7 @@ export function StreakBadge({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           onClick={() => void refresh()}
-          className="touch-target mt-3 text-sm text-primary underline"
+          className="touch-target mt-3 text-sm text-primary-ink underline"
         >
           Retry progress lookup
         </button>
@@ -66,7 +66,7 @@ export function StreakBadge({ compact = false }: { compact?: boolean }) {
           <button
             type="button"
             onClick={() => void checkIn()}
-            className="touch-target mt-2 text-primary underline"
+            className="touch-target mt-2 text-primary-ink underline"
           >
             Retry daily check-in
           </button>

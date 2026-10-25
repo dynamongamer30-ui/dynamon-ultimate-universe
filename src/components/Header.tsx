@@ -96,12 +96,12 @@ export function Header() {
 
   return (
     <header className="sticky top-0 site-chrome glass-l2 border-b border-border/60">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
         <Link
           to="/"
           onMouseDown={playClick}
           aria-label="Dynamon Universe home"
-          className="flex min-w-0 items-center gap-2 rounded-xl"
+          className="flex min-w-0 shrink-0 items-center gap-2 rounded-xl"
         >
           <motion.span
             initial={{ rotate: -20, scale: 0.6, opacity: 0 }}
@@ -132,7 +132,7 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-1 sm:gap-2">
           {user && (
             <div className="hidden items-center gap-2 md:flex">
               <LevelBadge compact />
@@ -161,13 +161,13 @@ export function Header() {
           {user && <NotificationBell />}
 
           {user ? (
-            <div ref={menuRef} className="relative">
+            <div ref={menuRef} className="relative shrink-0">
               <button
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-expanded={menuOpen}
-                aria-haspopup="menu"
+                aria-haspopup="dialog"
                 aria-controls="account-menu"
-                className={`touch-target relative grid place-items-center overflow-hidden rounded-full text-primary-foreground ${profile?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/40"}`}
+                className="account-trigger touch-target relative grid place-items-center overflow-hidden rounded-full text-primary-foreground ring-2 ring-primary/40"
                 style={!avatarUrl ? { background: "var(--gradient-violet)" } : undefined}
                 aria-label="Account"
               >
@@ -178,10 +178,9 @@ export function Header() {
                 )}
                 {profile?.is_owner && (
                   <span
-                    className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full text-xs font-extrabold text-amber-50"
+                    className="absolute bottom-0 right-0 grid h-4 w-4 place-items-center rounded-full bg-primary text-xs font-extrabold text-primary-foreground"
                     style={{
-                      background: "linear-gradient(135deg,#f59e0b,#f97316)",
-                      boxShadow: "0 0 8px rgba(251,191,36,0.7)",
+                      boxShadow: "var(--shadow-glow)",
                     }}
                   >
                     ★
@@ -275,28 +274,28 @@ export function Header() {
                         <Link
                           to="/admin"
                           onClick={() => setMenuOpen(false)}
-                          className="touch-target flex w-full items-center gap-2 border-t border-border/60 px-4 py-3 text-left text-sm text-amber-300 hover:bg-card/60"
+                          className="touch-target flex w-full items-center gap-2 border-t border-border/60 px-4 py-3 text-left text-sm text-primary-ink hover:bg-card/60"
                         >
                           <Shield className="h-4 w-4" /> Owner dashboard
                         </Link>
                         <Link
                           to="/admin-keys"
                           onClick={() => setMenuOpen(false)}
-                          className="touch-target flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-amber-300 hover:bg-card/60"
+                          className="touch-target flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-primary-ink hover:bg-card/60"
                         >
                           <KeyRound className="h-4 w-4" /> Key system
                         </Link>
                         <Link
                           to="/admin-control"
                           onClick={() => setMenuOpen(false)}
-                          className="touch-target flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-amber-300 hover:bg-card/60"
+                          className="touch-target flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-primary-ink hover:bg-card/60"
                         >
                           <Settings className="h-4 w-4" /> Control panel
                         </Link>
                         <Link
                           to="/admin-notifications"
                           onClick={() => setMenuOpen(false)}
-                          className="touch-target flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-amber-300 hover:bg-card/60"
+                          className="touch-target flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-primary-ink hover:bg-card/60"
                         >
                           <Bell className="h-4 w-4" /> Send notifications
                         </Link>

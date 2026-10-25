@@ -256,7 +256,7 @@ function AdminNotifications() {
                         <button
                           onClick={() => startEdit(n)}
                           aria-label="Edit notification"
-                          className="press grid h-8 w-8 place-items-center rounded-lg border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
+                          className="press grid h-8 w-8 place-items-center rounded-lg border border-border text-muted-foreground hover:border-primary/50 hover:text-primary-ink"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>

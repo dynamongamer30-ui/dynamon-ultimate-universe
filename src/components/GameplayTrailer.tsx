@@ -70,7 +70,7 @@ export function GameplayTrailer({
           href={`https://www.youtube.com/watch?v=${id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="touch-target inline-flex items-center gap-2 font-semibold text-primary hover:underline"
+          className="touch-target inline-flex items-center gap-2 font-semibold text-primary-ink hover:underline"
         >
           Open trailer on YouTube <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
         </a>

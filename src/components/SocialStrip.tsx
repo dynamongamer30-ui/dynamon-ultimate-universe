@@ -73,7 +73,7 @@ export function SocialStrip({ variant = "full" }: { variant?: "full" | "compact"
     <section className="relative overflow-hidden rounded-3xl glass p-6 sm:p-10">
       <div className="relative grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-ink">
             Join the Universe
           </p>
           <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
@@ -93,7 +93,7 @@ export function SocialStrip({ variant = "full" }: { variant?: "full" | "compact"
               onMouseDown={playSoft}
               whileHover={{ y: -3 }}
               whileTap={{ scale: 0.95 }}
-              className="group flex items-center gap-2 rounded-full border border-border bg-card/70 px-4 py-2 text-sm font-medium transition-colors hover:border-primary/50 hover:text-primary"
+              className="group flex items-center gap-2 rounded-full border border-border bg-card/70 px-4 py-2 text-sm font-medium transition-colors hover:border-primary/50 hover:text-primary-ink"
             >
               <Icon className="h-4 w-4" />
               <span>{label}</span>

@@ -29,7 +29,7 @@ function Contact() {
     <PageShell>
       <section className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
         <div className="route-hero">
-          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
+          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink">
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Get in touch
           </p>
@@ -107,7 +107,7 @@ function Contact() {
           </p>
           <p className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <Mail className="h-3 w-3" /> Or email{" "}
-            <a className="text-primary underline" href={`mailto:${SUPPORT_EMAIL}`}>
+            <a className="text-primary-ink underline" href={`mailto:${SUPPORT_EMAIL}`}>
               {SUPPORT_EMAIL}
             </a>
           </p>

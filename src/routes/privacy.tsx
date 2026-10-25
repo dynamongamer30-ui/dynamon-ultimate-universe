@@ -18,7 +18,7 @@ function Privacy() {
     <PageShell>
       <article className="prose prose-invert mx-auto max-w-3xl space-y-8">
         <header className="route-hero edge-light rounded-2xl glass p-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary-ink">
             Dynamon Universe
           </p>
           <h1 className="mt-3 font-display text-4xl font-black uppercase tracking-tight">
@@ -127,7 +127,7 @@ function Privacy() {
           </p>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             To ask about, correct, or delete account information, use the{" "}
-            <Link to="/contact" className="text-primary hover:underline">
+            <Link to="/contact" className="text-primary-ink hover:underline">
               Contact page
             </Link>{" "}
             and include the email address associated with your account. We may verify ownership
@@ -153,14 +153,14 @@ function Privacy() {
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             We may update this policy when the website, providers, or legal requirements change. The
             latest version is always posted at{" "}
-            <Link to="/privacy" className="text-primary hover:underline">
+            <Link to="/privacy" className="text-primary-ink hover:underline">
               dynamongamer.com/privacy
             </Link>
             .
           </p>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             For privacy questions or deletion requests, visit{" "}
-            <Link to="/contact" className="text-primary hover:underline">
+            <Link to="/contact" className="text-primary-ink hover:underline">
               dynamongamer.com/contact
             </Link>
             .

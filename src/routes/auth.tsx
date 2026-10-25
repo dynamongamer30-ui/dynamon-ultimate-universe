@@ -152,7 +152,7 @@ function AuthPage() {
             id="account-benefits-title"
             className="flex items-center gap-2 font-display text-lg font-bold"
           >
-            <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" /> Make it yours
+            <Sparkles className="h-4 w-4 text-primary-ink" aria-hidden="true" /> Make it yours
           </h2>
           <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
             {[
@@ -162,7 +162,7 @@ function AuthPage() {
               "Join reviews and react to other trainers",
             ].map((text) => (
               <li key={text} className="flex items-start gap-3">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-ink" aria-hidden="true" />
                 <span>{text}</span>
               </li>
             ))}
@@ -178,7 +178,7 @@ function Chip({ active, children }: { active: boolean; children: React.ReactNode
     <span
       role="listitem"
       aria-current={active ? "step" : undefined}
-      className={`inline-flex items-center rounded-full border px-3 py-1 font-semibold uppercase tracking-wider ${active ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
+      className={`inline-flex items-center rounded-full border px-3 py-1 font-semibold uppercase tracking-wider ${active ? "border-primary/40 bg-primary/10 text-primary-ink" : "border-border text-muted-foreground"}`}
     >
       {children}
     </span>
@@ -212,11 +212,11 @@ function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => vo
 
       <p className="mt-5 text-center text-xs text-muted-foreground">
         By continuing you agree to our{" "}
-        <Link to="/disclaimer" tabIndex={0} className="text-primary hover:underline">
+        <Link to="/disclaimer" tabIndex={0} className="text-primary-ink hover:underline">
           Disclaimer &amp; Safety
         </Link>{" "}
         and{" "}
-        <Link to="/privacy" tabIndex={0} className="text-primary hover:underline">
+        <Link to="/privacy" tabIndex={0} className="text-primary-ink hover:underline">
           Privacy Policy
         </Link>
         .
@@ -379,7 +379,7 @@ function ProfileStep({ onDone }: { onDone: () => Promise<void> }) {
                 aria-pressed={gender === g}
                 className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
                   gender === g
-                    ? "border-primary/50 bg-primary/10 text-primary"
+                    ? "border-primary/50 bg-primary/10 text-primary-ink"
                     : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -434,7 +434,7 @@ function ProfileStep({ onDone }: { onDone: () => Promise<void> }) {
 
       <p className="text-center text-xs text-muted-foreground">
         By continuing you agree to our{" "}
-        <Link to="/disclaimer" className="text-primary hover:underline">
+        <Link to="/disclaimer" className="text-primary-ink hover:underline">
           Disclaimer & Safety
         </Link>
         .

@@ -313,7 +313,7 @@ function ProfileEditor({
                       aria-pressed={gender === g}
                       className={`touch-target rounded-xl border px-3 py-2.5 text-sm font-semibold capitalize transition-colors ${
                         gender === g
-                          ? "border-primary/50 bg-primary/10 text-primary"
+                          ? "border-primary/50 bg-primary/10 text-primary-ink"
                           : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
                       }`}
                     >

@@ -100,7 +100,7 @@ function Index() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={spring}
-                className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary"
+                className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink"
               >
                 <span className="inline-block h-px w-8 bg-primary" aria-hidden />
                 Dynamon Gamer / The elemental collection
@@ -171,7 +171,6 @@ function Index() {
                 params={{ slug: top.slug }}
                 onMouseDown={playClick}
                 onMouseEnter={playHover}
-                aria-label={`View featured build: ${top.name}`}
                 className="edge-light group relative block overflow-hidden rounded-[var(--radius-surface)] border border-border bg-card shadow-elev transition-transform duration-300 hover:-translate-y-1.5"
                 style={{ boxShadow: elementTheme[top.element].glow }}
               >
@@ -206,7 +205,7 @@ function Index() {
                     <p className="text-xs text-muted-foreground">
                       v{top.version} · {formatCount(top.downloads)}+ downloads
                     </p>
-                    <ArrowRight className="h-4 w-4 text-primary transition-transform group-hover:translate-x-1" />
+                    <ArrowRight className="h-4 w-4 text-primary-ink transition-transform group-hover:translate-x-1" />
                   </div>
                 </div>
               </Link>
@@ -263,7 +262,7 @@ function Index() {
       <section aria-labelledby="showcase-title" className="mt-16 sm:mt-20">
         <div className="flex items-end justify-between gap-4">
           <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink">
               <span className="inline-block h-px w-8 bg-primary" aria-hidden />
               The vault
             </p>
@@ -279,7 +278,7 @@ function Index() {
             to="/mods"
             onMouseDown={playClick}
             onMouseEnter={playHover}
-            className="group hidden shrink-0 items-center gap-2 text-sm font-bold uppercase tracking-wider text-primary sm:inline-flex"
+            className="group hidden shrink-0 items-center gap-2 text-sm font-bold uppercase tracking-wider text-primary-ink sm:inline-flex"
           >
             Compare builds
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -314,7 +313,7 @@ function Index() {
       >
         <div className="flex flex-col justify-between rounded-[var(--radius-surface)] border border-border bg-card/55 p-6 sm:p-8">
           <div>
-            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink">
               <span className="inline-block h-px w-8 bg-primary" aria-hidden />
               Your trainer journey
             </p>
@@ -332,7 +331,7 @@ function Index() {
           <Link
             to="/rewards"
             onMouseDown={playClick}
-            className="press touch-target mt-8 inline-flex w-fit items-center gap-2 rounded-xl border border-primary/35 bg-primary/10 px-4 py-3 text-sm font-bold text-primary transition-colors hover:bg-primary/20"
+            className="press touch-target mt-8 inline-flex w-fit items-center gap-2 rounded-xl border border-primary/35 bg-primary/10 px-4 py-3 text-sm font-bold text-primary-ink transition-colors hover:bg-primary/20"
           >
             View rewards <ArrowUpRight className="h-4 w-4" />
           </Link>
@@ -366,7 +365,7 @@ function Index() {
         className="mt-20 grid gap-10 border-t border-border pt-16 lg:grid-cols-[0.75fr_1.25fr] lg:items-start"
       >
         <div>
-          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
+          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink">
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
             Before you choose
           </p>
@@ -387,7 +386,7 @@ function Index() {
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-bold tracking-tight marker:content-none">
                 {item.question}
                 <span
-                  className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-primary/30 text-primary transition-transform duration-300 group-open:rotate-45"
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-primary/30 text-primary-ink transition-transform duration-300 group-open:rotate-45"
                   aria-hidden
                 >
                   +
@@ -428,7 +427,7 @@ function FeaturePanel({
       className="group bg-card p-2 transition-colors hover:bg-secondary"
     >
       <div ref={tiltRef} className="feature-tilt h-full rounded-xl p-4 sm:p-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary-ink transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
           <Icon className="h-5 w-5" />
         </div>
         <h3 className="mt-4 font-display text-base font-extrabold uppercase tracking-tight">
@@ -463,16 +462,18 @@ function JourneyCard({
     >
       <div>
         <span
-          className="grid h-10 w-10 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary"
+          className="grid h-10 w-10 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary-ink"
           aria-hidden="true"
         >
           {icon}
         </span>
-        <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-primary">{eyebrow}</p>
+        <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-primary-ink">
+          {eyebrow}
+        </p>
         <h3 className="mt-2 font-display text-xl font-bold tracking-tight">{title}</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{text}</p>
       </div>
-      <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-foreground group-hover:text-primary">
+      <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-foreground group-hover:text-primary-ink">
         {action} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
       </span>
     </Link>

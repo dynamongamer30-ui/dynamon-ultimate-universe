@@ -146,7 +146,7 @@ function ControlPanel() {
             <button
               type="button"
               onClick={() => refresh()}
-              className="touch-target mt-3 text-primary underline"
+              className="touch-target mt-3 text-primary-ink underline"
             >
               Try again
             </button>
@@ -161,7 +161,7 @@ function ControlPanel() {
                   Manage feature locks, themes, branding and community links in Key system → Royal
                   Void DEX.
                 </p>
-                <Link to="/admin-keys" className="text-primary underline">
+                <Link to="/admin-keys" className="text-primary-ink underline">
                   Open Key system
                 </Link>
               </div>
@@ -498,7 +498,7 @@ function AccountsEditor() {
     >
       <Grid>
         <Field label="Total signed-up users">
-          <div className={`${inp} flex items-center font-mono text-lg font-bold text-primary`}>
+          <div className={`${inp} flex items-center font-mono text-lg font-bold text-primary-ink`}>
             {totalUsers}
           </div>
         </Field>
@@ -1301,7 +1301,7 @@ function Card({
   return (
     <section className="edge-light rounded-2xl glass p-6 sm:p-8">
       <h2 className="font-display text-xl font-bold flex items-center gap-2">
-        <ImageIcon className="h-5 w-5 text-primary" />
+        <ImageIcon className="h-5 w-5 text-primary-ink" />
         {title}
       </h2>
       {desc && <p className="mt-1 text-sm text-muted-foreground">{desc}</p>}
