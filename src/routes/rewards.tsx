@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -186,6 +187,7 @@ function Rewards() {
 }
 
 function AccountRewards() {
+  const reducedMotion = useReducedMotionPreference();
   const { pass, dailyKey, passExpired, keyExpired } = useDailyRewards();
   const loading = pass.isFetching || dailyKey.isFetching;
   const keyUnavailable = !!(dailyKey.data?.claimed && !dailyKey.data.key);
@@ -239,7 +241,8 @@ function AccountRewards() {
       {/* Active Phoenix Pass banner */}
       {!pass.isFetching && !pass.error && !passExpired && pass.data && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+          transition={reducedMotion ? { duration: 0 } : undefined}
           animate={{ opacity: 1, y: 0 }}
           className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 sm:flex-row sm:items-center sm:justify-between"
         >
@@ -291,6 +294,7 @@ function AccountRewards() {
 }
 
 function DailyKeyCard({ value, expiresAt }: { value: string; expiresAt: string }) {
+  const reducedMotion = useReducedMotionPreference();
   const [copied, setCopied] = useState(false);
   const active = useRef(true);
   const reset = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -321,7 +325,8 @@ function DailyKeyCard({ value, expiresAt }: { value: string; expiresAt: string }
   };
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+      transition={reducedMotion ? { duration: 0 } : undefined}
       animate={{ opacity: 1, y: 0 }}
       className="mt-6 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-transparent p-5"
     >
@@ -377,9 +382,12 @@ function PrizeCard({
   body: string;
   points: string[];
 }) {
+  const reducedMotion = useReducedMotionPreference();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+      transition={reducedMotion ? { duration: 0 } : undefined}
+      animate={reducedMotion ? { opacity: 1, y: 0 } : undefined}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       className={`relative overflow-hidden rounded-2xl border ${ring} bg-card p-6`}

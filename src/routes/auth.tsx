@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, useNavigate, useRouterState, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/auth")({
 type Step = "credentials" | "profile";
 
 function AuthPage() {
+  const reducedMotion = useReducedMotionPreference();
   const { user, loading } = useAuth();
   const {
     profile,
@@ -98,7 +100,8 @@ function AuthPage() {
     <PageShell>
       <div className="mx-auto grid max-w-6xl gap-5 py-2 sm:gap-8 sm:py-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start lg:gap-x-12 lg:py-12">
         <motion.header
-          initial={{ opacity: 0, y: 20 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 20 }}
+          transition={reducedMotion ? { duration: 0 } : undefined}
           animate={{ opacity: 1, y: 0 }}
           className="min-w-0"
         >
@@ -114,7 +117,8 @@ function AuthPage() {
           role="region"
           aria-label="Account access"
           key={step}
-          initial={{ opacity: 0, y: 20 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 20 }}
+          transition={reducedMotion ? { duration: 0 } : undefined}
           animate={{ opacity: 1, y: 0 }}
           className="relative min-w-0 overflow-hidden edge-light rounded-2xl glass p-5 shadow-elev sm:p-8 lg:col-start-2 lg:row-start-1 lg:row-span-2"
         >
@@ -186,9 +190,11 @@ function Chip({ active, children }: { active: boolean; children: React.ReactNode
 }
 
 function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => void }) {
+  const reducedMotion = useReducedMotionPreference();
   return (
     <motion.div
-      initial={{ opacity: 0, x: -10 }}
+      initial={reducedMotion ? false : { opacity: 0, x: -10 }}
+      transition={reducedMotion ? { duration: 0 } : undefined}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 10 }}
       className="relative"
@@ -229,6 +235,7 @@ function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => vo
 }
 
 function ProfileStep({ onDone }: { onDone: () => Promise<void> }) {
+  const reducedMotion = useReducedMotionPreference();
   const { user } = useAuth();
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -304,7 +311,8 @@ function ProfileStep({ onDone }: { onDone: () => Promise<void> }) {
       aria-labelledby="profile-step-title"
       onSubmit={submit}
       aria-busy={busy}
-      initial={{ opacity: 0, x: 10 }}
+      initial={reducedMotion ? false : { opacity: 0, x: 10 }}
+      transition={reducedMotion ? { duration: 0 } : undefined}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -10 }}
       className="relative space-y-5"

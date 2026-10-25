@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Heart, Send, Star, Loader2, Trash2, Reply as ReplyIcon } from "lucide-react";
@@ -40,6 +41,7 @@ export function CommentsPanel({
   /** Blended (owner seed + real) count of likes on reviews. */
   combinedLikes?: number;
 }) {
+  const reducedMotion = useReducedMotionPreference();
   const { user } = useAuth();
   const { profile } = useProfile();
   const { award } = useGamification();
@@ -394,7 +396,8 @@ export function CommentsPanel({
         key={c.id}
         data-comment-id={c.id}
         data-review-thread={isReply ? undefined : "true"}
-        initial={{ opacity: 0, y: 10 }}
+        initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+        transition={reducedMotion ? { duration: 0 } : undefined}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
         className={`surface-l1 rounded-2xl border p-4 ${isReply ? "ml-6 border-l-2 border-l-primary/30" : ""}`}
@@ -504,7 +507,8 @@ export function CommentsPanel({
         <AnimatePresence>
           {replyOpen === c.id && !isReply && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
+              initial={reducedMotion ? false : { opacity: 0, height: 0 }}
+              transition={reducedMotion ? { duration: 0 } : undefined}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               className="mt-3 overflow-hidden"

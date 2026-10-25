@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
@@ -71,6 +72,7 @@ const FAQ_ITEMS = [
 ];
 
 function Index() {
+  const reducedMotion = useReducedMotionPreference();
   const { mods } = useSiteSettings();
   // Newest version first (1.13.33, then 1.13.32, then 1.13.31 ...).
   // The first build is automatically the featured one.
@@ -97,9 +99,9 @@ function Index() {
           <div className="grid gap-8 lg:grid-cols-[1.25fr_1fr] lg:items-center lg:gap-12">
             <div>
               <motion.p
-                initial={{ opacity: 0, y: 12 }}
+                initial={reducedMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={spring}
+                transition={reducedMotion ? { duration: 0 } : spring}
                 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink"
               >
                 <span className="inline-block h-px w-8 bg-primary" aria-hidden />
@@ -107,9 +109,9 @@ function Index() {
               </motion.p>
 
               <motion.h1
-                initial={{ opacity: 0, y: 24 }}
+                initial={reducedMotion ? false : { opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ ...spring, delay: 0.06 }}
+                transition={reducedMotion ? { duration: 0 } : { ...spring, delay: 0.06 }}
                 id="homepage-title"
                 className="mt-6 max-w-[16ch] font-display text-[clamp(1.5rem,7.7vw,4.5rem)] font-bold leading-[1.03] tracking-[-0.045em] text-balance lg:text-[clamp(2.25rem,4.6vw,4.5rem)]"
               >
@@ -119,9 +121,9 @@ function Index() {
               </motion.h1>
 
               <motion.p
-                initial={{ opacity: 0, y: 20 }}
+                initial={reducedMotion ? false : { opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ ...spring, delay: 0.12 }}
+                transition={reducedMotion ? { duration: 0 } : { ...spring, delay: 0.12 }}
                 className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg text-pretty"
               >
                 Explore a focused collection of Dynamons World builds with clear feature notes,
@@ -130,9 +132,9 @@ function Index() {
               </motion.p>
 
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={reducedMotion ? false : { opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ ...spring, delay: 0.18 }}
+                transition={reducedMotion ? { duration: 0 } : { ...spring, delay: 0.18 }}
                 className="mt-8 flex flex-wrap items-center gap-3"
               >
                 <Link
@@ -148,9 +150,9 @@ function Index() {
 
               {/* Honest stats — machined row */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={reducedMotion ? false : { opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ ...spring, delay: 0.24 }}
+                transition={reducedMotion ? { duration: 0 } : { ...spring, delay: 0.24 }}
                 className="mt-8 grid grid-cols-3 divide-x divide-border border-y border-border sm:mt-10"
               >
                 <HeroStat value={`${formatCount(totalDownloads)}+`} label="Community downloads" />
@@ -161,9 +163,9 @@ function Index() {
 
             {/* Featured cartridge */}
             <motion.div
-              initial={{ opacity: 1, scale: 0.94, rotate: 1 }}
+              initial={reducedMotion ? false : { opacity: 1, scale: 0.94, rotate: 1 }}
               animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ ...spring, delay: 0.1 }}
+              transition={reducedMotion ? { duration: 0 } : { ...spring, delay: 0.1 }}
               className="relative mx-auto w-full max-w-md"
             >
               <Link
@@ -305,10 +307,11 @@ function Index() {
       {/* ── COMMUNITY + REWARD PREVIEW ───────────────────── */}
       <motion.section
         aria-labelledby="journey-title"
-        initial={{ opacity: 0, y: 18 }}
+        initial={reducedMotion ? false : { opacity: 0, y: 18 }}
+        animate={reducedMotion ? { opacity: 1, y: 0 } : undefined}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.2 }}
-        transition={{ ...spring, delay: 0.04 }}
+        transition={reducedMotion ? { duration: 0 } : { ...spring, delay: 0.04 }}
         className="mt-20 grid gap-6 border-t border-border pt-16 lg:grid-cols-[0.8fr_1.2fr] lg:items-stretch"
       >
         <div className="flex flex-col justify-between rounded-[var(--radius-surface)] border border-border bg-card/55 p-6 sm:p-8">
@@ -358,10 +361,11 @@ function Index() {
       </motion.section>
 
       <motion.section
-        initial={{ opacity: 0, y: 18 }}
+        initial={reducedMotion ? false : { opacity: 0, y: 18 }}
+        animate={reducedMotion ? { opacity: 1, y: 0 } : undefined}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.2 }}
-        transition={{ ...spring, delay: 0.04 }}
+        transition={reducedMotion ? { duration: 0 } : { ...spring, delay: 0.04 }}
         className="mt-20 grid gap-10 border-t border-border pt-16 lg:grid-cols-[0.75fr_1.25fr] lg:items-start"
       >
         <div>
@@ -416,14 +420,16 @@ function FeaturePanel({
   text: string;
   index: number;
 }) {
+  const reducedMotion = useReducedMotionPreference();
   const tiltRef = usePerspectiveTilt<HTMLDivElement>();
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+      animate={reducedMotion ? { opacity: 1, y: 0 } : undefined}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ ...spring, delay: index * 0.08 }}
+      transition={reducedMotion ? { duration: 0 } : { ...spring, delay: index * 0.08 }}
       className="group bg-card p-2 transition-colors hover:bg-secondary"
     >
       <div ref={tiltRef} className="feature-tilt h-full rounded-xl p-4 sm:p-6">

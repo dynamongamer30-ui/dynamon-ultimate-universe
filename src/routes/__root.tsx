@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { MotionConfig, motion } from "motion/react";
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
@@ -185,14 +186,15 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function PageTransition({ children }: { children: ReactNode }) {
+  const reducedMotion = useReducedMotionPreference();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <motion.div
       className="page-transition"
       key={pathname}
-      initial={{ opacity: 0, y: 8 }}
+      initial={reducedMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      transition={reducedMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
     </motion.div>

@@ -58,6 +58,7 @@ async function fixture(page: Page) {
     hold: false,
     release: undefined as (() => void) | undefined,
   };
+  await page.routeWebSocket(/supabase\.co/, (socket) => socket.close());
   await page.route("**/*.supabase.co/**", async (route) => {
     const url = new URL(route.request().url()),
       fn = url.pathname.split("/").pop()!;
@@ -123,6 +124,12 @@ test("notification claims require an explicit action and suppress duplicate subm
   state.release?.();
   await expect(page.getByRole("heading", { name: "Reward claimed", exact: true })).toBeVisible();
   await expect(page.getByText("FIXTURE-KEY", { exact: true })).toBeVisible();
+  expect(
+    await page.getByText("FIXTURE-KEY", { exact: true }).evaluate((node) => {
+      const card = node.closest('[style*="opacity"]');
+      return card ? getComputedStyle(card).opacity : "missing";
+    }),
+  ).toBe("1");
   expect(state.calls).toEqual(["claim_daily_key"]);
 });
 

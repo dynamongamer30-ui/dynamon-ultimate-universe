@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, Outlet, useRouterState, useSearch } from "@tanstack/react-router";
 import { motion } from "motion/react";
@@ -70,6 +71,7 @@ function ClaimSession({
   signedIn: boolean;
   isCurrent: () => boolean;
 }) {
+  const reducedMotion = useReducedMotionPreference();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(
     signedIn && kind === "granted_key" && ref
@@ -233,7 +235,8 @@ function ClaimSession({
           </div>
         ) : result?.kind === "key" ? (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+            transition={reducedMotion ? { duration: 0 } : undefined}
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl border border-primary/40 bg-primary/5 p-6 text-center"
           >
@@ -267,7 +270,8 @@ function ClaimSession({
           </motion.div>
         ) : result?.kind === "pass" ? (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+            transition={reducedMotion ? { duration: 0 } : undefined}
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl border border-amber-400/40 bg-amber-500/5 p-6 text-center"
           >

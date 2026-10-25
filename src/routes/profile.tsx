@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
@@ -86,6 +87,7 @@ function ProfileEditor({
   profile: Profile;
   refresh: () => Promise<void>;
 }) {
+  const reducedMotion = useReducedMotionPreference();
   const [displayName, setDisplayName] = useState(profile.display_name ?? "");
   const [gender, setGender] = useState(profile.gender);
   const [avatarId, setAvatarId] = useState(profile.avatar_url);
@@ -171,7 +173,8 @@ function ProfileEditor({
           {/* Identity card */}
           <motion.aside
             aria-label="Profile preview"
-            initial={{ opacity: 0, y: 12 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+            transition={reducedMotion ? { duration: 0 } : undefined}
             animate={{ opacity: 1, y: 0 }}
             className="surface-l1 relative min-w-0 edge-light rounded-2xl p-5 sm:p-6 lg:sticky lg:top-24"
           >
@@ -224,7 +227,8 @@ function ProfileEditor({
           {/* Edit form */}
           <motion.form
             aria-labelledby="edit-profile-title"
-            initial={{ opacity: 0, y: 12 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+            transition={reducedMotion ? { duration: 0 } : undefined}
             animate={{ opacity: 1, y: 0 }}
             onSubmit={submit}
             aria-busy={busy}

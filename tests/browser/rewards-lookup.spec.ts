@@ -67,6 +67,7 @@ async function fixture(page: Page) {
     keyExpires: "2027-01-01T00:00:00Z",
     passExpires: "2027-01-01T00:00:00Z",
   };
+  await page.routeWebSocket(/supabase\.co/, (socket) => socket.close());
   await page.route("**/*.supabase.co/**", async (route) => {
     const req = route.request(),
       url = new URL(req.url()),
@@ -138,6 +139,11 @@ test("collected rewards stay read-only, long keys fit and clipboard failure has 
   await expect(
     rewards(page).getByRole("heading", { name: "Your Daily Key", exact: true }),
   ).toBeVisible();
+  expect(
+    await rewards(page)
+      .locator('[style*="opacity"]')
+      .evaluateAll((nodes) => nodes.every((node) => getComputedStyle(node).opacity === "1")),
+  ).toBe(true);
   await expect(
     rewards(page).getByText("You have a Phoenix Pass ready!", { exact: true }),
   ).toBeVisible();

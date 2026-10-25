@@ -71,6 +71,7 @@ test("community writes recover from denial and replies cannot be posted twice", 
   let releaseReply: (() => void) | undefined;
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  await page.routeWebSocket(/supabase\.co/, (socket) => socket.close());
   await page.route("**/*.supabase.co/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -193,6 +194,7 @@ test("community writes recover from denial and replies cannot be posted twice", 
   await page.goto("/mods/thunder-arena", { waitUntil: "networkidle" });
   const review = page.locator(`[data-comment-id="${commentId}"]`);
   await expect(review).toBeVisible();
+  expect(await review.evaluate((node) => getComputedStyle(node).opacity)).toBe("1");
   const like = review.getByRole("button", { name: "Like review by Fixture Trainer", exact: true });
   await like.click();
   await expect(
@@ -263,6 +265,7 @@ test("community writes recover from denial and replies cannot be posted twice", 
   await review.getByRole("button", { name: "Reply", exact: true }).click();
   const draft = review.getByRole("textbox", { name: "Reply to Fixture Trainer", exact: true });
   await draft.fill("A preserved fixture reply");
+  expect(await draft.evaluate((node) => getComputedStyle(node.parentElement!).opacity)).toBe("1");
   await review.getByRole("button", { name: "Post reply", exact: true }).evaluate((button) => {
     (button as HTMLButtonElement).click();
     (button as HTMLButtonElement).click();

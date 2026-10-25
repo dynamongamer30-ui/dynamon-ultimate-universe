@@ -86,6 +86,7 @@ async function account(page: Page, setup = false, email = "fixture@example.test"
     avatarReads: 0,
     releaseAvatars: undefined as undefined | (() => void),
   };
+  await page.routeWebSocket(/supabase\.co/, (socket) => socket.close());
   await page.route("**/*.supabase.co/**", async (route) => {
     const request = route.request(),
       url = new URL(request.url());
@@ -167,6 +168,11 @@ test("reduced motion shows the selected avatar immediately without saving a prof
   const state = await account(page, false);
   await ready(page, "/profile");
   const selected = page.getByRole("button", { name: "Fixture hero", exact: true });
+  expect(
+    await page
+      .getByRole("form", { name: "Edit profile" })
+      .evaluate((node) => getComputedStyle(node).opacity),
+  ).toBe("1");
   await expect(selected).toHaveAttribute("aria-pressed", "true");
   const indicator = selected.locator("div");
   expect(await indicator.evaluate((node) => getComputedStyle(node).transform)).toBe("none");
