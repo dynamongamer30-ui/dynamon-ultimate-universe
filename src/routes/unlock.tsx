@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
@@ -88,14 +89,14 @@ function mapRedeemError(code?: string): string {
  * (ambient motion behind the card) but reads as "royal/mystical" rather
  * than "hacker terminal", matching the rest of the site. */
 function EmberField() {
+  const reducedMotion = useReducedMotionPreference();
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
     const ctx = c.getContext("2d");
     if (!ctx) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) return;
+    if (reducedMotion) return;
 
     let w = (c.width = window.innerWidth);
     let h = (c.height = window.innerHeight);
@@ -127,7 +128,22 @@ function EmberField() {
     window.addEventListener("resize", onResize);
 
     let raf = 0;
+    let primary = "";
+    let highlight = "";
+    const readColors = () => {
+      const styles = getComputedStyle(document.documentElement);
+      primary = styles.getPropertyValue("--primary-ink").trim();
+      highlight = styles.getPropertyValue("--muted-foreground").trim();
+    };
+    readColors();
+    const colors = new MutationObserver(readColors);
+    colors.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["style", "data-website-theme"],
+    });
     const draw = () => {
+      raf = 0;
+      if (document.hidden) return;
       ctx.clearRect(0, 0, w, h);
       for (const e of embers) {
         e.y += e.vy;
@@ -136,7 +152,8 @@ function EmberField() {
           e.y = h + 10;
           e.x = Math.random() * w;
         }
-        const color = e.hue === "gold" ? `rgba(224,180,90,${e.a})` : `rgba(168,110,230,${e.a})`;
+        const color = e.hue === "gold" ? highlight : primary;
+        ctx.globalAlpha = e.a;
         ctx.beginPath();
         ctx.fillStyle = color;
         ctx.shadowBlur = 6;
@@ -146,16 +163,33 @@ function EmberField() {
       }
       raf = requestAnimationFrame(draw);
     };
-    raf = requestAnimationFrame(draw);
+    const visibility = () => {
+      cancelAnimationFrame(raf);
+      raf = 0;
+      ctx.clearRect(0, 0, w, h);
+      if (!document.hidden) raf = requestAnimationFrame(draw);
+    };
+    document.addEventListener("visibilitychange", visibility);
+    visibility();
     return () => {
       cancelAnimationFrame(raf);
+      ctx.clearRect(0, 0, w, h);
+      colors.disconnect();
+      document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("resize", onResize);
     };
-  }, []);
-  return <canvas ref={ref} className="pointer-events-none fixed inset-0 -z-10 opacity-70" />;
+  }, [reducedMotion]);
+  return (
+    <canvas
+      ref={ref}
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 -z-10 opacity-70"
+    />
+  );
 }
 
 function ProgressRing({ pct }: { pct: number }) {
+  const reducedMotion = useReducedMotionPreference();
   const size = 88;
   const stroke = 5;
   const r = (size - stroke) / 2;
@@ -190,7 +224,9 @@ function ProgressRing({ pct }: { pct: number }) {
           strokeLinecap="round"
           style={{
             filter: "drop-shadow(0 0 10px oklch(0.54 0.22 296 / 55%))",
-            transition: "stroke-dashoffset 450ms cubic-bezier(0.4,0,0.2,1)",
+            transition: reducedMotion
+              ? "none"
+              : "stroke-dashoffset 450ms cubic-bezier(0.4,0,0.2,1)",
           }}
         />
       </svg>
@@ -205,12 +241,14 @@ function ProgressRing({ pct }: { pct: number }) {
 }
 
 function StatusIcon({ status }: { status: StageStatus }) {
+  const reducedMotion = useReducedMotionPreference();
   return (
     <AnimatePresence mode="wait" initial={false}>
       {status === "running" && (
         <motion.span
           key="running"
-          initial={{ opacity: 0, scale: 0.6 }}
+          initial={reducedMotion ? false : { opacity: 0, scale: 0.6 }}
+          transition={reducedMotion ? { duration: 0 } : undefined}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.6 }}
         >
@@ -220,9 +258,11 @@ function StatusIcon({ status }: { status: StageStatus }) {
       {status === "done" && (
         <motion.span
           key="done"
-          initial={{ opacity: 0, scale: 0.4, rotate: -30 }}
+          initial={reducedMotion ? false : { opacity: 0, scale: 0.4, rotate: -30 }}
           animate={{ opacity: 1, scale: 1, rotate: 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          transition={
+            reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 15 }
+          }
         >
           <Check className="h-4 w-4" style={{ color: "#4ade80" }} />
         </motion.span>
@@ -230,7 +270,8 @@ function StatusIcon({ status }: { status: StageStatus }) {
       {status === "error" && (
         <motion.span
           key="error"
-          initial={{ opacity: 0, scale: 0.4 }}
+          initial={reducedMotion ? false : { opacity: 0, scale: 0.4 }}
+          transition={reducedMotion ? { duration: 0 } : undefined}
           animate={{ opacity: 1, scale: 1 }}
         >
           <X className="h-4 w-4" style={{ color: "#f87171" }} />
@@ -246,8 +287,8 @@ function StatusIcon({ status }: { status: StageStatus }) {
     </AnimatePresence>
   );
 }
-
 function UnlockPage() {
+  const reducedMotion = useReducedMotionPreference();
   // The secure-session RPC currently stores the mod slug in its legacy
   // `modVersion` field, while this page previously supplied the human build
   // version. Leave the optional version pin unset until the database contract
@@ -258,20 +299,16 @@ function UnlockPage() {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [fatalError, setFatalError] = useState<string | null>(null);
   const ran = useRef(false);
-
   const completed = stages.filter((s) => s.status === "done").length;
   const pct = (completed / stages.length) * 100;
-
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
     void run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
   const setStage = (id: number, patch: Partial<Stage>) =>
     setStages((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-
   async function runStage<T>(id: number, fn: () => Promise<T>): Promise<T> {
     setStage(id, { status: "running" });
     await sleep(420 + Math.random() * 180);
@@ -287,7 +324,6 @@ function UnlockPage() {
       throw e;
     }
   }
-
   async function run() {
     try {
       // 0. Initialize — read + decode the local session token (obfuscated in storage).
@@ -308,7 +344,6 @@ function UnlockPage() {
           throw new Error("This download link looks broken. Please start again from the mod page.");
         return decoded;
       });
-
       // 1. Compute the device fingerprint that the server will verify against.
       const fingerprint = await runStage(1, async () => {
         const fp = await getFingerprint();
@@ -318,13 +353,11 @@ function UnlockPage() {
           );
         return fp;
       });
-
       // 2-4. Server-side verification. A single SECURITY DEFINER RPC checks the
       // session, fingerprint, timing window and ATOMICALLY burns the token — none
       // of this logic or the link is exposed to the browser.
       let redeemed: { ok: boolean; error?: string; link?: string; encrypted?: boolean } | null =
         null;
-
       await runStage(2, async () => {
         // redeem_secure_session isn't in the generated types yet; call loosely.
         const { data, error } = await (
@@ -339,7 +372,6 @@ function UnlockPage() {
           throw new Error(mapRedeemError(redeemed?.error));
         }
       });
-
       // 3-4 are validated inside the RPC; surface them as completed UX steps.
       await runStage(3, async () => {
         /* fingerprint verified server-side */
@@ -347,7 +379,6 @@ function UnlockPage() {
       await runStage(4, async () => {
         /* timing verified server-side */
       });
-
       // 5. Resolve the final link. New sessions return plaintext; legacy sessions
       // return an encrypted blob we decrypt locally for backward compatibility.
       const url = await runStage(5, async () => {
@@ -363,17 +394,14 @@ function UnlockPage() {
         if (!out) throw new Error("No download link available.");
         return out;
       });
-
       try {
         localStorage.removeItem("dg_token");
       } catch {
         /* ignore */
       }
-
       setDownloadUrl(url);
       setDone(true);
       playUnlock();
-
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (!reduced) {
         confetti({
@@ -383,7 +411,6 @@ function UnlockPage() {
           colors: ["#a86ee6", "#e0b45a", "#c9a4ee", "#ffffff"],
         });
       }
-
       setTimeout(() => {
         window.location.href = url;
       }, 2000);
@@ -391,7 +418,6 @@ function UnlockPage() {
       setFatalError(e instanceof Error ? e.message : String(e));
     }
   }
-
   return (
     <div
       className="relative min-h-screen overflow-hidden"
@@ -416,9 +442,9 @@ function UnlockPage() {
 
       <main className="relative mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-5 py-12">
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          transition={reducedMotion ? { duration: 0 } : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           className="w-full rounded-2xl border p-6 shadow-elev backdrop-blur-xl sm:p-8"
           style={{
             borderColor: "var(--border)",
@@ -437,10 +463,11 @@ function UnlockPage() {
                 boxShadow: "0 0 18px oklch(0.54 0.22 296 / 50%)",
               }}
               animate={{ width: `${pct}%` }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              transition={
+                reducedMotion ? { duration: 0 } : { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
+              }
             />
           </div>
-
           <div className="mb-6 flex items-center gap-4">
             <ProgressRing pct={pct} />
             <div className="min-w-0">
@@ -452,7 +479,6 @@ function UnlockPage() {
               </p>
             </div>
           </div>
-
           <ul className="space-y-2.5">
             {stages.map((s, i) => {
               const I = s.Icon;
@@ -460,9 +486,13 @@ function UnlockPage() {
               return (
                 <motion.li
                   key={s.id}
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={reducedMotion ? false : { opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  transition={
+                    reducedMotion
+                      ? { duration: 0 }
+                      : { delay: i * 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }
+                  }
                   className="flex items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors"
                   style={{
                     borderColor: active
@@ -492,7 +522,8 @@ function UnlockPage() {
                     </div>
                     {s.status === "error" && s.message && (
                       <motion.p
-                        initial={{ opacity: 0 }}
+                        initial={reducedMotion ? false : { opacity: 0 }}
+                        transition={reducedMotion ? { duration: 0 } : undefined}
                         animate={{ opacity: 1 }}
                         className="mt-1 text-xs"
                         style={{ color: "#f87171" }}
@@ -510,9 +541,11 @@ function UnlockPage() {
             {done && downloadUrl && (
               <motion.div
                 role="status"
-                initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                initial={reducedMotion ? false : { opacity: 0, scale: 0.96, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                transition={
+                  reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 22 }
+                }
                 className="mt-6 rounded-xl border p-4 text-center"
                 style={{
                   borderColor: "color-mix(in oklch, var(--gold) 40%, transparent)",
@@ -543,7 +576,8 @@ function UnlockPage() {
             {fatalError && (
               <motion.div
                 role="alert"
-                initial={{ opacity: 0, scale: 0.96 }}
+                initial={reducedMotion ? false : { opacity: 0, scale: 0.96 }}
+                transition={reducedMotion ? { duration: 0 } : undefined}
                 animate={{ opacity: 1, scale: 1 }}
                 className="mt-6 rounded-xl border p-4 text-center"
                 style={{

@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { Trophy, Lock, KeyRound, Feather, Check, ArrowRight } from "lucide-react";
@@ -22,6 +23,7 @@ export function TrainerRankLadder() {
 }
 
 function AccountRank({ userId }: { userId: string }) {
+  const reducedMotion = useReducedMotionPreference();
   const { streak, checkInStatus } = useGamification();
   const confirmed = checkInStatus === "success";
   const settled = confirmed || checkInStatus === "error";
@@ -146,9 +148,9 @@ function AccountRank({ userId }: { userId: string }) {
             return (
               <motion.div
                 key={level.level}
-                initial={{ opacity: 0, x: -8 }}
+                initial={reducedMotion ? false : { opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: level.level * 0.02 }}
+                transition={reducedMotion ? { duration: 0 } : { delay: level.level * 0.02 }}
                 className={`flex flex-wrap items-center gap-3 rounded-2xl border p-4 ${claimed ? "border-emerald-400/30 bg-emerald-500/5" : claimable ? "border-primary/40 bg-primary/5" : "border-border bg-card/30"}`}
               >
                 <span

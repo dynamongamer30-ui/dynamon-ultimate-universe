@@ -65,6 +65,7 @@ async function fixture(page: Page) {
       reset: () => {},
     };
   });
+  await page.routeWebSocket(/supabase\.co/, (socket) => socket.close());
   await page.route("**/*.supabase.co/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/mod_overrides") && url.searchParams.get("limit") === "1") {
@@ -212,6 +213,9 @@ test("a failed check can recover to verified readiness without issuing a key", a
   state.body = { valid: true };
   await retry(page).click();
   await expect(page.getByText("Local verification fixture")).toBeVisible();
+  expect(await page.locator(".route-hero").evaluate((node) => getComputedStyle(node).opacity)).toBe(
+    "1",
+  );
   await expect(page.getByRole("button", { name: "Get my key", exact: true })).toBeEnabled({
     timeout: 15000,
   });

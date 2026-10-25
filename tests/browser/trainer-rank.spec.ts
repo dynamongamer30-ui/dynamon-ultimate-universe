@@ -66,6 +66,7 @@ async function fixture(page: Page) {
     mutations: [] as string[],
     checkInDeny: false,
   };
+  await page.routeWebSocket(/supabase\.co/, (socket) => socket.close());
   await page.route("**/*.supabase.co/**", async (route) => {
     const req = route.request(),
       url = new URL(req.url()),
@@ -160,6 +161,11 @@ test("confirmed rank renders once across same-account auth refresh and never awa
     rank(page).getByText("Current Trainer Rank: Level 1", { exact: true }),
   ).toBeVisible();
   await expect(claim(page)).toHaveAttribute("href", /kind=trainer_level/);
+  expect(
+    await rank(page)
+      .locator('[style*="opacity"]')
+      .evaluateAll((nodes) => nodes.every((node) => getComputedStyle(node).opacity === "1")),
+  ).toBe(true);
   await expect(rank(page).getByText("Claimed", { exact: true })).toHaveCount(1);
   await sameOrNewAccount(page, state, idA);
   await page.evaluate(() => {

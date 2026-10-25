@@ -61,6 +61,7 @@ async function fixture(page: Page) {
     releaseRead: undefined as (() => void) | undefined,
     release: undefined as (() => void) | undefined,
   };
+  await page.routeWebSocket(/supabase\.co/, (socket) => socket.close());
   await page.route("**/*.supabase.co/**", async (route) => {
     const req = route.request(),
       url = new URL(req.url()),
@@ -148,6 +149,16 @@ test("explicit confirmation prevents duplicate redemption and protects the pendi
   const state = await fixture(page);
   state.hold = true;
   await open(page);
+  expect(
+    await dialog(page)
+      .locator('[style*="opacity"]')
+      .evaluateAll((nodes) =>
+        nodes.every(
+          (node) =>
+            getComputedStyle(node).opacity === "1" && getComputedStyle(node).transform === "none",
+        ),
+      ),
+  ).toBe(true);
   await expect(
     dialog(page).getByRole("heading", { name: "Spend your Phoenix Pass?", exact: true }),
   ).toBeVisible();

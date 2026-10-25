@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -107,6 +108,7 @@ function safeDecrypt(ct?: string | null): string {
 }
 
 function ModDetail() {
+  const reducedMotion = useReducedMotionPreference();
   const { mod } = Route.useLoaderData() as { mod: Mod };
   const { user } = useAuth();
   const { overrides, allMods } = useSiteSettings();
@@ -174,7 +176,8 @@ function ModDetail() {
       <article className="mt-6 grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:items-start">
         {/* Hero image with element halo */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 20 }}
+          transition={reducedMotion ? { duration: 0 } : undefined}
           animate={{ opacity: 1, y: 0 }}
           className="surface-l1 edge-light relative overflow-hidden rounded-2xl border"
           style={{ boxShadow: theme.glow }}
@@ -202,9 +205,9 @@ function ModDetail() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={reducedMotion ? { duration: 0 } : { delay: 0.1 }}
         >
           <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink">
             <span className="inline-block h-px w-8 bg-primary" aria-hidden />
@@ -537,6 +540,7 @@ function FollowGate({
   followUrl: string;
   onClose: () => void;
 }) {
+  const reducedMotion = useReducedMotionPreference();
   const navigate = useNavigate();
   // If there's no follow link configured, skip straight to verifying.
   const [step, setStep] = useState<"gate" | "verifying" | "error">(
@@ -616,7 +620,8 @@ function FollowGate({
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        initial={reducedMotion ? false : { opacity: 0, scale: 0.95, y: 10 }}
+        transition={reducedMotion ? { duration: 0 } : undefined}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="modal-panel overlay-surface relative w-full max-w-md rounded-[var(--radius-command)] border p-6"
         onClick={(e) => e.stopPropagation()}
@@ -698,6 +703,7 @@ function ModalShell({
   children: ReactNode;
   dismissible?: boolean;
 }) {
+  const reducedMotion = useReducedMotionPreference();
   const dismiss = () => {
     if (dismissible) onClose();
   };
@@ -713,7 +719,8 @@ function ModalShell({
       onClick={dismiss}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        initial={reducedMotion ? false : { opacity: 0, scale: 0.95, y: 10 }}
+        transition={reducedMotion ? { duration: 0 } : undefined}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="modal-panel overlay-surface relative w-full max-w-md rounded-[var(--radius-command)] border p-6"
         onClick={(e) => e.stopPropagation()}

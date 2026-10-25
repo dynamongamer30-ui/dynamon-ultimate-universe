@@ -62,6 +62,7 @@ async function fixture(page: Page, signedIn = true, blockReturnStorage = false) 
     hold: false,
     releases: [] as (() => void)[],
   };
+  await page.routeWebSocket(/supabase\.co/, (socket) => socket.close());
   await page.route("**/*.supabase.co/**", async (route) => {
     const req = route.request(),
       url = new URL(req.url()),
@@ -124,6 +125,11 @@ test("authenticated arrival claims once and same-account refresh events cannot r
   const state = await fixture(page);
   await open(page);
   await expect(page.getByRole("heading", { name: "Claim successful", exact: true })).toBeVisible();
+  expect(
+    await page
+      .locator('main [style*="opacity"]')
+      .evaluateAll((nodes) => nodes.every((node) => getComputedStyle(node).opacity === "1")),
+  ).toBe(true);
   await expect(page.getByText("4 of 100 claimed", { exact: true })).toBeVisible();
   await signInAs(page, idA, state);
   await page.evaluate(() => {

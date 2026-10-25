@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
@@ -50,6 +51,7 @@ function TeslaClaimSession({
   authLoading: boolean;
   isCurrent: () => boolean;
 }) {
+  const reducedMotion = useReducedMotionPreference();
   const navigate = useNavigate();
   const started = useRef(false);
   const pending = useRef(false);
@@ -230,7 +232,8 @@ function TeslaClaimSession({
           </div>
         ) : state.kind === "claimed" ? (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+            transition={reducedMotion ? { duration: 0 } : undefined}
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl border border-emerald-400/30 bg-emerald-500/5 p-8 text-center"
           >

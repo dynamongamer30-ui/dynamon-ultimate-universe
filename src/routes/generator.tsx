@@ -1,3 +1,4 @@
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
@@ -109,11 +110,16 @@ function Particles() {
 }
 
 function Orb({ pulse }: { pulse: boolean }) {
+  const reducedMotion = useReducedMotionPreference();
   return (
     <motion.div
       className="relative mx-auto h-28 w-28"
-      animate={pulse ? { scale: [1, 1.04, 1] } : { scale: 1 }}
-      transition={{ duration: 1.6, repeat: pulse ? Infinity : 0, ease: "easeInOut" }}
+      animate={pulse && !reducedMotion ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+      transition={
+        reducedMotion
+          ? { duration: 0 }
+          : { duration: 1.6, repeat: pulse && !reducedMotion ? Infinity : 0, ease: "easeInOut" }
+      }
     >
       <div
         className="absolute inset-0 rounded-full"
@@ -165,6 +171,7 @@ function GeneratorPage() {
 }
 
 function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
+  const reducedMotion = useReducedMotionPreference();
   // Deep link registered by the modded APK (com.funtomic.dynamons):
   //   <data android:scheme="dynamongamer" android:host="verify" />
   // If it isn't installed we fall back to the newest mod page on the site
@@ -516,9 +523,9 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
       <Particles />
       <div className="mx-auto max-w-xl py-8">
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          transition={reducedMotion ? { duration: 0 } : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           className="route-hero rounded-2xl border p-8 shadow-elev backdrop-blur-xl"
           style={{
             borderColor: "var(--border)",
@@ -777,7 +784,9 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
                               : "linear-gradient(90deg, var(--primary), var(--gold))",
                         }}
                         animate={{ width: `${(secondsLeft / KEY_TTL_SECONDS) * 100}%` }}
-                        transition={{ duration: 0.6, ease: "linear" }}
+                        transition={
+                          reducedMotion ? { duration: 0 } : { duration: 0.6, ease: "linear" }
+                        }
                       />
                     </div>
                   </div>
