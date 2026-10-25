@@ -87,41 +87,67 @@ export interface GenerateKeyArgs {
   fingerprint: string;
 }
 export type GenerateKeyResult =
-  | { ok: true; key: string; remaining: number }
-  | { ok: false; error: string; resetInMinutes?: number; status?: number };
+  | { ok: true; key: string; remaining: number | null }
+  | { ok: false; error: string; resetInMinutes?: number; status?: number; uncertain?: boolean };
 
-export async function generateKey(args: GenerateKeyArgs): Promise<GenerateKeyResult> {
+export async function generateKey(
+  args: GenerateKeyArgs,
+  signal?: AbortSignal,
+): Promise<GenerateKeyResult> {
   let res: Response;
   try {
     res = await fetch(`${GEN_WORKER_URL}/generate-key`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal,
       body: JSON.stringify({
         accessToken: args.accessToken,
         turnstileToken: args.turnstileToken,
         fingerprint: args.fingerprint,
       }),
     });
-  } catch (e) {
-    return { ok: false, error: (e as Error).message || "network_error" };
+  } catch {
+    return { ok: false, error: "generation_unconfirmed", uncertain: true };
   }
 
-  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  const value: unknown = await res.json().catch(() => null);
+  const body = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
-  if (res.ok && body.key) {
+  if (res.ok && body.ok !== false && typeof body.key === "string" && body.key.trim()) {
     return {
       ok: true,
-      key: String(body.key),
-      remaining: Number(body.remaining ?? 0),
+      key: body.key,
+      remaining:
+        typeof body.remaining === "number" &&
+        Number.isSafeInteger(body.remaining) &&
+        body.remaining >= 0
+          ? body.remaining
+          : null,
     };
   }
 
+  const confirmedErrors = [
+    "maintenance",
+    "captcha_failed",
+    "rate_limited",
+    "invalid_token",
+    "token_used",
+    "token_expired",
+    "missing_fields",
+    "bad_request",
+  ];
+  if (typeof body.error !== "string" || !confirmedErrors.includes(body.error))
+    return { ok: false, status: res.status, error: "generation_unconfirmed", uncertain: true };
   return {
     ok: false,
     status: res.status,
-    error: String(body.error ?? `http_${res.status}`),
+    error: body.error,
     resetInMinutes:
-      typeof body.resetInMinutes === "number" ? (body.resetInMinutes as number) : undefined,
+      typeof body.resetInMinutes === "number" &&
+      Number.isSafeInteger(body.resetInMinutes) &&
+      body.resetInMinutes >= 0
+        ? body.resetInMinutes
+        : undefined,
   };
 }
 

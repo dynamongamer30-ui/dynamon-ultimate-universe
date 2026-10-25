@@ -182,13 +182,37 @@ export function listKeys(
   onError?: (error: Error) => void,
 ): () => void {
   let cancelled = false;
+  let running = false;
+  let dirty = false;
+  let controller: AbortController | undefined;
 
   const load = async () => {
+    if (cancelled) return;
+    if (running) {
+      dirty = true;
+      return;
+    }
+    running = true;
+    dirty = false;
+    controller = new AbortController();
+    const deadline = setTimeout(() => controller?.abort(), 10000);
     try {
-      const rows = await selectAll("valid_keys");
-      if (!cancelled) cb(rows.map((r) => toValidKey(r.id, r.data)));
+      const { data, error } = await supabase
+        .from("valid_keys")
+        .select("id,data")
+        .abortSignal(controller.signal)
+        .retry(false);
+      if (error || !Array.isArray(data))
+        throw new Error(error?.message || "Invalid key lookup response");
+      const rows = data as unknown as Row[];
+      if (!cancelled && !dirty) cb(rows.map((r) => toValidKey(r.id, r.data)));
     } catch (error) {
-      if (!cancelled) onError?.(error instanceof Error ? error : new Error("Could not load keys"));
+      if (!cancelled && !dirty)
+        onError?.(error instanceof Error ? error : new Error("Could not load keys"));
+    } finally {
+      clearTimeout(deadline);
+      running = false;
+      if (!cancelled && dirty) void load();
     }
   };
 
@@ -203,6 +227,7 @@ export function listKeys(
 
   return () => {
     cancelled = true;
+    controller?.abort();
     void supabase.removeChannel(channel);
   };
 }

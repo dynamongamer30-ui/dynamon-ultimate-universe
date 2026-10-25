@@ -3,7 +3,7 @@ import { isKeyBound, isKeyExpired } from "@/lib/dgKeyPolicy";
 import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   KeyRound,
   Loader2,
@@ -88,6 +88,7 @@ function KeysAdminGate() {
 // ----- Main panel -----
 
 type Tab = "keys" | "devices" | "config" | "app" | "dex";
+const KeyClock = createContext<number | null>(null);
 
 function KeysAdmin() {
   const { user } = useAuth();
@@ -107,20 +108,24 @@ function KeysAdmin() {
         </div>
       </div>
 
-      <div className="mb-6 -mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav
+        aria-label="Key system sections"
+        className="mb-6 -mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         <div className="inline-flex min-w-full gap-1 rounded-full border border-border bg-card/60 p-1 text-xs font-semibold sm:min-w-0">
           {(["keys", "devices", "dex", "config", "app"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 whitespace-nowrap rounded-full px-3 py-2 capitalize transition-colors sm:flex-none sm:px-4 sm:py-1.5 ${tab === t ? "text-primary-foreground" : "text-muted-foreground"}`}
+              aria-pressed={tab === t}
+              className={`touch-target flex-1 whitespace-nowrap rounded-full px-3 py-2 capitalize transition-colors sm:flex-none sm:px-4 sm:py-1.5 ${tab === t ? "text-primary-foreground" : "text-muted-foreground"}`}
               style={tab === t ? { background: "var(--gradient-primary)" } : undefined}
             >
               {t === "dex" ? "Royal Void DEX" : t}
             </button>
           ))}
         </div>
-      </div>
+      </nav>
 
       {tab === "keys" && <KeysPanel />}
       {tab === "devices" && <DevicesPanel />}
@@ -137,11 +142,26 @@ function KeysPanel() {
   const [keys, setKeys] = useState<ValidKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [lookupAttempt, setLookupAttempt] = useState(0);
   const [clock, setClock] = useState(nowSeconds());
   useEffect(() => {
-    const timer = window.setInterval(() => setClock(nowSeconds()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tick = () => {
+      clearTimeout(timer);
+      const now = nowSeconds();
+      setClock(now);
+      if (!document.hidden && keys.some((key) => isKeyBound(key) && key.expiry > now))
+        timer = setTimeout(tick, 1000);
+    };
+    tick();
+    window.addEventListener("focus", tick);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("focus", tick);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [keys]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "expired" | "revoked" | "activated">(
     "all",
@@ -149,8 +169,14 @@ function KeysPanel() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const confirm = useConfirm();
+  const retryKeys = () => {
+    setSelected(new Set());
+    setLookupAttempt((attempt) => attempt + 1);
+  };
 
   useEffect(() => {
+    setLoading(true);
+    setLoadError("");
     const unsub = listKeys(
       (list) => {
         setLoadError("");
@@ -163,7 +189,7 @@ function KeysPanel() {
       },
     );
     return unsub;
-  }, []);
+  }, [lookupAttempt]);
 
   const stats = useMemo(() => {
     const now = clock;
@@ -313,181 +339,230 @@ function KeysPanel() {
   };
 
   return (
-    <div>
-      {loadError && (
-        <p
-          role="alert"
-          className="mb-4 rounded-xl border border-red-400/40 p-3 text-sm text-red-300"
-        >
-          Could not refresh keys: {loadError}. Reload to retry; displayed data may be stale.
-        </p>
-      )}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <StatTile label="Total" value={stats.total} icon={<KeyRound className="h-4 w-4" />} />
-        <StatTile
-          label="Active"
-          value={stats.active}
-          icon={<ShieldCheck className="h-4 w-4 text-green-400" />}
-        />
-        <StatTile
-          label="Expired"
-          value={stats.expired}
-          icon={<Clock className="h-4 w-4 text-amber-400" />}
-        />
-        <StatTile
-          label="Activated"
-          value={stats.activated}
-          icon={<Sparkles className="h-4 w-4 text-primary" />}
-        />
-        <StatTile
-          label="Revoked"
-          value={stats.revoked}
-          icon={<Ban className="h-4 w-4 text-red-400" />}
-        />
-      </div>
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="rounded-2xl border border-border bg-card/60 p-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by key, fingerprint, IP"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <div className="inline-flex rounded-full border border-border p-1 text-xs">
-              {(["all", "active", "expired", "revoked", "activated"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`rounded-full px-3 py-1 capitalize ${filter === f ? "text-primary-foreground" : "text-muted-foreground"}`}
-                  style={filter === f ? { background: "var(--gradient-primary)" } : undefined}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
+    <KeyClock.Provider value={clock}>
+      <div>
+        {loadError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-red-400/40 p-3 text-sm text-red-300"
+          >
+            <p>Could not confirm the key list. Displayed counts and key actions are unavailable.</p>
+            <button
+              type="button"
+              className="touch-target mt-2 rounded-lg border border-border px-4 py-2"
+              onClick={retryKeys}
+            >
+              Retry key lookup
+            </button>
           </div>
-
-          {selected.size > 0 && (
-            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-2.5">
-              <span className="text-sm font-semibold text-foreground">
-                {selected.size} selected
-              </span>
-              <div className="flex-1" />
-              <button
-                onClick={bulkExtend}
-                disabled={bulkBusy}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
-              >
-                {bulkBusy ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Clock className="h-3.5 w-3.5" />
-                )}{" "}
-                Extend
-              </button>
-              <button
-                onClick={bulkRevoke}
-                disabled={bulkBusy}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-400/10 disabled:opacity-50"
-              >
-                {bulkBusy ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Ban className="h-3.5 w-3.5" />
-                )}{" "}
-                Revoke
-              </button>
-              <button
-                onClick={bulkDelete}
-                disabled={bulkBusy}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-400/10 disabled:opacity-50"
-              >
-                {bulkBusy ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
-                )}{" "}
-                Delete
-              </button>
-              <button
-                onClick={clearSelection}
-                disabled={bulkBusy}
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-white/5 disabled:opacity-50"
-              >
-                Clear
-              </button>
-            </div>
-          )}
-
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">No keys found.</p>
-          ) : (
-            <>
-              <div className="hidden overflow-x-auto md:block">
-                <table className="w-full min-w-[600px] text-left text-sm">
-                  <thead className="text-xs uppercase tracking-wider text-muted-foreground">
-                    <tr>
-                      <th className="py-2 pr-3">
-                        <input
-                          type="checkbox"
-                          checked={allFilteredSelected}
-                          onChange={toggleAll}
-                          className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
-                          aria-label="Select all"
-                        />
-                      </th>
-                      <th className="py-2 pr-3">Key</th>
-                      <th className="py-2 pr-3">Status</th>
-                      <th className="py-2 pr-3">Device</th>
-                      <th className="py-2 pr-3">Created</th>
-                      <th className="py-2 pr-3">Expires</th>
-                      <th className="py-2 pr-3">Source</th>
-                      <th className="py-2 pr-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((k) => (
-                      <KeyRow key={k.key} k={k} selected={selected.has(k.key)} onToggle={toggle} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="space-y-2.5 md:hidden">
-                <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-background/40 px-3 py-2.5">
-                  <input
-                    type="checkbox"
-                    checked={allFilteredSelected}
-                    onChange={toggleAll}
-                    className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
-                  />
-                  <span className="text-sm font-semibold text-foreground">
-                    {allFilteredSelected ? "Deselect all" : "Select all"}
-                    <span className="ml-1 font-normal text-muted-foreground">
-                      ({filtered.length})
-                    </span>
-                  </span>
-                </label>
-                {filtered.map((k) => (
-                  <KeyCard key={k.key} k={k} selected={selected.has(k.key)} onToggle={toggle} />
-                ))}
-              </div>
-            </>
-          )}
+        )}
+        <div
+          role="region"
+          aria-label="Key totals"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-5"
+        >
+          <StatTile
+            label="Loaded keys"
+            value={loading || loadError ? null : stats.total}
+            icon={<KeyRound className="h-4 w-4" />}
+          />
+          <StatTile
+            label="Active"
+            value={loading || loadError ? null : stats.active}
+            icon={<ShieldCheck className="h-4 w-4 text-green-400" />}
+          />
+          <StatTile
+            label="Expired"
+            value={loading || loadError ? null : stats.expired}
+            icon={<Clock className="h-4 w-4 text-amber-400" />}
+          />
+          <StatTile
+            label="Activated"
+            value={loading || loadError ? null : stats.activated}
+            icon={<Sparkles className="h-4 w-4 text-primary" />}
+          />
+          <StatTile
+            label="Revoked"
+            value={loading || loadError ? null : stats.revoked}
+            icon={<Ban className="h-4 w-4 text-red-400" />}
+          />
         </div>
 
-        <ManualKeyForm />
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_320px]">
+          <div className="min-w-0 rounded-2xl border border-border bg-card/60 p-4">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="touch-target"
+                disabled={loading}
+                onClick={retryKeys}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" /> Refresh key list
+              </Button>
+              <div className="relative min-w-0 basis-[200px] flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  aria-label="Search keys"
+                  placeholder="Search by key, fingerprint, IP"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-11 pl-9"
+                />
+              </div>
+              <div
+                role="group"
+                aria-label="Key status filter"
+                className="flex flex-wrap gap-1 rounded-xl border border-border p-1 text-xs"
+              >
+                {(["all", "active", "expired", "revoked", "activated"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    aria-pressed={filter === f}
+                    className={`touch-target rounded-full px-3 py-1 capitalize ${filter === f ? "text-primary-foreground" : "text-muted-foreground"}`}
+                    style={filter === f ? { background: "var(--gradient-primary)" } : undefined}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {selected.size > 0 && !loading && !loadError && (
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-2.5">
+                <span className="text-sm font-semibold text-foreground">
+                  {selected.size} selected
+                </span>
+                <div className="flex-1" />
+                <button
+                  onClick={bulkExtend}
+                  disabled={bulkBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
+                >
+                  {bulkBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Clock className="h-3.5 w-3.5" />
+                  )}{" "}
+                  Extend
+                </button>
+                <button
+                  onClick={bulkRevoke}
+                  disabled={bulkBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-400/10 disabled:opacity-50"
+                >
+                  {bulkBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Ban className="h-3.5 w-3.5" />
+                  )}{" "}
+                  Revoke
+                </button>
+                <button
+                  onClick={bulkDelete}
+                  disabled={bulkBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-400/10 disabled:opacity-50"
+                >
+                  {bulkBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}{" "}
+                  Delete
+                </button>
+                <button
+                  onClick={clearSelection}
+                  disabled={bulkBusy}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-white/5 disabled:opacity-50"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </div>
+            ) : loadError ? (
+              <p className="py-8 text-sm text-muted-foreground">
+                Retry the lookup to view a confirmed key list.
+              </p>
+            ) : filtered.length === 0 ? (
+              <p className="py-12 text-center text-sm text-muted-foreground">No keys found.</p>
+            ) : (
+              <>
+                <div
+                  role="region"
+                  aria-label="Access keys table"
+                  tabIndex={0}
+                  className="hidden overflow-x-auto md:block"
+                >
+                  <table className="w-full min-w-[600px] text-left text-sm">
+                    <caption className="sr-only">
+                      Access keys, device binding, expiry and owner actions
+                    </caption>
+                    <thead className="text-xs uppercase tracking-wider text-muted-foreground">
+                      <tr>
+                        <th className="py-2 pr-3">
+                          <input
+                            type="checkbox"
+                            checked={allFilteredSelected}
+                            onChange={toggleAll}
+                            className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+                            aria-label="Select all"
+                          />
+                        </th>
+                        <th className="py-2 pr-3">Key</th>
+                        <th className="py-2 pr-3">Status</th>
+                        <th className="py-2 pr-3">Device</th>
+                        <th className="py-2 pr-3">Created</th>
+                        <th className="py-2 pr-3">Expires</th>
+                        <th className="py-2 pr-3">Source</th>
+                        <th className="py-2 pr-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((k) => (
+                        <KeyRow
+                          key={k.key}
+                          k={k}
+                          selected={selected.has(k.key)}
+                          onToggle={toggle}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-2.5 md:hidden">
+                  <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-background/40 px-3 py-2.5">
+                    <input
+                      type="checkbox"
+                      checked={allFilteredSelected}
+                      onChange={toggleAll}
+                      className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+                    />
+                    <span className="text-sm font-semibold text-foreground">
+                      {allFilteredSelected ? "Deselect all" : "Select all"}
+                      <span className="ml-1 font-normal text-muted-foreground">
+                        ({filtered.length})
+                      </span>
+                    </span>
+                  </label>
+                  {filtered.map((k) => (
+                    <KeyCard key={k.key} k={k} selected={selected.has(k.key)} onToggle={toggle} />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <ManualKeyForm disabled={loading || !!loadError} />
+        </div>
       </div>
-    </div>
+    </KeyClock.Provider>
   );
 }
 
@@ -496,8 +571,12 @@ function useKeyActions(k: ValidKey) {
   const confirm = useConfirm();
 
   const copy = async () => {
-    await navigator.clipboard.writeText(k.key);
-    toast.success(`Copied ${k.key}`);
+    try {
+      await navigator.clipboard.writeText(k.key);
+      toast.success("Key copied");
+    } catch {
+      toast.error("Could not copy the key. Clipboard access may be blocked.");
+    }
   };
   const doExtend = async (hours: number) => {
     setBusy(true);
@@ -553,7 +632,7 @@ function useKeyActions(k: ValidKey) {
     }
   };
 
-  const now = nowSeconds();
+  const now = useContext(KeyClock) ?? nowSeconds();
   const isExpired = isKeyExpired(k, now);
   const status: { label: string; cls: string } =
     k.status === "revoked"
@@ -613,7 +692,7 @@ function KeyCard({
   const { copy, status } = useKeyActions(k);
   return (
     <div
-      className={`rounded-xl border p-3 ${selected ? "border-primary/40 bg-primary/5" : "border-border bg-background/40"}`}
+      className={`rounded-xl border p-3 [overflow-wrap:anywhere] ${selected ? "border-primary/40 bg-primary/5" : "border-border bg-background/40"}`}
     >
       <div className="flex items-start gap-3">
         <input
@@ -626,9 +705,9 @@ function KeyCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <button
-              onDoubleClick={copy}
+              onClick={copy}
               className="truncate font-mono text-sm font-semibold text-primary"
-              title="Double-click to copy"
+              title="Copy key"
             >
               {k.key}
             </button>
@@ -676,9 +755,9 @@ function KeyRow({
       </td>
       <td className="py-3 pr-3">
         <button
-          onDoubleClick={copy}
+          onClick={copy}
           className="font-mono text-sm text-primary hover:underline"
-          title="Double-click to copy"
+          title="Copy key"
         >
           {k.key}
         </button>
@@ -723,7 +802,8 @@ function IconBtn({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition disabled:opacity-50 ${
+      aria-label={title}
+      className={`touch-target inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition disabled:opacity-50 ${
         danger
           ? "border-red-400/30 text-red-300 hover:bg-red-400/10"
           : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary"
@@ -735,11 +815,7 @@ function IconBtn({
 }
 
 function Countdown({ unixSec, pending = false }: { unixSec: number; pending?: boolean }) {
-  const [now, setNow] = useState(nowSeconds());
-  useEffect(() => {
-    const i = setInterval(() => setNow(nowSeconds()), 1000);
-    return () => clearInterval(i);
-  }, []);
+  const now = useContext(KeyClock) ?? nowSeconds();
   if (pending) return <span className="text-muted-foreground">Starts at first login</span>;
   if (unixSec === 0) return <span className="text-primary">Lifetime</span>;
   const diff = unixSec - now;
@@ -754,7 +830,15 @@ function Countdown({ unixSec, pending = false }: { unixSec: number; pending?: bo
   );
 }
 
-function StatTile({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
+function StatTile({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: number | null;
+  icon: React.ReactNode;
+}) {
   return (
     <div className="rounded-xl border border-border bg-card/60 p-3">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -762,7 +846,7 @@ function StatTile({ label, value, icon }: { label: string; value: number; icon: 
         {label}
       </div>
       <div className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight">
-        {value}
+        {value === null ? "—" : value}
       </div>
     </div>
   );
@@ -770,13 +854,14 @@ function StatTile({ label, value, icon }: { label: string; value: number; icon: 
 
 // ----- Manual key form -----
 
-function ManualKeyForm() {
+function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
   const [prefix, setPrefix] = useState("DG");
   const [hours, setHours] = useState("24");
   const [busy, setBusy] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (disabled || busy) return;
     const h = Number(hours);
     if (!hours.trim() || !Number.isFinite(h) || h < 0 || h > 87600) {
       toast.error("Enter 0–87600 hours (0 = lifetime)");
@@ -785,8 +870,15 @@ function ManualKeyForm() {
     setBusy(true);
     try {
       const key = await createManualKey(prefix, h);
-      await navigator.clipboard.writeText(key).catch(() => {});
-      toast.success(`Created ${key} (copied)`);
+      const copied = await navigator.clipboard.writeText(key).then(
+        () => true,
+        () => false,
+      );
+      toast.success("Key created", {
+        description: copied
+          ? "Key copied."
+          : "Copy was blocked. Refresh the key list to find and copy the created key.",
+      });
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -806,14 +898,19 @@ function ManualKeyForm() {
         Writes one ValidKeys entry. Users normally generate keys through the worker gate.
       </p>
 
-      <label className="text-xs text-muted-foreground">Prefix</label>
-      <div className="mt-1 mb-3 inline-flex rounded-full border border-border p-1 text-xs">
+      <p className="text-xs text-muted-foreground">Prefix</p>
+      <div
+        role="group"
+        aria-label="Key prefix"
+        className="mt-1 mb-3 inline-flex rounded-full border border-border p-1 text-xs"
+      >
         {["DG", "VIP"].map((p) => (
           <button
             type="button"
             key={p}
             onClick={() => setPrefix(p)}
-            className={`rounded-full px-3 py-1 ${prefix === p ? "text-primary-foreground" : "text-muted-foreground"}`}
+            aria-pressed={prefix === p}
+            className={`touch-target rounded-full px-3 py-1 ${prefix === p ? "text-primary-foreground" : "text-muted-foreground"}`}
             style={prefix === p ? { background: "var(--gradient-primary)" } : undefined}
           >
             {p}
@@ -821,17 +918,20 @@ function ManualKeyForm() {
         ))}
       </div>
 
-      <label className="text-xs text-muted-foreground">Duration (hours; 0 = lifetime)</label>
+      <label htmlFor="manual-key-duration" className="text-xs text-muted-foreground">
+        Duration (hours; 0 = lifetime)
+      </label>
       <Input
+        id="manual-key-duration"
         type="number"
         min="0"
         max="87600"
         value={hours}
         onChange={(e) => setHours(e.target.value)}
-        className="mt-1 mb-3"
+        className="mt-1 mb-3 h-11"
       />
 
-      <div className="mb-3 flex gap-1 text-xs">
+      <div className="mb-3 flex flex-wrap gap-1 text-xs">
         {[
           { l: "1d", h: "24" },
           { l: "7d", h: "168" },
@@ -842,7 +942,7 @@ function ManualKeyForm() {
             type="button"
             key={p.l}
             onClick={() => setHours(p.h)}
-            className="rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-primary"
+            className="touch-target rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-primary"
           >
             {p.l}
           </button>
@@ -851,7 +951,7 @@ function ManualKeyForm() {
 
       <Button
         type="submit"
-        disabled={busy}
+        disabled={busy || disabled}
         className="w-full"
         style={{ background: "var(--gradient-primary)" }}
       >

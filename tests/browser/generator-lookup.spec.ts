@@ -23,16 +23,33 @@ async function fixture(page: Page) {
     releaseGeneration: undefined as (() => void) | undefined,
     generations: 0,
     gateCalls: 0,
+    generationStatus: 200,
+    generationBody: { ok: true, key: "LOCAL-FIXTURE-NOT-A-LICENSE", remaining: 4 } as unknown,
+    holdMod: false,
+    releaseMod: undefined as (() => void) | undefined,
+    modReads: 0,
   };
   await page.addInitScript(() => {
-    const capture = window as unknown as { fixtureCopies: number; fixtureWidgets: number };
+    const capture = window as unknown as {
+      fixtureCopies: number;
+      fixtureWidgets: number;
+      fixtureCopyMode: string;
+      fixtureReleaseCopy?: () => void;
+      fixtureVerify?: () => void;
+    };
     capture.fixtureCopies = 0;
     capture.fixtureWidgets = 0;
+    capture.fixtureCopyMode = "ok";
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: {
         writeText: async () => {
           capture.fixtureCopies++;
+          if (capture.fixtureCopyMode === "deny") throw new Error("Local clipboard denial");
+          if (capture.fixtureCopyMode === "hold")
+            await new Promise<void>((resolve) => {
+              capture.fixtureReleaseCopy = resolve;
+            });
         },
       },
     });
@@ -41,19 +58,36 @@ async function fixture(page: Page) {
         capture.fixtureWidgets++;
         element.textContent = "Local verification fixture";
         options.callback("local-fixture-captcha");
+        capture.fixtureVerify = () => options.callback("local-fixture-captcha");
         return "local-widget";
       },
       remove: () => {},
       reset: () => {},
     };
   });
-  await page.route("**/*.supabase.co/**", (route) =>
-    route.fulfill({
+  await page.route("**/*.supabase.co/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/mod_overrides") && url.searchParams.get("limit") === "1") {
+      state.modReads++;
+      if (state.holdMod)
+        await new Promise<void>((resolve) => {
+          state.releaseMod = resolve;
+        });
+      await route
+        .fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ slug: "local-fixture-mod", updated_at: "2026-10-25T00:00:00Z" }),
+        })
+        .catch(() => {});
+      return;
+    }
+    await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: "[]",
-    }),
-  );
+    });
+  });
   await page.route(
     (url) => /\/(check-token|generate-key|start|init(?:\/.*)?)$/.test(url.pathname),
     async (route) => {
@@ -76,9 +110,9 @@ async function fixture(page: Page) {
           });
         await route
           .fulfill({
-            status: 200,
+            status: state.generationStatus,
             contentType: "application/json",
-            body: JSON.stringify({ ok: true, key: "LOCAL-FIXTURE-NOT-A-LICENSE", remaining: 4 }),
+            body: JSON.stringify(state.generationBody),
           })
           .catch(() => {});
       } else {
@@ -125,9 +159,11 @@ test("service failure preserves the link and retries only its read", async ({ pa
   for (const width of [320, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     expect((await retry(page).boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-      true,
-    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
     await page.screenshot({
       path: info.outputPath(`generator-lookup-${width}.png`),
       fullPage: true,
@@ -239,10 +275,233 @@ test("a late generation response cannot copy or announce a key after navigation"
   await expect(page.getByRole("heading", { level: 1, name: /Dynamons World/ })).toBeVisible();
   state.releaseGeneration?.();
   await page.waitForTimeout(400);
-  await expect(page.getByText("Your key is ready and copied!", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Your key is ready/)).toHaveCount(0);
   expect(
     await page.evaluate(() => (window as unknown as { fixtureCopies: number }).fixtureCopies),
   ).toBe(0);
   expect(state.generations).toBe(1);
   expect(state.gateCalls).toBe(0);
+});
+
+async function ready(page: Page) {
+  const state = await fixture(page);
+  state.body = { valid: true };
+  await open(page, "/generator?ref=local-fixture");
+  await expect(page.getByRole("button", { name: "Get my key", exact: true })).toBeEnabled({
+    timeout: 15000,
+  });
+  return state;
+}
+const keyField = (page: Page) => page.getByRole("textbox", { name: "Your key", exact: true });
+const copyStatus = (page: Page) => page.locator("#generated-key-copy-status");
+const copyMode = (page: Page, value: string) =>
+  page.evaluate((mode) => {
+    (window as unknown as { fixtureCopyMode: string }).fixtureCopyMode = mode;
+  }, value);
+
+test("unknown generation failure is explicit and cannot replay the request", async ({
+  page,
+}, info) => {
+  const state = await ready(page);
+  state.generationStatus = 500;
+  state.generationBody = { error: "unavailable" };
+  await page.getByRole("button", { name: "Get my key", exact: true }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Your request may have completed" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Get my key", exact: true })).toHaveCount(0);
+  await expect(keyField(page)).toHaveCount(0);
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`generation-uncertain-${width}.png`),
+      fullPage: true,
+    });
+  }
+  expect(state.generations).toBe(1);
+  expect(state.gateCalls).toBe(0);
+});
+
+test("stalled generation times out once and ignores a late successful receipt", async ({
+  page,
+}) => {
+  const state = await ready(page);
+  state.holdGeneration = true;
+  await page.clock.install();
+  await page
+    .getByRole("button", { name: "Get my key", exact: true })
+    .evaluate((button: HTMLButtonElement) => {
+      button.click();
+      button.click();
+    });
+  await expect.poll(() => state.generations).toBe(1);
+  await page.clock.fastForward(10001);
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Your request may have completed" }),
+  ).toBeVisible();
+  state.releaseGeneration?.();
+  await page.waitForTimeout(100);
+  await expect(keyField(page)).toHaveCount(0);
+  expect(state.generations).toBe(1);
+  expect(
+    await page.evaluate(() => (window as unknown as { fixtureCopies: number }).fixtureCopies),
+  ).toBe(0);
+});
+
+test("blocked clipboard preserves a selectable key and does not launch the app", async ({
+  page,
+}, info) => {
+  const state = await ready(page);
+  await copyMode(page, "deny");
+  await page.getByRole("button", { name: "Get my key", exact: true }).click();
+  await expect(copyStatus(page)).toContainText("Copy was blocked");
+  await expect(keyField(page)).toHaveValue("LOCAL-FIXTURE-NOT-A-LICENSE");
+  await expect(keyField(page)).toHaveAttribute("readonly", "");
+  await keyField(page).focus();
+  expect(
+    await keyField(page).evaluate(
+      (input: HTMLInputElement) =>
+        input.selectionStart === 0 && input.selectionEnd === input.value.length,
+    ),
+  ).toBe(true);
+  await page.getByRole("button", { name: "Copy & Open App", exact: true }).click();
+  await expect(copyStatus(page)).toContainText("Copy was blocked");
+  expect(state.modReads).toBe(0);
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+    expect(
+      (await page.getByRole("button", { name: "Copy key", exact: true }).boundingBox())!.height,
+    ).toBeGreaterThanOrEqual(44);
+    await page.screenshot({
+      path: info.outputPath(`generation-copy-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await copyMode(page, "ok");
+  const newKey = page.getByRole("button", { name: "New key", exact: true });
+  await newKey.hover();
+  const contrast = await newKey.evaluate((element) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext("2d")!;
+    const style = getComputedStyle(element);
+    context.fillStyle = getComputedStyle(document.body).backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    context.fillStyle = style.backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    const background = Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3);
+    context.fillStyle = style.color;
+    context.fillRect(0, 0, 1, 1);
+    const foreground = Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3);
+    const luminance = (rgb: number[]) =>
+      rgb
+        .map((value) => {
+          const channel = value / 255;
+          return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        })
+        .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+    const a = luminance(background),
+      b = luminance(foreground);
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  });
+  expect(contrast).toBeGreaterThanOrEqual(4.5);
+  await page.getByRole("button", { name: "Copy key", exact: true }).click();
+  await expect(copyStatus(page)).toHaveText("Key copied");
+  expect(state.generations).toBe(1);
+  expect(state.gateCalls).toBe(0);
+});
+
+test("copy success is announced only after the clipboard promise resolves", async ({ page }) => {
+  await ready(page);
+  await copyMode(page, "hold");
+  await page.getByRole("button", { name: "Get my key", exact: true }).click();
+  await expect(copyStatus(page)).toHaveText("Copying key…");
+  await expect(page.getByRole("button", { name: "Copy & Open App", exact: true })).toBeDisabled();
+  await page.evaluate(() =>
+    (window as unknown as { fixtureReleaseCopy?: () => void }).fixtureReleaseCopy?.(),
+  );
+  await expect(copyStatus(page)).toHaveText("Key copied");
+});
+
+test("unused-key countdown does not claim an activated key was revoked", async ({ page }) => {
+  const state = await ready(page);
+  await page.clock.install();
+  await page.getByRole("button", { name: "Get my key", exact: true }).click();
+  await expect(copyStatus(page)).toHaveText("Key copied");
+  await page.clock.setSystemTime(new Date(Date.now() + 610000));
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(page.getByText(/The unused-key window has passed/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy & Open App", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Copy again", exact: true }).click();
+  await expect(copyStatus(page)).toHaveText("Key copied");
+  expect(state.generations).toBe(1);
+});
+
+test("a valid key with unknown remaining quota hides the unsupported counter", async ({ page }) => {
+  const state = await ready(page);
+  state.generationBody = { ok: true, key: "LOCAL-FIXTURE-NOT-A-LICENSE" };
+  await page.getByRole("button", { name: "Get my key", exact: true }).click();
+  await expect(keyField(page)).toHaveValue("LOCAL-FIXTURE-NOT-A-LICENSE");
+  await expect(page.getByText(/keys left in this window|left today/)).toHaveCount(0);
+});
+
+test("a fallback lookup finishing after navigation cannot redirect the new page", async ({
+  page,
+}) => {
+  const state = await ready(page);
+  // Keep the held lookup pending while slower engines perform the navigation.
+  // The lookup deadline is covered separately; this case isolates late completion.
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  state.holdMod = true;
+  await page.evaluate(() => {
+    const value = navigator.userAgent.replace(/android/gi, "fixture");
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () => value,
+    });
+  });
+  await page.getByRole("button", { name: "Get my key", exact: true }).click();
+  await expect(copyStatus(page)).toHaveText("Key copied");
+  await page.getByRole("button", { name: "Copy & Open App", exact: true }).click();
+  await expect.poll(() => !!state.releaseMod).toBe(true);
+  await page.getByRole("link", { name: "Home", exact: true }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: /Dynamons World/ })).toBeVisible();
+  state.releaseMod?.();
+  await page.waitForTimeout(200);
+  await expect(page).toHaveURL(/\/$/);
+  expect(state.modReads).toBe(1);
+});
+
+test("confirmed CAPTCHA rejection permits a fresh manual attempt without auto replay", async ({
+  page,
+}) => {
+  const state = await ready(page);
+  state.generationStatus = 403;
+  state.generationBody = { error: "captcha_failed" };
+  await page.getByRole("button", { name: "Get my key", exact: true }).click();
+  await expect(
+    page.getByText("The robot check didn’t pass. Please try again.", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Get my key", exact: true })).toBeDisabled();
+  expect(state.generations).toBe(1);
+  state.generationStatus = 200;
+  state.generationBody = { ok: true, key: "LOCAL-FIXTURE-NOT-A-LICENSE", remaining: 3 };
+  await page.evaluate(() =>
+    (window as unknown as { fixtureVerify?: () => void }).fixtureVerify?.(),
+  );
+  await page.getByRole("button", { name: "Get my key", exact: true }).click();
+  await expect(keyField(page)).toHaveValue("LOCAL-FIXTURE-NOT-A-LICENSE");
+  expect(state.generations).toBe(2);
 });

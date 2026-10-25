@@ -137,9 +137,10 @@ function Orb({ pulse }: { pulse: boolean }) {
 type Phase =
   | { kind: "loading" }
   | { kind: "lookup-error" }
+  | { kind: "uncertain" }
   | { kind: "invalid"; reason: string }
   | { kind: "ready" }
-  | { kind: "success"; key: string; remaining: number; hours: number; generatedAt: number };
+  | { kind: "success"; key: string; remaining: number | null; generatedAt: number };
 
 const REASON_TEXT: Record<string, string> = {
   not_found: "This link doesn't work any more. Tap below to start again.",
@@ -174,12 +175,22 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
   const [fingerprint, setFingerprint] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [lookupAttempt, setLookupAttempt] = useState(0);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copying" | "copied" | "error">("idle");
+  const [openingApp, setOpeningApp] = useState(false);
   const active = useRef(true);
+  const generating = useRef(false);
+  const opening = useRef(false);
+  const copyRevision = useRef(0);
+  const controllers = useRef(new Set<AbortController>());
+  const appCleanup = useRef<(() => void) | undefined>(undefined);
 
   useEffect(() => {
     active.current = true;
+    const activeControllers = controllers.current;
     return () => {
       active.current = false;
+      for (const controller of activeControllers) controller.abort();
+      appCleanup.current?.();
     };
   }, []);
 
@@ -282,22 +293,34 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
 
   // Step 5/6/7 — generate
   const onGenerate = async () => {
-    if (!ref || !turnstileToken || !fingerprint) return;
+    if (!ref || !turnstileToken || !fingerprint || generating.current || !active.current) return;
+    generating.current = true;
     setSubmitting(true);
-    const res = await generateKey({ accessToken: ref, turnstileToken, fingerprint });
+    const controller = new AbortController();
+    controllers.current.add(controller);
+    const deadline = setTimeout(() => controller.abort(), 10_000);
+    const res = await generateKey(
+      { accessToken: ref, turnstileToken, fingerprint },
+      controller.signal,
+    );
+    clearTimeout(deadline);
+    controllers.current.delete(controller);
+    generating.current =
+      res.ok ||
+      res.uncertain === true ||
+      ["invalid_token", "token_used", "token_expired"].includes(res.error);
     if (!active.current) return;
     setSubmitting(false);
 
     if (res.ok) {
-      // Default to 24h for the user-visible label; the real expiry is enforced server-side.
+      setCopyStatus("idle");
       setPhase({
         kind: "success",
         key: res.key,
         remaining: res.remaining,
-        hours: 24,
         generatedAt: Date.now(),
       });
-      toast.success("Your key is ready and copied!");
+      toast.success("Your key is ready");
       resetTurnstile();
       playUnlock();
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -309,6 +332,12 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
           colors: ["#a86ee6", "#e0b45a", "#c9a4ee", "#ffffff"],
         });
       }
+      return;
+    }
+
+    if (res.uncertain) {
+      setPhase({ kind: "uncertain" });
+      resetTurnstile();
       return;
     }
 
@@ -339,19 +368,29 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
     }
   };
 
-  const copyKey = async (k: string) => {
+  const copyKey = useCallback(async (k: string, announce = true): Promise<boolean> => {
+    if (!active.current) return false;
+    const revision = ++copyRevision.current;
+    setCopyStatus("copying");
     try {
       await navigator.clipboard.writeText(k);
-      toast.success("Key copied");
+      if (!active.current) return false;
+      if (revision === copyRevision.current) {
+        setCopyStatus("copied");
+        if (announce) toast.success("Key copied");
+      }
+      return true;
     } catch {
-      toast.error("Couldn’t copy — press and hold the key to copy it");
+      if (active.current && revision === copyRevision.current) {
+        setCopyStatus("error");
+        if (announce) toast.error("Couldn’t copy — select the key to copy it manually");
+      }
+      return false;
     }
-  };
+  }, []);
 
-  // ---- Live countdown to the 10-minute unused-key deletion deadline ----
-  // Starts from when the key was generated (client time; within ~1-2s of the
-  // DB `date`, which is fine — avoids an extra DB/Worker round-trip per key).
-  const KEY_TTL_SECONDS = 600; // must match the cleanup_valid_keys() 10-min rule
+  // Receipt-time estimate for unused web-key cleanup, not proof of license expiry.
+  const KEY_TTL_SECONDS = 600;
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   useEffect(() => {
@@ -360,20 +399,29 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
       return;
     }
     const deadline = phase.generatedAt + KEY_TTL_SECONDS * 1000;
-    const tick = () => setSecondsLeft(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tick = () => {
+      clearTimeout(timer);
+      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      if (remaining > 0 && !document.hidden) timer = setTimeout(tick, 1000);
+    };
     tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
+    window.addEventListener("focus", tick);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("focus", tick);
+      document.removeEventListener("visibilitychange", tick);
+    };
   }, [phase]);
 
   // Auto-copy the key the instant the success screen appears (no tap needed).
   useEffect(() => {
     if (phase.kind === "success") {
-      navigator.clipboard.writeText(phase.key).catch(() => {
-        /* clipboard may be blocked; tap still works */
-      });
+      void copyKey(phase.key, false);
     }
-  }, [phase]);
+  }, [phase, copyKey]);
 
   const fmtCountdown = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -381,6 +429,9 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
   // always follows your latest upload. Prefers the most recently updated row in
   // mod_overrides; if that's unavailable, uses the newest base mod by date.
   const latestModUrl = useCallback(async (): Promise<string> => {
+    const controller = new AbortController();
+    controllers.current.add(controller);
+    const deadline = setTimeout(() => controller.abort(), 5000);
     try {
       const { data } = await supabase
         .from("mod_overrides")
@@ -388,10 +439,16 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
         .eq("hidden", false)
         .order("updated_at", { ascending: false })
         .limit(1)
-        .maybeSingle();
-      if (data?.slug) return `/mods/${data.slug}`;
+        .abortSignal(controller.signal)
+        .maybeSingle()
+        .retry(false);
+      if (typeof data?.slug === "string" && data.slug)
+        return `/mods/${encodeURIComponent(data.slug)}`;
     } catch {
       /* fall through */
+    } finally {
+      clearTimeout(deadline);
+      controllers.current.delete(controller);
     }
     // Fallback: newest base mod by its `updated` date.
     const newest = [...mods].sort((a, b) => (a.updated < b.updated ? 1 : -1))[0];
@@ -402,22 +459,33 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
   // the screen within ~1.5s (not installed / can't open), tell the user and
   // send them to the latest mod page to download it.
   const copyAndOpenApp = async (k: string) => {
-    await copyKey(k);
+    if (opening.current || !active.current) return;
+    opening.current = true;
+    setOpeningApp(true);
+    const finish = () => {
+      opening.current = false;
+      if (active.current) setOpeningApp(false);
+    };
+    if (!(await copyKey(k)) || !active.current) {
+      finish();
+      return;
+    }
     const isAndroid = /android/i.test(navigator.userAgent);
     const fallback = async () => {
-      toast.error("App not installed on your phone — opening the latest mod page.");
+      toast("Opening the latest mod page. Use your key in the Android app.");
       const url = await latestModUrl();
-      window.location.assign(url);
+      if (active.current) window.location.assign(url);
     };
 
     if (!isAndroid) {
       await fallback();
+      finish();
       return;
     }
 
     let hidden = false;
     const onHide = () => {
-      hidden = true;
+      if (document.hidden) hidden = true;
     };
     document.addEventListener("visibilitychange", onHide);
 
@@ -429,10 +497,16 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
 
     // If the app took over, the tab goes hidden; if we're still here after the
     // delay, treat it as "not installed" and redirect.
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       document.removeEventListener("visibilitychange", onHide);
-      if (!hidden && !document.hidden) fallback();
+      appCleanup.current = undefined;
+      if (active.current && !hidden && !document.hidden) void fallback().finally(finish);
+      else finish();
     }, 1500);
+    appCleanup.current = () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onHide);
+    };
   };
 
   // ---------- Render ----------
@@ -465,8 +539,13 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
               Claim your key
             </h1>
             <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-              Tick the box below to prove you're not a robot. Then we'll forge a key that unlocks
-              the mod in the app.
+              {phase.kind === "ready"
+                ? "Complete the verification below, then request your key."
+                : phase.kind === "success"
+                  ? "Copy your key and activate it in the Android app."
+                  : phase.kind === "uncertain"
+                    ? "Check the request outcome before starting again."
+                    : "Use a valid access link to claim your key for the app."}
             </p>
           </div>
 
@@ -509,6 +588,20 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Retry link check
+              </Button>
+            </div>
+          )}
+
+          {phase.kind === "uncertain" && (
+            <div className="flex flex-col items-center gap-4 py-6 text-center">
+              <p role="alert" className="text-sm text-foreground">
+                We couldn’t confirm the result. Your request may have completed, so it won’t be sent
+                again automatically. This page can’t recover a key from a lost response. Start again
+                if you still need a key.
+              </p>
+              <Button className="touch-target" onClick={() => window.location.assign(startGate())}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Start with a new link
               </Button>
             </div>
           )}
@@ -559,26 +652,27 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
             <div className="flex flex-col items-center gap-6 py-2">
               {/* Key reveal card */}
               <div className="w-full">
-                <div className="mb-2 flex items-center justify-between px-1">
-                  <span
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+                  <label
+                    htmlFor="generated-access-key"
                     className="text-xs font-semibold uppercase tracking-[0.2em]"
                     style={{ color: "var(--muted-foreground)" }}
                   >
                     Your key
-                  </span>
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.15em]"
-                    style={{ color: "var(--gold)" }}
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    {phase.remaining} left today
-                  </span>
+                  </label>
+                  {phase.remaining !== null && (
+                    <span
+                      className="inline-flex items-center gap-1 text-xs font-medium"
+                      style={{ color: "var(--gold)" }}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      {phase.remaining} keys left in this window
+                    </span>
+                  )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => copyKey(phase.key)}
-                  className="group relative w-full overflow-hidden rounded-2xl p-[1.5px] transition-transform active:scale-[0.99]"
+                <div
+                  className="relative w-full overflow-hidden rounded-2xl p-[1.5px]"
                   style={{
                     background: "linear-gradient(135deg, var(--gold), var(--primary), var(--gold))",
                   }}
@@ -589,27 +683,51 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
                       background: "color-mix(in oklch, var(--background) 92%, transparent)",
                     }}
                   >
-                    <div
-                      className="break-all text-center font-display text-4xl font-bold leading-tight tracking-[0.12em] sm:text-4xl"
+                    <input
+                      id="generated-access-key"
+                      aria-describedby="generated-key-copy-status"
+                      readOnly
+                      value={phase.key}
+                      onFocus={(event) => event.currentTarget.select()}
+                      className="w-full min-w-0 select-all bg-transparent text-center font-display text-2xl font-bold leading-tight tracking-wide text-foreground outline-offset-4"
                       style={{
-                        background: "linear-gradient(180deg, #f4d98f, var(--gold))",
-                        WebkitBackgroundClip: "text",
-                        backgroundClip: "text",
-                        color: "transparent",
+                        color: "var(--gold)",
                         filter: "drop-shadow(0 0 18px oklch(0.78 0.13 82 / 35%))",
                       }}
+                    />
+                    <p
+                      id="generated-key-copy-status"
+                      role={copyStatus === "error" ? "alert" : "status"}
+                      className="mt-3 text-center text-xs text-muted-foreground"
                     >
-                      {phase.key}
-                    </div>
-                    <div
-                      className="mt-3 flex items-center justify-center gap-1.5 text-xs font-medium"
-                      style={{ color: "#4ade80" }}
+                      {copyStatus === "copied"
+                        ? "Key copied"
+                        : copyStatus === "copying"
+                          ? "Copying key…"
+                          : copyStatus === "error"
+                            ? "Copy was blocked. Select the key field to copy it manually, or try Copy key."
+                            : "Select the key field or use Copy key."}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="touch-target mt-3 w-full"
+                      disabled={copyStatus === "copying"}
+                      onClick={() => void copyKey(phase.key)}
                     >
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Copied — tap to copy again
-                    </div>
+                      {copyStatus === "copied" ? (
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                      ) : (
+                        <Copy className="mr-2 h-4 w-4" />
+                      )}
+                      {copyStatus === "copying"
+                        ? "Copying…"
+                        : copyStatus === "copied"
+                          ? "Copy again"
+                          : "Copy key"}
+                    </Button>
                   </div>
-                </button>
+                </div>
               </div>
 
               {/* Countdown */}
@@ -635,7 +753,9 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
                         style={{ color: secondsLeft <= 60 ? "#f87171" : "var(--muted-foreground)" }}
                       >
                         <Timer className="h-3.5 w-3.5" />
-                        {secondsLeft <= 60 ? "Expiring soon" : "Expires in"}
+                        {secondsLeft <= 60
+                          ? "Activate an unused key soon"
+                          : "Approximate unused-key window"}
                       </span>
                       <span
                         className="font-display text-xl font-bold tabular-nums tracking-wide"
@@ -671,7 +791,9 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
                   >
                     <XCircle className="h-4 w-4 shrink-0" style={{ color: "#f87171" }} />
                     <span className="text-sm font-semibold" style={{ color: "#f87171" }}>
-                      This key ran out of time — get a new one
+                      The unused-key window has passed. If you already activated this key, its
+                      server-controlled access period still applies. Otherwise, start again if the
+                      app rejects it.
                     </span>
                   </div>
                 ))}
@@ -683,7 +805,6 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
                   className="flex-1"
                   style={{
                     borderColor: "color-mix(in oklch, var(--gold) 30%, transparent)",
-                    color: "var(--foreground)",
                   }}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
@@ -691,12 +812,12 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
                 </Button>
                 <Button
                   onClick={() => copyAndOpenApp(phase.key)}
-                  disabled={secondsLeft === 0}
+                  disabled={openingApp || copyStatus === "copying"}
                   className="flex-1 text-primary-foreground disabled:opacity-50"
                   style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  Copy &amp; Open App
+                  {openingApp ? "Opening app…" : "Copy & Open App"}
                 </Button>
               </div>
             </div>
@@ -707,7 +828,7 @@ function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
           className="mt-4 text-center text-xs"
           style={{ color: "var(--muted-foreground)", opacity: 0.7 }}
         >
-          One key per device. Don't share your key — shared keys get blocked.
+          Keep your key private and use it in the Android app on your device.
         </p>
       </div>
     </PageShell>

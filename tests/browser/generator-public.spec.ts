@@ -23,7 +23,11 @@ test("generator without a link makes no gate, key or verification requests", asy
   });
   await expect(page.getByRole("alert").filter({ hasText: "Something's missing" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start again", exact: true })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
   await page.screenshot({ path: info.outputPath("generator-public.png"), fullPage: true });
   expect(requests).toEqual([]);
   expect(errors).toEqual([]);
