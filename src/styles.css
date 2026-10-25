@@ -563,7 +563,11 @@ h4,
    anchored to a narrow header control. This prevents right-edge clipping and
    leaves the trigger row usable while the inbox is open. */
 .notification-popover {
+  position: absolute;
   min-width: 0;
+}
+.install-suggestion {
+  position: fixed;
 }
 .notification-copy {
   min-width: 0;

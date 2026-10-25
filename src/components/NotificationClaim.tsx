@@ -66,7 +66,7 @@ export function NotificationClaim({ notification }: { notification: AppNotificat
       to="/claim"
       search={{ kind: to.kind, ref: to.ref, label: to.label }}
       onClick={(e) => e.stopPropagation()}
-      className="press mt-3 inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-4 py-2 text-xs font-bold text-primary transition hover:bg-primary/10"
+      className="press touch-target mt-3 inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-4 py-2 text-xs font-bold text-primary transition hover:bg-primary/10"
     >
       {to.icon} {to.text} <ArrowRight className="h-3 w-3" />
     </Link>

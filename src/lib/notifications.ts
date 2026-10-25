@@ -32,30 +32,41 @@ export interface SenderProfile {
 
 /** All notifications on this site come from the single owner account, so we
  * fetch their public profile once and show it as the sender everywhere. */
-export async function getSenderProfile(): Promise<SenderProfile | null> {
+export async function getSenderProfile(signal?: AbortSignal): Promise<SenderProfile | null> {
   const { data, error } = await supabase
     .from("public_profiles")
     .select("display_name, avatar_url, custom_avatar_url")
     .eq("is_owner", true)
-    .maybeSingle();
+    .abortSignal(signal ?? AbortSignal.timeout(10000))
+    .maybeSingle()
+    .retry(false);
   if (error || !data) return null;
   return data as SenderProfile;
 }
 
-export async function listNotifications(): Promise<AppNotification[]> {
+export async function listNotifications(signal?: AbortSignal): Promise<AppNotification[]> {
   const { data, error } = await supabase
     .from("notifications")
     .select("id,title,body,created_at,reward_kind,reward_ref,burn_after_read")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .abortSignal(signal ?? AbortSignal.timeout(10000))
+    .retry(false);
   if (error) throw new Error(error.message);
-  return (data ?? []) as AppNotification[];
+  if (!Array.isArray(data)) throw new Error("Invalid notification response");
+  return data as AppNotification[];
 }
 
 /** Ids of notifications the current user has already read. */
-export async function listMyReadIds(): Promise<string[]> {
-  const { data, error } = await supabase.from("notification_reads").select("notification_id");
+export async function listMyReadIds(signal?: AbortSignal): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("notification_reads")
+    .select("notification_id")
+    .abortSignal(signal ?? AbortSignal.timeout(10000))
+    .retry(false);
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r: { notification_id: string }) => r.notification_id);
+  if (!Array.isArray(data) || data.some((row) => typeof row?.notification_id !== "string"))
+    throw new Error("Invalid notification read response");
+  return data.map((r: { notification_id: string }) => r.notification_id);
 }
 
 export async function markRead(ids: string[], userId: string): Promise<void> {

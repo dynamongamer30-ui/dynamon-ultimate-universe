@@ -12,6 +12,21 @@ import {
 
 type Inbox = { list: AppNotification[]; reads: string[] };
 
+async function boundedRead<T>(signal: AbortSignal, read: (signal: AbortSignal) => Promise<T>) {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal.addEventListener("abort", abort, { once: true });
+  if (signal.aborted) controller.abort();
+  const deadline = setTimeout(abort, 10000);
+  try {
+    return await read(controller.signal);
+  } finally {
+    clearTimeout(deadline);
+    signal.removeEventListener("abort", abort);
+    controller.abort();
+  }
+}
+
 /** One account-scoped inbox shared by the header and notification center. */
 export function useNotifications() {
   const { user } = useAuth();
@@ -20,10 +35,14 @@ export function useNotifications() {
   const query = useQuery({
     queryKey: ["notifications", userId],
     enabled: !!userId,
-    queryFn: async (): Promise<Inbox> => {
-      const [list, reads] = await Promise.all([listNotifications(), listMyReadIds()]);
-      return { list, reads };
-    },
+    queryFn: ({ signal }): Promise<Inbox> =>
+      boundedRead(signal, async (requestSignal) => {
+        const [list, reads] = await Promise.all([
+          listNotifications(requestSignal),
+          listMyReadIds(requestSignal),
+        ]);
+        return { list, reads };
+      }),
     staleTime: 60_000,
     gcTime: 0,
     refetchOnWindowFocus: false,
@@ -32,7 +51,7 @@ export function useNotifications() {
   const senderQuery = useQuery({
     queryKey: ["notification-sender"],
     enabled: !!userId,
-    queryFn: getSenderProfile,
+    queryFn: ({ signal }) => boundedRead(signal, getSenderProfile),
     staleTime: 300_000,
     refetchOnWindowFocus: false,
     retry: false,

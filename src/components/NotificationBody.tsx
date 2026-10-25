@@ -6,7 +6,7 @@ const KEY_PATTERN = /\b(?:DGVIP|VIP|DG)-[A-Z0-9]{4,}\b/g;
 /**
  * Renders a notification's body text, highlighting any access key found in
  * it (e.g. "Your key: VIP-A3CB81") so it stands out from the surrounding
- * sentence. Double-tapping/double-clicking a highlighted key copies it.
+ * sentence. Clicking or keyboard-activating a highlighted key copies it.
  */
 export function NotificationBody({ text, className }: { text: string; className?: string }) {
   const parts = text.split(KEY_PATTERN);
@@ -17,7 +17,7 @@ export function NotificationBody({ text, className }: { text: string; className?
   const copyKey = async (key: string) => {
     try {
       await navigator.clipboard.writeText(key);
-      toast.success(`Copied ${key}`);
+      toast.success("Key copied");
     } catch {
       toast.error("Could not copy — press and hold the key to copy it");
     }
@@ -34,14 +34,11 @@ export function NotificationBody({ text, className }: { text: string; className?
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                void copyKey(keys[i]);
               }}
-              onDoubleClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                copyKey(keys[i]);
-              }}
-              title="Double-tap to copy"
-              className="mx-0.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-mono font-bold text-amber-300"
+              aria-label={`Copy key ${keys[i]}`}
+              title="Copy key"
+              className="touch-target mx-0.5 inline-flex select-text items-center break-all rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono font-bold text-primary"
             >
               {keys[i]}
             </button>

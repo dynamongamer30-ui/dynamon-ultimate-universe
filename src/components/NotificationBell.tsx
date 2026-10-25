@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Bell, Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -20,25 +20,45 @@ function timeAgo(iso: string): string {
 }
 
 export function NotificationBell() {
-  const { items, readIds, unreadCount, markAllRead, markOneRead, sender, error, refresh } =
+  const { items, readIds, unreadCount, markAllRead, markOneRead, sender, loading, error, refresh } =
     useNotifications();
-  const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => setOpen(false), [location.href]);
 
   useEffect(() => {
-    const onClick = (e: MouseEvent) => {
+    const onOutside = (e: Event) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("pointerdown", onOutside);
+    document.addEventListener("focusin", onOutside);
+    return () => {
+      document.removeEventListener("pointerdown", onOutside);
+      document.removeEventListener("focusin", onOutside);
+    };
   }, []);
 
   const recent = items.slice(0, 6);
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    <div
+      ref={ref}
+      className="relative shrink-0"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(false);
+          trigger.current?.focus();
+        }
+      }}
+    >
       <button
+        ref={trigger}
+        type="button"
         onClick={() => {
           setOpen((v) => !v);
           playClick();
@@ -69,7 +89,7 @@ export function NotificationBell() {
           >
             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
               <p className="text-sm font-semibold">Notifications</p>
-              {unreadCount > 0 && (
+              {!loading && !error && unreadCount > 0 && (
                 <button
                   onClick={markAllRead}
                   className="touch-target inline-flex items-center gap-1 rounded-lg px-2 text-xs font-medium text-primary hover:bg-primary/10 hover:underline"
@@ -79,13 +99,17 @@ export function NotificationBell() {
               )}
             </div>
 
-            {error ? (
+            {loading ? (
+              <p role="status" className="px-4 py-8 text-sm text-muted-foreground">
+                Loading notifications…
+              </p>
+            ) : error ? (
               <div className="px-4 py-8 text-center">
                 <p className="text-sm text-muted-foreground">Could not load notifications.</p>
                 <button
                   type="button"
                   onClick={refresh}
-                  className="mt-3 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-card/60"
+                  className="touch-target mt-3 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-card/60"
                 >
                   Try again
                 </button>
@@ -100,24 +124,7 @@ export function NotificationBell() {
                   const unread = !readIds.has(n.id);
                   return (
                     <li key={n.id} className={unread ? "bg-primary/5" : ""}>
-                      <div
-                        role="link"
-                        tabIndex={0}
-                        onClick={() => {
-                          if (unread) markOneRead(n.id);
-                          setOpen(false);
-                          navigate({ to: "/notifications" });
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            if (unread) markOneRead(n.id);
-                            setOpen(false);
-                            navigate({ to: "/notifications" });
-                          }
-                        }}
-                        className="block cursor-pointer px-4 py-3 hover:bg-card/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                      >
+                      <div className="px-4 py-3">
                         <div className="flex items-start gap-2">
                           {unread && (
                             <span
@@ -149,8 +156,17 @@ export function NotificationBell() {
                                 </span>
                               </div>
                             )}
-                            <p className="truncate text-sm font-semibold">{n.title}</p>
-                            <p className="notification-copy mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                            <Link
+                              to="/notifications"
+                              onClick={() => {
+                                if (unread) void markOneRead(n.id);
+                                setOpen(false);
+                              }}
+                              className="touch-target flex items-center rounded-md text-sm font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            >
+                              {n.title}
+                            </Link>
+                            <p className="notification-copy mt-0.5 text-xs text-muted-foreground">
                               <NotificationBody text={n.body} />
                             </p>
                             <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/70">
