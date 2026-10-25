@@ -14,10 +14,6 @@ import {
   Image as ImageIcon,
   Box,
   KeyRound,
-  Trash2,
-  Upload,
-  Plus,
-  User,
   Feather,
   Send,
 } from "lucide-react";
@@ -35,7 +31,7 @@ import {
   type Socials,
   type ModOverride,
 } from "@/hooks/useSiteSettings";
-import { useProfile } from "@/hooks/useProfile";
+import { OwnerAvatarsEditor } from "@/components/OwnerAvatarsEditor";
 import { useConfirm } from "@/hooks/useConfirm";
 import { mods as baseMods } from "@/lib/mods";
 import { Cipher } from "@/lib/cipher";
@@ -180,7 +176,7 @@ function ControlPanel() {
                 <AccountsEditor />
               </>
             )}
-            {tab === "avatars" && <AvatarsEditor />}
+            {tab === "avatars" && <OwnerAvatarsEditor />}
             {tab === "rewards" && <RewardsEditor />}
           </>
         )}
@@ -217,245 +213,6 @@ async function saveAppConfig(id: string, data: unknown) {
   return true;
 }
 
-// ---------- Avatars ----------
-type AvatarRow = {
-  id: string;
-  url: string;
-  gender: "male" | "female";
-  label: string | null;
-  active: boolean;
-  sort_order: number;
-};
-
-function AvatarsEditor() {
-  const { profile, refresh: refreshProfile } = useProfile();
-  const confirm = useConfirm();
-  const [rows, setRows] = useState<AvatarRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [customUrl, setCustomUrl] = useState("");
-  const [savingCustom, setSavingCustom] = useState(false);
-
-  const load = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from("avatar_pool").select("*").order("sort_order");
-    if (error) toast.error(error.message);
-    setRows((data ?? []) as AvatarRow[]);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-  useEffect(() => {
-    setCustomUrl(profile?.custom_avatar_url ?? "");
-  }, [profile?.custom_avatar_url]);
-
-  const upload = async (file: File, gender: "male" | "female") => {
-    setUploading(true);
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${gender}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from("avatars")
-      .upload(path, file, { upsert: false });
-    if (upErr) {
-      toast.error(upErr.message);
-      setUploading(false);
-      return;
-    }
-    const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
-    const { error: insErr } = await supabase.from("avatar_pool").insert({
-      url: pub.publicUrl,
-      gender,
-      active: true,
-      sort_order: rows.length,
-    } as never);
-    if (insErr) toast.error(insErr.message);
-    else {
-      toast.success("Avatar added");
-      load();
-    }
-    setUploading(false);
-  };
-
-  const updateRow = async (id: string, patch: Partial<AvatarRow>) => {
-    const { error } = await supabase
-      .from("avatar_pool")
-      .update(patch as never)
-      .eq("id", id);
-    if (error) toast.error(error.message);
-    else load();
-  };
-
-  const removeRow = async (id: string) => {
-    if (
-      !(await confirm({
-        title: "Remove avatar",
-        description: "Remove this avatar from the pool?",
-        confirmText: "Remove",
-        danger: true,
-      }))
-    )
-      return;
-    const { error } = await supabase.from("avatar_pool").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else load();
-  };
-
-  const saveCustomPfp = async () => {
-    if (!profile) return;
-    setSavingCustom(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ custom_avatar_url: customUrl || null } as never)
-      .eq("id", profile.id);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Saved");
-      refreshProfile();
-    }
-    setSavingCustom(false);
-  };
-
-  return (
-    <div className="space-y-6">
-      <Card
-        title="My profile picture"
-        desc="A custom image just for your account — separate from the shared picker below. Leave blank to use the regular avatar picker on your profile instead."
-      >
-        <Field label="Custom avatar URL">
-          <input
-            value={customUrl}
-            onChange={(e) => setCustomUrl(e.target.value)}
-            className={inp}
-            placeholder="https://…"
-          />
-        </Field>
-        <div className="mt-3 flex items-center gap-3">
-          {customUrl && (
-            <img
-              src={customUrl}
-              alt=""
-              className="h-12 w-12 rounded-full object-cover ring-2 ring-primary/40"
-            />
-          )}
-          <button
-            onClick={saveCustomPfp}
-            disabled={savingCustom}
-            className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-60"
-            style={{ background: "var(--gradient-primary)" }}
-          >
-            {savingCustom ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <User className="h-4 w-4" />
-            )}{" "}
-            Save
-          </button>
-        </div>
-      </Card>
-
-      <Card
-        title="Avatar pool"
-        desc="These show up in the picker every user sees, and next to their comments. Upload images (they're stored in your Supabase project, not on an external host) or edit URLs directly."
-      >
-        <div className="flex flex-wrap gap-3">
-          <UploadButton
-            label="Add male avatar"
-            uploading={uploading}
-            onFile={(f) => upload(f, "male")}
-          />
-          <UploadButton
-            label="Add female avatar"
-            uploading={uploading}
-            onFile={(f) => upload(f, "female")}
-          />
-        </div>
-
-        {loading ? (
-          <Loader2 className="mt-6 h-5 w-5 animate-spin text-muted-foreground" />
-        ) : (
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {rows.map((r) => (
-              <div
-                key={r.id}
-                className="flex items-center gap-3 rounded-xl border border-border bg-background/40 p-3"
-              >
-                <img src={r.url} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <input
-                    value={r.url}
-                    onChange={(e) =>
-                      setRows((prev) =>
-                        prev.map((x) => (x.id === r.id ? { ...x, url: e.target.value } : x)),
-                      )
-                    }
-                    onBlur={(e) => updateRow(r.id, { url: e.target.value })}
-                    className="w-full truncate rounded-lg border border-border bg-background/60 px-2 py-1 text-xs outline-none focus:border-primary"
-                  />
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="capitalize text-muted-foreground">{r.gender}</span>
-                    <button
-                      onClick={() => updateRow(r.id, { active: !r.active })}
-                      className={`rounded-full px-2 py-0.5 font-semibold ${r.active ? "bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-muted-foreground"}`}
-                    >
-                      {r.active ? "Active" : "Hidden"}
-                    </button>
-                  </div>
-                </div>
-                <button
-                  onClick={() => removeRow(r.id)}
-                  className="shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-red-500/10 hover:text-red-400"
-                  aria-label="Remove"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            {rows.length === 0 && (
-              <p className="text-sm text-muted-foreground">No avatars yet — upload some above.</p>
-            )}
-          </div>
-        )}
-      </Card>
-    </div>
-  );
-}
-
-function UploadButton({
-  label,
-  uploading,
-  onFile,
-}: {
-  label: string;
-  uploading: boolean;
-  onFile: (f: File) => void;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  return (
-    <>
-      <input
-        ref={ref}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) onFile(f);
-          e.target.value = "";
-        }}
-      />
-      <button
-        onClick={() => ref.current?.click()}
-        disabled={uploading}
-        className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-2 text-sm font-semibold text-foreground hover:bg-card disabled:opacity-60"
-      >
-        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}{" "}
-        {label}
-      </button>
-    </>
-  );
-}
 const DEFAULT_SECURITY = { timer: 900, minTimer: 45 };
 type SecurityConfig = { timer: number; minTimer: number };
 
