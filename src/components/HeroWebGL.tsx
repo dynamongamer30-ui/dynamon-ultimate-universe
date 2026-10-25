@@ -6,7 +6,10 @@ export function usePerspectiveTilt<T extends HTMLElement>() {
 
   useEffect(() => {
     const element = ref.current;
-    if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!element) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const fine = window.matchMedia("(pointer: fine)");
+    const enabled = () => !reduced.matches && fine.matches && !document.hidden;
 
     let targetX = 0;
     let targetY = 0;
@@ -16,6 +19,7 @@ export function usePerspectiveTilt<T extends HTMLElement>() {
 
     const paint = () => {
       frame = 0;
+      if (!enabled()) return;
       currentX += (targetX - currentX) * 0.08;
       currentY += (targetY - currentY) * 0.08;
       element.style.setProperty("--card-tilt-x", `${currentY}deg`);
@@ -25,10 +29,12 @@ export function usePerspectiveTilt<T extends HTMLElement>() {
       }
     };
     const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(paint);
+      if (!frame && enabled()) frame = requestAnimationFrame(paint);
     };
     const onPointerMove = (event: PointerEvent) => {
+      if (!enabled()) return;
       const rect = element.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
       const x = (event.clientX - rect.left) / rect.width - 0.5;
       const y = (event.clientY - rect.top) / rect.height - 0.5;
       targetX = Math.max(-4, Math.min(4, x * 8));
@@ -40,15 +46,26 @@ export function usePerspectiveTilt<T extends HTMLElement>() {
       targetY = 0;
       schedule();
     };
+    const stop = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      targetX = targetY = currentX = currentY = 0;
+      element.style.removeProperty("--card-tilt-x");
+      element.style.removeProperty("--card-tilt-y");
+    };
 
     element.addEventListener("pointermove", onPointerMove, { passive: true });
     element.addEventListener("pointerleave", reset, { passive: true });
+    reduced.addEventListener("change", stop);
+    fine.addEventListener("change", stop);
+    document.addEventListener("visibilitychange", stop);
     return () => {
       element.removeEventListener("pointermove", onPointerMove);
       element.removeEventListener("pointerleave", reset);
-      if (frame) cancelAnimationFrame(frame);
-      element.style.removeProperty("--card-tilt-x");
-      element.style.removeProperty("--card-tilt-y");
+      reduced.removeEventListener("change", stop);
+      fine.removeEventListener("change", stop);
+      document.removeEventListener("visibilitychange", stop);
+      stop();
     };
   }, []);
 

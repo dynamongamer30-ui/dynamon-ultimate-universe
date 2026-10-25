@@ -230,6 +230,8 @@ html {
   scroll-behavior: smooth;
   overflow-x: clip;
   font-synthesis: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 body {
   overflow-x: clip;
@@ -357,9 +359,21 @@ h4,
 
 /* Focus visibility — accessibility */
 :focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-  box-shadow: var(--focus-ring);
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px !important;
+  box-shadow: var(--focus-ring) !important;
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: Highlight !important;
+  }
+  .text-gradient,
+  .text-gradient-violet {
+    background: none;
+    color: CanvasText;
+    -webkit-text-fill-color: CanvasText;
+  }
 }
 
 @utility text-gradient {

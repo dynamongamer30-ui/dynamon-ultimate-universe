@@ -8,7 +8,12 @@ export function AnnouncementBanner() {
   const key = `announce:${announcement.message}`;
 
   useEffect(() => {
-    if (typeof window !== "undefined") setDismissed(localStorage.getItem(key) === "1");
+    if (typeof window === "undefined") return;
+    try {
+      setDismissed(localStorage.getItem(key) === "1");
+    } catch {
+      setDismissed(false);
+    }
   }, [key]);
 
   if (!announcement.enabled || !announcement.message || dismissed) return null;
@@ -24,7 +29,7 @@ export function AnnouncementBanner() {
       className={`relative z-40 border-b bg-gradient-to-r px-4 py-2.5 text-center text-sm font-medium ${tone}`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-center gap-2">
-        <Megaphone className="h-4 w-4 shrink-0" />
+        <Megaphone className="h-4 w-4 shrink-0" aria-hidden="true" />
         {announcement.href ? (
           <a href={announcement.href} target="_blank" rel="noreferrer" className="hover:underline">
             {announcement.message}
@@ -34,11 +39,15 @@ export function AnnouncementBanner() {
         )}
         <button
           onClick={() => {
-            localStorage.setItem(key, "1");
+            try {
+              localStorage.setItem(key, "1");
+            } catch {
+              /* Dismissal still applies to the current page. */
+            }
             setDismissed(true);
           }}
-          className="ml-2 grid h-6 w-6 place-items-center rounded-full hover:bg-white/10"
-          aria-label="Dismiss"
+          className="touch-target ml-2 grid place-items-center rounded-full hover:bg-white/10"
+          aria-label="Dismiss announcement"
         >
           <X className="h-3.5 w-3.5" />
         </button>

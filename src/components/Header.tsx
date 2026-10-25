@@ -101,7 +101,7 @@ export function Header() {
           to="/"
           onMouseDown={playClick}
           aria-label="Dynamon Universe home"
-          className="flex min-w-0 items-center gap-2 rounded-xl focus-visible:outline-none"
+          className="flex min-w-0 items-center gap-2 rounded-xl"
         >
           <motion.span
             initial={{ rotate: -20, scale: 0.6, opacity: 0 }}
@@ -166,7 +166,8 @@ export function Header() {
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-expanded={menuOpen}
                 aria-haspopup="menu"
-                className={`relative grid h-10 w-10 place-items-center overflow-hidden rounded-full text-primary-foreground ${profile?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/40"}`}
+                aria-controls="account-menu"
+                className={`touch-target relative grid place-items-center overflow-hidden rounded-full text-primary-foreground ${profile?.is_owner ? "ring-2 ring-amber-400/70" : "ring-2 ring-primary/40"}`}
                 style={!avatarUrl ? { background: "var(--gradient-violet)" } : undefined}
                 aria-label="Account"
               >
@@ -318,7 +319,7 @@ export function Header() {
             <Link
               to="/auth"
               onMouseDown={playClick}
-              className="press hidden items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground glow-primary transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_30px_-8px_oklch(0.66_0.21_318_/_0.82)] sm:inline-flex"
+              className="press touch-target hidden items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground glow-primary transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_30px_-8px_oklch(0.66_0.21_318_/_0.82)] sm:inline-flex"
             >
               <UserIcon className="h-4 w-4" /> Sign in
             </Link>

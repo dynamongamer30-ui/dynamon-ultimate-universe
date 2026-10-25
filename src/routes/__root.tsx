@@ -210,6 +210,13 @@ function RootComponent() {
             <GamificationProvider>
               <ConfirmProvider>
                 <MotionConfig reducedMotion="user">
+                  <a
+                    href="#main-content"
+                    tabIndex={0}
+                    className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[120] focus:rounded-xl focus:bg-primary focus:px-4 focus:py-3 focus:font-semibold focus:text-primary-foreground"
+                  >
+                    Skip to content
+                  </a>
                   <AuroraCursor />
                   <AnnouncementBanner />
                   <OwnerReturnRedirect />

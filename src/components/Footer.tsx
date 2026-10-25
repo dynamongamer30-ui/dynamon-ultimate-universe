@@ -123,7 +123,7 @@ export function Footer() {
                     href={href}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="group inline-flex items-center gap-2.5 text-muted-foreground transition-colors hover:text-primary"
+                    className="touch-target group inline-flex items-center gap-2.5 text-muted-foreground transition-colors hover:text-primary"
                   >
                     <span className="grid h-7 w-7 place-items-center rounded-lg border border-border bg-card/60 transition-colors group-hover:border-primary/40 group-hover:text-primary">
                       <Icon className="h-3.5 w-3.5" />
