@@ -136,6 +136,7 @@ function Orb({ pulse }: { pulse: boolean }) {
 
 type Phase =
   | { kind: "loading" }
+  | { kind: "lookup-error" }
   | { kind: "invalid"; reason: string }
   | { kind: "ready" }
   | { kind: "success"; key: string; remaining: number; hours: number; generatedAt: number };
@@ -159,8 +160,10 @@ function reasonMessage(reason?: string): string {
 
 function GeneratorPage() {
   const search = useSearch({ from: "/generator" }) as GeneratorSearch;
-  const ref = search.ref;
+  return <GeneratorFlow key={search.ref ?? ""} accessRef={search.ref} />;
+}
 
+function GeneratorFlow({ accessRef: ref }: { accessRef?: string }) {
   // Deep link registered by the modded APK (com.funtomic.dynamons):
   //   <data android:scheme="dynamongamer" android:host="verify" />
   // If it isn't installed we fall back to the newest mod page on the site
@@ -170,21 +173,37 @@ function GeneratorPage() {
   const [turnstileToken, setTurnstileToken] = useState<string>("");
   const [fingerprint, setFingerprint] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [lookupAttempt, setLookupAttempt] = useState(0);
+  const active = useRef(true);
+
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
 
   const widgetRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
 
   // Step 1+2 — validate ref
   useEffect(() => {
+    if (!ref) {
+      setPhase({ kind: "invalid", reason: "missing" });
+      return;
+    }
     let cancelled = false;
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), 10_000);
     (async () => {
-      if (!ref) {
-        setPhase({ kind: "invalid", reason: "missing" });
+      setPhase({ kind: "loading" });
+      const res = await checkToken(ref, controller.signal);
+      clearTimeout(deadline);
+      if (cancelled) return;
+      if (res.unavailable) {
+        setPhase({ kind: "lookup-error" });
         return;
       }
-      setPhase({ kind: "loading" });
-      const res = await checkToken(ref);
-      if (cancelled) return;
       if (!res.valid) {
         setPhase({ kind: "invalid", reason: res.reason || "not_found" });
         return;
@@ -193,8 +212,10 @@ function GeneratorPage() {
     })();
     return () => {
       cancelled = true;
+      clearTimeout(deadline);
+      controller.abort();
     };
-  }, [ref]);
+  }, [ref, lookupAttempt]);
 
   // Step 4 — fingerprint
   useEffect(() => {
@@ -237,6 +258,14 @@ function GeneratorPage() {
       .catch(() => toast.error("The robot check couldn’t load. Check your internet and refresh."));
     return () => {
       cancelled = true;
+      if (widgetIdRef.current && window.turnstile) {
+        try {
+          window.turnstile.remove(widgetIdRef.current);
+        } catch {
+          /* Widget already removed. */
+        }
+        widgetIdRef.current = null;
+      }
     };
   }, [phase.kind]);
 
@@ -256,6 +285,7 @@ function GeneratorPage() {
     if (!ref || !turnstileToken || !fingerprint) return;
     setSubmitting(true);
     const res = await generateKey({ accessToken: ref, turnstileToken, fingerprint });
+    if (!active.current) return;
     setSubmitting(false);
 
     if (res.ok) {
@@ -463,6 +493,22 @@ function GeneratorPage() {
               >
                 <KeyRound className="mr-2 h-4 w-4" />
                 Start again
+              </Button>
+            </div>
+          )}
+
+          {phase.kind === "lookup-error" && (
+            <div className="flex flex-col items-center gap-4 py-6 text-center">
+              <p role="alert" className="text-sm text-foreground">
+                We couldn’t check your link. Your connection or the key service may be unavailable.
+                Retry the check with this same link.
+              </p>
+              <Button
+                className="touch-target"
+                onClick={() => setLookupAttempt((attempt) => attempt + 1)}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Retry link check
               </Button>
             </div>
           )}

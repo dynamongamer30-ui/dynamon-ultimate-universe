@@ -1,0 +1,27 @@
+# Generator link lookup recovery — 25 October 2026
+
+Phase 21's first implementation increment separates an unavailable link lookup from a confirmed unusable link. The previous client converted network, non-JSON and server failures into “start again” instructions, accepted truthy non-boolean `valid` values and had no request deadline. This could make an otherwise usable gate link appear invalid or leave the screen loading indefinitely.
+
+## Implemented behavior
+
+`checkToken` accepts an optional AbortSignal and requires an HTTP success response containing a real boolean `valid` field and, if supplied, a string reason. Network errors, failed status codes and malformed bodies return an explicit unavailable result. The generator route bounds each active lookup to ten seconds and aborts it on cleanup. Missing references remain entirely local. Confirmed invalid/used/expired responses keep their existing instructions.
+
+Unavailable checks show an inline alert and **Retry link check**. That action reads the same encoded reference; it does not request a new gate, submit the verification challenge or generate a key. There is no retry timer, polling or background key generation. A new reference mounts a separate flow so its verification and key state cannot reuse the preceding reference's state. A generation response arriving after that flow unmounts cannot display/copy a key, announce success or run unlock feedback. The underlying POST can still finish server-side; this guard is not rollback or cancellation of a completed key issue.
+
+The ready-state widget is removed during effect cleanup using Cloudflare's documented [Turnstile widget removal API](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#remove-a-widget). The existing script URL, site key, fingerprint format, POST payload, gate flow, CAPTCHA verification, rate/expiry rules and `dynamongamer://verify` deep link are retained. No generator/license Worker, Supabase definition, native source or secret is changed. No package is added.
+
+## Validation and scope
+
+Local fixtures intercept all Supabase HTTP and generator `/check-token`, `/generate-key`, `/start` and `/init` traffic. CAPTCHA is a local UI double and clipboard writes are counted in a stub. The only fixture POST is an explicitly held synthetic generation response for the navigation guard; it never reaches production and never creates or copies a real key. These tests cannot run against a non-local base URL.
+
+Coverage includes missing references, service failure followed by a same-link read retry, malformed/null/array/string-valid/non-JSON bodies, recovery to verified readiness, a stalled read followed by a late response, lookup cleanup during navigation, and a generation response after navigation. Width checks at 320/1440 pixels require no horizontal overflow and a retry target at least 44 pixels high. The narrow recovery screenshot was reviewed. Public checks use a missing-reference page and assert zero gate/key/Turnstile requests; they do not follow the gate or solve a real challenge.
+
+Initial diagnostic runs are retained. They exposed a cold-start readiness assumption and a total-initial-request assumption across the existing development route lifecycle. Tests now wait for the rendered page and measure each manual retry relative to its completed initial lookup(s), rather than claiming one request across route remounts. The initial lifecycle can issue more than one lookup; this release adds cancellation but does not claim a global request cache. A navigation assertion also initially released its response after the URL changed but before the destination page rendered; it now waits for that destination. Passing scopes are retained, and affected navigation checks are rerun explicitly. Final results and rollout evidence follow below.
+
+Generator modernization remains partial. Challenge/fingerprint failure recovery, a bounded and explicit uncertain generation outcome, copy-success accuracy, expiry wording/layout and full authorized real-device/gate validation remain separate work. This increment does not certify key issuance or APK activation in production. In particular, the existing client countdown is not proof that a key was revoked or expired server-side.
+
+## Validation results
+
+All 32 distinct local browser cases are validated: seven behavior cases per Chrome phone/tablet/desktop/WebKit configuration and four public-page cases. Six phone cases passed in the diagnostic phone run; both affected navigation cases then passed in 24.2 seconds after fixing the destination-readiness assertion (one repeated case). The remaining 21 tablet/desktop/WebKit cases pass in 3.3 minutes. Four local public checks pass in 38.2 seconds. TypeScript, production build and all 43 Node tests pass; lint has zero errors/twelve baseline warnings. Generated sitemap output was restored, and formatting/diff checks pass. Existing key/Worker Node contracts remain part of the passing suite.
+
+Artifacts in the external audit directory use `generator-lookup-{local,focus,phone,navigation,matrix}`, `generator-public-local` and `generator-lookup-{check,node,lint,build}`. Initial failed/interrupted diagnostic logs remain available and are not counted as successful runs. The implemented increment passes local gates; production rollout evidence follows after verification. No real gate token, key creation/copy or native activation was used for QA.

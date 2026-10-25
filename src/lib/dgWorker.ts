@@ -56,17 +56,28 @@ export function startGate(): string {
 export interface CheckTokenResult {
   valid: boolean;
   reason?: string;
+  unavailable?: boolean;
 }
 
-export async function checkToken(ref: string): Promise<CheckTokenResult> {
+export async function checkToken(ref: string, signal?: AbortSignal): Promise<CheckTokenResult> {
   try {
     const res = await fetch(`${GEN_WORKER_URL}/check-token?ref=${encodeURIComponent(ref)}`, {
       method: "GET",
+      signal,
     });
-    const body = (await res.json().catch(() => ({}))) as Partial<CheckTokenResult>;
-    return { valid: Boolean(body.valid), reason: body.reason };
-  } catch (e) {
-    return { valid: false, reason: (e as Error).message || "network_error" };
+    if (!res.ok) return { valid: false, unavailable: true };
+    const body: unknown = await res.json();
+    if (
+      !body ||
+      typeof body !== "object" ||
+      !("valid" in body) ||
+      typeof body.valid !== "boolean" ||
+      ("reason" in body && typeof body.reason !== "string")
+    )
+      return { valid: false, unavailable: true };
+    return { valid: body.valid, reason: "reason" in body ? (body.reason as string) : undefined };
+  } catch {
+    return { valid: false, unavailable: true };
   }
 }
 
