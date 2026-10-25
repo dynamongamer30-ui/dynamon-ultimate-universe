@@ -57,3 +57,7 @@ Four fresh local signed-out public-route checks also pass in 52.9 seconds across
 ## Production rollout
 
 Application commit `d69bd1b37d2600cc33053eae195cbf6b2472f62b` is published to existing main. Cloudflare build `45c2c0cf-7cf0-4fdf-bff0-ac0e7663b505` succeeded; deployment `c41b6257-a03b-405e-a93f-9742153c7a63` serves version `5633fef8-2a4d-4e69-a132-30bea67da5ae` at 100%. Four fresh signed-out live phone/tablet/desktop/WebKit checks pass in 52.1 seconds without private progression reads or mutations (`engagement-recovery-live.log` and `engagement-recovery-live-results`). These are public production checks; synthetic historical-event/new-award behavior is validated locally, not by creating production events. The application increment passes its implemented gates; Phase 19 remains partial for the listed rule/recovery and real-session/device gates.
+
+## Subsequent native concurrency evidence
+
+An installed PostgreSQL 18.6 runtime was subsequently found and verified. Seven isolated native multi-connection scenarios now pass, including observed lock waits, commit/rollback, simultaneous first-row insertion, account independence and server statement timeout. See [NATIVE-CONCURRENCY.md](NATIVE-CONCURRENCY.md). This supersedes the earlier lack of a native concurrency harness for those scenarios. Production is PostgreSQL 17.6; exact-version/full-service/device and broader recovery/rule gates remain. No backend function or application behavior changed in that test-only increment.
