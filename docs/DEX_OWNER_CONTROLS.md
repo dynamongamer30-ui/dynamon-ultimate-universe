@@ -1,4 +1,4 @@
-# Owner key system and Royal Void controls
+# Owner key system and Royal Black controls
 
 Open the owner profile menu → Key system (between Owner dashboard and Control panel).
 The owner dashboard also links here. `/admin-keys` remains protected by OwnerGate and Supabase RLS.
@@ -7,10 +7,12 @@ The old Control panel DEX tab now points here instead of maintaining a second ed
 ## Pages
 
 - Keys: create DG/VIP keys, extend, revoke/unrevoke, delete and search by key/device/IP. Zero duration creates lifetime access. Other timers begin at the first successful game login. Unused keys display “Starts at first login”; bound expiry=0 means lifetime. Bulk failures are reported.
-- Devices: existing activation records and device bans. No online-presence polling was added.
-- Royal Void DEX: 35 feature locks, eight themes, palette overrides, menu header name and up to eight community links (the current native display limit).
+- Devices: stored activation information appears only while a valid key is bound to that device. Ban/Unban controls access; Delete removes information after confirmation while keeping keys, bindings and bans. A valid device can reappear when it verifies its key again. No online-presence polling is added.
+- Royal Black: 35 feature locks, eight themes, palette overrides, menu header name and up to eight community links (the current native display limit).
 - Config: existing generator maintenance, duration and rate-limit settings.
-- App: existing login-dialog configuration and signed encrypted payload upload. Login dialog branding and native menu branding are separate consumers; edit each in its labelled editor.
+- App: login-dialog configuration. Login dialog branding and native menu branding are separate consumers; edit each in its labelled editor. Publish signed encrypted payloads through the existing Termux workflow. Both website upload forms have been removed.
+
+The server runs `cleanup_stale_device_records()` once per minute to remove activation information without a current valid bound key. Another valid key preserves the device record; malformed expiry values are retained for inspection. Lifetime keys use expiry zero. The cleanup preserves key records and device bans, and is callable only by the server/scheduler. Its SQL is in `supabase/device_record_retention.sql`.
 
 ## DEX lock contract: app_config / FeatureLocks
 
