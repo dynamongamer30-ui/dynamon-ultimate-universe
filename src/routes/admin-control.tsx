@@ -858,48 +858,64 @@ const inp =
 
 function RewardsEditor() {
   const [email, setEmail] = useState("");
-  const [busy, setBusy] = useState(false);
+  const { saving: busy, error: grantError, run } = useOwnerMutation();
+  const [uncertain, setUncertain] = useState(false);
   const [lastGrant, setLastGrant] = useState<{ email: string; at: string } | null>(null);
-
-  const looseRpc = (
-    supabase.rpc as unknown as (
-      fn: string,
-      args?: Record<string, unknown>,
-    ) => Promise<{ data: unknown; error: { message: string } | null }>
-  ).bind(supabase);
-
-  const grant = async () => {
+  const grant = () => {
+    if (uncertain || busy) return;
     const trimmed = email.trim();
     if (!trimmed) {
       toast.error("Enter a user's email first.");
       return;
     }
-    setBusy(true);
-    try {
-      const { data, error } = await looseRpc("admin_grant_phoenix_pass", { p_email: trimmed });
-      if (error) throw new Error("rpc_failed");
-      const res = data as { ok?: boolean; error?: string } | null;
-      if (!res?.ok) {
-        const map: Record<string, string> = {
+    void run(async (signal) => {
+      let result: unknown;
+      try {
+        const { data, error } = await supabase
+          .rpc("admin_grant_phoenix_pass" as never, { p_email: trimmed } as never)
+          .abortSignal(signal)
+          .retry(false);
+        if (error) {
+          if (["42501", "PGRST301", "PGRST302"].includes(error.code))
+            throw new Error("Owner access was denied. Sign in again before granting a pass.");
+          setUncertain(true);
+          throw new Error(
+            "Grant outcome was not confirmed. Check the recipient's pass and notification before trying again.",
+          );
+        }
+        result = data;
+      } catch (cause) {
+        if (!(cause instanceof Error && cause.message.startsWith("Owner access")))
+          setUncertain(true);
+        throw cause;
+      }
+      const res = result as { ok?: boolean; error?: string } | null;
+      if (signal.aborted || typeof res?.ok !== "boolean") {
+        setUncertain(true);
+        throw new Error(
+          "Grant outcome was not confirmed. Check the recipient's pass and notification before trying again.",
+        );
+      }
+      if (!res.ok) {
+        const errors: Record<string, string> = {
           user_not_found:
-            "No signed-up user with that email — check it's the exact address they used to sign in.",
+            "No signed-up user with that email. Check the address they used to sign in.",
           not_owner: "Only the owner account can grant rewards.",
         };
-        toast.error(map[res?.error || ""] || "Couldn't grant the pass. Please try again.");
-        return;
+        throw new Error(
+          errors[res.error ?? ""] ?? "The server declined the grant. Your email draft is retained.",
+        );
       }
-      toast.success(`Phoenix Pass granted to ${trimmed} — active for 30 days.`);
+      toast.success(`Phoenix Pass grant confirmed for ${trimmed}`);
       setLastGrant({ email: trimmed, at: new Date().toLocaleString() });
       setEmail("");
-    } catch {
-      toast.error("Couldn't grant the pass. Please try again.");
-    } finally {
-      setBusy(false);
-    }
+    });
   };
 
   return (
     <Card
+      saving={busy}
+      error={grantError}
       title="Grant Phoenix Pass"
       desc="Instantly gives any signed-in user a Phoenix Pass — auto-claimed, no 24h wait, active for 30 days, exactly like a normal claimed pass. They'll get a notification too."
     >
@@ -907,6 +923,8 @@ function RewardsEditor() {
         <div className="flex gap-2">
           <input
             type="email"
+            aria-label="Reward recipient email"
+            disabled={uncertain || busy}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => {
@@ -917,7 +935,7 @@ function RewardsEditor() {
           />
           <button
             onClick={grant}
-            disabled={busy}
+            disabled={busy || uncertain}
             className="press inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{" "}

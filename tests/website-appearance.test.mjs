@@ -28,7 +28,25 @@ globalThis.__appearanceTestClient = {
       select() {
         return query;
       },
-      async maybeSingle() {
+      abortSignal(signal) {
+        assert.ok(signal instanceof AbortSignal);
+        return query;
+      },
+      retry(value) {
+        assert.equal(value, false);
+        return query;
+      },
+      maybeSingle() {
+        return query;
+      },
+      async then(resolve, reject) {
+        try {
+          resolve(await query.result());
+        } catch (error) {
+          reject(error);
+        }
+      },
+      async result() {
         if (denied) return { data: null, error: { message: "permission denied" } };
         if (insert && row !== undefined) return { data: null, error: { message: "duplicate key" } };
         if (

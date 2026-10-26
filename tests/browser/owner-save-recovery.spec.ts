@@ -173,6 +173,85 @@ test("stale branding drafts cannot overwrite a newer owner setting", async ({ pa
   expect(state.writes[0].method).toBe("PATCH");
 });
 
+test("appearance publication locks duplicate submissions and retains an unconfirmed draft", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  await page.getByRole("button", { name: "Website themes", exact: true }).click();
+  const field = page.getByLabel("Default website theme", { exact: true });
+  await field.selectOption("dark");
+  state.mode = "hold";
+  const publish = page.getByRole("button", { name: "Publish website appearance", exact: true });
+  await publish.evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+  });
+  await expect.poll(() => state.writes.length).toBe(1);
+  await expect(field).toBeDisabled();
+  state.mode = "empty";
+  state.release?.();
+  await expect(page.getByRole("alert")).toContainText("publication was not confirmed");
+  await expect(field).toHaveValue("dark");
+  expect(state.writes).toHaveLength(1);
+  expect(state.settingsReads).toBe(1);
+});
+
+test("manual reward grant freezes an uncertain outcome instead of sending twice", async ({
+  page,
+}) => {
+  await fixture(page);
+  let writes = 0;
+  let release: () => void = () => {};
+  await page.route("**/rest/v1/rpc/admin_grant_phoenix_pass", async (route) => {
+    writes++;
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+  });
+  await page.getByRole("button", { name: "Rewards", exact: true }).click();
+  const field = page.getByRole("textbox", { name: "Reward recipient email", exact: true });
+  await field.fill("recipient@example.test");
+  const grant = page.getByRole("button", { name: "Grant", exact: true });
+  await grant.evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+  });
+  await expect.poll(() => writes).toBe(1);
+  await expect(field).toBeDisabled();
+  release();
+  await expect(page.getByRole("alert")).toContainText("Grant outcome was not confirmed");
+  await expect(grant).toBeDisabled();
+  await expect(field).toHaveValue("recipient@example.test");
+  expect(writes).toBe(1);
+});
+
+test("explicit reward denial retains the recipient while a confirmed manual retry clears it", async ({
+  page,
+}) => {
+  await fixture(page);
+  let allow = false,
+    writes = 0;
+  await page.route("**/rest/v1/rpc/admin_grant_phoenix_pass", async (route) => {
+    writes++;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(allow ? { ok: true } : { ok: false, error: "user_not_found" }),
+    });
+  });
+  await page.getByRole("button", { name: "Rewards", exact: true }).click();
+  const field = page.getByRole("textbox", { name: "Reward recipient email", exact: true });
+  await field.fill("recipient@example.test");
+  await page.getByRole("button", { name: "Grant", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("No signed-up user");
+  await expect(field).toHaveValue("recipient@example.test");
+  allow = true;
+  await page.getByRole("button", { name: "Grant", exact: true }).click();
+  await expect(field).toHaveValue("");
+  expect(writes).toBe(2);
+});
+
 test("stale mod edits and resets cannot replace a newer saved mod", async ({ page }) => {
   const state = await fixture(page);
   state.mode = "allow";

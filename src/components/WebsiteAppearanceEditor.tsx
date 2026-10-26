@@ -12,6 +12,7 @@ import {
   type WebsiteThemeId,
 } from "@/lib/websiteThemes";
 import { Button } from "./ui/button";
+import { useOwnerMutation } from "@/hooks/useOwnerMutation";
 
 export function WebsiteAppearanceEditor() {
   const { websiteAppearance, loading, refresh } = useSiteSettings();
@@ -21,7 +22,7 @@ export function WebsiteAppearanceEditor() {
     normalizeWebsiteAppearance(websiteAppearance),
   );
   const [selected, setSelected] = useState<WebsiteThemeId>(draft.defaultTheme);
-  const [busy, setBusy] = useState(false);
+  const { saving: busy, error: publishError, run } = useOwnerMutation();
   const [previewing, setPreviewing] = useState(false);
   const initialized = useRef(!loading);
   useEffect(() => {
@@ -59,23 +60,14 @@ export function WebsiteAppearanceEditor() {
       );
       return;
     }
-    setBusy(true);
-    try {
-      await publishWebsiteAppearance(next, snapshot.current);
+    await run(async (signal) => {
+      await publishWebsiteAppearance(next, snapshot.current, signal);
       snapshot.current = next;
-      await refresh();
       preview(null);
       setPreviewing(false);
       toast.success("Website appearance published");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Could not publish. Reload to check for changes in another session.",
-      );
-    } finally {
-      setBusy(false);
-    }
+      void refresh();
+    });
   };
   return (
     <section
@@ -92,6 +84,11 @@ export function WebsiteAppearanceEditor() {
       </p>
       <fieldset disabled={busy || loading} className="mt-6 space-y-5">
         <legend className="sr-only">Website theme settings</legend>
+        {publishError && (
+          <p role="alert" className="break-words text-destructive">
+            {publishError}
+          </p>
+        )}
         <div className="grid gap-3 sm:grid-cols-3">
           {WEBSITE_THEMES.map((theme) => (
             <label
@@ -122,6 +119,7 @@ export function WebsiteAppearanceEditor() {
         <label className="block text-sm font-semibold">
           Default website theme
           <select
+            aria-label="Default website theme"
             className="control-input mt-2 min-h-11 w-full rounded-xl border px-3"
             value={draft.defaultTheme}
             onChange={(e) => setDraft({ ...draft, defaultTheme: e.target.value as WebsiteThemeId })}
@@ -136,6 +134,7 @@ export function WebsiteAppearanceEditor() {
         <label className="block text-sm font-semibold">
           Customize palette
           <select
+            aria-label="Customize palette"
             className="control-input mt-2 min-h-11 w-full rounded-xl border px-3"
             value={selected}
             onChange={(e) => setSelected(e.target.value as WebsiteThemeId)}
