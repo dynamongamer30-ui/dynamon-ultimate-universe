@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dg-neon-api-test",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "NEON_AUTH_BASE_URL": "https://ep-proud-bread-azzu2cee.neonauth.c-3.ap-southeast-1.aws.neon.tech/neondb/auth",
+    "ALLOWED_ORIGINS": "http://localhost:8080,http://127.0.0.1:8080,http://localhost:5174,http://127.0.0.1:5174"
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "29e01df227224591a5220b0f5e5d721e"
+    }
+  ]
+}
