@@ -20,6 +20,9 @@ test("signed-out owner routes expose no management data or mutations", async ({ 
     "/admin-notifications",
   ]) {
     await page.goto(route, { waitUntil: "domcontentloaded" });
+    await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true", {
+      timeout: 15000,
+    });
     await expect(page.getByRole("heading", { name: "Owner sign-in", exact: true })).toBeVisible({
       timeout: 20000,
     });
