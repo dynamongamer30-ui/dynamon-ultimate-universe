@@ -111,10 +111,30 @@ function ModDetail() {
   const reducedMotion = useReducedMotionPreference();
   const { mod } = Route.useLoaderData() as { mod: Mod };
   const { user } = useAuth();
-  const { overrides, allMods } = useSiteSettings();
+  const { overrides, allMods, loading: settingsLoading } = useSiteSettings();
   const navigate = useNavigate();
   const theme = elementTheme[mod.element];
   const [tab, setTab] = useState<"overview" | "changelog">("overview");
+  const downloadTarget = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const arrive = () => {
+      if (settingsLoading || window.location.hash !== "#download") return;
+      timer = setTimeout(() => {
+        downloadTarget.current?.scrollIntoView({
+          behavior: reducedMotion ? "instant" : "smooth",
+          block: "center",
+        });
+        downloadTarget.current?.focus({ preventScroll: true });
+      }, 150);
+    };
+    arrive();
+    window.addEventListener("hashchange", arrive);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("hashchange", arrive);
+    };
+  }, [mod.slug, reducedMotion, settingsLoading]);
   const [chooseOpen, setChooseOpen] = useState(false);
   const [gateOpen, setGateOpen] = useState(false);
   // Phoenix Pass redemption modal state (null = closed).
@@ -148,6 +168,14 @@ function ModDetail() {
 
   const handleGet = () => {
     if (!user) {
+      try {
+        sessionStorage.setItem(
+          "dg_after_auth",
+          "/mods/" + encodeURIComponent(mod.slug) + "#download",
+        );
+      } catch {
+        /* Optional storage. */
+      }
       navigate({ to: "/auth" });
       return;
     }
@@ -277,7 +305,13 @@ function ModDetail() {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div
+            id="download"
+            ref={downloadTarget}
+            tabIndex={-1}
+            aria-label="Download controls"
+            className="mt-7 flex scroll-mt-32 flex-wrap gap-3 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-primary target:ring-2 target:ring-primary/50 target:ring-offset-8 target:ring-offset-background"
+          >
             <button
               onClick={handleGet}
               className="press animate-pulse-glow inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter] hover:brightness-110"

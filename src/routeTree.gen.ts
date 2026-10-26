@@ -31,7 +31,9 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ModsIndexRouteImport } from './routes/mods.index'
 import { Route as ModsSlugRouteImport } from './routes/mods.$slug'
+import { Route as LinksGetKeyRouteImport } from './routes/links.get-key'
 import { Route as ClaimTeslaRouteImport } from './routes/claim.tesla'
+import { Route as ApiBotCatalogRouteImport } from './routes/api.bot.catalog'
 
 const UnlockRoute = UnlockRouteImport.update({
   id: '/unlock',
@@ -143,10 +145,20 @@ const ModsSlugRoute = ModsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => ModsRoute,
 } as any)
+const LinksGetKeyRoute = LinksGetKeyRouteImport.update({
+  id: '/links/get-key',
+  path: '/links/get-key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClaimTeslaRoute = ClaimTeslaRouteImport.update({
   id: '/tesla',
   path: '/tesla',
   getParentRoute: () => ClaimRoute,
+} as any)
+const ApiBotCatalogRoute = ApiBotCatalogRouteImport.update({
+  id: '/api/bot/catalog',
+  path: '/api/bot/catalog',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -171,8 +183,10 @@ export interface FileRoutesByFullPath {
   '/rewards': typeof RewardsRoute
   '/unlock': typeof UnlockRoute
   '/claim/tesla': typeof ClaimTeslaRoute
+  '/links/get-key': typeof LinksGetKeyRoute
   '/mods/$slug': typeof ModsSlugRoute
   '/mods/': typeof ModsIndexRoute
+  '/api/bot/catalog': typeof ApiBotCatalogRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -195,8 +209,10 @@ export interface FileRoutesByTo {
   '/rewards': typeof RewardsRoute
   '/unlock': typeof UnlockRoute
   '/claim/tesla': typeof ClaimTeslaRoute
+  '/links/get-key': typeof LinksGetKeyRoute
   '/mods/$slug': typeof ModsSlugRoute
   '/mods': typeof ModsIndexRoute
+  '/api/bot/catalog': typeof ApiBotCatalogRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -221,8 +237,10 @@ export interface FileRoutesById {
   '/rewards': typeof RewardsRoute
   '/unlock': typeof UnlockRoute
   '/claim/tesla': typeof ClaimTeslaRoute
+  '/links/get-key': typeof LinksGetKeyRoute
   '/mods/$slug': typeof ModsSlugRoute
   '/mods/': typeof ModsIndexRoute
+  '/api/bot/catalog': typeof ApiBotCatalogRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -248,8 +266,10 @@ export interface FileRouteTypes {
     | '/rewards'
     | '/unlock'
     | '/claim/tesla'
+    | '/links/get-key'
     | '/mods/$slug'
     | '/mods/'
+    | '/api/bot/catalog'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -272,8 +292,10 @@ export interface FileRouteTypes {
     | '/rewards'
     | '/unlock'
     | '/claim/tesla'
+    | '/links/get-key'
     | '/mods/$slug'
     | '/mods'
+    | '/api/bot/catalog'
   id:
     | '__root__'
     | '/'
@@ -297,8 +319,10 @@ export interface FileRouteTypes {
     | '/rewards'
     | '/unlock'
     | '/claim/tesla'
+    | '/links/get-key'
     | '/mods/$slug'
     | '/mods/'
+    | '/api/bot/catalog'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -322,6 +346,8 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RewardsRoute: typeof RewardsRoute
   UnlockRoute: typeof UnlockRoute
+  LinksGetKeyRoute: typeof LinksGetKeyRoute
+  ApiBotCatalogRoute: typeof ApiBotCatalogRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -480,12 +506,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModsSlugRouteImport
       parentRoute: typeof ModsRoute
     }
+    '/links/get-key': {
+      id: '/links/get-key'
+      path: '/links/get-key'
+      fullPath: '/links/get-key'
+      preLoaderRoute: typeof LinksGetKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/claim/tesla': {
       id: '/claim/tesla'
       path: '/tesla'
       fullPath: '/claim/tesla'
       preLoaderRoute: typeof ClaimTeslaRouteImport
       parentRoute: typeof ClaimRoute
+    }
+    '/api/bot/catalog': {
+      id: '/api/bot/catalog'
+      path: '/api/bot/catalog'
+      fullPath: '/api/bot/catalog'
+      preLoaderRoute: typeof ApiBotCatalogRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -533,6 +573,8 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RewardsRoute: RewardsRoute,
   UnlockRoute: UnlockRoute,
+  LinksGetKeyRoute: LinksGetKeyRoute,
+  ApiBotCatalogRoute: ApiBotCatalogRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
