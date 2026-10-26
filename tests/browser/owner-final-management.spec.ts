@@ -198,50 +198,18 @@ test("loader lookup failures have a read-only refresh and no native writes", asy
   expect(state.writes).toEqual([]);
 });
 
-const payload = {
-  build: "LOCAL-FIXTURE-ONLY",
-  ct_b64: "bG9jYWw=",
-  iv_b64: "bG9jYWw=",
-  sig_b64: "bG9jYWw=",
-  key_b64: "bG9jYWw=",
-  ct_sha: "local",
-  protocol: 2,
-  min_client: 3,
-  issued: Math.floor(Date.now() / 1000),
-  meta_sig_b64: "bG9jYWw=",
-};
-test("payload form preserves typing and rejects unconfirmed Worker acknowledgements", async ({
-  page,
-}) => {
+test("loader management leaves payload publishing to Termux", async ({ page }) => {
   const state = await managementFixture(page, "/admin-loader");
-  const field = page.getByRole("textbox", { name: "ct_b64 (ciphertext)", exact: true });
-  await field.fill("");
-  await field.pressSequentially("abcd");
-  await expect(field).toHaveValue("abcd");
-  await page.getByLabel("Load ct_b64 (ciphertext)", { exact: true }).setInputFiles({
-    name: "local-fixture.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(payload)),
-  });
-  const build = page.getByRole("textbox", { name: "Payload build", exact: true });
-  await expect(build).toHaveValue(payload.build);
-  state.mode = "empty";
-  await page.getByRole("button", { name: "Upload payload", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("not confirmed");
-  await expect(build).toHaveValue(payload.build);
-  state.mode = "hold";
-  await page
-    .getByRole("button", { name: "Upload payload", exact: true })
-    .evaluate((button: HTMLButtonElement) => {
-      button.click();
-      button.click();
-    });
-  await expect.poll(() => state.writes.length).toBe(2);
-  await expect(build).toBeDisabled();
-  state.mode = "allow";
-  state.release?.();
-  await expect(build).toBeEnabled();
-  expect(state.writes[1].body).toMatchObject(payload);
+  await expect(page.getByText("LOCAL-BUILD", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "Device ban management", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Upload payload/i })).toHaveCount(0);
+  await expect(page.locator('input[type="file"]')).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "ct_b64 (ciphertext)", exact: true })).toHaveCount(
+    0,
+  );
+  expect(state.writes).toEqual([]);
 });
 
 test("device ban confirmation and pending state prevent overlapping writes", async ({ page }) => {

@@ -435,7 +435,30 @@ export async function listBannedDevices(signal?: AbortSignal): Promise<BannedDev
 
 export async function listActivatedUsers(signal?: AbortSignal): Promise<ActivatedUser[]> {
   const rows = await selectAll("activated_users", signal);
-  return rows.map((r) => ({ fingerprint: r.id, ...(r.data ?? {}) }));
+  return rows.map((r) => ({ ...(r.data ?? {}), fingerprint: r.id, recordData: r.data }));
+}
+
+export async function readDeviceLicenseKeys(signal: AbortSignal): Promise<ValidKey[]> {
+  return (await selectAll("valid_keys", signal)).map((row) => toValidKey(row.id, row.data));
+}
+
+/** Delete information only; keep key bindings and bans. Refuse a stale record snapshot. */
+export async function deleteDeviceInformation(fingerprint: string, expected: unknown) {
+  if (expected === undefined) throw new Error("Reload device records before deleting information.");
+  const { data, error } = await supabase
+    .from("activated_users")
+    .delete()
+    .eq("id", fingerprint)
+    .eq("data", JSON.stringify(expected))
+    .select("id")
+    .abortSignal(AbortSignal.timeout(10000))
+    .maybeSingle()
+    .retry(false);
+  if (error) throw new Error(error.message);
+  if (data?.id !== fingerprint)
+    throw new Error(
+      "Device information changed or deletion was not confirmed. Refresh before trying again.",
+    );
 }
 
 /** Lock (ban) a device fingerprint. Matches the worker's banned_devices shape. */

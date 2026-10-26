@@ -49,6 +49,9 @@ export async function managementFixture(page: Page, path: string) {
       body: Record<string, unknown>;
       select: string | null;
     }[],
+    keys: [] as { id: string; data: Record<string, unknown> }[],
+    devices: [] as { id: string; data: Record<string, unknown> }[],
+    bans: [] as { id: string; data: Record<string, unknown> }[],
     configReads: 0,
     notificationReads: 0,
     workerReads: 0,
@@ -92,6 +95,31 @@ export async function managementFixture(page: Page, path: string) {
     else if (target === "activated_users" && state.deviceFail) {
       status = 503;
       data = { message: "Local device lookup denied" };
+    } else if (target === "valid_keys" && req.method() === "GET") data = state.keys;
+    else if (target === "activated_users" && req.method() === "GET") data = state.devices;
+    else if (target === "activated_users" && req.method() === "DELETE") {
+      const id = url.searchParams.get("id")?.replace(/^eq\./, "");
+      const expected = url.searchParams.get("data");
+      state.writes.push({
+        target,
+        method: req.method(),
+        body: { id, expected },
+        select: url.searchParams.get("select"),
+      });
+      if (state.mode === "hold")
+        await new Promise<void>((resolve) => {
+          state.release = resolve;
+        });
+      const row = state.devices.find((device) => device.id === id);
+      if (state.mode === "deny") {
+        status = 403;
+        data = { message: "Local device deletion denied" };
+      } else if (state.mode === "empty" || !row || expected !== "eq." + JSON.stringify(row.data))
+        data = null;
+      else {
+        state.devices = state.devices.filter((device) => device.id !== id);
+        data = { id };
+      }
     } else if (target === "valid_keys" && req.method() === "POST") {
       const body = req.postDataJSON() as Record<string, unknown>;
       state.writes.push({
@@ -174,7 +202,7 @@ export async function managementFixture(page: Page, path: string) {
           data = state.notifications[0];
         }
       }
-    } else if (target === "banned_devices") data = [];
+    } else if (target === "banned_devices") data = state.bans;
     await route
       .fulfill({ status, contentType: "application/json", body: JSON.stringify(data) })
       .catch(() => {});

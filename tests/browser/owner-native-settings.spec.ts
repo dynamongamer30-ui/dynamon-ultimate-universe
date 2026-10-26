@@ -121,52 +121,14 @@ test("confirmed switch saves preserve other drafts and lock duplicate clicks", a
   expect(state.configs.get("Maintenance")).toBe(true);
 });
 
-test("legacy payload upload protects credentials and requires the signed bundle and explicit acknowledgement", async ({
-  page,
-}) => {
+test("app settings remain available without the website payload uploader", async ({ page }) => {
   const state = await managementFixture(page, "/admin-keys");
   await page.getByRole("button", { name: "app", exact: true }).click();
-  const group = page.getByRole("group", { name: "Signed payload upload", exact: true });
-  await group
-    .getByRole("textbox", { name: "DG Worker URL", exact: true })
-    .fill("https://dg.example.test");
-  await expect(group.getByLabel("Admin Key (X-Admin)", { exact: true })).toHaveAttribute(
-    "type",
-    "password",
+  await expect(page.getByRole("button", { name: "Save App Config", exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Signed payload upload", exact: true })).toHaveCount(
+    0,
   );
-  const file = group.getByLabel("Signed payload JSON file", { exact: true });
-  const payload = {
-    build: "LOCAL",
-    ct_b64: "LOCAL",
-    iv_b64: "LOCAL",
-    sig_b64: "LOCAL",
-    key_b64: "LOCAL",
-    ct_sha: "LOCAL",
-  };
-  await file.setInputFiles({
-    name: "local.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(payload)),
-  });
-  await expect(group.getByRole("alert")).toContainText("protocol-2");
+  await expect(page.locator('input[type="file"]')).toHaveCount(0);
+  await expect(page.getByText("Payload Upload", { exact: true })).toHaveCount(0);
   expect(state.writes).toEqual([]);
-  state.mode = "empty";
-  await file.setInputFiles({
-    name: "local.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(
-      JSON.stringify({
-        ...payload,
-        protocol: 2,
-        min_client: 3,
-        issued: Math.floor(Date.now() / 1000),
-        meta_sig_b64: "LOCAL",
-      }),
-    ),
-  });
-  await expect(group.getByRole("alert")).toContainText("Upload was not confirmed");
-  expect(state.writes).toHaveLength(1);
-  await expect(group.getByLabel("Admin Key (X-Admin)", { exact: true })).toHaveValue(
-    "LOCAL-OWNER-FIXTURE-NOT-A-SECRET",
-  );
 });

@@ -5,14 +5,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Loader2,
   RefreshCw,
-  Upload,
   Ban,
   KeyRound,
   ShieldCheck,
   AlertTriangle,
   X,
   Trash2,
-  FileUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/PageShell";
@@ -20,16 +18,7 @@ import { OwnerGate } from "@/components/OwnerGate";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  getAdminKey,
-  setAdminKey,
-  listDevices,
-  uploadPayload,
-  banDevice,
-  unbanDevice,
-  type UploadPayloadArgs,
-} from "@/lib/dgWorker";
+import { getAdminKey, setAdminKey, listDevices, banDevice, unbanDevice } from "@/lib/dgWorker";
 import { listBannedDevices } from "@/lib/dgData";
 import { useConfirm } from "@/hooks/useConfirm";
 
@@ -75,7 +64,8 @@ function LoaderShell() {
         <div>
           <h1 className="font-display text-3xl font-bold">OTA Loader</h1>
           <p className="text-sm text-muted-foreground">
-            Manage current build, payloads, and device bans via the License Worker.
+            View the current build and manage device bans. Payload publishing is handled through
+            Termux.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -88,7 +78,6 @@ function LoaderShell() {
       {adminKey ? (
         <div className="mt-6 grid gap-6">
           <DevicesPanel onAuthFail={() => setKey("")} />
-          <UploadPayloadPanel onAuthFail={() => setKey("")} />
           <BanPanel onAuthFail={() => setKey("")} />
         </div>
       ) : (
@@ -242,202 +231,6 @@ function formatMaybeTime(v: unknown): string {
   if (!Number.isFinite(n)) return String(v);
   const ms = n > 1e12 ? n : n * 1000;
   return new Date(ms).toLocaleString();
-}
-
-// ---------- 2) Upload payload ----------
-
-function UploadPayloadPanel({ onAuthFail }: { onAuthFail: () => void }) {
-  const [form, setForm] = useState<UploadPayloadArgs>({
-    build: "",
-    ct_b64: "",
-    iv_b64: "",
-    sig_b64: "",
-    key_b64: "",
-    ct_sha: "",
-    protocol: 2,
-    issued: "",
-    min_client: 3,
-    meta_sig_b64: "",
-  });
-  const mutation = useOwnerMutation();
-  const busy = mutation.saving;
-  const fileRevision = useRef(0);
-  const active = useRef(true);
-  useEffect(() => {
-    active.current = true;
-    return () => {
-      active.current = false;
-    };
-  }, []);
-
-  const upd = (k: keyof UploadPayloadArgs, v: string) => setForm((f) => ({ ...f, [k]: v }));
-
-  const readFileTo = async (k: keyof UploadPayloadArgs, file: File) => {
-    const revision = ++fileRevision.current;
-    let text: string;
-    try {
-      text = (await file.text()).trim();
-    } catch {
-      if (active.current) toast.error("Could not read this file. Your draft is unchanged.");
-      return;
-    }
-    if (!active.current || revision !== fileRevision.current || busy) return;
-    if (file.name.toLowerCase().endsWith(".json")) {
-      try {
-        const payload = JSON.parse(text) as Partial<Record<keyof UploadPayloadArgs, unknown>>;
-        const fields: (keyof UploadPayloadArgs)[] = [
-          "build",
-          "ct_b64",
-          "iv_b64",
-          "sig_b64",
-          "key_b64",
-          "ct_sha",
-          "protocol",
-          "issued",
-          "min_client",
-          "meta_sig_b64",
-        ];
-        const missing = fields.filter(
-          (field) => payload[field] == null || String(payload[field]).trim() === "",
-        );
-        if (missing.length > 0) {
-          toast.error(`Invalid payload bundle — missing ${missing.join(", ")}`);
-          return;
-        }
-        setForm((current) => ({
-          ...current,
-          build: String(payload.build),
-          ct_b64: String(payload.ct_b64),
-          iv_b64: String(payload.iv_b64),
-          sig_b64: String(payload.sig_b64),
-          key_b64: String(payload.key_b64),
-          ct_sha: String(payload.ct_sha),
-          protocol: Number(payload.protocol),
-          issued: Number(payload.issued),
-          min_client: Number(payload.min_client),
-          meta_sig_b64: String(payload.meta_sig_b64),
-        }));
-        toast.success(`Loaded payload bundle ${file.name}`);
-        return;
-      } catch {
-        toast.error(`${file.name} is not valid JSON`);
-        return;
-      }
-    }
-    upd(k, text);
-    toast.success(`Loaded ${file.name} into ${k}`);
-  };
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    for (const k of Object.keys(form) as (keyof UploadPayloadArgs)[]) {
-      if (!String(form[k]).trim()) return toast.error(`Missing ${k}`);
-    }
-    await mutation.run(async (signal) => {
-      try {
-        const r = await uploadPayload(form, signal);
-        toast.success(`Uploaded build ${form.build}`);
-        void r;
-      } catch (err) {
-        const msg = (err as Error).message;
-        if (/401|403|unauthor|forbidden/i.test(msg)) {
-          toast.error("Admin key rejected — re-enter it");
-          onAuthFail();
-        }
-        throw err;
-      }
-    });
-  };
-
-  const field = ({
-    k,
-    label,
-    rows = 3,
-  }: {
-    k: keyof UploadPayloadArgs;
-    label: string;
-    rows?: number;
-  }) => (
-    <div>
-      <div className="mb-1 flex items-center justify-between">
-        <label className="text-xs font-semibold text-muted-foreground">{label}</label>
-        <label className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-primary-ink">
-          <FileUp className="h-3 w-3" /> Load file
-          <input
-            type="file"
-            aria-label={`Load ${label}`}
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void readFileTo(k, file);
-              e.target.value = "";
-            }}
-          />
-        </label>
-      </div>
-      <Textarea
-        aria-label={label}
-        rows={rows}
-        value={String(form[k])}
-        onChange={(e) => upd(k, e.target.value)}
-        className="font-mono text-xs"
-      />
-    </div>
-  );
-
-  return (
-    <div className="rounded-2xl border border-border bg-card/60 p-5">
-      <h3 className="mb-1 font-display text-lg font-bold">Upload OTA payload</h3>
-      <p className="mb-4 text-xs text-muted-foreground">
-        Pushes a new encrypted build to <code className="font-mono">/admin/upload-payload</code>.
-      </p>
-
-      {mutation.error && (
-        <p role="alert" className="mb-4 break-words text-sm text-destructive">
-          {mutation.error}
-        </p>
-      )}
-      <form onSubmit={submit}>
-        <fieldset disabled={busy} aria-busy={busy} className="grid min-w-0 gap-4">
-          <legend className="sr-only">OTA payload upload</legend>
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground">Build</label>
-            <Input
-              className="mt-1"
-              placeholder="e.g. 42 or 1.2.3"
-              aria-label="Payload build"
-              value={String(form.build)}
-              onChange={(e) => upd("build", e.target.value)}
-            />
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {field({ k: "ct_b64", label: "ct_b64 (ciphertext)", rows: 4 })}
-            {field({ k: "iv_b64", label: "iv_b64", rows: 4 })}
-            {field({ k: "sig_b64", label: "sig_b64", rows: 4 })}
-            {field({ k: "key_b64", label: "key_b64", rows: 4 })}
-          </div>
-          {field({ k: "ct_sha", label: "ct_sha (hex)", rows: 2 })}
-          {field({ k: "meta_sig_b64", label: "Metadata signature (meta_sig_b64)", rows: 2 })}
-          <div className="grid gap-4 sm:grid-cols-3">
-            {field({ k: "protocol", label: "Protocol (2)", rows: 1 })}
-            {field({ k: "min_client", label: "Minimum client (3)", rows: 1 })}
-            {field({ k: "issued", label: "Issued (Unix seconds)", rows: 1 })}
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={busy} style={{ background: "var(--gradient-primary)" }}>
-              {busy ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="mr-2 h-4 w-4" />
-              )}
-              Upload payload
-            </Button>
-          </div>
-        </fieldset>
-      </form>
-    </div>
-  );
 }
 
 // ---------- 3) Ban manager ----------

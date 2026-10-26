@@ -176,7 +176,7 @@ export function DexControls() {
       <DexThemes />
       <section className="rounded-2xl border border-border bg-card/60 p-5">
         <h2 className="text-xl font-bold">
-          Royal Void feature access ({CONTROLS.length} controls)
+          Royal Black feature access ({CONTROLS.length} controls)
         </h2>
         <p className="my-3 text-sm text-muted-foreground">
           Checked means locked. Changes apply on the next game launch; there are no heartbeats or

@@ -162,7 +162,7 @@ export function DexThemes() {
   const theme = THEMES.find((t) => t.id === selected)!;
   return (
     <section className="rounded-2xl border border-border bg-card/60 p-5">
-      <h2 className="text-xl font-bold">Royal Void themes</h2>
+      <h2 className="text-xl font-bold">Royal Black themes</h2>
       <p className="my-3 text-sm text-muted-foreground">
         Enable themes and choose the default for new users. Existing users keep their selected theme
         while it remains enabled. Changes arrive at game startup; switching themes sends no network

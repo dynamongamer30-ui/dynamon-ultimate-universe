@@ -5,12 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { readOwnerConfig, saveOwnerSetting } from "@/lib/ownerSettings";
 import { useOwnerResource } from "@/hooks/useOwnerResource";
 import { useOwnerMutation } from "@/hooks/useOwnerMutation";
-import {
-  normalizeSignedPayload,
-  getAdminKey,
-  setAdminKey,
-  LICENSE_WORKER_URL,
-} from "@/lib/dgWorker";
+import { licensedDevices } from "@/lib/licensedDevices";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -32,7 +27,6 @@ import {
   Unlock,
   ArrowUpCircle,
   Settings2,
-  UploadCloud,
   Save,
   Link2,
 } from "lucide-react";
@@ -53,6 +47,8 @@ import {
   listGenerationLogs,
   createManualKey,
   listActivatedUsers,
+  readDeviceLicenseKeys,
+  deleteDeviceInformation,
   listBannedDevices,
   banDevice,
   unbanDevice,
@@ -110,20 +106,17 @@ function KeysAdmin() {
         </div>
       </div>
 
-      <nav
-        aria-label="Key system sections"
-        className="mb-6 -mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        <div className="inline-flex min-w-full gap-1 rounded-full border border-border bg-card/60 p-1 text-xs font-semibold sm:min-w-0">
+      <nav aria-label="Key system sections" className="mb-6">
+        <div className="flex flex-wrap gap-1 rounded-2xl border border-border bg-card/60 p-1 text-xs font-semibold sm:inline-flex sm:rounded-full">
           {(["keys", "devices", "dex", "config", "app"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               aria-pressed={tab === t}
-              className={`touch-target flex-1 whitespace-nowrap rounded-full px-3 py-2 capitalize transition-colors sm:flex-none sm:px-4 sm:py-1.5 ${tab === t ? "text-primary-foreground" : "text-muted-foreground"}`}
+              className={`touch-target min-w-max flex-auto shrink-0 whitespace-nowrap rounded-full px-3 py-2 capitalize transition-colors sm:flex-none sm:px-4 sm:py-1.5 ${tab === t ? "text-primary-foreground" : "text-muted-foreground"}`}
               style={tab === t ? { background: "var(--gradient-primary)" } : undefined}
             >
-              {t === "dex" ? "Royal Void DEX" : t}
+              {t === "dex" ? "Royal Black" : t}
             </button>
           ))}
         </div>
@@ -973,12 +966,38 @@ function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
 // ----- Devices panel (activated devices) -----
 
 async function readDeviceRecords(signal: AbortSignal) {
-  const [users, bans] = await Promise.all([listActivatedUsers(signal), listBannedDevices(signal)]);
-  return { users: users.sort((a, b) => Number(b.lastLogin ?? 0) - Number(a.lastLogin ?? 0)), bans };
+  const [users, bans, keys] = await Promise.all([
+    listActivatedUsers(signal),
+    listBannedDevices(signal),
+    readDeviceLicenseKeys(signal),
+  ]);
+  return {
+    users: users.sort((a, b) => Number(b.lastLogin ?? 0) - Number(a.lastLogin ?? 0)),
+    bans,
+    keys,
+  };
 }
 function DevicesPanel() {
   const resource = useOwnerResource(readDeviceRecords);
-  const rows = resource.data?.users ?? [];
+  const [, tick] = useState(0);
+  const deviceNow = Math.floor(Date.now() / 1000);
+  const rows = licensedDevices(resource.data?.users ?? [], resource.data?.keys ?? [], deviceNow);
+  useEffect(() => {
+    const refresh = () => tick((value) => value + 1);
+    const future = (resource.data?.keys ?? [])
+      .map((key) => key.expiry)
+      .filter((expiry) => Number.isFinite(expiry) && expiry > deviceNow);
+    const deadline = future.length ? Math.min(...future) * 1000 - Date.now() + 25 : null;
+    const timer =
+      deadline === null
+        ? undefined
+        : setTimeout(refresh, Math.min(2147483647, Math.max(25, deadline)));
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [resource.data, deviceNow]);
   const banned = new Set(resource.data?.bans.map((b) => b.fingerprint) ?? []);
   const loading = resource.loading;
   const reload = resource.reload;
@@ -986,6 +1005,27 @@ function DevicesPanel() {
   const [busy, setBusy] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  useEffect(() => {
+    const live = new Set(
+      licensedDevices(resource.data?.users ?? [], resource.data?.keys ?? [], deviceNow).map(
+        (row) => row.fingerprint,
+      ),
+    );
+    setSelected((previous) => {
+      const next = new Set([...previous].filter((id) => live.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [resource.data, deviceNow]);
+  const liveSelected = () => {
+    const live = new Set(
+      licensedDevices(
+        resource.data?.users ?? [],
+        resource.data?.keys ?? [],
+        Math.floor(Date.now() / 1000),
+      ).map((row) => row.fingerprint),
+    );
+    return [...selected].filter((id) => live.has(id));
+  };
   const confirm = useConfirm();
   const pending = useRef(false);
   const serialize = async (action: () => Promise<void>) => {
@@ -1025,6 +1065,42 @@ function DevicesPanel() {
       }
     });
 
+  const removeInformation = (row: ActivatedUser) =>
+    serialize(async () => {
+      if (
+        !(await confirm({
+          title: "Delete device information",
+          description:
+            "Remove this device's stored information? Its key, device binding and ban remain unchanged. A valid device can appear again when it verifies its key. It may need to verify again before loading the game.",
+          confirmText: "Delete information",
+          danger: true,
+        }))
+      )
+        return;
+      setBusy(row.fingerprint);
+      try {
+        await deleteDeviceInformation(row.fingerprint, row.recordData);
+        resource.setData((previous) =>
+          previous
+            ? {
+                ...previous,
+                users: previous.users.filter((user) => user.fingerprint !== row.fingerprint),
+              }
+            : previous,
+        );
+        setSelected((previous) => {
+          const next = new Set(previous);
+          next.delete(row.fingerprint);
+          return next;
+        });
+        toast.success("Device information deleted");
+      } catch (cause) {
+        toast.error(cause instanceof Error ? cause.message : "Deletion was not confirmed");
+      } finally {
+        setBusy("");
+      }
+    });
+
   const q = search.trim().toLowerCase();
   const filtered = q
     ? rows.filter(
@@ -1058,7 +1134,7 @@ function DevicesPanel() {
 
   const bulkBan = () =>
     serialize(async () => {
-      const targets = [...selected];
+      const targets = liveSelected();
       if (!targets.length) return;
       if (
         !(await confirm({
@@ -1087,7 +1163,7 @@ function DevicesPanel() {
 
   const bulkUnban = () =>
     serialize(async () => {
-      const targets = [...selected];
+      const targets = liveSelected();
       if (!targets.length) return;
       if (
         !(await confirm({
@@ -1272,6 +1348,14 @@ function DevicesPanel() {
                         </td>
                         <td className="py-3 pr-3">
                           <div className="flex justify-end gap-1">
+                            <IconBtn
+                              title="Delete device info"
+                              disabled={!!busy}
+                              onClick={() => removeInformation(r)}
+                              danger
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </IconBtn>
                             {isLocked ? (
                               <IconBtn
                                 title="Unban"
@@ -1348,7 +1432,15 @@ function DevicesPanel() {
                           </div>
                           <div>Last login: {last ? new Date(last).toLocaleString() : "—"}</div>
                         </div>
-                        <div className="mt-3 flex justify-end">
+                        <div className="mt-3 flex flex-wrap justify-end gap-2">
+                          <IconBtn
+                            title="Delete device info"
+                            disabled={!!busy}
+                            onClick={() => removeInformation(r)}
+                            danger
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                          </IconBtn>
                           {isLocked ? (
                             <IconBtn
                               title="Unban"
@@ -1971,7 +2063,7 @@ function LogsPanel() {
 
 // ============================================================
 // App tab — legacy login dialog + links + API. DEX controls use the DEX tab.
-// · Payload upload. Supabase-backed via dgData config nodes. Mobile-friendly.
+// Supabase-backed app configuration. Mobile-friendly.
 // ============================================================
 const AX_INPUT =
   "w-full rounded-lg bg-background/70 border border-border px-3 py-2 text-sm outline-none focus:border-primary";
@@ -2007,7 +2099,6 @@ function AppExtrasPanel() {
   return (
     <div className="space-y-6">
       <AxAppConfig />
-      <AxPayload />
     </div>
   );
 }
@@ -2191,128 +2282,6 @@ function AxAppConfig() {
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save
         App Config
       </button>
-    </fieldset>
-  );
-}
-
-/* ---- Payload JSON upload (ref-based, no navigation) ---- */
-function AxPayload() {
-  const [url, setUrl] = useState("");
-  const [key, setKey] = useState("");
-  const { saving: busy, error, run } = useOwnerMutation();
-  const fileRef = useRef<HTMLInputElement | null>(null);
-  useEffect(() => {
-    try {
-      setUrl(localStorage.getItem("dg_worker_url") || LICENSE_WORKER_URL);
-      setKey(getAdminKey());
-    } catch (err) {
-      /* no localStorage during SSR */
-    }
-  }, []);
-  const saveCfg = () => {
-    try {
-      localStorage.setItem("dg_worker_url", url.trim());
-      if (!setAdminKey(key.trim()))
-        throw new Error("Could not save the admin key in this browser session.");
-      toast.success("Worker settings saved");
-    } catch (err) {
-      toast.error(String(err));
-    }
-  };
-  const onFile = (file: File) =>
-    run(async (signal) => {
-      if (!url || !key) throw new Error("Set Worker URL + Admin key first");
-      const target = new URL(url);
-      if (
-        target.protocol !== "https:" ||
-        target.username ||
-        target.password ||
-        target.search ||
-        target.hash
-      )
-        throw new Error("Use an HTTPS Worker URL without credentials, query or fragment.");
-      if (file.size > 16 * 1024 * 1024) throw new Error("Payload file exceeds 16 MB.");
-      const payload = JSON.parse(await file.text());
-      if (!payload || typeof payload !== "object" || Array.isArray(payload))
-        throw new Error("Use a signed payload JSON object.");
-      const need = ["build", "ct_b64", "iv_b64", "sig_b64", "key_b64", "ct_sha"];
-      for (const fld of need)
-        if (!(fld in payload)) throw new Error("payload JSON missing field: " + fld);
-      const signed = normalizeSignedPayload(payload);
-      if (signal.aborted) throw new Error("Payload read timed out. Select the file again.");
-      const res = await fetch(url.replace(/\/+$/, "") + "/admin/upload-payload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Admin": key },
-        body: JSON.stringify(signed),
-        signal,
-      });
-      if (!res.ok)
-        throw new Error(
-          `Upload was not confirmed (${res.status}). Check the current build before trying again.`,
-        );
-      const acknowledgement = await res.json();
-      if (signal.aborted || acknowledgement?.ok !== true)
-        throw new Error("Upload was not confirmed. Check the current build before trying again.");
-      toast.success("Payload uploaded");
-    });
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files && e.target.files[0];
-    if (f) void onFile(f);
-    if (fileRef.current) fileRef.current.value = "";
-  };
-  return (
-    <fieldset disabled={busy} className={`min-w-0 ${AX_CARD}`}>
-      <legend className="sr-only">Signed payload upload</legend>
-      {error && (
-        <p role="alert" className="break-words text-destructive">
-          {error}
-        </p>
-      )}
-      <div className={AX_HEAD}>
-        <UploadCloud className="h-5 w-5" /> Payload Upload
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <AxField
-          label="DG Worker URL"
-          value={url}
-          onChange={setUrl}
-          placeholder="https://dg.xxx.workers.dev"
-        />
-        <AxField label="Admin Key (X-Admin)" secret value={key} onChange={setKey} />
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <button type="button" className={AX_GHOST} onClick={saveCfg}>
-          <Save className="h-4 w-4" /> Save worker settings
-        </button>
-        <button
-          type="button"
-          className={AX_BTN}
-          style={{ background: "var(--gradient-primary)" }}
-          disabled={busy}
-          onClick={() => {
-            if (fileRef.current) fileRef.current.click();
-          }}
-        >
-          {busy ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <UploadCloud className="h-4 w-4" />
-          )}{" "}
-          Upload payload.json
-        </button>
-        <input
-          aria-label="Signed payload JSON file"
-          ref={fileRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={onChange}
-        />
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Use the signed protocol-2 bundle with min_client 3, issued, meta_sig_b64 and all encrypted
-        payload fields.
-      </p>
     </fieldset>
   );
 }
