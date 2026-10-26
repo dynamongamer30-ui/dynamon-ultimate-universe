@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
-const source = readFileSync(new URL("../src/lib/botCatalog.ts", import.meta.url), "utf8");
+const source =
+  readFileSync(new URL("../src/lib/versionSort.ts", import.meta.url), "utf8") +
+  readFileSync(new URL("../src/lib/botCatalog.ts", import.meta.url), "utf8").replace(
+    'import { compareVersions } from "./versionSort";',
+    "",
+  );
 const { buildBotCatalog } = await import(
   "data:text/javascript;base64," + Buffer.from(stripTypeScriptTypes(source)).toString("base64")
 );
@@ -63,4 +68,15 @@ test("empty public catalog and malformed changelog are handled without invented 
     ).releases[0].changelog[0].notes,
     ["safe"],
   );
+});
+
+test("latest version follows website numeric version ordering even when another edition was edited later", () => {
+  const result = buildBotCatalog(
+    [base[0], base[1]],
+    [
+      { slug: "old", version: "v1.13.43", updated_date: "2026-10-01" },
+      { slug: "new", version: "1.13.42", updated_date: "2026-10-26" },
+    ],
+  );
+  assert.equal(result.latestSlug, "old");
 });

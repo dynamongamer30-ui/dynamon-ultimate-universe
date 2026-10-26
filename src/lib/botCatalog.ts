@@ -1,4 +1,5 @@
 import type { Mod } from "./mods";
+import { compareVersions } from "./versionSort";
 
 export const WEBSITE_ORIGIN = "https://dynamongamer.com";
 export const APK_KEY_ENTRY = "https://generator.dynamongamer30.workers.dev/start";
@@ -49,8 +50,8 @@ export function buildBotCatalog(base: Mod[], rows: Record<string, unknown>[]) {
   });
   releases.sort(
     (a, b) =>
+      compareVersions(b.version, a.version) ||
       b.updated.localeCompare(a.updated) ||
-      b.version.localeCompare(a.version, undefined, { numeric: true }) ||
       a.slug.localeCompare(b.slug),
   );
   return { schema: 1, releases, latestSlug: releases[0]?.slug ?? null };
