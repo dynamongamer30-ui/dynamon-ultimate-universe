@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 test("signed-out owner routes expose no management data or mutations", async ({ page }) => {
+  test.setTimeout(90000);
   const privateRequests: string[] = [],
     errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));

@@ -6,7 +6,7 @@ test("public metadata, private indexing and install assets are consistent", asyn
     throw error;
   });
   for (const path of ["/", "/mods", "/mods/thunder-arena", "/about", "/contact"]) {
-    await page.goto(path, { waitUntil: "networkidle" });
+    await page.goto(path, { waitUntil: "domcontentloaded" });
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       "href",
       `https://dynamongamer.com${path}`,
@@ -51,7 +51,11 @@ test("public pages and action labels remain usable at double text size on a narr
   });
   await page.setViewportSize({ width: 390, height: 900 });
   for (const path of ["/", "/mods", "/auth", "/contact", "/rewards"]) {
-    await page.goto(path, { waitUntil: "networkidle" });
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true", {
+      timeout: 15000,
+    });
+    await expect(page.locator("main")).toBeVisible();
     await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
     await page.evaluate(() => document.fonts.ready);
     const overflow = await page.evaluate(() => ({
