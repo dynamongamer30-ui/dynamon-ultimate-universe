@@ -2,6 +2,15 @@ import { DexControls } from "@/components/DexControls";
 import { isKeyBound, isKeyExpired } from "@/lib/dgKeyPolicy";
 import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { readOwnerConfig, saveOwnerSetting } from "@/lib/ownerSettings";
+import { useOwnerResource } from "@/hooks/useOwnerResource";
+import { useOwnerMutation } from "@/hooks/useOwnerMutation";
+import {
+  normalizeSignedPayload,
+  getAdminKey,
+  setAdminKey,
+  LICENSE_WORKER_URL,
+} from "@/lib/dgWorker";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -40,13 +49,7 @@ import {
   unrevokeKey,
   deleteKey,
   extendKey,
-  getConfig,
   getConfigNode,
-  setConfigNode,
-  setMaintenance,
-  setRateLimitEnabled,
-  setKeyDurationHours,
-  setIPWhitelist,
   listGenerationLogs,
   createManualKey,
   listActivatedUsers,
@@ -54,8 +57,7 @@ import {
   banDevice,
   unbanDevice,
   nowSeconds,
-  getAppUpdate,
-  setAppUpdate,
+  DEFAULT_APP_UPDATE,
   type ValidKey,
   type DgConfig,
   type GenerationLog,
@@ -858,15 +860,17 @@ function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
   const [prefix, setPrefix] = useState("DG");
   const [hours, setHours] = useState("24");
   const [busy, setBusy] = useState(false);
+  const pending = useRef(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (disabled || busy) return;
+    if (disabled || busy || pending.current) return;
     const h = Number(hours);
     if (!hours.trim() || !Number.isFinite(h) || h < 0 || h > 87600) {
       toast.error("Enter 0–87600 hours (0 = lifetime)");
       return;
     }
+    pending.current = true;
     setBusy(true);
     try {
       const key = await createManualKey(prefix, h);
@@ -882,6 +886,7 @@ function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
+      pending.current = false;
       setBusy(false);
     }
   };
@@ -967,56 +972,58 @@ function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
 }
 // ----- Devices panel (activated devices) -----
 
+async function readDeviceRecords(signal: AbortSignal) {
+  const [users, bans] = await Promise.all([listActivatedUsers(signal), listBannedDevices(signal)]);
+  return { users: users.sort((a, b) => Number(b.lastLogin ?? 0) - Number(a.lastLogin ?? 0)), bans };
+}
 function DevicesPanel() {
-  const [rows, setRows] = useState<ActivatedUser[]>([]);
-  const [banned, setBanned] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const resource = useOwnerResource(readDeviceRecords);
+  const rows = resource.data?.users ?? [];
+  const banned = new Set(resource.data?.bans.map((b) => b.fingerprint) ?? []);
+  const loading = resource.loading;
+  const reload = resource.reload;
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const confirm = useConfirm();
+  const pending = useRef(false);
+  const serialize = async (action: () => Promise<void>) => {
+    if (pending.current) return;
+    pending.current = true;
+    try {
+      await action();
+    } finally {
+      pending.current = false;
+    }
+  };
 
-  const reload = async () => {
-    setLoading(true);
-    try {
-      const [users, bans] = await Promise.all([listActivatedUsers(), listBannedDevices()]);
-      setRows(users.sort((a, b) => Number(b.lastLogin ?? 0) - Number(a.lastLogin ?? 0)));
-      setBanned(new Set(bans.map((b) => b.fingerprint)));
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    void reload();
-  }, []);
-
-  const doLock = async (fp: string) => {
-    setBusy(fp);
-    try {
-      await banDevice(fp, "locked from devices panel");
-      toast.success("Device banned");
-      await reload();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setBusy("");
-    }
-  };
-  const doUnlock = async (fp: string) => {
-    setBusy(fp);
-    try {
-      await unbanDevice(fp);
-      toast.success("Device unbanned");
-      await reload();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setBusy("");
-    }
-  };
+  const doLock = (fp: string) =>
+    serialize(async () => {
+      setBusy(fp);
+      try {
+        await banDevice(fp, "locked from devices panel");
+        toast.success("Device banned");
+        await reload();
+      } catch (e) {
+        toast.error((e as Error).message);
+      } finally {
+        setBusy("");
+      }
+    });
+  const doUnlock = (fp: string) =>
+    serialize(async () => {
+      setBusy(fp);
+      try {
+        await unbanDevice(fp);
+        toast.success("Device unbanned");
+        await reload();
+      } catch (e) {
+        toast.error((e as Error).message);
+      } finally {
+        setBusy("");
+      }
+    });
 
   const q = search.trim().toLowerCase();
   const filtered = q
@@ -1049,66 +1056,77 @@ function DevicesPanel() {
   };
   const clearSelection = () => setSelected(new Set());
 
-  const bulkBan = async () => {
-    const targets = [...selected];
-    if (!targets.length) return;
-    if (
-      !(await confirm({
-        title: "Ban selected devices",
-        description: `Ban ${targets.length} device${targets.length > 1 ? "s" : ""}? They lose access immediately.`,
-        confirmText: "Ban all",
-        danger: true,
-      }))
-    )
-      return;
-    setBulkBusy(true);
-    let ok = 0;
-    for (const fp of targets) {
-      try {
-        await banDevice(fp, "bulk ban from devices panel");
-        ok++;
-      } catch {
-        /* skip */
+  const bulkBan = () =>
+    serialize(async () => {
+      const targets = [...selected];
+      if (!targets.length) return;
+      if (
+        !(await confirm({
+          title: "Ban selected devices",
+          description: `Ban ${targets.length} device${targets.length > 1 ? "s" : ""}? They lose access immediately.`,
+          confirmText: "Ban all",
+          danger: true,
+        }))
+      )
+        return;
+      setBulkBusy(true);
+      let ok = 0;
+      for (const fp of targets) {
+        try {
+          await banDevice(fp, "bulk ban from devices panel");
+          ok++;
+        } catch {
+          /* skip */
+        }
       }
-    }
-    setBulkBusy(false);
-    clearSelection();
-    toast.success(`Banned ${ok} device${ok !== 1 ? "s" : ""}`);
-    await reload();
-  };
+      setBulkBusy(false);
+      clearSelection();
+      toast.success(`Banned ${ok} device${ok !== 1 ? "s" : ""}`);
+      await reload();
+    });
 
-  const bulkUnban = async () => {
-    const targets = [...selected];
-    if (!targets.length) return;
-    if (
-      !(await confirm({
-        title: "Unban selected devices",
-        description: `Unban ${targets.length} device${targets.length > 1 ? "s" : ""}?`,
-        confirmText: "Unban all",
-      }))
-    )
-      return;
-    setBulkBusy(true);
-    let ok = 0;
-    for (const fp of targets) {
-      try {
-        await unbanDevice(fp);
-        ok++;
-      } catch {
-        /* skip */
+  const bulkUnban = () =>
+    serialize(async () => {
+      const targets = [...selected];
+      if (!targets.length) return;
+      if (
+        !(await confirm({
+          title: "Unban selected devices",
+          description: `Unban ${targets.length} device${targets.length > 1 ? "s" : ""}?`,
+          confirmText: "Unban all",
+        }))
+      )
+        return;
+      setBulkBusy(true);
+      let ok = 0;
+      for (const fp of targets) {
+        try {
+          await unbanDevice(fp);
+          ok++;
+        } catch {
+          /* skip */
+        }
       }
-    }
-    setBulkBusy(false);
-    clearSelection();
-    toast.success(`Unbanned ${ok} device${ok !== 1 ? "s" : ""}`);
-    await reload();
-  };
+      setBulkBusy(false);
+      clearSelection();
+      toast.success(`Unbanned ${ok} device${ok !== 1 ? "s" : ""}`);
+      await reload();
+    });
 
   const bannedCount = rows.filter((r) => banned.has(r.fingerprint)).length;
   const unbannedCount = Math.max(0, rows.length - bannedCount);
 
+  if (resource.error)
+    return (
+      <div role="alert">
+        <p>{resource.error}</p>
+        <Button onClick={reload}>Retry device records</Button>
+      </div>
+    );
+  if (loading) return <p role="status">Loading device records…</p>;
   return (
-    <div>
+    <fieldset disabled={!!busy || bulkBusy} className="min-w-0">
+      <legend className="sr-only">Device records and actions</legend>
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-3">
         <StatTile
           label="Total devices"
@@ -1133,12 +1151,19 @@ function DevicesPanel() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by device or key"
+              aria-label="Search device records"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
             />
           </div>
-          <Button variant="outline" size="sm" onClick={reload} disabled={loading}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={reload}
+            disabled={loading}
+            aria-label="Refresh device records"
+          >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
@@ -1352,7 +1377,7 @@ function DevicesPanel() {
           </>
         )}
       </div>
-    </div>
+    </fieldset>
   );
 }
 // ----- Locks panel (banned devices) -----
@@ -1521,112 +1546,105 @@ function LocksPanel() {
 
 // ----- Config panel -----
 
+async function readGeneratorSettings(signal: AbortSignal) {
+  const rows = await readOwnerConfig(
+    ["Maintenance", "RateLimit", "KeyDurationHours", "IPWhitelist", "Update"],
+    signal,
+  );
+  const rate = rows.RateLimit;
+  const update = rows.Update;
+  if (
+    (rows.Maintenance != null && typeof rows.Maintenance !== "boolean") ||
+    (rows.KeyDurationHours != null &&
+      (!Number.isSafeInteger(rows.KeyDurationHours) || Number(rows.KeyDurationHours) < 1)) ||
+    (rate != null &&
+      (typeof rate !== "object" ||
+        Array.isArray(rate) ||
+        typeof (rate as { enabled?: unknown }).enabled !== "boolean")) ||
+    (rows.IPWhitelist != null &&
+      (!Array.isArray(rows.IPWhitelist) ||
+        rows.IPWhitelist.some((v: unknown) => typeof v !== "string"))) ||
+    (update != null && (typeof update !== "object" || Array.isArray(update)))
+  )
+    throw new Error("Invalid saved generator settings.");
+  return rows;
+}
+
 function ConfigPanel() {
+  const resource = useOwnerResource(readGeneratorSettings);
+  const snapshot = useRef<Record<string, unknown>>({});
   const [cfg, setCfg] = useState<DgConfig | null>(null);
   const [upd, setUpd] = useState<AppUpdate | null>(null);
-  const [loading, setLoading] = useState(true);
   const [newIP, setNewIP] = useState("");
   const [hours, setHours] = useState("24");
-  const [busy, setBusy] = useState(false);
-
-  const reload = async () => {
-    setLoading(true);
-    try {
-      const [c, u] = await Promise.all([getConfig(), getAppUpdate()]);
-      setCfg(c);
-      setHours(String(c.KeyDurationHours));
-      setUpd(u);
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { saving: busy, error, run } = useOwnerMutation();
   useEffect(() => {
-    reload();
-  }, []);
-
-  const saveUpdate = async () => {
+    if (!resource.data) return;
+    const rows = resource.data;
+    snapshot.current = rows;
+    setCfg({
+      Maintenance: (rows.Maintenance ?? false) as boolean,
+      RateLimit: { enabled: false, ...((rows.RateLimit as object) ?? {}) },
+      KeyDurationHours: Number(rows.KeyDurationHours ?? 24),
+      IPWhitelist: (rows.IPWhitelist ?? []) as string[],
+    });
+    setHours(String(rows.KeyDurationHours ?? 24));
+    setUpd({ ...DEFAULT_APP_UPDATE, ...((rows.Update as object) ?? {}) });
+  }, [resource.data]);
+  const save = (id: string, value: unknown, message = "Saved") =>
+    run(async (signal) => {
+      await saveOwnerSetting("app_config", id, value, snapshot.current[id], signal);
+      snapshot.current = { ...snapshot.current, [id]: value };
+      setCfg((previous) =>
+        previous && id in previous ? ({ ...previous, [id]: value } as DgConfig) : previous,
+      );
+      toast.success(message);
+    });
+  const saveUpdate = () => {
     if (!upd) return;
-    setBusy(true);
-    try {
-      await setAppUpdate(upd);
-      toast.success("Update settings saved");
-      await reload();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    if (!Number.isSafeInteger(upd.VersionCode) || upd.VersionCode < 0)
+      return toast.error("Use a non-negative whole version code.");
+    void save("Update", upd, "Update settings saved");
   };
   const setU = <K extends keyof AppUpdate>(k: K, v: AppUpdate[K]) =>
     setUpd((p) => (p ? { ...p, [k]: v } : p));
-
-  if (loading || !cfg) {
+  if (resource.error)
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-5 w-5 animate-spin text-primary-ink" />
+      <div role="alert">
+        <p>{resource.error}</p>
+        <Button onClick={resource.reload}>Retry generator settings</Button>
       </div>
     );
-  }
-
-  const toggleMaintenance = async () => {
-    setBusy(true);
-    try {
-      await setMaintenance(!cfg.Maintenance);
-      toast.success(cfg.Maintenance ? "Maintenance OFF" : "Maintenance ON");
-      await reload();
-    } finally {
-      setBusy(false);
-    }
-  };
-  const toggleRate = async () => {
-    setBusy(true);
-    try {
-      await setRateLimitEnabled(!cfg.RateLimit.enabled);
-      toast.success("Updated");
-      await reload();
-    } finally {
-      setBusy(false);
-    }
-  };
-  const saveHours = async () => {
+  if (resource.loading || !cfg) return <p role="status">Loading generator settings…</p>;
+  const toggleMaintenance = () =>
+    save("Maintenance", !cfg.Maintenance, cfg.Maintenance ? "Maintenance OFF" : "Maintenance ON");
+  const toggleRate = () => save("RateLimit", { ...cfg.RateLimit, enabled: !cfg.RateLimit.enabled });
+  const saveHours = () => {
     const n = Number(hours);
-    if (!Number.isFinite(n) || n < 1) return toast.error("Invalid hours");
-    setBusy(true);
-    try {
-      await setKeyDurationHours(n);
-      toast.success("Saved");
-      await reload();
-    } finally {
-      setBusy(false);
-    }
+    if (!Number.isSafeInteger(n) || n < 1)
+      return toast.error("Use a positive whole number of hours.");
+    void save("KeyDurationHours", n);
   };
   const addIP = async () => {
     const ip = newIP.trim();
     if (!ip) return;
     if (cfg.IPWhitelist.includes(ip)) return toast.error("Already in list");
-    setBusy(true);
-    try {
-      await setIPWhitelist([...cfg.IPWhitelist, ip]);
-      setNewIP("");
-      await reload();
-    } finally {
-      setBusy(false);
-    }
+    await save("IPWhitelist", [...cfg.IPWhitelist, ip]);
   };
-  const removeIP = async (ip: string) => {
-    setBusy(true);
-    try {
-      await setIPWhitelist(cfg.IPWhitelist.filter((x) => x !== ip));
-      await reload();
-    } finally {
-      setBusy(false);
-    }
-  };
+  const removeIP = (ip: string) =>
+    save(
+      "IPWhitelist",
+      cfg.IPWhitelist.filter((x) => x !== ip),
+    );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <fieldset disabled={busy} className="min-w-0 grid gap-4 lg:grid-cols-2">
+      <legend className="sr-only">Generator and app update settings</legend>
+      {error && (
+        <p role="alert" className="break-words text-destructive lg:col-span-2">
+          {error}
+        </p>
+      )}
       <div className="rounded-2xl border border-border bg-card/60 p-5">
         <h3 className="mb-4 font-display text-lg font-bold">Switches</h3>
 
@@ -1649,12 +1667,20 @@ function ConfigPanel() {
 
         <div className="my-5 h-px bg-border/50" />
 
-        <label className="text-sm font-semibold">Key duration (hours)</label>
+        <label htmlFor="owner-key-duration" className="text-sm font-semibold">
+          Key duration (hours)
+        </label>
         <p className="mb-2 text-xs text-muted-foreground">
           Default lifetime for newly generated keys.
         </p>
         <div className="flex gap-2">
-          <Input type="number" min="1" value={hours} onChange={(e) => setHours(e.target.value)} />
+          <Input
+            id="owner-key-duration"
+            type="number"
+            min="1"
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+          />
           <Button
             onClick={saveHours}
             disabled={busy}
@@ -1673,11 +1699,12 @@ function ConfigPanel() {
         <div className="flex gap-2">
           <Input
             placeholder="1.2.3.4"
+            aria-label="IP whitelist address"
             value={newIP}
             onChange={(e) => setNewIP(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addIP()}
           />
-          <Button onClick={addIP} disabled={busy}>
+          <Button onClick={addIP} disabled={busy} aria-label="Add IP whitelist address">
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -1693,6 +1720,7 @@ function ConfigPanel() {
               <span className="font-mono">{ip}</span>
               <button
                 onClick={() => removeIP(ip)}
+                aria-label={`Remove ${ip} from IP whitelist`}
                 className="text-muted-foreground hover:text-red-400"
               >
                 <X className="h-4 w-4" />
@@ -1790,7 +1818,7 @@ function ConfigPanel() {
           </div>
         </div>
       )}
-    </div>
+    </fieldset>
   );
 }
 
@@ -1830,13 +1858,21 @@ function Toggle({
         <p className="text-xs text-muted-foreground">{desc}</p>
       </div>
       <button
+        type="button"
+        role="switch"
+        aria-label={label}
+        aria-checked={on}
         onClick={onClick}
         disabled={disabled}
-        className={`relative h-6 w-11 rounded-full transition ${on ? "bg-primary" : "bg-muted"} disabled:opacity-50`}
+        className="touch-target relative inline-flex h-11 w-11 shrink-0 items-center justify-center disabled:opacity-50"
       >
         <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${on ? "left-5" : "left-0.5"}`}
-        />
+          className={`relative block h-6 w-11 rounded-full transition ${on ? "bg-primary" : "bg-muted"}`}
+        >
+          <span
+            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${on ? "left-5" : "left-0.5"}`}
+          />
+        </span>
       </button>
     </div>
   );
@@ -1951,11 +1987,13 @@ function AxField(props: {
   value: string;
   onChange: (s: string) => void;
   placeholder?: string;
+  secret?: boolean;
 }) {
   return (
     <label className="block space-y-1">
       <span className="text-xs text-muted-foreground">{props.label}</span>
       <input
+        type={props.secret ? "password" : "text"}
         className={AX_INPUT}
         value={props.value || ""}
         placeholder={props.placeholder}
@@ -1975,6 +2013,25 @@ function AppExtrasPanel() {
 }
 
 /* ---- App Config (in-app dialog + app links + API) ---- */
+async function readLegacyAppSettings(signal: AbortSignal) {
+  const rows = await readOwnerConfig(
+    ["Title", "Subtitle", "TutorialUrl", "Texts", "Links", "Api"],
+    signal,
+  );
+  for (const id of ["Title", "Subtitle", "TutorialUrl"])
+    if (rows[id] != null && typeof rows[id] !== "string")
+      throw new Error("Invalid saved app settings.");
+  for (const id of ["Texts", "Links", "Api"])
+    if (
+      rows[id] != null &&
+      (typeof rows[id] !== "object" ||
+        Array.isArray(rows[id]) ||
+        Object.values(rows[id] as object).some((v) => typeof v !== "string"))
+    )
+      throw new Error("Invalid saved app settings.");
+  return rows;
+}
+
 function AxAppConfig() {
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
@@ -1982,81 +2039,67 @@ function AxAppConfig() {
   const [texts, setTexts] = useState<Record<string, string>>({});
   const [links, setLinks] = useState<Record<string, string>>({});
   const [api, setApi] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-
+  const resource = useOwnerResource(readLegacyAppSettings);
+  const snapshot = useRef<Record<string, unknown>>({});
+  const { saving: busy, error, run } = useOwnerMutation();
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const [t, s, tu, tx, lk, ap] = await Promise.all([
-          getConfigNode<string>("Title"),
-          getConfigNode<string>("Subtitle"),
-          getConfigNode<string>("TutorialUrl"),
-          getConfigNode<Record<string, string>>("Texts"),
-          getConfigNode<Record<string, string>>("Links"),
-          getConfigNode<Record<string, string>>("Api"),
-        ]);
-        if (!alive) return;
-        setTitle(t || "");
-        setSubtitle(s || "");
-        setTutorial(tu || "");
-        setTexts(tx || {});
-        setLinks(lk || {});
-        setApi(ap || {});
-      } catch (err) {
-        if (alive) {
-          setFailed(true);
-          toast.error(String(err));
-        }
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
+    if (!resource.data) return;
+    const rows = resource.data;
+    snapshot.current = rows;
+    setTitle((rows.Title ?? "") as string);
+    setSubtitle((rows.Subtitle ?? "") as string);
+    setTutorial((rows.TutorialUrl ?? "") as string);
+    setTexts((rows.Texts ?? {}) as Record<string, string>);
+    setLinks((rows.Links ?? {}) as Record<string, string>);
+    setApi((rows.Api ?? {}) as Record<string, string>);
+  }, [resource.data]);
 
   const link = (k: string) => links[k] || "";
   const setLink = (k: string, v: string) => setLinks((p) => ({ ...p, [k]: v }));
   const setText = (k: string, v: string) => setTexts((p) => ({ ...p, [k]: v }));
   const setApiF = (k: string, v: string) => setApi((p) => ({ ...p, [k]: v }));
 
-  const save = async () => {
-    setBusy(true);
-    try {
-      await Promise.all([
-        setConfigNode("Title", title),
-        setConfigNode("Subtitle", subtitle),
-        setConfigNode("TutorialUrl", tutorial),
-        setConfigNode("Texts", texts),
-        setConfigNode("Links", links),
-        setConfigNode("Api", api),
-      ]);
-      toast.success("App config saved");
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (loading)
+  const save = () =>
+    run(async (signal) => {
+      let confirmed = 0;
+      try {
+        for (const [id, value] of Object.entries({
+          Title: title,
+          Subtitle: subtitle,
+          TutorialUrl: tutorial,
+          Texts: texts,
+          Links: links,
+          Api: api,
+        })) {
+          await saveOwnerSetting("app_config", id, value, snapshot.current[id], signal);
+          snapshot.current = { ...snapshot.current, [id]: value };
+          confirmed++;
+        }
+        toast.success("App config saved");
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : "Save was not confirmed.";
+        throw new Error(
+          `${message} ${confirmed} of 6 setting saves confirmed. Your draft is retained; check saved values before retrying.`,
+        );
+      }
+    });
+  if (resource.error)
     return (
-      <div className={AX_CARD}>
-        <div className={AX_HEAD}>
-          <Settings2 className="h-5 w-5" /> App Config
-        </div>
-        <Loader2 className="h-5 w-5 animate-spin text-primary-ink" />
+      <div role="alert">
+        <p>{resource.error}</p>
+        <Button onClick={resource.reload}>Retry app settings</Button>
       </div>
     );
-
-  if (failed) return <p role="alert">Could not load app settings. Reload before editing.</p>;
+  if (resource.loading) return <p role="status">Loading app settings…</p>;
 
   return (
-    <div className={AX_CARD}>
+    <fieldset disabled={busy} className={`min-w-0 ${AX_CARD}`}>
+      <legend className="sr-only">App configuration</legend>
+      {error && (
+        <p role="alert" className="break-words text-destructive">
+          {error}
+        </p>
+      )}
       <div className={AX_HEAD}>
         <Settings2 className="h-5 w-5" /> App Config{" "}
         <span className="text-xs sm:text-sm text-muted-foreground">(in-app dialog)</span>
@@ -2126,7 +2169,12 @@ function AxAppConfig() {
           value={api.BaseUrl || ""}
           onChange={(v) => setApiF("BaseUrl", v)}
         />
-        <AxField label="API Token" value={api.Token || ""} onChange={(v) => setApiF("Token", v)} />
+        <AxField
+          label="API Token"
+          secret
+          value={api.Token || ""}
+          onChange={(v) => setApiF("Token", v)}
+        />
         <AxField
           label="Dest Base"
           value={api.DestBase || ""}
@@ -2143,7 +2191,7 @@ function AxAppConfig() {
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save
         App Config
       </button>
-    </div>
+    </fieldset>
   );
 }
 
@@ -2151,12 +2199,12 @@ function AxAppConfig() {
 function AxPayload() {
   const [url, setUrl] = useState("");
   const [key, setKey] = useState("");
-  const [busy, setBusy] = useState(false);
+  const { saving: busy, error, run } = useOwnerMutation();
   const fileRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     try {
-      setUrl(localStorage.getItem("dg_worker_url") || "");
-      setKey(localStorage.getItem("dg_admin_key") || "");
+      setUrl(localStorage.getItem("dg_worker_url") || LICENSE_WORKER_URL);
+      setKey(getAdminKey());
     } catch (err) {
       /* no localStorage during SSR */
     }
@@ -2164,41 +2212,62 @@ function AxPayload() {
   const saveCfg = () => {
     try {
       localStorage.setItem("dg_worker_url", url.trim());
-      localStorage.setItem("dg_admin_key", key.trim());
+      if (!setAdminKey(key.trim()))
+        throw new Error("Could not save the admin key in this browser session.");
       toast.success("Worker settings saved");
     } catch (err) {
       toast.error(String(err));
     }
   };
-  const onFile = async (file: File) => {
-    setBusy(true);
-    try {
+  const onFile = (file: File) =>
+    run(async (signal) => {
       if (!url || !key) throw new Error("Set Worker URL + Admin key first");
+      const target = new URL(url);
+      if (
+        target.protocol !== "https:" ||
+        target.username ||
+        target.password ||
+        target.search ||
+        target.hash
+      )
+        throw new Error("Use an HTTPS Worker URL without credentials, query or fragment.");
+      if (file.size > 16 * 1024 * 1024) throw new Error("Payload file exceeds 16 MB.");
       const payload = JSON.parse(await file.text());
+      if (!payload || typeof payload !== "object" || Array.isArray(payload))
+        throw new Error("Use a signed payload JSON object.");
       const need = ["build", "ct_b64", "iv_b64", "sig_b64", "key_b64", "ct_sha"];
       for (const fld of need)
         if (!(fld in payload)) throw new Error("payload JSON missing field: " + fld);
+      const signed = normalizeSignedPayload(payload);
+      if (signal.aborted) throw new Error("Payload read timed out. Select the file again.");
       const res = await fetch(url.replace(/\/+$/, "") + "/admin/upload-payload", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Admin": key },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(signed),
+        signal,
       });
-      const txt = await res.text();
-      if (!res.ok) throw new Error("upload failed (" + res.status + "): " + txt);
+      if (!res.ok)
+        throw new Error(
+          `Upload was not confirmed (${res.status}). Check the current build before trying again.`,
+        );
+      const acknowledgement = await res.json();
+      if (signal.aborted || acknowledgement?.ok !== true)
+        throw new Error("Upload was not confirmed. Check the current build before trying again.");
       toast.success("Payload uploaded");
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
+    });
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files && e.target.files[0];
     if (f) void onFile(f);
     if (fileRef.current) fileRef.current.value = "";
   };
   return (
-    <div className={AX_CARD}>
+    <fieldset disabled={busy} className={`min-w-0 ${AX_CARD}`}>
+      <legend className="sr-only">Signed payload upload</legend>
+      {error && (
+        <p role="alert" className="break-words text-destructive">
+          {error}
+        </p>
+      )}
       <div className={AX_HEAD}>
         <UploadCloud className="h-5 w-5" /> Payload Upload
       </div>
@@ -2209,7 +2278,7 @@ function AxPayload() {
           onChange={setUrl}
           placeholder="https://dg.xxx.workers.dev"
         />
-        <AxField label="Admin Key (X-Admin)" value={key} onChange={setKey} />
+        <AxField label="Admin Key (X-Admin)" secret value={key} onChange={setKey} />
       </div>
       <div className="flex flex-wrap gap-3">
         <button type="button" className={AX_GHOST} onClick={saveCfg}>
@@ -2232,6 +2301,7 @@ function AxPayload() {
           Upload payload.json
         </button>
         <input
+          aria-label="Signed payload JSON file"
           ref={fileRef}
           type="file"
           accept="application/json,.json"
@@ -2240,8 +2310,9 @@ function AxPayload() {
         />
       </div>
       <p className="text-xs text-muted-foreground">
-        JSON must contain: build, ct_b64, iv_b64, sig_b64, key_b64, ct_sha
+        Use the signed protocol-2 bundle with min_client 3, issued, meta_sig_b64 and all encrypted
+        payload fields.
       </p>
-    </div>
+    </fieldset>
   );
 }

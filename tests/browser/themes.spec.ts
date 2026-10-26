@@ -17,7 +17,10 @@ test("shell and discovery fit intermediate viewport widths", async ({ page }) =>
   for (const width of [320, 360, 375, 390, 430, 600, 768, 820, 1024, 1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     for (const route of ["/", "/mods"]) {
-      await page.goto(route, { waitUntil: "networkidle" });
+      await page.goto(route, { waitUntil: "domcontentloaded" });
+      await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true", {
+        timeout: 15000,
+      });
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
         `${route} at ${width}`,
@@ -50,6 +53,9 @@ test("all nine appearances change full surfaces, persist and send no theme reque
     if (request.url().includes("supabase.co")) requests++;
   });
   await page.goto("/", { waitUntil: "networkidle" });
+  await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true", {
+    timeout: 15000,
+  });
   if ((page.viewportSize()?.width ?? 0) < 1024)
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
   const selector = page.getByRole("combobox", { name: "Website theme" });

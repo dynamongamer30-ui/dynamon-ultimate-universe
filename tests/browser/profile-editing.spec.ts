@@ -213,12 +213,35 @@ test("profile keeps long identity details and editable controls inside narrow an
       }),
       `${width} form bounds`,
     ).toBe(true);
-    expect(
-      await form.getByRole("textbox", { name: /Username/ }).evaluate((node) => {
+    const usernameMetrics = await form
+      .getByRole("textbox", { name: /Username/ })
+      .evaluate((node) => {
         const s = getComputedStyle(node);
-        return node.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
-      }),
-      `${width} username text space`,
+        let parent: Element | null = node;
+        const ancestors = [];
+        while (parent && ancestors.length < 6) {
+          const style = getComputedStyle(parent);
+          ancestors.push({
+            tag: parent.tagName,
+            width: parent.getBoundingClientRect().width,
+            padding: style.padding,
+            display: style.display,
+          });
+          parent = parent.parentElement;
+        }
+        return {
+          text:
+            node.getBoundingClientRect().width -
+            parseFloat(s.borderLeftWidth) -
+            parseFloat(s.borderRightWidth) -
+            parseFloat(s.paddingLeft) -
+            parseFloat(s.paddingRight),
+          ancestors,
+        };
+      });
+    expect(
+      usernameMetrics.text,
+      `${width} username text space: ${JSON.stringify(usernameMetrics)}`,
     ).toBeGreaterThan(175);
     const preview = page.getByRole("complementary", { name: "Profile preview" });
     for (const text of [displayName, email])

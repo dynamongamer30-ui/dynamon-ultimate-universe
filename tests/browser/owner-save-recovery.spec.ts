@@ -55,6 +55,7 @@ async function fixture(page: Page) {
       method: string;
       body: Record<string, unknown> | null;
       select: string | null;
+      identity: string | null;
     }[],
     settingsReads: 0,
     overrides: [
@@ -97,6 +98,7 @@ async function fixture(page: Page) {
           method: req.method(),
           body,
           select: url.searchParams.get("select"),
+          identity: url.searchParams.get("key")?.replace(/^eq\./, "") ?? null,
         });
         if (state.mode === "hold")
           await new Promise<void>((resolve) => {
@@ -107,14 +109,42 @@ async function fixture(page: Page) {
           data = { message: state.denialMessage };
         } else if (state.mode === "empty") data = null;
         else if (table === "site_settings") {
-          state.settings.set(String(body!.key), body!.value);
-          data = { key: body!.key };
-        } else if (req.method() === "DELETE") {
-          state.overrides = [];
-          data = { slug: "fire-phoenix" };
+          const key = String(body!.key ?? url.searchParams.get("key")?.replace(/^eq\./, ""));
+          const expected = url.searchParams.get("value");
+          if (
+            req.method() === "PATCH" &&
+            expected !== `eq.${JSON.stringify(state.settings.get(key))}`
+          )
+            data = null;
+          else if (req.method() === "POST" && state.settings.has(key)) {
+            status = 409;
+            data = { code: "23505", message: "duplicate key" };
+          } else {
+            state.settings.set(key, body!.value);
+            data = { key };
+          }
         } else {
-          state.overrides = [body!];
-          data = { slug: body!.slug };
+          const current = state.overrides[0];
+          const matches =
+            current &&
+            [...url.searchParams].every(([key, filter]) => {
+              if (key === "select") return true;
+              const value = current[key] ?? null;
+              return (
+                filter ===
+                (value === null
+                  ? "is.null"
+                  : `eq.${typeof value === "object" ? JSON.stringify(value) : value}`)
+              );
+            });
+          if (req.method() !== "POST" && !matches) data = null;
+          else if (req.method() === "DELETE") {
+            state.overrides = [];
+            data = { slug: "fire-phoenix" };
+          } else {
+            state.overrides = [{ ...current, ...body }];
+            data = { slug: current?.slug ?? body!.slug };
+          }
         }
       }
     } else if (table === "notification_prefs") data = { asked_at: "2026-01-01T00:00:00Z" };
@@ -128,6 +158,37 @@ async function fixture(page: Page) {
   );
   return state;
 }
+
+test("stale branding drafts cannot overwrite a newer owner setting", async ({ page }) => {
+  const state = await fixture(page);
+  state.mode = "allow";
+  const field = page.getByRole("textbox", { name: "Site name", exact: true });
+  await field.fill("Retained older-tab draft");
+  state.settings.set("branding", { siteName: "Newer tab saved first" });
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("another session");
+  await expect(field).toHaveValue("Retained older-tab draft");
+  expect(state.settings.get("branding")).toEqual({ siteName: "Newer tab saved first" });
+  expect(state.writes).toHaveLength(1);
+  expect(state.writes[0].method).toBe("PATCH");
+});
+
+test("stale mod edits and resets cannot replace a newer saved mod", async ({ page }) => {
+  const state = await fixture(page);
+  state.mode = "allow";
+  const group = await modEditor(page);
+  state.overrides[0].name = "Newer saved mod";
+  const name = group.getByRole("textbox", { name: /^Name \(default:/ });
+  await name.fill("Older draft");
+  await group.getByRole("button", { name: "Save mod", exact: true }).click();
+  await expect(group.getByRole("alert")).toContainText("another session");
+  await expect(name).toHaveValue("Older draft");
+  expect(state.overrides[0].name).toBe("Newer saved mod");
+  await group.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Reset", exact: true }).click();
+  await expect(group.getByRole("alert")).toContainText("Reset was not confirmed");
+  expect(state.overrides[0].name).toBe("Newer saved mod");
+});
 
 for (const editor of [
   { tab: "Branding & Hero", key: "branding", field: "Site name", value: "Owner retained draft" },
@@ -189,7 +250,7 @@ for (const editor of [
       await page.getByRole("button", { name: editor.tab, exact: true }).click();
     await draftIsRetained();
     expect(state.writes.map((write) => write.select)).toEqual(["key", "key", "key"]);
-    expect(state.writes[2].body?.key).toBe(editor.key);
+    expect(state.writes[2].body?.key ?? state.writes[2].identity).toBe(editor.key);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

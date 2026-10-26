@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOwnerResource } from "@/hooks/useOwnerResource";
 import { useOwnerMutation } from "@/hooks/useOwnerMutation";
 import { Button } from "@/components/ui/button";
+import { saveOwnerSetting } from "@/lib/ownerSettings";
 
 const timingDefaults = { timer: 900, minTimer: 45 };
 const accountDefaults = { enabled: true };
@@ -33,7 +34,7 @@ function useConfiguration<T extends object>(id: string, defaults: T, valid: (val
         const value =
           data?.data == null ? defaults : { ...defaults, ...(data.data as unknown as T) };
         if (!valid(value)) throw new Error("Saved configuration is invalid");
-        return { value, exists: !!data };
+        return { value, exists: !!data, snapshot: data ? (data.data as unknown) : undefined };
       },
       [id, defaults, valid],
     ),
@@ -47,17 +48,8 @@ function useConfiguration<T extends object>(id: string, defaults: T, valid: (val
     mutation.run(async (signal) => {
       if (!draft || resource.loading || resource.error) return;
       if (!valid(draft)) throw new Error("Use valid values before saving. Your draft is retained.");
-      const { data, error } = await supabase
-        .from("app_config")
-        .upsert({ id, data: draft as never })
-        .select("id")
-        .abortSignal(signal)
-        .maybeSingle()
-        .retry(false);
-      if (signal.aborted) throw new Error("Configuration save was not confirmed");
-      if (error) throw new Error(error.message);
-      if (data?.id !== id)
-        throw new Error("Configuration save was not confirmed. Your draft is retained.");
+      await saveOwnerSetting("app_config", id, draft, resource.data?.snapshot, signal);
+      resource.setData({ value: draft, exists: true, snapshot: draft });
       toast.success("Configuration saved");
     });
   return {
@@ -217,7 +209,9 @@ export function OwnerAccountsEditor() {
           <input
             type="checkbox"
             checked={state.draft?.enabled ?? false}
-            onChange={(event) => state.setDraft({ enabled: event.target.checked })}
+            onChange={(event) =>
+              state.setDraft((draft) => draft && { ...draft, enabled: event.target.checked })
+            }
           />
           Auto-delete inactive accounts
         </label>

@@ -12,6 +12,21 @@ test.beforeEach(({ page }, info) => {
   });
 });
 
+test("stale timing saves preserve newer configuration and the unsaved draft", async ({ page }) => {
+  const state = await managementFixture(page, "/admin-control");
+  state.mode = "allow";
+  await page.getByRole("button", { name: "Unlock Timing", exact: true }).click();
+  const region = page.getByRole("region", { name: "Unlock timing", exact: true });
+  const field = region.getByRole("spinbutton", { name: "Minimum time (seconds)", exact: true });
+  await expect(field).toHaveValue("60");
+  await field.fill("55");
+  state.configs.set("Security", { timer: 1500, minTimer: 75 });
+  await region.getByRole("button", { name: "Save unlock timing", exact: true }).click();
+  await expect(region.getByRole("alert")).toContainText("another session");
+  await expect(field).toHaveValue("55");
+  expect(state.configs.get("Security")).toEqual({ timer: 1500, minTimer: 75 });
+});
+
 test("timing lookup failures block defaults and retry restores the saved timing", async ({
   page,
 }) => {

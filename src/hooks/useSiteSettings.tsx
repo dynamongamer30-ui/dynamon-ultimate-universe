@@ -88,6 +88,7 @@ export const DEFAULT_SOCIALS: Socials = {
 };
 
 type Ctx = {
+  savedSettings: Record<string, unknown>;
   websiteAppearance: unknown;
   loading: boolean;
   error: string | null;
@@ -102,6 +103,7 @@ type Ctx = {
 };
 
 const C = createContext<Ctx>({
+  savedSettings: {},
   websiteAppearance: undefined,
   loading: true,
   error: null,
@@ -175,6 +177,7 @@ function applyOverride(
 }
 
 export function SiteSettingsProvider({ children }: { children: ReactNode }) {
+  const [savedSettings, setSavedSettings] = useState<Record<string, unknown>>({});
   const [websiteAppearance, setWebsiteAppearance] = useState<unknown>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -211,6 +214,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       if (settingsError || overridesError) throw settingsError || overridesError;
       const map = new Map<string, unknown>();
       (settings ?? []).forEach((r: { key: string; value: unknown }) => map.set(r.key, r.value));
+      setSavedSettings(Object.fromEntries(map));
       setWebsiteAppearance(map.get("website_appearance"));
       setBranding({
         ...DEFAULT_BRANDING,
@@ -270,6 +274,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   return (
     <C.Provider
       value={{
+        savedSettings,
         loading,
         error,
         branding,

@@ -21,6 +21,7 @@ import { PageShell } from "@/components/PageShell";
 import { OwnerGate } from "@/components/OwnerGate";
 import { ThemedSelect } from "@/components/ThemedSelect";
 import { supabase } from "@/integrations/supabase/client";
+import { saveOwnerSetting, writeOwnerMod } from "@/lib/ownerSettings";
 import {
   useSiteSettings,
   DEFAULT_BRANDING,
@@ -187,23 +188,19 @@ function ControlPanel() {
 }
 
 // ---------- Generic settings save helper ----------
-async function saveSetting(key: string, value: unknown, signal: AbortSignal) {
-  const { data, error } = await supabase
-    .from("site_settings")
-    .upsert({ key, value: value as never })
-    .select("key")
-    .abortSignal(signal)
-    .maybeSingle()
-    .retry(false);
-  if (signal.aborted) throw new Error("Save was not confirmed");
-  if (error) throw new Error(error.message);
-  if (data?.key !== key) throw new Error("Save was not confirmed. Your draft is retained.");
-  toast.success("Saved");
-  return true;
+function useSettingSave(key: string) {
+  const { savedSettings } = useSiteSettings();
+  const snapshot = useRef(savedSettings[key]);
+  return async (value: unknown, signal: AbortSignal) => {
+    await saveOwnerSetting("site_settings", key, value, snapshot.current, signal);
+    snapshot.current = value;
+    toast.success("Saved");
+  };
 }
 
 // ---------- Branding ----------
 function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: () => void }) {
+  const saveSetting = useSettingSave("branding");
   const [v, setV] = useState<SiteBranding>(initial);
   const { saving, error, run } = useOwnerMutation();
   const f =
@@ -254,7 +251,7 @@ function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: 
         onReset={() => setV(DEFAULT_BRANDING)}
         onSave={() =>
           void run(async (signal) => {
-            await saveSetting("branding", v, signal);
+            await saveSetting(v, signal);
             onSaved();
           })
         }
@@ -265,6 +262,7 @@ function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: 
 
 // ---------- Announcement ----------
 function AnnouncementEditor({ initial, onSaved }: { initial: Announcement; onSaved: () => void }) {
+  const saveSetting = useSettingSave("announcement");
   const [v, setV] = useState<Announcement>(initial);
   const { saving, error, run } = useOwnerMutation();
   return (
@@ -316,7 +314,7 @@ function AnnouncementEditor({ initial, onSaved }: { initial: Announcement; onSav
         onReset={() => setV(DEFAULT_ANNOUNCEMENT)}
         onSave={() =>
           void run(async (signal) => {
-            await saveSetting("announcement", v, signal);
+            await saveSetting(v, signal);
             onSaved();
           })
         }
@@ -327,6 +325,7 @@ function AnnouncementEditor({ initial, onSaved }: { initial: Announcement; onSav
 
 // ---------- Socials ----------
 function SocialsEditor({ initial, onSaved }: { initial: Socials; onSaved: () => void }) {
+  const saveSetting = useSettingSave("socials");
   const [v, setV] = useState<Socials>(initial);
   const { saving, error, run } = useOwnerMutation();
   return (
@@ -371,7 +370,7 @@ function SocialsEditor({ initial, onSaved }: { initial: Socials; onSaved: () => 
         onReset={() => setV(DEFAULT_SOCIALS)}
         onSave={() =>
           void run(async (signal) => {
-            await saveSetting("socials", v, signal);
+            await saveSetting(v, signal);
             onSaved();
           })
         }
@@ -382,6 +381,7 @@ function SocialsEditor({ initial, onSaved }: { initial: Socials; onSaved: () => 
 
 // ---------- Featured ----------
 function FeaturedEditor({ onSaved }: { onSaved: () => void }) {
+  const saveSetting = useSettingSave("featured");
   const { featuredSlug } = useSiteSettings();
   const [slug, setSlug] = useState(featuredSlug ?? "");
   const { saving, error, run } = useOwnerMutation();
@@ -409,7 +409,7 @@ function FeaturedEditor({ onSaved }: { onSaved: () => void }) {
         onReset={() => setSlug("")}
         onSave={() =>
           void run(async (signal) => {
-            await saveSetting("featured", { slug }, signal);
+            await saveSetting({ slug }, signal);
             onSaved();
           })
         }
@@ -470,6 +470,7 @@ function ModRowEditor({
   onSaved: () => void;
 }) {
   const base = baseMods.find((m) => m.slug === slug)!;
+  const snapshot = useRef(existing);
   const confirm = useConfirm();
   const [v, setV] = useState({
     name: existing?.name ?? "",
@@ -565,17 +566,12 @@ function ModRowEditor({
         (!Number.isFinite(payload.seed_rating_points) || payload.seed_rating_points < 0)
       )
         throw new Error("Rating points must be a non-negative number. Your draft is retained.");
-      const { data, error } = await supabase
-        .from("mod_overrides")
-        .upsert(payload as never)
-        .select("slug")
-        .abortSignal(signal)
-        .maybeSingle()
-        .retry(false);
-      if (signal.aborted) throw new Error("Save was not confirmed");
-      if (error) throw new Error(error.message);
-      if (data?.slug !== slug)
-        throw new Error("Mod save was not confirmed. Your draft is retained.");
+      await writeOwnerMod(
+        slug,
+        payload,
+        snapshot.current as unknown as Record<string, unknown> | undefined,
+        signal,
+      );
       toast.success("Mod saved");
       onSaved();
     });
@@ -594,18 +590,12 @@ function ModRowEditor({
       )
         return;
       await run(async (signal) => {
-        const { data, error } = await supabase
-          .from("mod_overrides")
-          .delete()
-          .eq("slug", slug)
-          .select("slug")
-          .abortSignal(signal)
-          .maybeSingle()
-          .retry(false);
-        if (signal.aborted) throw new Error("Reset was not confirmed");
-        if (error) throw new Error(error.message);
-        if (data?.slug !== slug)
-          throw new Error("Reset was not confirmed. Check the saved mod before trying again.");
+        await writeOwnerMod(
+          slug,
+          null,
+          snapshot.current as unknown as Record<string, unknown> | undefined,
+          signal,
+        );
         toast.success("Reset");
         onSaved();
       });

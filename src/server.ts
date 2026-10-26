@@ -19,10 +19,25 @@ const SECURITY_HEADERS: Record<string, string> = {
     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com; connect-src 'self' https://dfxcpxzylyycrirtnkof.supabase.co wss://dfxcpxzylyycrirtnkof.supabase.co https://generator.dynamongamer30.workers.dev https://dg.dynamongamer30.workers.dev https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com; media-src 'self' blob:; worker-src 'self' blob:",
 };
 
-function withSecurityHeaders(response: Response): Response {
+function withSecurityHeaders(response: Response, request: Request): Response {
   const headers = new Headers(response.headers);
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
     if (!headers.has(name)) headers.set(name, value);
+  }
+  const privatePath =
+    /^\/(?:admin(?:[-/]|$)|auth(?:\/|$)|profile(?:\/|$)|favorites(?:\/|$)|achievements(?:\/|$)|notifications(?:\/|$)|rewards(?:\/|$)|claim(?:\/|$)|unlock(?:\/|$)|generator(?:\/|$))/.test(
+      new URL(request.url).pathname,
+    );
+  if (
+    privatePath ||
+    response.status >= 400 ||
+    request.headers.has("authorization") ||
+    request.headers.has("cookie") ||
+    headers.has("set-cookie")
+  ) {
+    headers.set("Cache-Control", "private, no-store");
+    headers.set("CDN-Cache-Control", "no-store");
+    headers.set("Cloudflare-CDN-Cache-Control", "no-store");
   }
   return new Response(response.body, {
     status: response.status,
@@ -64,7 +79,7 @@ export default {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response));
+      return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response), request);
     } catch (error) {
       console.error(error);
       return withSecurityHeaders(
@@ -72,6 +87,7 @@ export default {
           status: 500,
           headers: { "content-type": "text/html; charset=utf-8" },
         }),
+        request,
       );
     }
   },

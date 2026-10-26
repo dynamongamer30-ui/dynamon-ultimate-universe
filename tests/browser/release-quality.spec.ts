@@ -7,6 +7,9 @@ test("public metadata, private indexing and install assets are consistent", asyn
   });
   for (const path of ["/", "/mods", "/mods/thunder-arena", "/about", "/contact"]) {
     await page.goto(path, { waitUntil: "domcontentloaded" });
+    await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true", {
+      timeout: 15000,
+    });
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       "href",
       `https://dynamongamer.com${path}`,
@@ -28,6 +31,9 @@ test("public metadata, private indexing and install assets are consistent", asyn
     "/generator",
   ]) {
     await page.goto(path, { waitUntil: "domcontentloaded" });
+    await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true", {
+      timeout: 15000,
+    });
     await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", /noindex/);
   }
   const response = await page.request.get("/manifest.webmanifest");

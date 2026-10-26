@@ -40,6 +40,7 @@ export async function managementFixture(page: Page, path: string) {
     mode: "deny" as "deny" | "empty" | "hold" | "allow",
     readsFail: false,
     configFail: false,
+    deviceFail: false,
     notificationFail: false,
     release: undefined as undefined | (() => void),
     writes: [] as {
@@ -88,13 +89,35 @@ export async function managementFixture(page: Page, path: string) {
       ];
     else if (target === "admin_account_stats") data = [{ total_users: 7, inactive_30d: 2 }];
     else if (target === "notification_prefs") data = { asked_at: "2026-01-01T00:00:00Z" };
-    else if (target === "app_config" || target === "notifications") {
+    else if (target === "activated_users" && state.deviceFail) {
+      status = 503;
+      data = { message: "Local device lookup denied" };
+    } else if (target === "valid_keys" && req.method() === "POST") {
+      const body = req.postDataJSON() as Record<string, unknown>;
+      state.writes.push({
+        target,
+        method: req.method(),
+        body,
+        select: url.searchParams.get("select"),
+      });
+      if (state.mode === "hold")
+        await new Promise<void>((resolve) => {
+          state.release = resolve;
+        });
+      if (state.mode === "deny") {
+        status = 403;
+        data = { message: "Local key write denied" };
+      } else data = state.mode === "empty" ? [] : [{ id: body.id }];
+    } else if (target === "app_config" || target === "notifications") {
       if (req.method() === "GET") {
         if (target === "app_config") {
           state.configReads++;
-          data = {
-            data: state.configs.get((url.searchParams.get("id") ?? "").replace(/^eq\./, "")),
-          };
+          const idFilter = url.searchParams.get("id") ?? "";
+          data = idFilter.startsWith("in.")
+            ? [...state.configs]
+                .filter(([id]) => idFilter.slice(3).replace(/[()"]/g, "").split(",").includes(id))
+                .map(([id, data]) => ({ id, data }))
+            : { data: state.configs.get(idFilter.replace(/^eq\./, "")) };
         } else {
           state.notificationReads++;
           data = state.notifications;
@@ -123,8 +146,17 @@ export async function managementFixture(page: Page, path: string) {
           data = { message: "Local write denied" };
         } else if (state.mode === "empty") data = null;
         else if (target === "app_config") {
-          state.configs.set(String(body.id), body.data);
-          data = { id: body.id };
+          const id = String(body.id ?? url.searchParams.get("id")?.replace(/^eq\./, ""));
+          const expected = url.searchParams.get("data");
+          if (
+            req.method() === "PATCH" &&
+            expected !== `eq.${JSON.stringify(state.configs.get(id))}`
+          )
+            data = null;
+          else {
+            state.configs.set(id, body.data);
+            data = { id };
+          }
         } else if (req.method() === "POST") {
           data = {
             ...body,
@@ -174,6 +206,8 @@ export async function managementFixture(page: Page, path: string) {
       .catch(() => {});
   });
   await page.goto(path, { waitUntil: "networkidle" });
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible({
+    timeout: 15000,
+  });
   return state;
 }

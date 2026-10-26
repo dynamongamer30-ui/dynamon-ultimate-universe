@@ -196,10 +196,7 @@ export interface UploadPayloadArgs {
   meta_sig_b64: string;
 }
 
-export async function uploadPayload(
-  args: UploadPayloadArgs,
-  signal?: AbortSignal,
-): Promise<{ ok: boolean }> {
+export function normalizeSignedPayload(args: UploadPayloadArgs): UploadPayloadArgs {
   const protocol = Number(args.protocol);
   const issued = Number(args.issued);
   const minClient = Number(args.min_client);
@@ -209,16 +206,24 @@ export async function uploadPayload(
     !Number.isSafeInteger(issued) ||
     issued <= 0 ||
     issued > Math.floor(Date.now() / 1000) + 300 ||
+    typeof args.meta_sig_b64 !== "string" ||
     !args.meta_sig_b64.trim()
   ) {
     throw new Error(
       "Royal Void 0.3 requires a freshly signed protocol-2 bundle with min_client 3, issued and meta_sig_b64. Use the owner payload tool.",
     );
   }
+  return { ...args, protocol, issued, min_client: minClient };
+}
+
+export async function uploadPayload(
+  args: UploadPayloadArgs,
+  signal?: AbortSignal,
+): Promise<{ ok: boolean }> {
   return adminJson("/admin/upload-payload", {
     method: "POST",
     signal,
-    body: JSON.stringify({ ...args, protocol, issued, min_client: minClient }),
+    body: JSON.stringify(normalizeSignedPayload(args)),
   });
 }
 

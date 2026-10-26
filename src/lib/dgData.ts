@@ -99,16 +99,22 @@ async function selectOne(table: string, id: string): Promise<Record<string, unkn
     .select("data")
     .eq("id", id)
     .abortSignal(AbortSignal.timeout(10000))
+    .retry(false)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return (data as { data?: Record<string, unknown> } | null)?.data ?? null;
 }
 
 async function upsertRow(table: string, id: string, data: unknown): Promise<void> {
-  const { error } = await supabase
+  const { data: confirmed, error } = await supabase
     .from(table as never)
-    .upsert({ id, data } as never, { onConflict: "id" });
+    .upsert({ id, data } as never, { onConflict: "id" })
+    .select("id")
+    .abortSignal(AbortSignal.timeout(10000))
+    .retry(false);
   if (error) throw new Error(error.message);
+  if (!Array.isArray(confirmed) || !confirmed.some((row: { id?: unknown }) => row.id === id))
+    throw new Error("Save was not confirmed. Refresh the saved entry before trying again.");
 }
 
 /** Conditional write prevents an open editor from overwriting newer data. */
@@ -127,13 +133,20 @@ async function compareRow(
   expected: unknown,
 ): Promise<void> {
   if (expected === null) {
-    const { error } = await supabase.from(table as never).insert({ id, data: value } as never);
+    const { data, error } = await supabase
+      .from(table as never)
+      .insert({ id, data: value } as never)
+      .select("id")
+      .abortSignal(AbortSignal.timeout(10000))
+      .retry(false);
     if (error)
       throw new Error(
         error.code === "23505"
           ? "Settings changed elsewhere. Reload before saving."
           : error.message,
       );
+    if (!Array.isArray(data) || !data.some((row: { id?: unknown }) => row.id === id))
+      throw new Error("Settings save was not confirmed. Reload before trying again.");
     return;
   }
   const { data, error } = await supabase
@@ -141,7 +154,9 @@ async function compareRow(
     .update({ data: value } as never)
     .eq("id", id)
     .eq("data", JSON.stringify(expected))
-    .select("id");
+    .select("id")
+    .abortSignal(AbortSignal.timeout(10000))
+    .retry(false);
   if (error) throw new Error(error.message);
   if (!data?.length)
     throw new Error("Data changed elsewhere or access was denied. Reload before saving.");
@@ -155,11 +170,16 @@ async function patchRow(table: string, id: string, patch: Record<string, unknown
 }
 
 async function deleteRow(table: string, id: string): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from(table as never)
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .select("id")
+    .abortSignal(AbortSignal.timeout(10000))
+    .retry(false);
   if (error) throw new Error(error.message);
+  if (!Array.isArray(data) || !data.some((row: { id?: unknown }) => row.id === id))
+    throw new Error("Removal was not confirmed. Reload before trying again.");
 }
 
 // ---------- ValidKeys ----------
@@ -278,21 +298,32 @@ export async function createManualKey(prefix: string, hours: number): Promise<st
   if (!/^[A-Z0-9]{1,12}$/.test(clean)) throw new Error("Invalid key prefix.");
   for (let i = 0; i < 10; i++) {
     const key = `${clean}-${rand()}`;
-    const { error } = await supabase.from("valid_keys" as never).insert({
-      id: key,
-      data: {
-        status: "active",
-        expiry: 0,
-        durationHours: hours,
-        activated: false,
-        device: null,
-        date: nowSeconds(),
-        fingerprint: "",
-        sourceIP: "",
-        source: "admin",
-      },
-    } as never);
-    if (!error) return key;
+    const { data, error } = await supabase
+      .from("valid_keys" as never)
+      .insert({
+        id: key,
+        data: {
+          status: "active",
+          expiry: 0,
+          durationHours: hours,
+          activated: false,
+          device: null,
+          date: nowSeconds(),
+          fingerprint: "",
+          sourceIP: "",
+          source: "admin",
+        },
+      } as never)
+      .select("id")
+      .abortSignal(AbortSignal.timeout(10000))
+      .retry(false);
+    if (!error) {
+      if (!Array.isArray(data) || !data.some((row: { id?: unknown }) => row.id === key))
+        throw new Error(
+          "Key creation was not confirmed. Refresh the key list before trying again.",
+        );
+      return key;
+    }
     if (error.code !== "23505") throw new Error(error.message);
   }
   throw new Error("Could not allocate a unique key");
@@ -402,8 +433,8 @@ export async function listBannedDevices(signal?: AbortSignal): Promise<BannedDev
   });
 }
 
-export async function listActivatedUsers(): Promise<ActivatedUser[]> {
-  const rows = await selectAll("activated_users");
+export async function listActivatedUsers(signal?: AbortSignal): Promise<ActivatedUser[]> {
+  const rows = await selectAll("activated_users", signal);
   return rows.map((r) => ({ fingerprint: r.id, ...(r.data ?? {}) }));
 }
 

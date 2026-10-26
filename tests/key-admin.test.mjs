@@ -98,7 +98,7 @@ const client = {
                 reject,
               );
             rows.set(key, clone(value));
-            return Promise.resolve({ error: null }).then(resolve, reject);
+            return Promise.resolve({ data: [{ id }], error: null }).then(resolve, reject);
           }
           if (op === "update") {
             if (!existing || JSON.stringify(existing.data) !== filters.data)
