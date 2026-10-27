@@ -41,7 +41,7 @@ const links = {
   whatsapp: "Whatsapp",
   website: "Website",
 };
-function safeLink(value) {
+export function safeLink(value) {
   if (typeof value !== "string" || value.length > 2048) return "";
   try {
     const u = new URL(value);
@@ -51,6 +51,7 @@ function safeLink(value) {
       !u.port &&
       u.hostname.includes(".") &&
       !u.hostname.endsWith(".local") &&
+      !u.hostname.startsWith("[") &&
       !/^[\d.]+$/.test(u.hostname)
       ? u.toString()
       : "";

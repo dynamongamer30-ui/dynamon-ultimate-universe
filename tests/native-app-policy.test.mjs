@@ -120,7 +120,15 @@ test("public configuration publishes the shared UI without private values and ne
   let rows = [
     { id: "Ui", data: nativeUi(null, { Links: { Website: "https://dynamongamer.com/" } }) },
     { id: "Api", data: { Token: "DO-NOT-PUBLISH" } },
-    { id: "Update", data: { Enabled: false, Force: false } },
+    {
+      id: "Update",
+      data: {
+        Enabled: true,
+        Force: false,
+        VersionCode: 20,
+        UpdateUrl: "https://downloads.example.com/latest.apk",
+      },
+    },
   ];
   let reads = 0;
   globalThis.fetch = async (url, options) => {
@@ -134,6 +142,8 @@ test("public configuration publishes the shared UI without private values and ne
     assert.equal(response.status, 200);
     const config = await response.json();
     assert.equal(config.Ui.links.website, "https://dynamongamer.com/");
+    assert.equal(config.Update.Enabled, true);
+    assert.equal(config.Update.UpdateUrl, "https://downloads.example.com/latest.apk");
     assert.ok(!JSON.stringify(config).includes("DO-NOT-PUBLISH"));
     rows = [{ id: "Maintenance", data: true }];
     const verify = new Request("https://fixture.test/verify-key", {

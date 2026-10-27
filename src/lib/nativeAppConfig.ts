@@ -123,6 +123,8 @@ export function validateNativeUi(value: NativeUi) {
         url.password ||
         url.port ||
         !url.hostname.includes(".") ||
+        url.hostname.endsWith(".local") ||
+        /^[\d.]+$/.test(url.hostname) ||
         /^(localhost|127\.|\[)/.test(url.hostname)
       )
         throw Error();

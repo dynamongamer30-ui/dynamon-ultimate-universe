@@ -3,6 +3,7 @@ import { useOwnerResource } from "@/hooks/useOwnerResource";
 import { useAutosave } from "@/hooks/useAutosave";
 import { readOwnerConfig, saveOwnerSetting } from "@/lib/ownerSettings";
 import { DEFAULT_APP_UPDATE } from "@/lib/dgData";
+import { nativeUi, validateNativeUi } from "@/lib/nativeAppConfig";
 import { Button } from "@/components/ui/button";
 
 const ids = ["Maintenance", "RateLimit", "KeyDurationHours", "IPWhitelist", "Update"];
@@ -210,7 +211,13 @@ export function NativeConfigEditor() {
               if (v.Enabled) {
                 try {
                   const url = new URL(v.UpdateUrl);
-                  if (url.protocol !== "https:" || url.username || url.password) throw Error();
+                  if (
+                    url.protocol !== "https:" ||
+                    url.username ||
+                    url.password ||
+                    validateNativeUi(nativeUi(null, { Links: { Website: v.UpdateUrl } }))
+                  )
+                    throw Error();
                 } catch {
                   return "Add a valid HTTPS update link before enabling updates.";
                 }

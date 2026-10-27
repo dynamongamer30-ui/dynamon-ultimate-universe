@@ -1,4 +1,4 @@
-import { publicUiConfig } from "./public-ui.js";
+import { publicUiConfig, safeLink } from "./public-ui.js";
 // Pure policy helpers: no credentials, database access, or request state.
 function licenseReason(activation, keyData, fingerprint, now) {
   if (!activation || !keyData) return "no-login";
@@ -352,7 +352,7 @@ function publicAppConfig(config) {
   const tutorialUrl =
     safePublicUrl(cfg.TutorialUrl) ||
     (tutorialId ? safePublicUrl("https://youtu.be/" + encodeURIComponent(tutorialId)) : "");
-  const updateUrl = safePublicUrl(update.UpdateUrl);
+  const updateUrl = safeLink(update.UpdateUrl);
 
   return {
     AppVersion: Number.isFinite(Number(cfg.AppVersion)) ? Number(cfg.AppVersion) : 0,
