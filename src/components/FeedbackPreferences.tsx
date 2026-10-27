@@ -61,7 +61,7 @@ export function FeedbackPreferences() {
           id="feedback-preferences-panel"
           role="dialog"
           aria-label="Feedback preferences"
-          className="feedback-popover right-0 z-[var(--z-popover)] mt-2 w-[min(18rem,calc(100vw-1.5rem))] rounded-2xl border border-border/70 bg-card p-3 shadow-elev glass-l3"
+          className="feedback-popover right-0 z-[var(--z-popover)] mt-2 w-[min(18rem,calc(100vw-1.5rem))] rounded-2xl border border-border bg-card p-3 text-foreground shadow-elev"
         >
           <div className="flex items-start justify-between gap-3 px-1 pb-2">
             <div>

@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useAutosave } from "@/hooks/useAutosave";
 import { getConfigNode, compareConfigNode } from "@/lib/dgData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const THEMES = [
+  {
+    id: "royal_black",
+    label: "Royal Black",
+    primary: "#C2C8D0",
+    deep: "#08090C",
+    highlight: "#F5F6F7",
+  },
   {
     id: "dark",
     label: "Dark / Royal Void",
@@ -50,7 +58,7 @@ const isColor = (value: unknown): value is string =>
   typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
 const DEFAULT: ThemeConfig = {
   schema: 1,
-  defaultTheme: "dark",
+  defaultTheme: "royal_black",
   enabledThemes: [...IDS],
   palettes: {},
 };
@@ -88,10 +96,10 @@ function normalize(value: unknown): ThemeConfig {
 export function DexThemes() {
   const snapshot = useRef<unknown>(null);
   const [config, setConfig] = useState<ThemeConfig>(DEFAULT);
-  const [selected, setSelected] = useState<ThemeId>("dark");
+  const [selected, setSelected] = useState<ThemeId>("royal_black");
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
-  const [busy, setBusy] = useState(false);
+
   useEffect(() => {
     let active = true;
     getConfigNode<unknown>("DexThemes")
@@ -134,29 +142,26 @@ export function DexThemes() {
     else delete palette[key];
     setConfig({ ...config, palettes: { ...config.palettes, [selected]: palette } });
   }
-  async function save() {
-    for (const id of IDS)
-      for (const key of COLOR_KEYS) {
-        const color = config.palettes[id]?.[key];
-        if (color !== undefined && !isColor(color)) {
-          toast.error(`${id}: ${key} must use #RRGGBB or be empty.`);
-          return;
+  const autosave = useAutosave({
+    value: config,
+    ready: !loading && !failed,
+    validate: (next) => {
+      for (const id of IDS)
+        for (const key of COLOR_KEYS) {
+          const color = next.palettes[id]?.[key];
+          if (color !== undefined && !isColor(color))
+            return id + ": " + key + " must use #RRGGBB or be empty.";
         }
-      }
-    setBusy(true);
-    try {
-      const next = normalize(config);
-      await compareConfigNode("DexThemes", next, snapshot.current);
-      snapshot.current = next;
-      toast.success(
-        "Themes saved. Applied at the next game launch with the updated Worker and DEX.",
-      );
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save themes");
-    } finally {
-      setBusy(false);
-    }
-  }
+      return null;
+    },
+    save: async (next) => {
+      const normalized = normalize(next);
+      await compareConfigNode("DexThemes", normalized, snapshot.current);
+      snapshot.current = normalized;
+    },
+  });
+  const busy = false;
+  const save = () => void autosave.saveNow();
   if (loading) return <p>Loading DEX themes…</p>;
   if (failed) return <p>Could not load DEX themes. Reload before editing.</p>;
   const theme = THEMES.find((t) => t.id === selected)!;
@@ -260,11 +265,14 @@ export function DexThemes() {
           Reset {theme.label} palette
         </Button>
       </details>
-      <p className="my-4 text-sm text-muted-foreground">
-        Logos are APK assets: assets/royal_void/images/themes/dark.png, fire.png, thunder.png,
-        water.png, earth.png, diamond.png, gold.png and spirit.png. Missing files use the existing
-        logo.
+      <p role="status" className="my-3 text-sm">
+        {autosave.status}
       </p>
+      {autosave.error && (
+        <p role="alert" className="text-sm text-destructive">
+          {autosave.error}
+        </p>
+      )}
       <Button disabled={busy} onClick={save}>
         Save DEX themes
       </Button>

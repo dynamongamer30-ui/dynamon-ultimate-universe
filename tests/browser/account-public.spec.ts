@@ -1,3 +1,4 @@
+import { chooseWebsiteTheme } from "./fixtures/website-theme";
 import { expect, test } from "@playwright/test";
 
 test("signed-out account routes show sign-in without private reads or setup writes", async ({
@@ -118,7 +119,7 @@ test("account surfaces support all nine themes without extra backend reads", asy
     const menu = page.getByRole("button", { name: "Open menu", exact: true });
     const mobile = await menu.isVisible();
     if (mobile) await menu.click();
-    await page.getByRole("combobox", { name: "Website theme" }).selectOption(theme);
+    await chooseWebsiteTheme(page, theme);
     if (mobile) await page.keyboard.press("Escape");
     await expect(page.locator("html")).toHaveAttribute("data-website-theme", theme);
     await expect(action).toBeInViewport({ ratio: 1 });

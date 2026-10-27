@@ -147,12 +147,15 @@ const pioneer = (page: Page) =>
   badges(page).getByRole("article", { name: "Fixture pioneer", exact: true });
 async function open(page: Page, path = "/achievements") {
   await page.goto(path, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible({
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toBeVisible({
     timeout: 15000,
   });
 }
 async function goToBadges(page: Page) {
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("link", { name: /Achievements/ }).click();
   await expect(badges(page)).toBeVisible();
 }

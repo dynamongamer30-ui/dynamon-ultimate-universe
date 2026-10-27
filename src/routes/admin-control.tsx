@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
+import { useAutosave } from "@/hooks/useAutosave";
 import {
   Shield,
   Save,
@@ -165,7 +166,9 @@ function ControlPanel() {
                 </Link>
               </div>
             )}
-            {tab === "branding" && <BrandingEditor initial={branding} onSaved={refresh} />}
+            {tab === "branding" && (
+              <BrandingEditor initial={branding} onSaved={() => void refresh(true)} />
+            )}
             {tab === "announcement" && (
               <AnnouncementEditor initial={announcement} onSaved={refresh} />
             )}
@@ -202,18 +205,35 @@ function useSettingSave(key: string) {
 function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: () => void }) {
   const saveSetting = useSettingSave("branding");
   const [v, setV] = useState<SiteBranding>(initial);
-  const { saving, error, run } = useOwnerMutation();
+
+  const autosave = useAutosave({
+    value: v,
+    ready: true,
+    validate: (value) =>
+      [value.logoUrl, value.faviconUrl, value.previewImageUrl].every((url) =>
+        /^(https:\/\/|\/(?!\/))/.test(url),
+      )
+        ? null
+        : "Use HTTPS image URLs or paths starting with /.",
+    save: async (value) => {
+      await saveSetting(value, AbortSignal.timeout(10000));
+      onSaved();
+    },
+  });
   const f =
     <K extends keyof SiteBranding>(k: K) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setV({ ...v, [k]: e.target.value } as SiteBranding);
   return (
     <Card
-      saving={saving}
-      error={error}
+      saving={autosave.saving}
+      error={autosave.error}
       title="Branding & Hero copy"
       desc="Site identity, hero headline, subtitle and CTAs."
     >
+      <p role="status" className="text-sm text-muted-foreground">
+        {autosave.status} · Changes save automatically.
+      </p>
       <Grid>
         <Field label="Circular brand image URL">
           <input
@@ -226,6 +246,22 @@ function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: 
         </Field>
         <Field label="Site name">
           <input value={v.siteName} onChange={f("siteName")} className={inp} />
+        </Field>
+        <Field label="Website icon URL (browser and search)">
+          <input
+            value={v.faviconUrl}
+            onChange={f("faviconUrl")}
+            className={inp}
+            placeholder="https://… or /image.png"
+          />
+        </Field>
+        <Field label="Website share preview image URL">
+          <input
+            value={v.previewImageUrl}
+            onChange={f("previewImageUrl")}
+            className={inp}
+            placeholder="https://… or /image.png"
+          />
         </Field>
         <Field label="Site tagline (for meta)">
           <input value={v.siteTagline} onChange={f("siteTagline")} className={inp} />
@@ -256,14 +292,9 @@ function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: 
         <textarea value={v.heroSubtitle} onChange={f("heroSubtitle")} rows={3} className={inp} />
       </Field>
       <SaveRow
-        saving={saving}
+        saving={autosave.saving}
         onReset={() => setV(DEFAULT_BRANDING)}
-        onSave={() =>
-          void run(async (signal) => {
-            await saveSetting(v, signal);
-            onSaved();
-          })
-        }
+        onSave={() => void autosave.saveNow()}
       />
     </Card>
   );

@@ -103,7 +103,7 @@ async function open(
   extra = "&ref=00000000-0000-4000-8000-000000000003",
 ) {
   await page.goto(`/claim?kind=${kind}${extra}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible({
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toBeVisible({
     timeout: 15000,
   });
 }

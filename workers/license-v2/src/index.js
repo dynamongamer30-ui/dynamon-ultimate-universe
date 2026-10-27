@@ -1,4 +1,5 @@
 import { ownerKeyAction } from "./owner-keys.js";
+import { checkAppPolicy } from "./app-policy.js";
 // Royal Void V2 isolated staging API.
 // Create a NEW Worker named royal-void-v2.
 // Do not replace dg, generator or the website Worker.
@@ -200,6 +201,8 @@ async function challenge(env) {
 
 async function activate(req, env) {
   const b = await requestBody(req);
+  const policy = await checkAppPolicy(env, b.client_version_code);
+  if (policy) return json({ error: policy.error }, policy.status);
 
   const license = typeof b.license_key === "string" ? b.license_key.trim().toUpperCase() : "";
 
@@ -269,6 +272,8 @@ async function issueLease(env, id, thumb, version, expiry) {
 
 async function renew(req, env) {
   const b = await requestBody(req);
+  const policy = await checkAppPolicy(env, b.client_version_code);
+  if (policy) return json({ error: policy.error }, policy.status);
 
   const lease = await tokenRead(env.SESSION_SIGNING_SECRET, "RV2:lease", b.lease);
 

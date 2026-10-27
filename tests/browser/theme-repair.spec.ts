@@ -1,3 +1,4 @@
+import { chooseWebsiteTheme } from "./fixtures/website-theme";
 import { expect, test, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ page }, info) => {
@@ -86,15 +87,15 @@ async function fixture(page: Page) {
   return writes;
 }
 
-test("large avatars and feedback/account popovers never expand or overflow the header", async ({
+test("large avatars and themed preference panels stay within the viewport", async ({
   page,
 }, info) => {
   const writes = await fixture(page);
   const header = page.locator("header.site-chrome");
   for (const width of [320, 360, 390, 430, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
-    const account = page.getByRole("button", { name: "Account", exact: true });
-    const box = (await account.boundingBox())!;
+    const profile = page.getByRole("link", { name: "Profile", exact: true });
+    const box = (await profile.boundingBox())!;
     expect(box.width).toBe(44);
     expect(box.height).toBe(44);
     expect(
@@ -102,25 +103,24 @@ test("large avatars and feedback/account popovers never expand or overflow the h
         () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
       ),
     ).toBe(true);
+    if (width <= 430) expect((await header.boundingBox())!.height).toBeLessThanOrEqual(90);
+    await page.getByRole("button", { name: "Open menu", exact: true }).click();
     const height = (await header.boundingBox())!.height;
-    if (width <= 430) expect(height).toBeLessThanOrEqual(90);
     const feedback = page.getByRole("button", { name: /^Feedback preference:/ });
     await feedback.click();
     const panel = page.getByRole("dialog", { name: "Feedback preferences", exact: true });
     await expect(panel).toBeInViewport({ ratio: 1 });
     expect((await header.boundingBox())!.height).toBe(height);
     if ([320, 390, 1440].includes(width))
-      await page.screenshot({ path: info.outputPath(`feedback-${width}.png`) });
+      await page.screenshot({ path: info.outputPath("feedback-" + width + ".png") });
     await panel.getByRole("radio", { name: /^Off/ }).focus();
     await page.keyboard.press("Escape");
     await expect(panel).toHaveCount(0);
     await expect(feedback).toBeFocused();
-    await account.click();
-    const menu = page.getByRole("dialog", { name: "Account menu", exact: true });
-    await expect(menu).toBeInViewport({ ratio: 1 });
-    expect((await header.boundingBox())!.height).toBe(height);
     await page.keyboard.press("Escape");
-    await expect(menu).toHaveCount(0);
+    await expect(
+      page.getByRole("navigation", { name: "Mobile navigation", exact: true }),
+    ).toHaveCount(0);
   }
   expect(writes).toEqual([]);
 });
@@ -144,10 +144,7 @@ test("all native palettes render readable homepage actions and persist without s
   };
   for (const [theme, colors] of Object.entries(palette)) {
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
-    await page
-      .getByRole("combobox", { name: "Website theme", exact: true })
-      .last()
-      .selectOption(theme);
+    await chooseWebsiteTheme(page, theme);
     await expect(page.locator("html")).toHaveAttribute("data-website-theme", theme);
     await page.getByRole("button", { name: "Close menu", exact: true }).click();
     expect(

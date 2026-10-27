@@ -122,7 +122,7 @@ async function show(page: Page, expectDialog = true) {
 }
 async function open(page: Page, expectDialog = true) {
   await page.goto("/mods/fire-phoenix", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible({
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toBeVisible({
     timeout: 15000,
   });
   await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true");

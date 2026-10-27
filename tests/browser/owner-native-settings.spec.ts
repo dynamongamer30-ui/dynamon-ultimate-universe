@@ -58,7 +58,7 @@ test("generator configuration failures recover without fallback writes", async (
   expect(state.writes).toEqual([]);
   state.configFail = false;
   await page.getByRole("button", { name: "Retry generator settings", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Switches", exact: true })).toBeVisible();
+  await expect(page.getByRole("switch", { name: "Maintenance mode", exact: true })).toBeVisible();
   expect(state.writes).toEqual([]);
 });
 
@@ -71,61 +71,60 @@ test("generator setting denial retains controls and stale updates cannot replace
   const field = page.getByRole("textbox", { name: "Version name", exact: true });
   await expect(field).toHaveValue("local-original");
   await field.fill("local-draft");
-  await page.getByRole("button", { name: "Save update settings", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "App update system", exact: true })
+    .locator("..")
+    .getByRole("button", { name: "Save now", exact: true })
+    .click();
   await expect(page.getByRole("alert")).toContainText("Local write denied");
   await expect(field).toHaveValue("local-draft");
   state.mode = "allow";
   state.configs.set("Update", { Enabled: false, VersionCode: 51, VersionName: "newer-tab" });
-  await page.getByRole("button", { name: "Save update settings", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "App update system", exact: true })
+    .locator("..")
+    .getByRole("button", { name: "Save now", exact: true })
+    .click();
   await expect(page.getByRole("alert")).toContainText("another session");
   expect(state.configs.get("Update")).toMatchObject({ VersionCode: 51 });
   await page.screenshot({ path: info.outputPath("owner-stale-update.png"), fullPage: true });
 });
 
-test("legacy app settings report partial confirmations and preserve drafts on a conflict", async ({
-  page,
-}) => {
+test("app text uses one atomic document and preserves drafts on a conflict", async ({ page }) => {
   const state = await managementFixture(page, "/admin-keys");
-  state.configs.set("Title", "Original title");
-  state.configs.set("Subtitle", "Original subtitle");
+  state.configs.set("Ui", { schema: 1, brand: { title: "Original title" } });
   await page.getByRole("button", { name: "app", exact: true }).click();
-  const title = page.getByRole("textbox", { name: "Dialog Title", exact: true });
+  const section = page.getByRole("heading", { name: "DEX branding", exact: true }).locator("..");
+  const title = section.getByRole("textbox", { name: "Heading", exact: true });
   await expect(title).toHaveValue("Original title");
   await title.fill("Retained title draft");
-  state.configs.set("Subtitle", "Newer subtitle");
+  state.configs.set("Ui", { schema: 1, brand: { title: "Newer title" } });
   state.mode = "allow";
-  await page.getByRole("button", { name: "Save App Config", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("1 of 6 setting saves confirmed");
+  await page.getByRole("button", { name: "Save app config", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("another session");
   await expect(title).toHaveValue("Retained title draft");
-  expect(state.configs.get("Subtitle")).toBe("Newer subtitle");
-  expect(state.writes).toHaveLength(2);
+  expect(state.configs.get("Ui")).toMatchObject({ brand: { title: "Newer title" } });
+  expect(state.writes).toHaveLength(1);
 });
 
-test("confirmed switch saves preserve other drafts and lock duplicate clicks", async ({ page }) => {
+test("switch autosaves preserve independent update drafts", async ({ page }) => {
   const state = await managementFixture(page, "/admin-keys");
+  state.mode = "allow";
   await page.getByRole("button", { name: "config", exact: true }).click();
   const field = page.getByRole("textbox", { name: "Version name", exact: true });
-  await field.fill("Unsaved update draft");
-  const toggle = page.getByRole("switch", { name: "Maintenance mode", exact: true });
-  state.mode = "hold";
-  await toggle.evaluate((button: HTMLButtonElement) => {
-    button.click();
-    button.click();
-  });
-  await expect.poll(() => state.writes.length).toBe(1);
-  await expect(toggle).toBeDisabled();
-  await expect(field).toBeDisabled();
-  state.mode = "allow";
-  state.release?.();
-  await expect(toggle).toHaveAttribute("aria-checked", "true");
-  await expect(field).toHaveValue("Unsaved update draft");
-  expect(state.configs.get("Maintenance")).toBe(true);
+  await field.fill("Independent update draft");
+  await page.getByRole("switch", { name: "Maintenance mode", exact: true }).check();
+  await expect.poll(() => state.configs.get("Maintenance")).toBe(true);
+  await expect
+    .poll(() => state.configs.get("Update"))
+    .toMatchObject({ VersionName: "Independent update draft" });
+  await expect(field).toHaveValue("Independent update draft");
 });
 
 test("app settings remain available without the website payload uploader", async ({ page }) => {
   const state = await managementFixture(page, "/admin-keys");
   await page.getByRole("button", { name: "app", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Save App Config", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save app config", exact: true })).toBeVisible();
   await expect(page.getByRole("group", { name: "Signed payload upload", exact: true })).toHaveCount(
     0,
   );

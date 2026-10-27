@@ -1,3 +1,4 @@
+import { chooseWebsiteTheme } from "./fixtures/website-theme";
 import { expect, test, type Page } from "@playwright/test";
 
 const key = "sb-dfxcpxzylyycrirtnkof-auth-token";
@@ -144,7 +145,7 @@ async function fixture(page: Page) {
 const rail = (page: Page) => page.getByRole("region", { name: railName, exact: true });
 async function home(page: Page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible({
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toBeVisible({
     timeout: 15000,
   });
 }
@@ -174,7 +175,7 @@ test("recommendations share collection reads, ignore unknown elements and surviv
   });
   const menu = page.getByRole("button", { name: "Open menu", exact: true });
   if (await menu.isVisible()) await menu.click();
-  await page.getByRole("combobox", { name: "Website theme" }).selectOption("fire");
+  await chooseWebsiteTheme(page, "fire");
   await page.keyboard.press("Escape");
   await expect(page.locator("html")).toHaveAttribute("data-website-theme", "fire");
   await expect(rail(page).getByRole("link")).toHaveCount(4);
@@ -310,9 +311,12 @@ test("sign-out disposes a pending recommendation read and hides late results", a
   state.hold.add(`user_preferences:${idA}`);
   await home(page);
   await expect.poll(() => !!state.releases.get(`user_preferences:${idA}`)).toBe(true);
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toHaveCount(0);
   state.releases.get(`user_preferences:${idA}`)?.();
   await expect(rail(page)).toHaveCount(0);
   expect(state.writes).toEqual([]);

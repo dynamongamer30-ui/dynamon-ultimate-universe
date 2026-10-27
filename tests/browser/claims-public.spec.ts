@@ -26,7 +26,7 @@ test("signed-out claim routes never submit reward mutations or expose a supplied
       timeout: 15000,
     });
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Account", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Profile", exact: true })).toHaveCount(0);
     await expect(page.getByText("PUBLIC-FIXTURE-ONLY", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Claim now", exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(

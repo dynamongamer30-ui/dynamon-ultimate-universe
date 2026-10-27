@@ -131,7 +131,10 @@ test("account reads are shared, failed saves roll back and sign-out clears priva
   expect(reads.receipts).toBe(1);
   expect(reads.sender).toBe(1);
   await expect(page.getByRole("button", { name: "Notifications", exact: true })).toHaveText("1");
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("link", { name: "My favorites", exact: true }).click();
   await expect(page.getByRole("heading", { name: "My favorites", exact: true })).toBeVisible();
   const remove = page.getByRole("button", { name: "Remove bookmark", exact: true });
@@ -151,7 +154,10 @@ test("account reads are shared, failed saves roll back and sign-out clears priva
   expect(deletes).toBe(2);
   const inboxReads = reads.inbox,
     receiptReads = reads.receipts;
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("link", { name: "Notifications", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Fixture release update", exact: true }),
@@ -188,14 +194,23 @@ test("account reads are shared, failed saves roll back and sign-out clears priva
   ).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("notification-center.png"), fullPage: true });
   const profileReads = reads.profile;
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("link", { name: "Edit profile", exact: true }).click();
   await expect(page.getByRole("form", { name: "Edit profile", exact: true })).toBeVisible();
   await expect(page.getByRole("textbox", { name: /^Display name/ })).toHaveValue("Fixture Trainer");
   expect(reads.profile - profileReads).toBeLessThanOrEqual(1);
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("link", { name: "My favorites", exact: true }).click();
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page.getByText("to start saving mods.")).toBeVisible();
   await expect(page.getByText("Fixture Trainer", { exact: true })).toHaveCount(0);

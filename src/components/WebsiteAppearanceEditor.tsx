@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { publishWebsiteAppearance } from "@/lib/websiteAppearance";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useWebsiteTheme } from "@/hooks/useWebsiteTheme";
@@ -12,7 +11,7 @@ import {
   type WebsiteThemeId,
 } from "@/lib/websiteThemes";
 import { Button } from "./ui/button";
-import { useOwnerMutation } from "@/hooks/useOwnerMutation";
+import { useAutosave } from "@/hooks/useAutosave";
 
 export function WebsiteAppearanceEditor() {
   const { websiteAppearance, loading, refresh } = useSiteSettings();
@@ -22,7 +21,7 @@ export function WebsiteAppearanceEditor() {
     normalizeWebsiteAppearance(websiteAppearance),
   );
   const [selected, setSelected] = useState<WebsiteThemeId>(draft.defaultTheme);
-  const { saving: busy, error: publishError, run } = useOwnerMutation();
+
   const [previewing, setPreviewing] = useState(false);
   const initialized = useRef(!loading);
   useEffect(() => {
@@ -39,36 +38,37 @@ export function WebsiteAppearanceEditor() {
     preview({ config: normalizeWebsiteAppearance(draft), theme: selected });
     setPreviewing(true);
   };
-  const publish = async () => {
-    if (busy || loading) return;
-    const next = normalizeWebsiteAppearance(draft);
-    if (!draft.enabledThemes.includes(draft.defaultTheme) || !draft.enabledThemes.length) {
-      toast.error("Enable the default theme and keep at least one appearance available.");
-      return;
-    }
-    if (
-      WEBSITE_THEMES.some((theme) =>
-        PALETTE_KEYS.some(
-          (key) =>
-            (next.palettes[theme.id]?.[key] ?? "").toLowerCase() !==
-            (draft.palettes[theme.id]?.[key] ?? "").toLowerCase(),
-        ),
+  const autosave = useAutosave({
+    value: draft,
+    ready: initialized.current,
+    validate: (value) => {
+      const next = normalizeWebsiteAppearance(value);
+      if (!value.enabledThemes.includes(value.defaultTheme) || !value.enabledThemes.length)
+        return "Enable the default theme and keep at least one appearance available.";
+      if (
+        WEBSITE_THEMES.some((theme) =>
+          PALETTE_KEYS.some(
+            (key) =>
+              (next.palettes[theme.id]?.[key] ?? "").toLowerCase() !==
+              (value.palettes[theme.id]?.[key] ?? "").toLowerCase(),
+          ),
+        )
       )
-    ) {
-      toast.error(
-        "Use six-digit hex colors with readable text and controls. Invalid palettes cannot be published.",
-      );
-      return;
-    }
-    await run(async (signal) => {
-      await publishWebsiteAppearance(next, snapshot.current, signal);
+        return "Use six-digit hex colors with readable text and controls.";
+      return null;
+    },
+    save: async (value) => {
+      const next = normalizeWebsiteAppearance(value);
+      await publishWebsiteAppearance(next, snapshot.current, AbortSignal.timeout(10000));
       snapshot.current = next;
       preview(null);
       setPreviewing(false);
-      toast.success("Website appearance published");
-      void refresh();
-    });
-  };
+      void refresh(true);
+    },
+  });
+  const busy = autosave.saving,
+    publishError = autosave.error;
+  const publish = () => void autosave.saveNow();
   return (
     <section
       aria-labelledby="website-appearance-title"
@@ -80,9 +80,12 @@ export function WebsiteAppearanceEditor() {
       </h2>
       <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
         Choose the default appearance, available themes and optional colors. Visitors keep their own
-        choice while it is enabled. Preview changes before publishing.
+        choice while it is enabled. Changes save automatically; preview is available while editing.
       </p>
-      <fieldset disabled={busy || loading} className="mt-6 space-y-5">
+      <p role="status" className="mt-3 text-sm text-muted-foreground">
+        {autosave.status} · Changes save automatically.
+      </p>
+      <fieldset disabled={loading} className="mt-6 space-y-5">
         <legend className="sr-only">Website theme settings</legend>
         {publishError && (
           <p role="alert" className="break-words text-destructive">

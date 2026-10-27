@@ -126,7 +126,7 @@ async function fixture(page: Page) {
 const rewards = (page: Page) => page.getByRole("region", { name: "Your rewards", exact: true });
 async function open(page: Page) {
   await page.goto("/rewards", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible({
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toBeVisible({
     timeout: 15000,
   });
 }
@@ -286,7 +286,10 @@ test("sign-out removes the key and ignores a late pass result", async ({ page })
   await expect(
     rewards(page).getByRole("heading", { name: "Your Daily Key", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   state.releases.get(`my_active_phoenix_pass:${idA}`)?.();
   await expect(rewards(page)).toHaveCount(0);

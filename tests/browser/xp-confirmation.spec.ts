@@ -138,7 +138,7 @@ async function fixture(page: Page) {
 }
 async function open(page: Page) {
   await page.goto("/mods", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible({
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toBeVisible({
     timeout: 15000,
   });
   await expect(page.getByRole("banner").getByText("Lv 1", { exact: true })).toHaveCount(1);
@@ -152,7 +152,10 @@ async function bookmark(page: Page, title: RegExp) {
   await expect(card.getByRole("button", { name: "Remove bookmark", exact: true })).toBeVisible();
 }
 async function achievements(page: Page) {
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("link", { name: /Achievements/ }).click();
 }
 const level = (page: Page) => page.getByRole("region", { name: "Trainer level", exact: true });

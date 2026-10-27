@@ -136,7 +136,7 @@ async function fixture(page: Page) {
 
 async function library(page: Page) {
   await page.goto("/mods", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible({
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toBeVisible({
     timeout: 15000,
   });
   const card = page
@@ -175,7 +175,10 @@ test("pending favorites share a lock across navigation and award only after conf
   await expect.poll(() => state.writes.length).toBe(1);
   await expect(card.getByRole("button", { name: "Remove bookmark", exact: true })).toBeDisabled();
   expect(state.awards).toBe(0);
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("link", { name: "My favorites", exact: true }).click();
   const remove = page.getByRole("button", { name: "Remove bookmark", exact: true });
   await expect(remove).toBeDisabled();
@@ -226,9 +229,12 @@ test("a successful late insert after sign-out cannot toast success or award XP",
   const card = await library(page);
   await card.getByRole("button", { name: "Bookmark", exact: true }).click();
   await expect.poll(() => !!state.release).toBe(true);
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toHaveCount(0);
   const response = page.waitForResponse(
     (r) => r.url().includes("/favorites") && r.request().method() === "POST",
   );

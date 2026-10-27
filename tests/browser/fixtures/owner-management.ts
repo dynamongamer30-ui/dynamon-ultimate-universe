@@ -264,7 +264,7 @@ export async function managementFixture(page: Page, path: string) {
     },
   );
   await page.goto(path, { waitUntil: "networkidle" });
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible({
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toBeVisible({
     timeout: 15000,
   });
   return state;

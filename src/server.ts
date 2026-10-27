@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { siteImageResponse } from "./lib/siteImages";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -77,6 +78,8 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const image = await siteImageResponse(request);
+      if (image) return withSecurityHeaders(image, request);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response), request);

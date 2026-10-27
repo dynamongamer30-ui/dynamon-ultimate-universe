@@ -79,7 +79,7 @@ test("report submission locks immediately, preserves failed drafts and confirms 
   });
   await page.goto("/mods/thunder-arena", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.documentElement.dataset.siteSettingsReady === "true");
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toBeVisible();
   const trigger = page
     .locator(`[data-comment-id="${commentId}"]`)
     .getByRole("button", { name: "Report", exact: true });

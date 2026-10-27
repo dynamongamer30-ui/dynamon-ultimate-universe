@@ -143,9 +143,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "Dynamon Universe" },
-      { property: "og:image", content: canonicalUrl("/dynamon-gamer-avatar.png") },
+      { property: "og:image", content: canonicalUrl("/site-preview") },
       { property: "og:url", content: SITE_URL },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: canonicalUrl("/site-preview") },
       {
         name: "robots",
         content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
@@ -159,8 +160,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
     ],
     links: [
-      { rel: "icon", href: "/dynamon-gamer-avatar.png", sizes: "256x256", type: "image/png" },
-      { rel: "apple-touch-icon", href: "/dynamon-gamer-avatar.png", sizes: "256x256" },
+      { rel: "icon", href: "/site-icon" },
+      { rel: "apple-touch-icon", href: "/site-icon" },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],

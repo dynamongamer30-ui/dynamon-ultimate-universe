@@ -22,7 +22,7 @@ test("circular brand and focused header fit phone/desktop widths and enlarged te
     for (const size of ["16px", "32px"]) {
       await page.evaluate((size) => (document.documentElement.style.fontSize = size), size);
       await expect(header.getByRole("button", { name: "Search", exact: true })).toBeVisible();
-      await expect(header.getByRole("button", { name: "Account", exact: true })).toBeVisible();
+      await expect(header.getByRole("link", { name: "Profile", exact: true })).toBeVisible();
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
       ).toBe(true);
@@ -50,11 +50,16 @@ test("circular brand and focused header fit phone/desktop widths and enlarged te
   ).toBe(true);
   await expect(logo).toHaveAttribute("src", "/dynamon-gamer-avatar.png");
   await expect(header.getByRole("combobox", { name: "Website theme" })).toHaveCount(0);
-  await header.getByRole("button", { name: "Account", exact: true }).click();
-  await expect(page.getByLabel("Trainer progress", { exact: true })).toBeVisible();
+  await header
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await expect(page.getByRole("combobox", { name: "Website theme" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Feedback preference:/ })).toBeVisible();
-  await header.getByRole("button", { name: "Account", exact: true }).click();
+  await header
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.screenshot({ path: info.outputPath("header-and-key-form.png") });
 });
 

@@ -1,3 +1,4 @@
+import { chooseWebsiteTheme } from "./fixtures/website-theme";
 import { expect, test, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ page }, info) => {
@@ -119,7 +120,7 @@ test("all nine themes retain visible text and keyboard outlines in forced colors
     "gold",
     "spirit",
   ]) {
-    await themes.selectOption(theme);
+    await chooseWebsiteTheme(page, theme);
     await expect(page.locator("html")).toHaveAttribute("data-website-theme", theme);
     const gradient = page.locator("header .text-gradient").first();
     const style = await gradient.evaluate((element) => ({

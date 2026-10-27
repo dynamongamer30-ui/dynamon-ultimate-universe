@@ -1,3 +1,4 @@
+import { chooseWebsiteTheme } from "./fixtures/website-theme";
 import { expect, test, type Page } from "@playwright/test";
 const pageErrors = new WeakMap<Page, string[]>();
 
@@ -302,7 +303,7 @@ test("profile preview and editable fields support all nine themes without new ac
     const menu = page.getByRole("button", { name: "Open menu", exact: true });
     const mobile = await menu.isVisible();
     if (mobile) await menu.click();
-    await page.getByRole("combobox", { name: "Website theme" }).selectOption(theme);
+    await chooseWebsiteTheme(page, theme);
     if (mobile) await page.keyboard.press("Escape");
     await expect(page.locator("html")).toHaveAttribute("data-website-theme", theme);
     const surface = await form.evaluate((node) => ({

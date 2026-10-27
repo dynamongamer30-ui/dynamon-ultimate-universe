@@ -1,3 +1,4 @@
+import { chooseWebsiteTheme } from "./fixtures/website-theme";
 import { expect, test } from "@playwright/test";
 
 const themes = [
@@ -57,11 +58,10 @@ test("all nine appearances change full surfaces, persist and send no theme reque
     timeout: 15000,
   });
   await page.getByRole("button", { name: "Open menu", exact: true }).click();
-  const selector = page.getByRole("combobox", { name: "Website theme" });
   const before = requests;
   const backgrounds = new Set<string>();
   for (const theme of themes) {
-    await selector.selectOption(theme);
+    await chooseWebsiteTheme(page, theme);
     await expect(page.locator("html")).toHaveAttribute("data-website-theme", theme);
     backgrounds.add(
       await page.evaluate(() =>

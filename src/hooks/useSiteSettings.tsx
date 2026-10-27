@@ -1,9 +1,19 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { mods as baseMods, type Mod } from "@/lib/mods";
 
 export type SiteBranding = {
   logoUrl: string;
+  faviconUrl: string;
+  previewImageUrl: string;
   siteName: string;
   siteTagline: string;
   heroEyebrow: string;
@@ -62,6 +72,8 @@ export type ModOverride = {
 
 export const DEFAULT_BRANDING: SiteBranding = {
   logoUrl: "/dynamon-gamer-avatar.png",
+  faviconUrl: "/dynamon-gamer-avatar.png",
+  previewImageUrl: "/dynamon-gamer-avatar.png",
   siteName: "Dynamon Universe",
   siteTagline: "Premium Dynamons World mod APK hub",
   heroEyebrow: "Only Dynamons World mods",
@@ -100,7 +112,7 @@ type Ctx = {
   overrides: Record<string, ModOverride>;
   mods: Mod[]; // merged + visible
   allMods: Mod[]; // merged including hidden
-  refresh: () => Promise<void>;
+  refresh: (background?: boolean) => Promise<void>;
   featuredSlug: string | null;
 };
 
@@ -196,8 +208,10 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     {},
   );
 
-  const refresh = async () => {
-    setLoading(true);
+  const refreshSequence = useRef(0);
+  const refresh = async (background = false) => {
+    const sequence = ++refreshSequence.current;
+    if (!background) setLoading(true);
     setError(null);
     const controller = new AbortController();
     const deadline = setTimeout(() => controller.abort(), 10_000);
@@ -213,6 +227,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
           .rpc("get_public_mod_stats", { p_slugs: baseMods.map((mod) => mod.slug) }, { get: true })
           .abortSignal(controller.signal),
       ]);
+      if (sequence !== refreshSequence.current) return;
       if (settingsError || overridesError) throw settingsError || overridesError;
       const map = new Map<string, unknown>();
       (settings ?? []).forEach((r: { key: string; value: unknown }) => map.set(r.key, r.value));
@@ -247,10 +262,11 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         setRealRatings(ratingAgg);
       }
     } catch {
-      setError("Could not load site configuration. Please retry before editing.");
+      if (sequence === refreshSequence.current)
+        setError("Could not load site configuration. Please retry before editing.");
     } finally {
       clearTimeout(deadline);
-      setLoading(false);
+      if (sequence === refreshSequence.current) setLoading(false);
     }
   };
 

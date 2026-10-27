@@ -244,7 +244,7 @@ test("dismissal skips the prompt for this session without writes or a permission
   await expect(dialog).toHaveCount(0);
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.documentElement.dataset.siteSettingsReady === "true");
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toBeVisible();
   expect(state.reads).toBe(1);
   expect(state.prefs).toEqual([]);
   expect(state.subscriberWrites).toEqual([]);
@@ -282,7 +282,7 @@ test("a failed preference read does not open the opt-in prompt or retry automati
   state.denyRead = true;
   await page.goto("/auth", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.documentElement.dataset.siteSettingsReady === "true");
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toBeVisible();
   await expect.poll(() => state.reads, { timeout: 15000 }).toBe(1);
   await page.clock.runFor(12_000);
   await expect(
@@ -337,7 +337,10 @@ test("preference error and actions remain usable across narrow and wide viewport
 });
 
 async function manage(page: Page) {
-  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open menu", exact: true })
+    .or(page.getByRole("button", { name: "Close menu", exact: true }))
+    .click();
   await page.getByRole("button", { name: "Update preferences", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Get notified on new mods", exact: true });
   await expect(dialog).toBeVisible();
@@ -362,7 +365,7 @@ test("account entry restores saved false choices and returns focus without write
   );
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeFocused();
   expect(state.subscriberWrites).toHaveLength(0);
   expect(state.prefs).toHaveLength(0);
   expect(

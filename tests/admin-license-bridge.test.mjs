@@ -219,6 +219,7 @@ test("admin DG/VIP keys pass the existing signed V2 activation path and reject a
       const path = new URL(url).pathname;
       if (path === "/auth/v1/user") return Response.json({ id: owner });
       if (path.endsWith("/dg_is_owner")) return Response.json(true);
+      if (path.endsWith("/app_config")) return Response.json([]);
       const payload = JSON.parse(options.body);
       const name = path.split("/").at(-1);
       const parameters =

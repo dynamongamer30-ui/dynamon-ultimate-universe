@@ -159,6 +159,36 @@ async function fixture(page: Page) {
   return state;
 }
 
+test("branding and image autosaves refresh the header while keeping the editor usable", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  state.mode = "allow";
+  const name = page.getByRole("textbox", { name: "Site name", exact: true });
+  await name.fill("Updated brand");
+  await expect
+    .poll(() => state.settings.get("branding"))
+    .toMatchObject({ siteName: "Updated brand" });
+  await expect(
+    page.locator("header").getByRole("link", { name: "Dynamon Universe home", exact: true }),
+  ).toContainText("Updated brand");
+  await expect(name).toHaveValue("Updated brand");
+  const icon = page.getByRole("textbox", {
+    name: "Website icon URL (browser and search)",
+    exact: true,
+  });
+  await icon.fill("https://images.example.com/site-icon.png");
+  await expect
+    .poll(() => state.settings.get("branding"))
+    .toMatchObject({
+      siteName: "Updated brand",
+      faviconUrl: "https://images.example.com/site-icon.png",
+      logoUrl: "/dynamon-gamer-avatar.png",
+    });
+  await expect(icon).toHaveValue("https://images.example.com/site-icon.png");
+  expect(state.writes).toHaveLength(2);
+});
+
 test("stale branding drafts cannot overwrite a newer owner setting", async ({ page }) => {
   const state = await fixture(page);
   state.mode = "allow";
@@ -187,7 +217,7 @@ test("appearance publication locks duplicate submissions and retains an unconfir
     button.click();
   });
   await expect.poll(() => state.writes.length).toBe(1);
-  await expect(field).toBeDisabled();
+  await expect(field).toBeEnabled();
   state.mode = "empty";
   state.release?.();
   await expect(page.getByRole("alert")).toContainText("publication was not confirmed");
