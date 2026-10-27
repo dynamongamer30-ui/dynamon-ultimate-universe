@@ -259,74 +259,67 @@ export function listKeys(
 }
 
 export async function revokeKey(key: string): Promise<void> {
-  await patchRow("valid_keys", key, { status: "revoked" });
+  const expected = await selectOne("valid_keys", key);
+  if (!expected) throw new Error("This key no longer exists. Refresh the list.");
+  await ownerKeyAction("revoke", key, undefined, expected);
 }
 export async function unrevokeKey(key: string): Promise<void> {
-  await patchRow("valid_keys", key, { status: "active" });
+  const expected = await selectOne("valid_keys", key);
+  await ownerKeyAction("unrevoke", key, undefined, expected);
 }
 export async function deleteKey(key: string): Promise<void> {
-  await deleteRow("valid_keys", key);
+  const expected = await selectOne("valid_keys", key);
+  await ownerKeyAction("delete", key, undefined, expected);
 }
 
 /** Add `hours` to expiry (unix seconds) and durationHours. */
 export async function extendKey(key: string, hours: number): Promise<void> {
   const cur = await selectOne("valid_keys", key);
   if (!cur) throw new Error("This key no longer exists.");
-  await compareRow("valid_keys", key, extendedKeyData(cur, hours, nowSeconds()), cur);
+  extendedKeyData(cur, hours, nowSeconds());
+  await ownerKeyAction("extend", key, hours, cur);
 }
 
 export async function keyExists(key: string): Promise<boolean> {
   return (await selectOne("valid_keys", key)) !== null;
 }
 
-/** Create a manual key (owner-added). Returns the allocated key id. */
+/** Owner JWT stays separate from server issuer/HMAC secrets. */
+async function ownerKeyAction(action: string, key: string, hours?: number, expected?: unknown) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error("Sign in as the owner before changing keys.");
+  const response = await fetch("https://royal-void-v2.dynamongamer30.workers.dev/v2/admin/keys", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      Authorization: "Bearer " + session.access_token,
+    },
+    body: JSON.stringify({ action, key, hours, expected, requestId: crypto.randomUUID() }),
+    signal: AbortSignal.timeout(20000),
+  });
+  const result = await response.json();
+  if (!response.ok || result.ok !== true || result.key !== key)
+    throw new Error(result.error || "Key action was not confirmed. Refresh before trying again.");
+}
+
 export async function createManualKey(prefix: string, hours: number): Promise<string> {
-  if (!Number.isFinite(hours) || hours < 0 || hours > 87600)
-    throw new Error("Enter 0–87600 hours; 0 means lifetime.");
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const rand = () => {
-    let s = "";
-    // Rejection sampling avoids modulo bias, including if the alphabet changes.
-    const limit = 256 - (256 % chars.length);
-    while (s.length < 16) {
-      const bytes = crypto.getRandomValues(new Uint8Array(32));
-      for (const byte of bytes) if (byte < limit && s.length < 16) s += chars[byte % chars.length];
-    }
-    return s;
-  };
-  const clean = (prefix || "DG").trim().toUpperCase();
-  if (!/^[A-Z0-9]{1,12}$/.test(clean)) throw new Error("Invalid key prefix.");
-  for (let i = 0; i < 10; i++) {
-    const key = `${clean}-${rand()}`;
-    const { data, error } = await supabase
-      .from("valid_keys" as never)
-      .insert({
-        id: key,
-        data: {
-          status: "active",
-          expiry: 0,
-          durationHours: hours,
-          activated: false,
-          device: null,
-          date: nowSeconds(),
-          fingerprint: "",
-          sourceIP: "",
-          source: "admin",
-        },
-      } as never)
-      .select("id")
-      .abortSignal(AbortSignal.timeout(10000))
-      .retry(false);
-    if (!error) {
-      if (!Array.isArray(data) || !data.some((row: { id?: unknown }) => row.id === key))
-        throw new Error(
-          "Key creation was not confirmed. Refresh the key list before trying again.",
-        );
-      return key;
-    }
-    if (error.code !== "23505") throw new Error(error.message);
-  }
-  throw new Error("Could not allocate a unique key");
+  if (!Number.isInteger(hours) || hours < 0 || hours > 87600)
+    throw new Error("Enter 0–87600 whole hours; 0 means lifetime.");
+  if (!["DG", "VIP"].includes(prefix)) throw new Error("Invalid key prefix.");
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const random = crypto.getRandomValues(new Uint8Array(6));
+  const key =
+    prefix + "-" + Array.from(random, (byte) => alphabet[byte % alphabet.length]).join("");
+  await ownerKeyAction("create", key, hours);
+  return key;
+}
+
+export async function repairKey(key: string): Promise<void> {
+  const expected = await selectOne("valid_keys", key);
+  if (!expected) throw new Error("This key no longer exists. Refresh the list.");
+  await ownerKeyAction("repair", key, undefined, expected);
 }
 
 // ---------- Config (each Config child = its own app_config row) ----------

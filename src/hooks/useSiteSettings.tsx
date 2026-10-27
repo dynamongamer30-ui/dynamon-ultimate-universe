@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { mods as baseMods, type Mod } from "@/lib/mods";
 
 export type SiteBranding = {
+  logoUrl: string;
   siteName: string;
   siteTagline: string;
   heroEyebrow: string;
@@ -60,6 +61,7 @@ export type ModOverride = {
 };
 
 export const DEFAULT_BRANDING: SiteBranding = {
+  logoUrl: "/dynamon-gamer-avatar.png",
   siteName: "Dynamon Universe",
   siteTagline: "Premium Dynamons World mod APK hub",
   heroEyebrow: "Only Dynamons World mods",

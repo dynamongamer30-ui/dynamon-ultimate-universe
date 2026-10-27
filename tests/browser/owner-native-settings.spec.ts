@@ -42,10 +42,11 @@ test("manual key allocation locks rapid submissions and never retries an unconfi
   await expect(button).toBeDisabled();
   state.mode = "empty";
   state.release?.();
-  await expect(page.getByText(/Key creation was not confirmed/)).toBeVisible();
+  await expect(page.getByText(/Key (?:creation|action) was not confirmed/)).toBeVisible();
   await expect(button).toBeEnabled();
   expect(state.writes).toHaveLength(1);
-  expect(state.writes[0].select).toBe("id");
+  expect(state.writes[0].target).toBe("valid_keys");
+  expect(state.writes[0].body.action).toBe("create");
   await expect(page.getByText("Key created", { exact: true })).toHaveCount(0);
 });
 

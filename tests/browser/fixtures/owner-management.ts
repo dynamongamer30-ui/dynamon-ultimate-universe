@@ -233,6 +233,36 @@ export async function managementFixture(page: Page, path: string) {
       .fulfill({ status, contentType: "application/json", body: JSON.stringify(data) })
       .catch(() => {});
   });
+  await page.route(
+    "https://royal-void-v2.dynamongamer30.workers.dev/v2/admin/keys",
+    async (route) => {
+      const headers = {
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "POST, OPTIONS",
+        "access-control-allow-headers": "authorization, content-type",
+      };
+      if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers });
+      const body = route.request().postDataJSON();
+      state.writes.push({ target: "valid_keys", method: "POST", body, select: null });
+      if (state.mode === "hold")
+        await new Promise<void>((resolve) => {
+          state.release = resolve;
+        });
+      if (state.mode === "deny")
+        return route.fulfill({
+          status: 403,
+          headers,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "Local key write denied" }),
+        });
+      await route.fulfill({
+        status: 200,
+        headers,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: state.mode !== "empty", key: body.key }),
+      });
+    },
+  );
   await page.goto(path, { waitUntil: "networkidle" });
   await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible({
     timeout: 15000,

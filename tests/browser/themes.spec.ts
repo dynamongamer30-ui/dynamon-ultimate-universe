@@ -56,8 +56,7 @@ test("all nine appearances change full surfaces, persist and send no theme reque
   await expect(page.locator("html")).toHaveAttribute("data-site-settings-ready", "true", {
     timeout: 15000,
   });
-  if ((page.viewportSize()?.width ?? 0) < 1024)
-    await page.getByRole("button", { name: "Open menu", exact: true }).click();
+  await page.getByRole("button", { name: "Open menu", exact: true }).click();
   const selector = page.getByRole("combobox", { name: "Website theme" });
   const before = requests;
   const backgrounds = new Set<string>();

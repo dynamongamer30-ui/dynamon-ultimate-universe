@@ -138,6 +138,34 @@ await assert.rejects(
   /changed elsewhere/,
 );
 assert.deepEqual(rows.get("app_config:FeatureLocks").data, { skins: false });
+client.auth = {
+  getSession: async () => ({ data: { session: { access_token: "LOCAL-OWNER-SESSION" } } }),
+};
+globalThis.fetch = async (url, options) => {
+  assert.equal(url, "https://royal-void-v2.dynamongamer30.workers.dev/v2/admin/keys");
+  assert.equal(options.headers.Authorization, "Bearer LOCAL-OWNER-SESSION");
+  const body = JSON.parse(options.body);
+  const key = "valid_keys:" + body.key;
+  if (changeBeforeWrite) {
+    const change = changeBeforeWrite;
+    changeBeforeWrite = null;
+    change();
+  }
+  if (body.action === "create")
+    rows.set(key, {
+      data: {
+        status: "active",
+        expiry: 0,
+        durationHours: body.hours,
+        activated: false,
+        device: null,
+      },
+    });
+  else if (JSON.stringify(rows.get(key)?.data) !== JSON.stringify(body.expected))
+    return Response.json({ error: "Data changed elsewhere" }, { status: 409 });
+  else if (body.action === "revoke") rows.get(key).data.status = "revoked";
+  return Response.json({ ok: true, key: body.key });
+};
 await assert.rejects(data.revokeKey("missing"), /no longer exists/);
 rows.set("valid_keys:test", {
   id: "test",
@@ -147,7 +175,7 @@ changeBeforeWrite = () => (rows.get("valid_keys:test").data.device = "another-ph
 await assert.rejects(data.revokeKey("test"), /changed elsewhere/);
 assert.equal(rows.get("valid_keys:test").data.status, "active");
 const id = await data.createManualKey("VIP", 0);
-assert.match(id, /^VIP-[A-Z2-9]{16}$/);
+assert.match(id, /^VIP-[A-Z2-9]{6}$/);
 assert.equal(rows.get("valid_keys:" + id).data.expiry, 0);
 assert.equal(rows.get("valid_keys:" + id).data.durationHours, 0);
 await assert.rejects(data.createManualKey("DG", -1));

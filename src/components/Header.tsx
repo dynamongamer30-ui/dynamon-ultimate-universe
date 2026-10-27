@@ -2,7 +2,6 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Menu,
-  Sparkles,
   X,
   Search,
   LogOut,
@@ -24,7 +23,7 @@ import { mods } from "@/lib/mods";
 import { OwnerBadge } from "@/components/OwnerBadge";
 import { LevelBadge } from "@/components/LevelBadge";
 import { StreakBadge } from "@/components/StreakBadge";
-import { NotificationBell } from "@/components/NotificationBell";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { FeedbackPreferences } from "@/components/FeedbackPreferences";
 import { WebsiteThemeSelector } from "@/components/WebsiteThemeSelector";
 
@@ -92,32 +91,41 @@ export function Header() {
       )
     : [];
 
+  const { branding } = useSiteSettings();
+  const brandLogo = /^(https:\/\/|\/(?!\/))/.test(branding.logoUrl || "")
+    ? branding.logoUrl
+    : "/dynamon-gamer-avatar.png";
   const avatarUrl = profile?.custom_avatar_url || profile?.avatar_url || undefined;
 
   return (
-    <header className="sticky top-0 site-chrome glass-l2 border-b border-border/60">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
+    <header className="site-header sticky top-0 site-chrome border-b border-border/60 bg-background/95 backdrop-blur-md">
+      <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 lg:px-8">
         <Link
           to="/"
           onMouseDown={playClick}
           aria-label="Dynamon Universe home"
-          className="flex min-w-0 shrink-0 items-center gap-2 rounded-xl"
+          className="flex min-w-0 items-center gap-2.5 rounded-full"
         >
-          <motion.span
-            initial={{ rotate: -20, scale: 0.6, opacity: 0 }}
-            animate={{ rotate: 0, scale: 1, opacity: 1 }}
-            className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-            style={{ background: "var(--gradient-primary)" }}
-          >
-            <Sparkles className="h-5 w-5 text-primary-foreground" />
-            <span className="absolute inset-0 rounded-xl animate-pulse-glow" />
-          </motion.span>
-          <span className="hidden truncate font-display text-lg font-bold sm:inline sm:text-xl">
-            Dynamon <span className="text-gradient">Universe</span>
+          <img
+            src={brandLogo}
+            alt=""
+            width={56}
+            height={56}
+            className="h-[52px] w-[52px] shrink-0 rounded-full border border-border object-cover"
+            onError={(event) => {
+              if (event.currentTarget.getAttribute("src") !== "/dynamon-gamer-avatar.png")
+                event.currentTarget.src = "/dynamon-gamer-avatar.png";
+            }}
+          />
+          <span className="min-w-0 max-w-24 line-clamp-2 font-display text-sm font-bold leading-tight tracking-tight [overflow-wrap:anywhere] sm:max-w-44 sm:text-lg lg:max-w-48">
+            {branding.siteName}
           </span>
         </Link>
 
-        <nav aria-label="Primary navigation" className="hidden items-center gap-1 lg:flex">
+        <nav
+          aria-label="Primary navigation"
+          className="hidden min-w-0 flex-1 flex-wrap items-center justify-center gap-1 xl:flex"
+        >
           {nav.map((n) => (
             <Link
               key={n.to}
@@ -132,13 +140,7 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-1 sm:gap-2">
-          {user && (
-            <div className="hidden items-center gap-2 md:flex">
-              <LevelBadge compact />
-              {streak.current > 0 && <StreakBadge compact />}
-            </div>
-          )}
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <button
             onClick={() => {
               setSearchOpen((v) => !v);
@@ -148,17 +150,10 @@ export function Header() {
             ref={searchButtonRef}
             aria-expanded={searchOpen}
             aria-controls="site-search-panel"
-            className="press touch-target grid place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-[color,border-color,box-shadow] hover:border-primary/55 hover:text-foreground"
+            className="header-control press touch-target grid place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-[color,border-color,box-shadow] hover:border-primary/55 hover:text-foreground"
           >
             <Search className="h-4 w-4" />
           </button>
-
-          <FeedbackPreferences />
-          <div className="hidden lg:block">
-            <WebsiteThemeSelector />
-          </div>
-
-          {user && <NotificationBell />}
 
           {user ? (
             <div ref={menuRef} className="relative shrink-0">
@@ -217,6 +212,20 @@ export function Header() {
                           @{profile?.username ?? user.email}
                         </p>
                       </div>
+                    </div>
+                    <div
+                      className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3"
+                      aria-label="Trainer progress"
+                    >
+                      <LevelBadge compact />
+                      {streak.current > 0 && <StreakBadge compact />}
+                    </div>
+                    <div
+                      className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3"
+                      aria-label="Appearance and feedback"
+                    >
+                      <WebsiteThemeSelector />
+                      <FeedbackPreferences />
                     </div>
                     <Link
                       to="/profile"
@@ -329,7 +338,7 @@ export function Header() {
               setOpen((v) => !v);
               playClick();
             }}
-            className="touch-target grid place-items-center rounded-xl border border-border lg:hidden"
+            className="header-control touch-target grid place-items-center rounded-xl border border-border"
             aria-label={open ? "Close menu" : "Open menu"}
             ref={mobileButtonRef}
             aria-expanded={open}
@@ -431,10 +440,13 @@ export function Header() {
           animate={{ opacity: 1, y: 0 }}
           role="navigation"
           aria-label="Mobile navigation"
-          className="glass-l2 border-t border-border/60 lg:hidden"
+          className="glass-l2 border-t border-border/60"
         >
           <div className="flex flex-col gap-1 px-4 py-3">
-            <WebsiteThemeSelector />
+            <div className="mb-2 flex flex-wrap items-center gap-3 border-b border-border/60 pb-3">
+              <WebsiteThemeSelector />
+              <FeedbackPreferences />
+            </div>
             {nav.map((n) => (
               <Link
                 key={n.to}

@@ -27,6 +27,7 @@ import {
   Unlock,
   ArrowUpCircle,
   Settings2,
+  Shield,
   Save,
   Link2,
 } from "lucide-react";
@@ -46,6 +47,7 @@ import {
   getConfigNode,
   listGenerationLogs,
   createManualKey,
+  repairKey,
   listActivatedUsers,
   readDeviceLicenseKeys,
   deleteDeviceInformation,
@@ -606,6 +608,17 @@ function useKeyActions(k: ValidKey) {
       setBusy(false);
     }
   };
+  const doRepair = async () => {
+    setBusy(true);
+    try {
+      await repairKey(k.key);
+      toast.success("APK license registration confirmed");
+    } catch (cause) {
+      toast.error((cause as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
   const doDelete = async () => {
     if (
       !(await confirm({
@@ -638,15 +651,18 @@ function useKeyActions(k: ValidKey) {
           ? { label: "Activated", cls: "border-primary/40 text-primary-ink" }
           : { label: "Active", cls: "border-green-400/40 text-green-300" };
 
-  return { busy, copy, doExtend, doExtendCustom, doRevoke, doDelete, status };
+  return { busy, copy, doExtend, doExtendCustom, doRevoke, doDelete, doRepair, status };
 }
 
 function KeyActionButtons({ k }: { k: ValidKey }) {
-  const { busy, copy, doExtend, doExtendCustom, doRevoke, doDelete } = useKeyActions(k);
+  const { busy, copy, doExtend, doExtendCustom, doRevoke, doDelete, doRepair } = useKeyActions(k);
   return (
     <div className="flex flex-wrap justify-end gap-1">
       <IconBtn title="Copy" onClick={copy}>
         <Copy className="h-3.5 w-3.5" />
+      </IconBtn>
+      <IconBtn title="Repair APK registration" disabled={busy} onClick={doRepair}>
+        <Shield className="h-3.5 w-3.5" />
       </IconBtn>
       <IconBtn title="+24h" disabled={busy} onClick={() => doExtend(24)}>
         +1d
@@ -859,7 +875,7 @@ function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
     e.preventDefault();
     if (disabled || busy || pending.current) return;
     const h = Number(hours);
-    if (!hours.trim() || !Number.isFinite(h) || h < 0 || h > 87600) {
+    if (!hours.trim() || !Number.isInteger(h) || h < 0 || h > 87600) {
       toast.error("Enter 0–87600 hours (0 = lifetime)");
       return;
     }
@@ -893,43 +909,49 @@ function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
         <Plus className="h-4 w-4 text-primary-ink" /> Add manual key
       </h3>
       <p className="mb-3 text-xs text-muted-foreground">
-        Writes one ValidKeys entry. Users normally generate keys through the worker gate.
+        Creates an APK-compatible key. Its timer starts at first successful activation.
       </p>
 
-      <p className="text-xs text-muted-foreground">Prefix</p>
-      <div
-        role="group"
-        aria-label="Key prefix"
-        className="mt-1 mb-3 inline-flex rounded-full border border-border p-1 text-xs"
-      >
-        {["DG", "VIP"].map((p) => (
-          <button
-            type="button"
-            key={p}
-            onClick={() => setPrefix(p)}
-            aria-pressed={prefix === p}
-            className={`touch-target rounded-full px-3 py-1 ${prefix === p ? "text-primary-foreground" : "text-muted-foreground"}`}
-            style={prefix === p ? { background: "var(--gradient-primary)" } : undefined}
+      <div className="mb-4 grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
+        <div>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">Prefix</p>
+          <div
+            role="group"
+            aria-label="Key prefix"
+            className="inline-flex rounded-xl border border-border bg-background/40 p-1 text-xs"
           >
-            {p}
-          </button>
-        ))}
+            {["DG", "VIP"].map((p) => (
+              <button
+                type="button"
+                key={p}
+                onClick={() => setPrefix(p)}
+                aria-pressed={prefix === p}
+                className={`min-h-11 min-w-14 rounded-lg px-3 py-2 font-semibold ${prefix === p ? "text-primary-foreground" : "text-muted-foreground"}`}
+                style={prefix === p ? { background: "var(--gradient-primary)" } : undefined}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label htmlFor="manual-key-duration" className="text-xs text-muted-foreground">
+            Duration in hours
+          </label>
+          <Input
+            id="manual-key-duration"
+            type="number"
+            min="0"
+            max="87600"
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+            className="mt-1 mb-3 h-11"
+          />
+
+          <p className="text-xs text-muted-foreground">0 hours means lifetime access.</p>
+        </div>
       </div>
-
-      <label htmlFor="manual-key-duration" className="text-xs text-muted-foreground">
-        Duration (hours; 0 = lifetime)
-      </label>
-      <Input
-        id="manual-key-duration"
-        type="number"
-        min="0"
-        max="87600"
-        value={hours}
-        onChange={(e) => setHours(e.target.value)}
-        className="mt-1 mb-3 h-11"
-      />
-
-      <div className="mb-3 flex flex-wrap gap-1 text-xs">
+      <div className="mb-4 grid grid-cols-4 gap-2 text-xs">
         {[
           { l: "1d", h: "24" },
           { l: "7d", h: "168" },
@@ -940,7 +962,8 @@ function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
             type="button"
             key={p.l}
             onClick={() => setHours(p.h)}
-            className="touch-target rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-primary-ink"
+            aria-pressed={hours === p.h}
+            className={`min-h-11 rounded-lg border px-2 py-2 ${hours === p.h ? "border-primary/50 bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
           >
             {p.l}
           </button>

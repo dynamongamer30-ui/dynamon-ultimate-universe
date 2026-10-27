@@ -53,18 +53,15 @@ const CONTROLS: [string, string][] = [
   ["noCD", "No cooldowns"],
   ["alwaysCatch", "Always catch"],
   ["botMatch", "Bot matchmaking"],
-  ["winTrophy", "Win state"],
+  ["winTrophy", "Win bot matches"],
   ["noTrophyLoss", "No trophy loss"],
   ["fullheal", "Full-heal potions"],
-  ["pvpcd", "Arena item cooldown"],
-  ["itemtimer", "Item wait"],
+  ["pvpcd", "Faster arena items"],
+  ["itemtimer", "No item wait"],
   ["turnreset", "Refill items each turn"],
   ["items5", "Five items per turn"],
   ["nicklen", "Longer nicknames"],
   ["nickval", "Name validation"],
-  ["statcap", "Stat cap override"],
-  ["shopfix", "Shop compatibility"],
-  ["maxdef", "Defense cap override"],
   ["speed", "Speed"],
   ["setCoins", "Set coins"],
   ["setDust", "Set dust"],
@@ -181,6 +178,10 @@ export function DexControls() {
         <p className="my-3 text-sm text-muted-foreground">
           Checked means locked. Changes apply on the next game launch; there are no heartbeats or
           background configuration requests.
+        </p>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Shop compatibility is always enabled in the current DEX. Retired stat and defense
+          overrides are not exposed.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {CONTROLS.map(([key, label]) => (

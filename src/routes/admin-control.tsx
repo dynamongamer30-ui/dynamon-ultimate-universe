@@ -215,6 +215,15 @@ function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: 
       desc="Site identity, hero headline, subtitle and CTAs."
     >
       <Grid>
+        <Field label="Circular brand image URL">
+          <input
+            aria-label="Circular brand image URL"
+            value={v.logoUrl}
+            onChange={f("logoUrl")}
+            placeholder="https://… or /image.png"
+            className={inp}
+          />
+        </Field>
         <Field label="Site name">
           <input value={v.siteName} onChange={f("siteName")} className={inp} />
         </Field>
