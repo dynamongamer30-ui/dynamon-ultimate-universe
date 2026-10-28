@@ -61,6 +61,9 @@ export function BuildComparison({
             <p className="mt-2 text-sm text-muted-foreground">
               Published build details, side by side. A dash means the feature is not listed.
             </p>
+            <p className="mt-2 text-xs text-muted-foreground sm:hidden">
+              Swipe the table sideways to see the other builds →
+            </p>
           </div>
           <button
             onClick={() => dialog.current?.close()}
