@@ -1,6 +1,0 @@
-Shadow dragon source: https://afk.ai/auto-rig/dragon
-Original download: https://afk.ai/auto-rig-models/dragon.glb
-Retrieved 2026-10-28.
-The publisher explicitly dedicates the downloadable sample model with its skeleton and animations to CC0: "use it for anything".
-License: CC0 1.0 Universal — https://creativecommons.org/publicdomain/zero/1.0/
-Local adaptations: runtime Royal Black material tint and lighting; original model geometry and animations retained.

@@ -13,7 +13,7 @@ import {
   MessageCircle,
   ArrowUpRight,
 } from "lucide-react";
-import { ShadowDragon } from "@/components/ShadowDragon";
+import "@/components/build-experience.css";
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ForYouRail } from "@/components/ForYouRail";
@@ -160,15 +160,40 @@ function Index() {
             </div>
 
             <div className="min-w-0">
-              <ShadowDragon />
-              <Link to="/mods/$slug" params={{ slug: top.slug }} className="royal-featured-link">
-                <img src={top.image} alt="" width={52} height={52} />
-                <span className="min-w-0 flex-1">
+              <Link
+                to="/mods/$slug"
+                params={{ slug: top.slug }}
+                className="featured-build-panel group"
+              >
+                <img
+                  src={top.image}
+                  alt={`${top.name} featured build artwork`}
+                  width={1024}
+                  height={1024}
+                  fetchPriority="high"
+                  className="featured-build-art"
+                />
+                <span className="featured-build-copy min-w-0 flex-1">
                   <small>FEATURED RELEASE · v{top.version}</small>
                   <strong>{top.name}</strong>
+                  <span className="mt-2 block text-sm text-muted-foreground">{top.tagline}</span>
                 </span>
-                <ArrowRight className="h-4 w-4 shrink-0" />
+                <span className="featured-build-action">
+                  Explore this build <ArrowRight className="h-4 w-4" />
+                </span>
               </Link>
+              <div className="mt-4 flex flex-wrap gap-2" aria-label="Quick feature searches">
+                {["Unlimited", "Unlock", "Coins"].map((q) => (
+                  <Link
+                    key={q}
+                    to="/mods"
+                    search={{ q }}
+                    className="touch-target inline-flex items-center rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold"
+                  >
+                    Find: {q}
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         </div>

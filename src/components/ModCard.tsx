@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { Link } from "@tanstack/react-router";
-import "./shadow-dragon.css";
+import "./build-experience.css";
 import { motion } from "motion/react";
 
 import { Download, Heart, MessageSquare, Star, TrendingUp } from "lucide-react";
@@ -21,12 +21,14 @@ export function ModCard({
   featured = false,
   badge = "Most popular",
   headingLevel = "h3",
+  comparison,
 }: {
   mod: Mod;
   index?: number;
   featured?: boolean;
   badge?: string;
   headingLevel?: "h2" | "h3";
+  comparison?: { selected: boolean; disabled: boolean; toggle: () => void };
 }) {
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const { user } = useAuth();
@@ -160,6 +162,18 @@ export function ModCard({
       </Link>
 
       <div className="relative flex flex-1 flex-col p-5 sm:p-6">
+        {comparison && (
+          <button
+            type="button"
+            aria-label={`Compare ${mod.name}`}
+            aria-pressed={comparison.selected}
+            disabled={comparison.disabled}
+            onClick={comparison.toggle}
+            className={`compare-select touch-target mb-3 self-start rounded-full border px-3 py-2 text-xs font-semibold ${comparison.selected ? "border-primary bg-primary/10 text-primary-ink" : "border-border text-muted-foreground"}`}
+          >
+            {comparison.selected ? "Added to comparison ✓" : "Add to comparison"}
+          </button>
+        )}
         <Link to="/mods/$slug" params={{ slug: mod.slug }} onMouseDown={playClick}>
           <Heading className="font-display text-xl font-extrabold uppercase leading-tight tracking-tight transition-colors hover:text-primary-ink">
             {mod.name}

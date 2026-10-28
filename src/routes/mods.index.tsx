@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Search, TrendingUp, Clock, Heart, Download, Star, Sparkles, X } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
+import { BuildComparison } from "@/components/BuildComparison";
 import { ModCard } from "@/components/ModCard";
 import { ThemedSelect } from "@/components/ThemedSelect";
 import { formatCount, elementTheme, mods as catalogMods, type Element } from "@/lib/mods";
@@ -44,6 +45,18 @@ export const Route = createFileRoute("/mods/")({
 
 function ModsPage() {
   const { mods } = useSiteSettings();
+  const [compareSlugs, setCompareSlugs] = useState<string[]>([]);
+  const compared = compareSlugs
+    .map((slug) => mods.find((m) => m.slug === slug))
+    .filter((m) => m !== undefined);
+  const toggleCompare = (slug: string) =>
+    setCompareSlugs((current) =>
+      current.includes(slug)
+        ? current.filter((s) => s !== slug)
+        : current.length < 3
+          ? [...current, slug]
+          : current,
+    );
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const q = search.q ?? "";
@@ -311,6 +324,11 @@ function ModsPage() {
         {activeFilters > 0 || q ? " with the current discovery settings" : ""}.
       </p>
 
+      <p className="mt-3 text-xs text-muted-foreground">
+        Choose two or three builds to compare their versions, sizes and listed features.
+      </p>
+      <BuildComparison builds={compared} remove={toggleCompare} clear={() => setCompareSlugs([])} />
+
       {filtered.length === 0 ? (
         <div className="mt-8 rounded-3xl border border-dashed border-border bg-card/30 p-8 text-center sm:p-12">
           <p className="font-display text-lg font-bold uppercase tracking-tight">No builds found</p>
@@ -350,6 +368,11 @@ function ModsPage() {
               featured={i === 0}
               badge={DISCOVERY_BADGES[sort]}
               headingLevel="h2"
+              comparison={{
+                selected: compareSlugs.includes(m.slug),
+                disabled: compareSlugs.length >= 3 && !compareSlugs.includes(m.slug),
+                toggle: () => toggleCompare(m.slug),
+              }}
             />
           ))}
         </section>
