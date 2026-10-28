@@ -8,8 +8,7 @@ import { useTrainerRank } from "@/hooks/useTrainerRank";
 import { Skeleton } from "@/components/Skeleton";
 
 function rewardLabel(kind: string, qty: number) {
-  const label =
-    kind === "trainer_vip_key" ? "VIP Key" : kind === "trainer_dg_key" ? "DG Key" : "Phoenix Pass";
+  const label = kind === "trainer_vip_key" || kind === "trainer_dg_key" ? "DG Key" : "Phoenix Pass";
   return `${qty} ${label}${qty === 1 ? "" : "s"}`;
 }
 

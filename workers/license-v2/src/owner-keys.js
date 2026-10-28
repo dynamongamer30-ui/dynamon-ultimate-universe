@@ -62,6 +62,8 @@ export async function ownerKeyAction(request, env) {
       !/^[0-9a-f-]{36}$/i.test(body.requestId || "")
     )
       return reply({ error: "Invalid key action" }, 400);
+    if (body.action === "create" && !/^DG-[A-Z0-9]{6}$/.test(body.key))
+      return reply({ error: "New keys must use DG followed by six characters." }, 400);
     if (
       ["create", "extend"].includes(body.action) &&
       (!Number.isInteger(body.hours) || body.hours < 0 || body.hours > 87600)

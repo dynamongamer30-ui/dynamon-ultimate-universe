@@ -35,7 +35,7 @@ export function NotificationClaim({ notification }: { notification: AppNotificat
     to = {
       kind: "granted_key",
       ref: reward_ref,
-      label: "VIP Key",
+      label: "DG Key",
       icon: <KeyRound className="h-3.5 w-3.5" />,
       text: "View your key",
     };

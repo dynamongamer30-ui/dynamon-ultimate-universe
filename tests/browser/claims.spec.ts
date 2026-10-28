@@ -82,7 +82,11 @@ async function fixture(page: Page) {
       body = [{ current_streak: 1, longest_streak: 1, incremented: false }];
     else if (fn === "user_xp") body = { xp: 0, level: 1 };
     else if (fn === "user_streaks") body = { current_streak: 1, longest_streak: 1 };
+    else if (fn === "my_daily_key")
+      body = [{ id: "00000000-0000-4000-8000-000000000003", key: "VIP-ABC234" }];
     else if (fn.startsWith("claim_")) {
+      if (fn === "claim_daily_key")
+        expect(route.request().postDataJSON().p_id).toBe("00000000-0000-4000-8000-000000000003");
       state.calls.push(fn);
       body = state.body;
       status = state.status;
@@ -107,6 +111,27 @@ async function open(
     timeout: 15000,
   });
 }
+
+test("winner notification key text resolves to its owned reward UUID before claiming", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  await open(page, "daily_key", "&ref=VIP-ABC234");
+  expect(state.calls).toEqual([]);
+  await page.getByRole("button", { name: "Claim now", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Reward claimed", exact: true })).toBeVisible();
+  expect(state.calls).toEqual(["claim_daily_key"]);
+});
+
+test("a stale key notification cannot claim a different current winner reward", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  await open(page, "daily_key", "&ref=VIP-OLD234");
+  await page.getByRole("button", { name: "Claim now", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("no longer available");
+  expect(state.calls).toEqual([]);
+});
 
 test("notification claims require an explicit action and suppress duplicate submissions", async ({
   page,
@@ -236,7 +261,7 @@ test("valid Trainer Rank key and pass acknowledgments display their rewards", as
   state.body = { ok: true, level: 2, reward_kind: "trainer_vip_key", key: "FIXTURE-VIP" };
   await open(page, "trainer_level", "");
   await page.getByRole("button", { name: "Claim now", exact: true }).click();
-  await expect(page.getByText("Trainer Level 2: VIP Key", { exact: true })).toBeVisible();
+  await expect(page.getByText("Trainer Level 2: DG Key", { exact: true })).toBeVisible();
   await expect(page.getByText("FIXTURE-VIP", { exact: true })).toBeVisible();
   state.body = { ok: true, level: 3, reward_kind: "phoenix_pass", key: null };
   await open(page, "trainer_level", "");

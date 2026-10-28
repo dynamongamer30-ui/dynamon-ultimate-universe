@@ -8,6 +8,7 @@ import { PageShell } from "@/components/PageShell";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { playClick } from "@/lib/sound";
+import { resolveDailyKeyClaimId } from "@/lib/dailyKeyClaim";
 
 type ClaimKind = "trainer_level" | "phoenix_pass" | "daily_key" | "granted_key" | "";
 
@@ -125,12 +126,26 @@ function ClaimSession({
     controller.current = request;
     const timer = setTimeout(() => request.abort(), 10_000);
     try {
+      const dailyId =
+        kind === "daily_key"
+          ? await resolveDailyKeyClaimId(ref, () =>
+              supabase.rpc("my_daily_key").abortSignal(request.signal).retry(false),
+            )
+          : null;
+      if (!valid()) return;
+      if (kind === "daily_key" && !dailyId) {
+        setResult({
+          kind: "error",
+          message: "This daily key is no longer available. Check Rewards for your current reward.",
+        });
+        return;
+      }
       const { data, error } = await (
         kind === "trainer_level"
           ? supabase.rpc("claim_trainer_level")
           : kind === "phoenix_pass"
             ? supabase.rpc("claim_phoenix_pass", { p_id: ref })
-            : supabase.rpc("claim_daily_key", { p_id: ref })
+            : supabase.rpc("claim_daily_key", { p_id: dailyId! })
       )
         .abortSignal(request.signal)
         .retry(false);
@@ -173,7 +188,7 @@ function ClaimSession({
           setResult({
             kind: "key",
             key: res.key,
-            title: `Trainer Level ${res.level}: ${res.reward_kind === "trainer_vip_key" ? "VIP Key" : "DG Key"}`,
+            title: `Trainer Level ${res.level}: DG Key`,
           });
         } else throw new Error("unconfirmed");
         playClick();

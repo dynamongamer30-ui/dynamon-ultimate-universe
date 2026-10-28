@@ -307,7 +307,7 @@ async function ownerKeyAction(action: string, key: string, hours?: number, expec
 export async function createManualKey(prefix: string, hours: number): Promise<string> {
   if (!Number.isInteger(hours) || hours < 0 || hours > 87600)
     throw new Error("Enter 0–87600 whole hours; 0 means lifetime.");
-  if (!["DG", "VIP"].includes(prefix)) throw new Error("Invalid key prefix.");
+  if (prefix !== "DG") throw new Error("New keys use the DG prefix.");
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const random = crypto.getRandomValues(new Uint8Array(6));
   const key =

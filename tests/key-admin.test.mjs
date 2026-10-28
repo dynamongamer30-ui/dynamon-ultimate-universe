@@ -174,8 +174,9 @@ rows.set("valid_keys:test", {
 changeBeforeWrite = () => (rows.get("valid_keys:test").data.device = "another-phone");
 await assert.rejects(data.revokeKey("test"), /changed elsewhere/);
 assert.equal(rows.get("valid_keys:test").data.status, "active");
-const id = await data.createManualKey("VIP", 0);
-assert.match(id, /^VIP-[A-Z2-9]{6}$/);
+const id = await data.createManualKey("DG", 0);
+assert.match(id, /^DG-[A-Z2-9]{6}$/);
+await assert.rejects(data.createManualKey("VIP", 24), /DG prefix/);
 assert.equal(rows.get("valid_keys:" + id).data.expiry, 0);
 assert.equal(rows.get("valid_keys:" + id).data.durationHours, 0);
 await assert.rejects(data.createManualKey("DG", -1));

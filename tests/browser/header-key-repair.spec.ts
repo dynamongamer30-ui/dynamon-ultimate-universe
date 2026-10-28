@@ -63,7 +63,7 @@ test("circular brand and focused header fit phone/desktop widths and enlarged te
   await page.screenshot({ path: info.outputPath("header-and-key-form.png") });
 });
 
-test("compact manual form creates six-character DG/VIP keys through owner API only", async ({
+test("compact manual form creates only six-character DG keys through owner API", async ({
   page,
 }, info) => {
   await page.addInitScript(() =>
@@ -80,11 +80,11 @@ test("compact manual form creates six-character DG/VIP keys through owner API on
   expect(state.writes[0].body.key).toMatch(/^DG-[A-Z2-9]{6}$/);
   expect(state.writes[0].body).toMatchObject({ action: "create", hours: 0 });
   await expect(form.getByRole("button", { name: "Generate & copy", exact: true })).toBeEnabled();
-  await form.getByRole("button", { name: "VIP", exact: true }).click();
+  await expect(form.getByRole("button", { name: "VIP", exact: true })).toHaveCount(0);
   await form.getByRole("button", { name: "7d", exact: true }).click();
   await form.getByRole("button", { name: "Generate & copy", exact: true }).click();
   await expect.poll(() => state.writes.length).toBe(2);
-  expect(state.writes[1].body.key).toMatch(/^VIP-[A-Z2-9]{6}$/);
+  expect(state.writes[1].body.key).toMatch(/^DG-[A-Z2-9]{6}$/);
   expect(state.writes[1].body.hours).toBe(168);
 });
 

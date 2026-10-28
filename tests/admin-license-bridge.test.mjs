@@ -225,9 +225,11 @@ test("admin DG/VIP keys pass the existing signed V2 activation path and reject a
       const parameters =
         name === "rv2_admin_key_action"
           ? ["p_action", "p_key", "p_key_hmac", "p_hours", "p_expected", "p_actor", "p_request_id"]
-          : name === "rv2_claim_device"
-            ? ["p_key_hmac", "p_thumbprint", "p_public_key_spki"]
-            : null;
+          : name === "rv2_claim_existing_key"
+            ? ["p_key", "p_key_hmac", "p_thumbprint", "p_public_key_spki"]
+            : name === "rv2_claim_device"
+              ? ["p_key_hmac", "p_thumbprint", "p_public_key_spki"]
+              : null;
       assert.ok(parameters, "only expected fixture RPCs may run");
       const rows = (
         await db.query(
@@ -269,9 +271,12 @@ test("admin DG/VIP keys pass the existing signed V2 activation path and reject a
       "sign",
       "verify",
     ]);
+    await db.exec(
+      readFileSync(new URL("../supabase/reward_license_bridge.sql", import.meta.url), "utf8"),
+    );
     for (const [key, hours] of [
       ["DG-ABC234", 24],
-      ["VIP-ABC234", 0],
+      ["DG-LIFE23", 0],
     ]) {
       const response = await licenseWorker.fetch(
         new Request("https://local.test/v2/admin/keys", {
@@ -296,6 +301,53 @@ test("admin DG/VIP keys pass the existing signed V2 activation path and reject a
         ["sign", "verify"],
       );
       assert.equal((await activate(key, different)).status, 401);
+    }
+    // Both old VIP rewards/admin keys and new DG rewards use real signed activation.
+    for (const key of ["VIP-REWARD", "DG-REWARD"]) {
+      await db.query("INSERT INTO valid_keys VALUES($1,$2)", [
+        key,
+        {
+          status: "active",
+          durationHours: 24,
+          expiry: Math.floor(Date.now() / 1000) + 86400,
+          device: null,
+          activated: false,
+        },
+      ]);
+      assert.equal((await activate(key, pair)).status, 200);
+      const different = await crypto.subtle.generateKey(
+        { name: "ECDSA", namedCurve: "P-256" },
+        true,
+        ["sign", "verify"],
+      );
+      assert.equal((await activate(key, different)).status, 401);
+    }
+    const createdCount = (await db.query("SELECT count(*)::int AS n FROM rv_v2.licenses")).rows[0]
+      .n;
+    for (const [key, data] of [
+      ["VIP-EXPIRE", { status: "active", durationHours: 24, expiry: 1 }],
+      ["VIP-REVOKE", { status: "revoked", durationHours: 24, expiry: 0 }],
+      ["VIP-BOUND2", { status: "active", durationHours: 24, expiry: 0, device: "existing-phone" }],
+      ["DG-BADDAT", { status: "active", durationHours: "invalid", expiry: 0 }],
+    ]) {
+      await db.query("INSERT INTO valid_keys VALUES($1,$2)", [key, data]);
+      assert.equal((await activate(key, pair)).status, 401);
+    }
+    assert.equal((await activate("DG-NOKEY2", pair)).status, 401);
+    assert.equal(
+      (await db.query("SELECT count(*)::int AS n FROM rv_v2.licenses")).rows[0].n,
+      createdCount,
+    );
+    for (const role of ["anon", "authenticated", "service_role"]) {
+      assert.equal(
+        (
+          await db.query(
+            "SELECT has_function_privilege($1,'public.rv2_claim_existing_key(text,text,text,text)','EXECUTE') AS allowed",
+            [role],
+          )
+        ).rows[0].allowed,
+        role === "service_role",
+      );
     }
   } finally {
     globalThis.fetch = original;

@@ -228,11 +228,20 @@ async function activate(req, env) {
 
   const keyHash = hex(await hmac(env.LICENSE_HMAC_PEPPER, "rv-v2:license:v1:" + license));
 
-  const row = await rpc(env, "rv2_claim_device", {
+  let row = await rpc(env, "rv2_claim_device", {
     p_key_hmac: keyHash,
     p_thumbprint: thumb,
     p_public_key_spki: b.public_key_spki,
   });
+
+  if (!row?.license_id && /^(?:DG|VIP|DGVIP)-[A-Z0-9]{6,16}$/.test(license)) {
+    row = await rpc(env, "rv2_claim_existing_key", {
+      p_key: license,
+      p_key_hmac: keyHash,
+      p_thumbprint: thumb,
+      p_public_key_spki: b.public_key_spki,
+    });
+  }
 
   if (!row?.license_id || !Number.isInteger(row.lease_version)) {
     return json({ error: "Invalid license or device" }, 401);

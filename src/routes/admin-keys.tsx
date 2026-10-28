@@ -859,7 +859,7 @@ function StatTile({
 // ----- Manual key form -----
 
 function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
-  const [prefix, setPrefix] = useState("DG");
+  const prefix = "DG";
   const [hours, setHours] = useState("24");
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
@@ -908,23 +908,8 @@ function ManualKeyForm({ disabled = false }: { disabled?: boolean }) {
       <div className="mb-4 grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
         <div>
           <p className="mb-2 text-xs font-semibold text-muted-foreground">Prefix</p>
-          <div
-            role="group"
-            aria-label="Key prefix"
-            className="inline-flex rounded-xl border border-border bg-background/40 p-1 text-xs"
-          >
-            {["DG", "VIP"].map((p) => (
-              <button
-                type="button"
-                key={p}
-                onClick={() => setPrefix(p)}
-                aria-pressed={prefix === p}
-                className={`min-h-11 min-w-14 rounded-lg px-3 py-2 font-semibold ${prefix === p ? "text-primary-foreground" : "text-muted-foreground"}`}
-                style={prefix === p ? { background: "var(--gradient-primary)" } : undefined}
-              >
-                {p}
-              </button>
-            ))}
+          <div className="inline-flex min-h-11 items-center rounded-xl border border-border bg-background/40 px-4 font-mono text-sm font-semibold">
+            DG-XXXXXX
           </div>
         </div>
         <div>
