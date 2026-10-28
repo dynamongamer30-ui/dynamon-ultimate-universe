@@ -3,12 +3,15 @@ import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { BackHome } from "./BackHome";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { BetaNotice } from "./BetaNotice";
+import { SiteGuide } from "./SiteGuide";
 
 export function PageShell({ children }: { children: ReactNode }) {
   const { loading } = useSiteSettings();
   return (
     <div className="app-shell min-h-screen">
       <Header />
+      <BetaNotice />
       <main
         id="main-content"
         aria-busy={loading}
@@ -19,6 +22,7 @@ export function PageShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <Footer />
+      <SiteGuide />
     </div>
   );
 }

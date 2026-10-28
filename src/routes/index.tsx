@@ -7,14 +7,13 @@ import {
   Zap,
   Users,
   ChevronRight,
-  Star,
   Download,
-  TrendingUp,
   ArrowRight,
   Gift,
   MessageCircle,
   ArrowUpRight,
 } from "lucide-react";
+import { ShadowDragon } from "@/components/ShadowDragon";
 import { PageShell } from "@/components/PageShell";
 import { ModCard } from "@/components/ModCard";
 import { ForYouRail } from "@/components/ForYouRail";
@@ -95,8 +94,8 @@ function Index() {
     <PageShell>
       {/* ── HERO ─────────────────────────────────────────── */}
       <section aria-labelledby="homepage-title" className="relative pt-4 sm:pt-10 lg:pt-14">
-        <div className="hero-field">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.25fr_1fr] lg:items-center lg:gap-12">
+        <div className="hero-field royal-hero">
+          <div className="royal-hero-grid">
             <div className="min-w-0">
               <motion.p
                 initial={reducedMotion ? false : { opacity: 0, y: 12 }}
@@ -115,9 +114,9 @@ function Index() {
                 id="homepage-title"
                 className="mt-6 max-w-[16ch] font-display text-[clamp(1.5rem,7.7vw,4.5rem)] font-bold leading-[1.03] tracking-[-0.045em] text-balance lg:text-[clamp(2.25rem,4.6vw,4.5rem)]"
               >
-                Dynamons World
+                Find your
                 <br />
-                <span className="text-gradient">Find your element.</span>
+                <span className="text-gradient">element.</span>
               </motion.h1>
 
               <motion.p
@@ -126,9 +125,8 @@ function Index() {
                 transition={reducedMotion ? { duration: 0 } : { ...spring, delay: 0.12 }}
                 className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg text-pretty"
               >
-                Explore a focused collection of Dynamons World builds with clear feature notes,
-                version details, and community signals. Find the edition that fits your play style,
-                then unlock it through a simple, guided flow.
+                Discover Dynamons World builds, compare what changed, and find your next adventure.
+                Clear release notes. A guided download. Your progress, connected.
               </motion.p>
 
               <motion.div
@@ -161,57 +159,17 @@ function Index() {
               </motion.div>
             </div>
 
-            {/* Featured cartridge */}
-            <motion.div
-              initial={reducedMotion ? false : { opacity: 1, scale: 0.94, rotate: 1 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={reducedMotion ? { duration: 0 } : { ...spring, delay: 0.1 }}
-              className="relative mx-auto min-w-0 w-full max-w-md"
-            >
-              <Link
-                to="/mods/$slug"
-                params={{ slug: top.slug }}
-                onMouseDown={playClick}
-                onMouseEnter={playHover}
-                className="edge-light group relative block overflow-hidden rounded-[var(--radius-surface)] border border-border bg-card shadow-elev transition-transform duration-300 hover:-translate-y-1.5"
-                style={{ boxShadow: elementTheme[top.element].glow }}
-              >
-                <div className="relative aspect-[4/3] overflow-hidden">
-                  <img
-                    src={top.image}
-                    alt={`${top.name} key art`}
-                    width={1024}
-                    height={1024}
-                    fetchPriority="high"
-                    decoding="async"
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <div
-                    className="absolute inset-0 bg-[var(--artwork-overlay)]"
-                    aria-hidden="true"
-                  />
-                </div>
-                <div className="relative p-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-black uppercase tracking-widest text-primary-foreground">
-                      <TrendingUp className="h-3 w-3" /> Featured build
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-gold">
-                      <Star className="h-3.5 w-3.5 fill-gold" /> {top.baseRating.toFixed(1)}
-                    </span>
-                  </div>
-                  <p className="mt-3 font-display text-2xl font-extrabold uppercase tracking-tight">
-                    {top.name}
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground">
-                      v{top.version} · {formatCount(top.downloads)}+ downloads
-                    </p>
-                    <ArrowRight className="h-4 w-4 text-primary-ink transition-transform group-hover:translate-x-1" />
-                  </div>
-                </div>
+            <div className="min-w-0">
+              <ShadowDragon />
+              <Link to="/mods/$slug" params={{ slug: top.slug }} className="royal-featured-link">
+                <img src={top.image} alt="" width={52} height={52} />
+                <span className="min-w-0 flex-1">
+                  <small>FEATURED RELEASE · v{top.version}</small>
+                  <strong>{top.name}</strong>
+                </span>
+                <ArrowRight className="h-4 w-4 shrink-0" />
               </Link>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>

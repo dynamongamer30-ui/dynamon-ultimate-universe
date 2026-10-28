@@ -1,3 +1,4 @@
+import "@/components/shadow-dragon.css";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
@@ -201,17 +202,17 @@ function ModDetail() {
         <ArrowLeft className="h-4 w-4" /> Back to mods
       </Link>
 
-      <article className="mt-6 grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:items-start">
+      <article className="mod-detail-layout mt-6 grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:items-start">
         {/* Hero image with element halo */}
         <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: 20 }}
           transition={reducedMotion ? { duration: 0 } : undefined}
           animate={{ opacity: 1, y: 0 }}
-          className="surface-l1 edge-light relative overflow-hidden rounded-2xl border"
+          className="mod-detail-hero surface-l1 edge-light relative overflow-hidden rounded-2xl border"
           style={{ boxShadow: theme.glow }}
         >
           <div
-            className="absolute inset-0 z-10 opacity-40 mix-blend-overlay"
+            className="absolute inset-0 z-10 opacity-15 mix-blend-overlay"
             style={{ background: theme.gradient }}
           />
           <img

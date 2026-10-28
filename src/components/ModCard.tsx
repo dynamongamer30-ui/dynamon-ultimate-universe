@@ -1,5 +1,7 @@
+import { useRef } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { Link } from "@tanstack/react-router";
+import "./shadow-dragon.css";
 import { motion } from "motion/react";
 
 import { Download, Heart, MessageSquare, Star, TrendingUp } from "lucide-react";
@@ -26,6 +28,7 @@ export function ModCard({
   badge?: string;
   headingLevel?: "h2" | "h3";
 }) {
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const { user } = useAuth();
   const reducedMotion = useReducedMotionPreference();
   const navigate = useNavigate();
@@ -88,16 +91,37 @@ export function ModCard({
           : { type: "spring", stiffness: 100, damping: 18, delay: index * 0.05 }
       }
       onMouseEnter={playHover}
-      className="edge-light group relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-surface)] border border-border bg-card transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-primary/45"
+      className="mod-card edge-light group relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-surface)] border border-border bg-card transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-primary/45"
       style={{ boxShadow: featured ? theme.glow : "var(--shadow-card)" }}
     >
-      {/* Image — entire thing links to detail */}
+      {/* Swipe the artwork to open details; download authorization stays in its existing flow. */}
       <Link
         to="/mods/$slug"
         params={{ slug: mod.slug }}
         onMouseDown={playClick}
-        className="relative block aspect-[16/9] overflow-hidden"
+        className="build-artwork relative block aspect-[16/9] overflow-hidden"
+        onPointerDown={(event) => {
+          if (event.pointerType === "touch")
+            swipeStart.current = { x: event.clientX, y: event.clientY };
+        }}
+        onPointerCancel={() => {
+          swipeStart.current = null;
+        }}
+        onPointerUp={(event) => {
+          const start = swipeStart.current;
+          swipeStart.current = null;
+          if (!start) return;
+          const dx = event.clientX - start.x;
+          const dy = event.clientY - start.y;
+          if (Math.abs(dx) > 72 && Math.abs(dx) > Math.abs(dy) * 2) {
+            event.preventDefault();
+            navigate({ to: "/mods/$slug", params: { slug: mod.slug } });
+          }
+        }}
       >
+        <span className="swipe-hint" aria-hidden="true">
+          Swipe to explore →
+        </span>
         <div
           className="absolute inset-0 z-10 opacity-30 mix-blend-overlay transition-opacity duration-300 group-hover:opacity-55"
           style={{ background: theme.gradient }}

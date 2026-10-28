@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Menu,
@@ -13,18 +13,20 @@ import {
   Bell,
   Gift,
   KeyRound,
+  Compass,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { playClick } from "@/lib/sound";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useGamification } from "@/hooks/useGamification";
-import { mods } from "@/lib/mods";
 import { LevelBadge } from "@/components/LevelBadge";
 import { StreakBadge } from "@/components/StreakBadge";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { FeedbackPreferences } from "@/components/FeedbackPreferences";
 import { WebsiteThemeSelector } from "@/components/WebsiteThemeSelector";
+import { openSiteGuide } from "@/components/SiteGuide";
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 
 import { OPEN_UPDATE_PREFERENCES } from "@/lib/updatePreferences";
 
@@ -41,11 +43,18 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const reducedMotion = useReducedMotionPreference();
   const { user, signOut } = useAuth();
   const { profile } = useProfile();
   const { streak } = useGamification();
   const searchButtonRef = useRef<HTMLButtonElement>(null);
   const mobileButtonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    setOpen(false);
+    setSearchOpen(false);
+    setQ("");
+  }, [pathname]);
   useEffect(() => {
     const escape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -61,15 +70,15 @@ export function Header() {
     return () => document.removeEventListener("keydown", escape);
   }, [searchOpen, open]);
 
+  const { branding, mods } = useSiteSettings();
   const results = q.trim()
     ? mods.filter((m) =>
         (m.name + " " + m.tagline + " " + m.features.join(" ") + " " + m.element)
           .toLowerCase()
-          .includes(q.toLowerCase()),
+          .includes(q.trim().toLowerCase()),
       )
     : [];
 
-  const { branding } = useSiteSettings();
   const brandLogo = /^(https:\/\/|\/(?!\/))/.test(branding.logoUrl || "")
     ? branding.logoUrl
     : "/dynamon-gamer-avatar.png";
@@ -83,7 +92,7 @@ export function Header() {
             to="/"
             onMouseDown={playClick}
             aria-label="Dynamon Universe home"
-            className="flex min-w-0 items-center gap-2.5 rounded-full"
+            className="royal-brand flex min-w-0 items-center gap-2.5 rounded-full"
           >
             <img
               src={brandLogo}
@@ -110,7 +119,7 @@ export function Header() {
                 key={n.to}
                 to={n.to}
                 onMouseDown={playClick}
-                className="touch-target relative rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-[color,background-color,box-shadow] hover:text-foreground [&.active]:bg-primary/12 [&.active]:text-foreground [&.active]:shadow-[inset_0_0_0_1px_oklch(0.6_0.2_300_/_0.32),0_0_18px_-10px_oklch(0.62_0.23_300_/_0.9)]"
+                className="royal-nav-link touch-target relative rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-[color,background-color,box-shadow] hover:bg-secondary/60 hover:text-foreground [&.active]:text-foreground"
                 activeProps={{ className: "active" }}
                 activeOptions={{ exact: n.to === "/" }}
               >
@@ -123,6 +132,7 @@ export function Header() {
             <button
               onClick={() => {
                 setSearchOpen((v) => !v);
+                setOpen(false);
                 playClick();
               }}
               aria-label="Search"
@@ -149,6 +159,7 @@ export function Header() {
             <button
               onClick={() => {
                 setOpen((v) => !v);
+                setSearchOpen(false);
                 playClick();
               }}
               className="header-control touch-target grid place-items-center rounded-xl border border-border"
@@ -167,12 +178,13 @@ export function Header() {
           {searchOpen && (
             <motion.div
               id="site-search-panel"
-              initial={{ opacity: 0, height: 0 }}
+              initial={reducedMotion ? false : { opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
+              transition={reducedMotion ? { duration: 0 } : { duration: 0.18 }}
               role="region"
               aria-label="Site search"
-              className="glass-l2 overflow-hidden border-t border-border/60"
+              className="overflow-hidden border-t border-border/60 bg-background"
             >
               <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
                 <div className="relative">
@@ -198,13 +210,14 @@ export function Header() {
                       }
                     }}
                     placeholder="Search mods, elements, features…"
-                    className="w-full rounded-xl border border-border bg-card/60 py-3 pl-11 pr-4 text-sm outline-none focus:border-primary"
+                    className="w-full rounded-xl border border-border bg-card py-3 pl-11 pr-12 text-sm outline-none focus:border-primary"
                   />
                   <button
                     type="button"
                     onClick={() => {
                       setSearchOpen(false);
                       setQ("");
+                      searchButtonRef.current?.focus();
                       playClick();
                     }}
                     aria-label="Close search"
@@ -249,31 +262,47 @@ export function Header() {
         {open && (
           <motion.div
             id="mobile-navigation"
-            initial={{ opacity: 0, y: -8 }}
+            initial={reducedMotion ? false : { opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={reducedMotion ? { duration: 0 } : { duration: 0.18 }}
             role="navigation"
             aria-label="Mobile navigation"
-            className="max-h-[calc(100dvh-5rem)] overflow-y-auto border-t border-border bg-background"
+            className="royal-menu max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain border-t border-border bg-background"
           >
-            <div className="flex flex-col gap-1 px-4 py-3">
+            <div className="royal-menu-inner flex flex-col gap-1 px-4 py-3 sm:px-6">
               <div className="mb-2 flex flex-wrap items-center gap-3 border-b border-border/60 pb-3">
                 <WebsiteThemeSelector />
                 <FeedbackPreferences />
-              </div>
-              {nav.map((n) => (
-                <Link
-                  key={n.to}
-                  to={n.to}
-                  onClick={() => setOpen(false)}
-                  activeProps={{ className: "active" }}
-                  activeOptions={{ exact: n.to === "/" }}
-                  className="touch-target rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-card hover:text-foreground [&.active]:bg-primary/12 [&.active]:text-foreground [&.active]:shadow-[inset_0_0_0_1px_oklch(0.6_0.2_300_/_0.32)]"
+                <button
+                  type="button"
+                  className="touch-target inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm"
+                  onClick={() => {
+                    setOpen(false);
+                    mobileButtonRef.current?.focus();
+                    openSiteGuide();
+                  }}
                 >
-                  {n.label}
-                </Link>
-              ))}
+                  <Compass size={16} aria-hidden="true" /> Quick guide
+                </button>
+              </div>
+              <p className="royal-menu-group-title">Explore</p>
+              <div className="grid gap-1 sm:grid-cols-3">
+                {nav.map((n) => (
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    onClick={() => setOpen(false)}
+                    activeProps={{ className: "active" }}
+                    activeOptions={{ exact: n.to === "/" }}
+                    className="royal-nav-link touch-target rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-card hover:text-foreground [&.active]:text-foreground"
+                  >
+                    {n.label}
+                  </Link>
+                ))}
+              </div>
               {user && (
                 <div className="mt-3 grid gap-1 border-t border-border pt-3 sm:grid-cols-2">
+                  <p className="royal-menu-group-title sm:col-span-2">Your account</p>
                   <Link
                     to="/profile"
                     onClick={() => setOpen(false)}
