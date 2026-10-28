@@ -13,7 +13,9 @@ test("app content loads without writes, coalesces typing, and shares the five so
   const state = await managementFixture(page, "/admin-keys");
   state.mode = "allow";
   await page.getByRole("button", { name: "app", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Shared links", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Shared social links", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("status")).toContainText("Saved");
   expect(state.writes).toHaveLength(0);
   await page

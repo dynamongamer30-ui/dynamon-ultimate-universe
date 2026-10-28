@@ -77,7 +77,13 @@ export function publicUiConfig(config) {
     const value =
       raw.links && Object.hasOwn(raw.links, id)
         ? raw.links[id]
-        : config.Links?.[legacy] || (id === "tutorial" ? config.TutorialUrl : "");
+        : config.Links && Object.hasOwn(config.Links, legacy)
+          ? config.Links[legacy]
+          : id === "tutorial"
+            ? config.TutorialUrl
+            : id === "getkey"
+              ? "https://generator.dynamongamer30.workers.dev/start"
+              : "";
     result.links[id] = safeLink(value);
     if (["instagram", "telegram", "youtube", "whatsapp", "website"].includes(id)) {
       const label = raw.social?.labels?.[id];

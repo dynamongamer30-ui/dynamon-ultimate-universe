@@ -17,11 +17,13 @@ export function NativeAppEditor() {
   const resource = useOwnerResource(read);
   const [initialized, setInitialized] = useState(false);
   const [draft, setDraft] = useState<NativeUi>(() => nativeUi(null, {}));
+  const [saved, setSaved] = useState<NativeUi>(() => nativeUi(null, {}));
   const snapshot = useRef<unknown>(undefined);
   useEffect(() => {
     if (resource.data) {
       snapshot.current = resource.data.Ui;
       setDraft(nativeUi(resource.data.Ui, resource.data));
+      setSaved(nativeUi(resource.data.Ui, resource.data));
       setInitialized(true);
     }
   }, [resource.data]);
@@ -39,6 +41,7 @@ export function NativeAppEditor() {
         AbortSignal.timeout(10000),
       );
       snapshot.current = next;
+      setSaved(next);
     },
   });
   if (resource.loading) return <p role="status">Loading app settings…</p>;
@@ -86,6 +89,26 @@ export function NativeAppEditor() {
     unavailableMessage: "Offline message",
     laterLabel: "Optional update continue text",
   };
+  const preview = (id: string, title: string) => {
+    const url = saved.links[id];
+    const unavailable =
+      !url?.trim() ||
+      !!validateNativeUi(saved) ||
+      JSON.stringify(draft) !== JSON.stringify(saved) ||
+      autosave.saving ||
+      !!autosave.error;
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        disabled={unavailable}
+        aria-label={`Open saved ${title} link`}
+        onClick={() => window.open(url.trim(), "_blank", "noopener,noreferrer")}
+      >
+        Open saved link
+      </Button>
+    );
+  };
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
@@ -104,7 +127,7 @@ export function NativeAppEditor() {
           )}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={resource.reload}>
+          <Button variant="outline" disabled={autosave.saving} onClick={resource.reload}>
             Reload saved settings
           </Button>
           <Button disabled={autosave.saving} onClick={() => void autosave.saveNow()}>
@@ -112,6 +135,54 @@ export function NativeAppEditor() {
           </Button>
         </div>
       </div>
+      <section
+        className="rounded-2xl border border-border bg-card p-5"
+        aria-labelledby="native-login-buttons"
+      >
+        <h3 id="native-login-buttons" className="mb-2 text-lg font-bold">
+          Login buttons
+        </h3>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Edit each button and its destination together. Leave a URL empty to disable that action in
+          the updated DEX. Saved links can be tested after changes finish saving.
+        </p>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {(
+            [
+              ["getkey", "Get Key", "getKeyLabel", "Get Key URL"],
+              ["admin", "Admin", "adminLabel", "Admin URL"],
+              ["tutorial", "Tutorial & Help", "tutorialLabel", "Tutorial URL"],
+            ] as const
+          ).map(([id, title, key, urlLabel]) => (
+            <div key={id} className="min-w-0 space-y-3 rounded-xl border border-border p-4">
+              <h4 className="font-semibold">{title}</h4>
+              {field(labels[key], draft.login[key], (text) =>
+                setDraft((v) => ({ ...v, login: { ...v.login, [key]: text } })),
+              )}
+              {field(urlLabel, draft.links[id], (text) =>
+                setDraft((v) => ({ ...v, links: { ...v.links, [id]: text } })),
+              )}
+              <p className="text-xs text-muted-foreground">
+                {id === "admin"
+                  ? "Use any public HTTPS destination you choose. No owner sign-in or contact address is assumed."
+                  : id === "getkey"
+                    ? "Keep your existing generator link unless you intend to change the key flow."
+                    : "Open your tutorial or support page."}
+              </p>
+              {preview(id, title)}
+            </div>
+          ))}
+          <div className="min-w-0 space-y-3 rounded-xl border border-border p-4">
+            <h4 className="font-semibold">Login / Verify</h4>
+            {field(labels.verifyLabel, draft.login.verifyLabel, (text) =>
+              setDraft((v) => ({ ...v, login: { ...v.login, verifyLabel: text } })),
+            )}
+            <p className="text-sm text-muted-foreground">
+              Verifies the entered key inside the APK. This button has no website URL.
+            </p>
+          </div>
+        </div>
+      </section>
       {Object.entries(NATIVE_TEXT_FIELDS).map(([group, fields]) => (
         <section key={group} className="rounded-2xl border border-border bg-card p-5">
           <h3 className="mb-4 text-lg font-bold capitalize">
@@ -122,33 +193,44 @@ export function NativeAppEditor() {
                 : group}
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">
-            {Object.keys(fields).map((key) =>
-              field(
-                labels[key] ?? key,
-                draft[group as "brand" | "login" | "community" | "policy"][key],
-                (text) =>
-                  setDraft((v) => ({
-                    ...v,
-                    [group]: {
-                      ...v[group as "brand" | "login" | "community" | "policy"],
-                      [key]: text,
-                    },
-                  })),
-              ),
-            )}
+            {Object.keys(fields)
+              .filter(
+                (key) =>
+                  group !== "login" ||
+                  !["getKeyLabel", "adminLabel", "verifyLabel", "tutorialLabel"].includes(key),
+              )
+              .map((key) =>
+                field(
+                  labels[key] ?? key,
+                  draft[group as "brand" | "login" | "community" | "policy"][key],
+                  (text) =>
+                    setDraft((v) => ({
+                      ...v,
+                      [group]: {
+                        ...v[group as "brand" | "login" | "community" | "policy"],
+                        [key]: text,
+                      },
+                    })),
+                ),
+              )}
           </div>
         </section>
       ))}
       <section className="rounded-2xl border border-border bg-card p-5">
-        <h3 className="mb-2 text-lg font-bold">Shared links</h3>
+        <h3 className="mb-2 text-lg font-bold">Shared social links</h3>
         <p className="mb-4 text-sm text-muted-foreground">
           The five social icons use these same links on login and Stay Connected. Icons stay the
           same when labels change.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
-          {NATIVE_LINKS.map(([id, label]) =>
-            field(label, draft.links[id], (text) =>
-              setDraft((v) => ({ ...v, links: { ...v.links, [id]: text } })),
+          {NATIVE_LINKS.filter(([id]) => !["getkey", "admin", "tutorial"].includes(id)).map(
+            ([id, label]) => (
+              <div key={id} className="min-w-0 space-y-3">
+                {field(label, draft.links[id], (text) =>
+                  setDraft((v) => ({ ...v, links: { ...v.links, [id]: text } })),
+                )}
+                {preview(id, label)}
+              </div>
             ),
           )}
         </div>

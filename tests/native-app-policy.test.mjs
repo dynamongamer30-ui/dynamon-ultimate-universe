@@ -51,6 +51,41 @@ test("native link validation refuses credentials, unsafe protocols and partial i
     assert.equal(publicUiConfig({ Ui: config }).links.website, "");
   }
 });
+
+test("login destinations preserve explicit empty settings and only missing fields use legacy defaults", () => {
+  const legacy = {
+    Links: {
+      GetKey: "https://old.example/key",
+      Admin: "https://old.example/admin",
+      Info: "https://old.example/help",
+    },
+    TutorialUrl: "https://old.example/tutorial",
+  };
+  const config = nativeUi(
+    { schema: 1, links: { getkey: "", admin: "", tutorial: "", website: "" } },
+    legacy,
+  );
+  const published = publicUiConfig({ ...legacy, Ui: config });
+  for (const id of ["getkey", "admin", "tutorial", "website"])
+    assert.equal(published.links[id], "");
+  assert.equal(publicUiConfig(legacy).links.getkey, legacy.Links.GetKey);
+  assert.equal(publicUiConfig(legacy).links.tutorial, legacy.Links.Info);
+  assert.equal(
+    publicUiConfig({}).links.getkey,
+    "https://generator.dynamongamer30.workers.dev/start",
+  );
+  assert.equal(
+    publicUiConfig({ Links: { GetKey: "", Info: "" }, TutorialUrl: legacy.TutorialUrl }).links
+      .tutorial,
+    "",
+  );
+  assert.equal(publicUiConfig({ Links: { GetKey: "" } }).links.getkey, "");
+  assert.equal(
+    publicUiConfig({ Ui: { schema: 1, links: { admin: "https://custom.example/support" } } }).links
+      .admin,
+    "https://custom.example/support",
+  );
+});
 test("maintenance takes priority; mandatory updates block missing or older versions and allow current versions", async () => {
   const original = globalThis.fetch;
   const env = { SUPABASE_URL: "https://fixture.supabase.co", SUPABASE_SERVICE_KEY: "local-only" };
