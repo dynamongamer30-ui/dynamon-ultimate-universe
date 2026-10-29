@@ -26,6 +26,18 @@ async function setup() {
  create table saved_tutorials(language text,body text,video text);
  insert into saved_tutorials values('en','English content','video-a'),('hi','हिंदी सामग्री','video-b'),('hing','Hinglish content','video-c'),('vi','Nội dung','video-d');`);
   await db.exec(migration);
+  await db.exec(
+    `create table website_campaign_browser_claims(campaign_slug text references claim_campaigns(slug),browser_hash text,user_id uuid,primary key(campaign_slug,browser_hash));`,
+  );
+  await db.exec(
+    await readFile(
+      new URL(
+        "../supabase/migrations/20261029084113_reuse_deleted_campaign_names.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
   return db;
 }
 async function rpc(db, action, hash = "a".repeat(64), who = user, tg = 123) {
@@ -94,6 +106,82 @@ test("pause, delete, expiry, rename and owner authorization preserve reward hist
     assert.equal((await db.query("select count(*)::int as n from phoenix_passes")).rows[0].n, 1);
     await db.exec("set test.owner='false'");
     await assert.rejects(db.query("select website_manage_campaign('list')"), /Owner access/);
+  } finally {
+    await db.close();
+  }
+});
+
+test("deleted link names can be reused repeatedly with fresh quotas and intact archived rewards", async () => {
+  const db = await setup();
+  try {
+    await db.exec("update claim_campaigns set max_claims=2");
+    await rpc(db, "create");
+    await rpc(db, "confirm");
+    await rpc(db, "redeem");
+    await rpc(db, "create", "b".repeat(64), other, 999);
+    await rpc(db, "confirm", "b".repeat(64), other, 999);
+    await db.exec(
+      `insert into website_campaign_browser_claims values('bonus','old-browser','${user}')`,
+    );
+    const passBefore = (await db.query("select * from phoenix_passes")).rows;
+    await db.query("select website_manage_campaign('delete','bonus')");
+    // A smaller new quota is valid even when the deleted campaign had claims.
+    const saves = await Promise.all([
+      db.query(
+        "select website_save_campaign('bonus','New Diwali Pass',1,true,null,null,'diwali-pass')",
+      ),
+      db.query(
+        "select website_save_campaign('bonus','New Diwali Pass',1,true,null,null,'diwali-pass')",
+      ),
+    ]);
+    assert.equal(saves.length, 2);
+    const campaigns = (await db.query("select * from claim_campaigns")).rows;
+    assert.equal(campaigns.length, 2);
+    const archived = campaigns.find((c) => c.deleted_at !== null);
+    assert.equal(archived.title, "Diwali Pass");
+    assert.equal(archived.claimed_count, 1);
+    assert.equal(campaigns.find((c) => c.slug === "bonus").claimed_count, 0);
+    for (const table of [
+      "claim_campaign_claims",
+      "website_campaign_browser_claims",
+      "website_telegram_handoffs",
+      "website_telegram_awards",
+    ]) {
+      const rows = (await db.query(`select campaign_slug from ${table}`)).rows;
+      assert.ok(rows.every((row) => row.campaign_slug === archived.slug));
+    }
+    assert.deepEqual((await db.query("select * from phoenix_passes")).rows, passBefore);
+    assert.equal((await rpc(db, "status")).claimed, false);
+    assert.equal((await rpc(db, "inspect", "b".repeat(64), other, 999)).error, "not_found");
+    assert.equal((await rpc(db, "redeem")).error, "not_found");
+    await rpc(db, "create", "c".repeat(64));
+    await rpc(db, "confirm", "c".repeat(64));
+    assert.equal((await rpc(db, "redeem", "c".repeat(64))).awarded, true);
+    assert.equal((await db.query("select count(*)::int as n from phoenix_passes")).rows[0].n, 2);
+    await assert.rejects(
+      db.query("select website_manage_campaign('save','bonus','Same campaign',0,true)"),
+      /Check campaign|Limit/,
+    );
+    await db.query("select website_manage_campaign('delete','bonus')");
+    await db.query(
+      "select website_save_campaign('bonus','Third campaign',1,true,null,null,'diwali-pass')",
+    );
+    assert.equal(
+      (await db.query("select claimed_count from claim_campaigns where slug='bonus'")).rows[0]
+        .claimed_count,
+      0,
+    );
+    assert.equal(
+      (await db.query("select count(*)::int as n from claim_campaign_claims")).rows[0].n,
+      2,
+    );
+    await db.exec("set test.owner='false'");
+    await assert.rejects(
+      db.query(
+        "select website_save_campaign('bonus','Unauthorized',1,true,null,null,'diwali-pass')",
+      ),
+      /Owner access/,
+    );
   } finally {
     await db.close();
   }
