@@ -38,6 +38,18 @@ async function setup() {
       "utf8",
     ),
   );
+  await db.exec(
+    "alter table auth.users add column email text; alter table profiles add column is_owner boolean not null default false;",
+  );
+  await db.exec(
+    await readFile(
+      new URL(
+        "../supabase/migrations/20261029085727_owner_campaign_demonstrations.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
   return db;
 }
 async function rpc(db, action, hash = "a".repeat(64), who = user, tg = 123) {
@@ -181,6 +193,114 @@ test("deleted link names can be reused repeatedly with fresh quotas and intact a
         "select website_save_campaign('bonus','Unauthorized',1,true,null,null,'diwali-pass')",
       ),
       /Owner access/,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("verified owner can demonstrate repeatedly without public allocation while ordinary quotas remain enforced", async () => {
+  const db = await setup();
+  try {
+    await db.exec(
+      `update auth.users set email='yugvadecha30@gmail.com' where id='${user}'; update profiles set is_owner=true where id='${user}';`,
+    );
+    const ownerTg = 1970192536;
+    assert.deepEqual(await rpc(db, "status"), { claimed: false, demo: true });
+    // Public sold-out state does not consume or block owner demonstrations.
+    await db.exec("update claim_campaigns set claimed_count=1");
+    await rpc(db, "create");
+    assert.equal((await rpc(db, "inspect", "a".repeat(64), user, 777)).error, "account_mismatch");
+    await rpc(db, "confirm", "a".repeat(64), user, ownerTg);
+    assert.equal((await rpc(db, "redeem", "a".repeat(64), user, ownerTg)).awarded, true);
+    assert.equal((await rpc(db, "redeem", "a".repeat(64), user, ownerTg)).awarded, true);
+    for (const letter of ["b", "c"]) {
+      await rpc(db, "create", letter.repeat(64));
+      await rpc(db, "confirm", letter.repeat(64), user, ownerTg);
+      assert.equal((await rpc(db, "redeem", letter.repeat(64), user, ownerTg)).demo, true);
+    }
+    assert.equal((await db.query("select count(*)::int n from phoenix_passes")).rows[0].n, 3);
+    assert.equal(
+      (await db.query("select claimed_count from claim_campaigns")).rows[0].claimed_count,
+      1,
+    );
+    assert.equal(
+      (await db.query("select count(*)::int n from claim_campaign_claims")).rows[0].n,
+      0,
+    );
+    assert.equal((await rpc(db, "create", "d".repeat(64), other, ownerTg)).error, "sold_out");
+    // Same Telegram ID alone is not enough to gain owner privileges.
+    assert.equal(
+      (await db.query("select website_is_demo_owner($1,$2) v", [other, ownerTg])).rows[0].v,
+      false,
+    );
+    await db.query("select website_manage_campaign('delete','bonus')");
+    await db.query(
+      "select website_save_campaign('bonus','New campaign',1,true,null,null,'diwali-pass')",
+    );
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int n from website_owner_demo_awards where campaign_slug like 'archived-%'",
+        )
+      ).rows[0].n,
+      3,
+    );
+    await rpc(db, "create", "e".repeat(64));
+    await db.exec(`update profiles set is_owner=false where id='${user}'`);
+    assert.equal(
+      (await rpc(db, "confirm", "e".repeat(64), user, ownerTg)).error,
+      "account_mismatch",
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("existing owner passes are revoked and owner test allocations refunded exactly once", async () => {
+  const db = await setup();
+  try {
+    // Seed historical public claims before enabling the designated owner account.
+    await rpc(db, "create");
+    await rpc(db, "confirm");
+    await rpc(db, "redeem");
+    await db.exec(`update auth.users set email='yugvadecha30@gmail.com' where id='${user}';update profiles set is_owner=true where id='${user}';
+    insert into phoenix_passes(user_id,claimed,claim_deadline,expires_at,grant_kind) values('${other}',true,now(),now()+interval '30 days','other');`);
+    const apply = await readFile(
+      new URL(
+        "../supabase/migrations/20261029085727_owner_campaign_demonstrations.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    await db.exec(apply);
+    await db.exec(apply);
+    assert.equal(
+      (await db.query("select claimed_count from claim_campaigns")).rows[0].claimed_count,
+      0,
+    );
+    assert.equal((await db.query("select count(*)::int n from phoenix_passes")).rows[0].n, 2);
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int n from phoenix_passes where user_id=$1 and expires_at>now()",
+          [user],
+        )
+      ).rows[0].n,
+      0,
+    );
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int n from phoenix_passes where user_id=$1 and expires_at>now()",
+          [other],
+        )
+      ).rows[0].n,
+      1,
+    );
+    assert.equal(
+      (await db.query("select is_demo from claim_campaign_claims")).rows[0].is_demo,
+      true,
     );
   } finally {
     await db.close();

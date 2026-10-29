@@ -37,8 +37,8 @@ export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: strin
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [demoEligible, setDemoEligible] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [ownerDemo, setOwnerDemo] = useState(false);
   const [telegramUrl, setTelegramUrl] = useState("");
   const [intent, setIntent] = useState("");
   const [token, setToken] = useState("");
@@ -96,8 +96,8 @@ export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: strin
         });
         const data = await response.json();
         if (response.ok && identity.current === session.user.id) {
-          setOwnerDemo(data.demo === true);
-          if (data.claimed && data.demo !== true) setSuccess(true);
+          setDemoEligible(data.demo === true);
+          if (data.claimed) setSuccess(true);
         }
       } catch {
         /* Refresh status remains available. */
@@ -111,8 +111,8 @@ export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: strin
     setIntent("");
     setToken("");
     setTelegramUrl("");
+    setDemoEligible(false);
     setSuccess(false);
-    setOwnerDemo(false);
     setError("");
   }, [user?.id]);
   useEffect(() => {
@@ -227,7 +227,7 @@ export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: strin
   };
   const available =
     campaign?.active &&
-    (campaign.remaining > 0 || ownerDemo) &&
+    (campaign.remaining > 0 || demoEligible) &&
     (!campaign.starts_at || Date.parse(campaign.starts_at) <= Date.now()) &&
     (!campaign.ends_at || Date.parse(campaign.ends_at) > Date.now());
   return (
@@ -259,7 +259,6 @@ export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: strin
         ) : (
           <p className="mt-5">This campaign is unavailable.</p>
         )}
-        {ownerDemo && <p className="mt-3 text-sm text-muted-foreground">Owner demonstration: claims do not reduce the public campaign quota.</p>}
         {error && (
           <p role="alert" className="mt-4 text-sm text-destructive">
             {error}
@@ -306,6 +305,20 @@ export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: strin
             >
               Continue in Telegram
             </a>
+            {demoEligible && (
+              <button
+                disabled={busy}
+                onClick={() => {
+                  setTelegramUrl("");
+                  setIntent("");
+                  setToken("");
+                  void action("prepare");
+                }}
+                className="touch-target block rounded-xl border border-border px-5 py-3 font-semibold disabled:opacity-50"
+              >
+                Start another demonstration
+              </button>
+            )}
             <p className="text-sm text-muted-foreground">
               Confirm your website account in the bot, then join the required communities. Your
               reward will be added automatically.

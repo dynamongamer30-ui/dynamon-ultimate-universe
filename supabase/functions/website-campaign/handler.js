@@ -149,11 +149,14 @@ export function createCampaignHandler(env, requestFetch = fetch) {
       if (!config.ready || !config.username)
         return result({ error: "verification_unavailable" }, 503);
       if (body.action === "prepare") return result({ intent: crypto.randomUUID() });
-      const rate = await rpc("website_campaign_rate", {
-        p_user: user.id,
-        p_browser: await hash("user:" + user.id),
-        p_ip: await hash("ip:" + proxyIp),
-      });
+      const ownerDemo = await rpc("website_is_demo_owner", { p_user: user.id });
+      const rate =
+        ownerDemo === true ||
+        (await rpc("website_campaign_rate", {
+          p_user: user.id,
+          p_browser: await hash("user:" + user.id),
+          p_ip: await hash("ip:" + proxyIp),
+        }));
       if (!rate) return result({ error: "rate_limited" }, 429);
       if (!env.TURNSTILE_SECRET_KEY) return result({ error: "verification_unavailable" }, 503);
       if (typeof body.token !== "string" || !body.token || body.token.length > 2048)

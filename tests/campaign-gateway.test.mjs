@@ -25,6 +25,7 @@ function setup() {
         hostname: "dynamongamer.com",
         action: state.action,
       });
+    if (url.endsWith("/website_is_demo_owner")) return Response.json(false);
     if (url.endsWith("/website_campaign_rate")) return Response.json(true);
     if (url.endsWith("/website_campaign_status")) return Response.json({ slug: "bonus" });
     if (url.endsWith("/website_telegram_claim")) {
