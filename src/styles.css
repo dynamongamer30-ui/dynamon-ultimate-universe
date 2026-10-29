@@ -1047,3 +1047,35 @@ h4 {
     will-change: auto;
   }
 }
+
+/* Shared typography stays consistent across all nine theme palettes. */
+body {
+  font-size: 1rem;
+  line-height: 1.65;
+}
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+[role="button"] {
+  line-height: 1.4;
+}
+p {
+  overflow-wrap: break-word;
+}
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}

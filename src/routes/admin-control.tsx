@@ -207,6 +207,8 @@ function useSettingSave(key: string) {
 function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: () => void }) {
   const saveSetting = useSettingSave("branding");
   const [v, setV] = useState<SiteBranding>(initial);
+  const currentBranding = useRef(v);
+  currentBranding.current = v;
 
   const autosave = useAutosave({
     value: v,
@@ -230,6 +232,7 @@ function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: 
     <Card
       saving={autosave.saving}
       error={autosave.error}
+      disableWhileSaving={false}
       title="Branding & Hero copy"
       desc="Site identity, hero headline, subtitle and CTAs."
     >
@@ -238,9 +241,15 @@ function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: 
       </p>
       <BrandLogoUpload
         current={v.logoUrl}
-        onPublish={(url, icon) =>
-          setV((previous) => ({ ...previous, logoUrl: url, ...(icon ? { faviconUrl: url } : {}) }))
-        }
+        onPublish={async (url, icon) => {
+          const next = {
+            ...currentBranding.current,
+            logoUrl: url,
+            ...(icon ? { faviconUrl: url } : {}),
+          };
+          await autosave.publish(next);
+          setV(next);
+        }}
       />
       <Grid>
         <Field label="Circular brand image URL">
@@ -912,12 +921,14 @@ function Card({
   desc,
   children,
   saving = false,
+  disableWhileSaving = true,
   error,
 }: {
   title: string;
   desc?: string;
   children: React.ReactNode;
   saving?: boolean;
+  disableWhileSaving?: boolean;
   error?: string | null;
 }) {
   return (
@@ -932,7 +943,11 @@ function Card({
           {error}
         </p>
       )}
-      <fieldset disabled={saving} aria-busy={saving} className="mt-6 min-w-0 space-y-4">
+      <fieldset
+        disabled={saving && disableWhileSaving}
+        aria-busy={saving}
+        className="mt-6 min-w-0 space-y-4"
+      >
         <legend className="sr-only">{title} settings</legend>
         {children}
       </fieldset>

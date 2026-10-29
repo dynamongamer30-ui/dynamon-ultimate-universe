@@ -30,7 +30,7 @@ export function BrandLogoUpload({
   onPublish,
 }: {
   current: string;
-  onPublish: (url: string, icon: boolean) => void;
+  onPublish: (url: string, icon: boolean) => Promise<void>;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
@@ -66,6 +66,13 @@ export function BrandLogoUpload({
         data: { user },
       } = await confirmedWithin(supabase.auth.getUser(), 15000);
       if (!user) throw new Error("Sign in again before uploading.");
+      const signature = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+      const png = [137, 80, 78, 71, 13, 10, 26, 10].every((n, i) => signature[i] === n);
+      const jpeg = signature[0] === 255 && signature[1] === 216 && signature[2] === 255;
+      const webp =
+        String.fromCharCode(...signature.slice(0, 4)) === "RIFF" &&
+        String.fromCharCode(...signature.slice(8, 12)) === "WEBP";
+      if (!png && !jpeg && !webp) throw Error("Choose a valid PNG, JPEG or WebP image.");
       bitmap = await createImageBitmap(file);
       if (
         Math.min(bitmap.width, bitmap.height) < 64 ||
@@ -111,8 +118,8 @@ export function BrandLogoUpload({
       } = await confirmedWithin(supabase.auth.getUser(), 15000);
       if (run !== generation.current || stillUser?.id !== user.id) return;
       const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      onPublish(data.publicUrl, alsoIcon);
-      setMessage("Upload complete. Branding changes are now saving; check the Saved status above.");
+      await onPublish(data.publicUrl, alsoIcon);
+      setMessage("Logo published successfully.");
     } catch (cause) {
       if (run === generation.current)
         setError(cause instanceof Error ? cause.message : "Upload failed. Retry when ready.");
@@ -146,14 +153,17 @@ export function BrandLogoUpload({
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp"
-            className="mt-2 block w-full text-xs"
+            className="mt-3 block min-h-11 w-full cursor-pointer text-sm file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-border file:bg-card file:px-4 file:py-3 file:font-semibold file:text-foreground"
             onChange={(event) => {
               const next = event.target.files?.[0];
               setError("");
               setMessage("");
               if (!next) return;
               if (
-                !["image/png", "image/jpeg", "image/webp"].includes(next.type) ||
+                !(
+                  ["image/png", "image/jpeg", "image/webp"].includes(next.type) ||
+                  (!next.type && /\.(png|jpe?g|webp)$/i.test(next.name))
+                ) ||
                 next.size > 8 * 1024 * 1024
               ) {
                 setError("Choose a PNG, JPEG or WebP smaller than 8 MB.");
@@ -206,9 +216,18 @@ export function BrandLogoUpload({
         <button
           type="button"
           onClick={() => {
-            onPublish("/dynamon-gamer-avatar.png", alsoIcon);
-            setFile(null);
-            setMessage("Default logo selected. Check the branding save status.");
+            setBusy(true);
+            setError("");
+            setMessage("");
+            void onPublish("/dynamon-gamer-avatar.png", alsoIcon)
+              .then(() => {
+                setFile(null);
+                setMessage("Default logo published.");
+              })
+              .catch((cause) =>
+                setError(cause instanceof Error ? cause.message : "Publication failed."),
+              )
+              .finally(() => setBusy(false));
           }}
           className="touch-target rounded-xl border border-border px-4 py-2 text-sm"
         >

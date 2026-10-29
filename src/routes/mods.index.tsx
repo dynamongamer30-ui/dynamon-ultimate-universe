@@ -46,7 +46,7 @@ export const Route = createFileRoute("/mods/")({
 
 function ModsPage() {
   const { mods } = useSiteSettings();
-  const search = Route.useSearch();
+  const search: DiscoverySearch = Route.useSearch();
   const navigate = Route.useNavigate();
   const compareSlugs = (search.compare?.split(",") ?? []).filter((slug) =>
     mods.some((mod) => mod.slug === slug),
@@ -72,7 +72,7 @@ function ModsPage() {
   const version = search.version ?? "all";
   const updateSearch = (patch: DiscoverySearch, replace = false) => {
     void navigate({
-      search: (previous) => normalizeDiscoverySearch({ ...previous, ...patch }),
+      search: (previous: DiscoverySearch) => normalizeDiscoverySearch({ ...previous, ...patch }),
       replace,
       resetScroll: false,
     });

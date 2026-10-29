@@ -1,0 +1,9 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {BrandLogoUpload} from './src/components/BrandLogoUpload';
+import {supabase} from './src/integrations/supabase/client';
+import './src/styles.css';
+supabase.auth.getUser=async()=>({data:{user:{id:'fixture-owner'}},error:null}) as never;
+supabase.storage.from=()=>({upload:async()=>({error:null}),getPublicUrl:()=>({data:{publicUrl:'https://fixture.test/logo.webp'}})}) as never;
+const div=document.createElement('div');document.body.appendChild(div);
+createRoot(div).render(<BrandLogoUpload current="/dynamon-gamer-avatar.png" onPublish={async()=>{if(new URL(location.href).searchParams.has('fail'))throw Error('Publication was refused');await new Promise(resolve=>setTimeout(resolve,100));}}/>);

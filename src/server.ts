@@ -32,6 +32,8 @@ function withSecurityHeaders(response: Response, request: Request): Response {
     );
   if (
     privatePath ||
+    (/^\/[a-z0-9-]+\/[a-z0-9-]+$/.test(new URL(request.url).pathname) &&
+      !/^\/(mods|links|api)\//.test(new URL(request.url).pathname)) ||
     response.status >= 400 ||
     request.headers.has("authorization") ||
     request.headers.has("cookie") ||
@@ -79,6 +81,18 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const url = new URL(request.url);
+      const legacy =
+        url.pathname.match(/^\/phoenix-pass\/claim\/([a-z0-9-]+)$/) ||
+        url.pathname.match(/^\/claim\/(tesla)$/);
+      if (legacy)
+        return withSecurityHeaders(
+          new Response(null, {
+            status: 308,
+            headers: { Location: `/diwali-pass/${legacy[1]}`, "Cache-Control": "no-store" },
+          }),
+          request,
+        );
       const campaign = await campaignProxy(request, (env ?? {}) as Record<string, unknown>);
       if (campaign) return withSecurityHeaders(campaign, request);
       const image = await siteImageResponse(request);

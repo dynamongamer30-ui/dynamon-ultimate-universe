@@ -5,6 +5,7 @@ import { PageShell } from "./PageShell";
 import { supabase } from "@/integrations/supabase/client";
 type Campaign = {
   slug: string;
+  url_prefix: string;
   title: string;
   active: boolean;
   max_claims: number;
@@ -17,18 +18,19 @@ const errors: Record<string, string> = {
   sign_in_required: "Sign in again to continue.",
   verified_account_required: "Confirm your account email before claiming.",
   verification_unavailable: "Secure claims are temporarily unavailable. No pass has been consumed.",
-  verification_expired: "Your verification expired. Prepare a fresh claim and try again.",
+  verification_expired: "Complete the security check again to continue.",
   verification_failed: "Verification failed or was already used. Complete a fresh security check.",
   verification_required: "Complete the security check first.",
   rate_limited: "Too many attempts. Please wait ten minutes before trying again.",
-  browser_already_claimed: "This browser has already claimed a pass in this campaign.",
+  already_claimed: "Your reward is already in My Rewards.",
+  handoff_expired: "Open the campaign again to continue your claim.",
   campaign_inactive: "This campaign is paused, has not started, or has ended.",
   sold_out: "All passes in this campaign have been claimed.",
   not_found: "This campaign is not available.",
   proxy_required: "Secure verification could not be confirmed. Refresh and try again.",
   server_unavailable: "The result could not be confirmed. Check My Rewards before retrying.",
 };
-export function PhoenixCampaign({ slug }: { slug: string }) {
+export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: string }) {
   const { user } = useAuth();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [enabled, setEnabled] = useState(false);
@@ -36,6 +38,7 @@ export function PhoenixCampaign({ slug }: { slug: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [telegramUrl, setTelegramUrl] = useState("");
   const [intent, setIntent] = useState("");
   const [token, setToken] = useState("");
   const [revision, setRevision] = useState(0);
@@ -56,6 +59,8 @@ export function PhoenixCampaign({ slug }: { slug: string }) {
       .then(async (r) => {
         const d = await r.json();
         if (!r.ok) throw Error(errors[d.error] || "Campaign unavailable.");
+        if (prefix && d.campaign?.url_prefix !== prefix)
+          throw Error("This campaign is not available.");
         if (active) {
           setCampaign(d.campaign);
           setEnabled(d.enabled === true);
@@ -71,10 +76,37 @@ export function PhoenixCampaign({ slug }: { slug: string }) {
       active = false;
       c.abort();
     };
-  }, [slug, revision]);
+  }, [slug, prefix, revision]);
+  useEffect(() => {
+    const refresh = async () => {
+      if (!user) return;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session || session.user.id !== identity.current) return;
+      try {
+        const response = await fetch(`/api/phoenix/${encodeURIComponent(slug)}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ action: "status" }),
+        });
+        const data = await response.json();
+        if (response.ok && data.claimed && identity.current === session.user.id) setSuccess(true);
+      } catch {
+        /* Refresh status remains available. */
+      }
+    };
+    void refresh();
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [user?.id, slug, revision]);
   useEffect(() => {
     setIntent("");
     setToken("");
+    setTelegramUrl("");
     setSuccess(false);
     setError("");
   }, [user?.id]);
@@ -156,6 +188,13 @@ export function PhoenixCampaign({ slug }: { slug: string }) {
       if (type === "prepare") {
         if (typeof data.intent !== "string") throw Error("Verification unavailable.");
         setIntent(data.intent);
+      } else if (
+        data.ok &&
+        typeof data.telegram_url === "string" &&
+        /^https:\/\/t\.me\/[A-Za-z0-9_]+\?start=pass_[a-f0-9]{48}$/.test(data.telegram_url)
+      ) {
+        setTelegramUrl(data.telegram_url);
+        setIntent("");
       } else if (data.ok) {
         setSuccess(true);
         setIntent("");
@@ -189,15 +228,11 @@ export function PhoenixCampaign({ slug }: { slug: string }) {
   return (
     <PageShell>
       <section className="mx-auto max-w-2xl rounded-3xl border border-border bg-card p-6 sm:p-10">
-        <p className="text-xs font-bold uppercase tracking-widest text-primary-ink">
-          Phoenix Pass campaign
-        </p>
         <h1 className="mt-3 font-display text-3xl font-bold">
-          {campaign?.title || "Claim a Phoenix Pass"}
+          {campaign?.title || "Campaign reward"}
         </h1>
         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-          One pass per verified account and recognized browser for this campaign. A browser check is
-          not a permanent phone hardware ID.
+          Celebrate with a special reward. Continue in Telegram to complete your claim.
         </p>
         {loading ? (
           <p role="status" className="mt-5">
@@ -226,7 +261,7 @@ export function PhoenixCampaign({ slug }: { slug: string }) {
         )}
         {success ? (
           <div role="status" className="mt-5">
-            <p className="font-bold">Your Phoenix Pass is ready.</p>
+            <p className="font-bold">Your reward has been added to your account.</p>
             <Link
               to="/rewards"
               hash="my-rewards"
@@ -240,7 +275,7 @@ export function PhoenixCampaign({ slug }: { slug: string }) {
             to="/auth"
             onClick={() => {
               try {
-                sessionStorage.setItem("dg_after_auth", `/phoenix-pass/claim/${slug}`);
+                sessionStorage.setItem("dg_after_auth", location.pathname);
               } catch {
                 /* optional */
               }
@@ -257,13 +292,26 @@ export function PhoenixCampaign({ slug }: { slug: string }) {
           <p className="mt-5 text-sm">
             Secure claims are being configured. Your existing passes remain in My Rewards.
           </p>
+        ) : telegramUrl ? (
+          <div className="mt-5 space-y-3">
+            <a
+              href={telegramUrl}
+              className="touch-target inline-flex rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground"
+            >
+              Continue in Telegram
+            </a>
+            <p className="text-sm text-muted-foreground">
+              Confirm your website account in the bot, then join the required communities. Your
+              reward will be added automatically.
+            </p>
+          </div>
         ) : !intent ? (
           <button
             disabled={busy}
             onClick={() => void action("prepare")}
             className="touch-target mt-5 rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground disabled:opacity-50"
           >
-            {busy ? "Preparing…" : "Verify and prepare claim"}
+            {busy ? "Preparing…" : "Claim your pass"}
           </button>
         ) : (
           <>
@@ -273,7 +321,7 @@ export function PhoenixCampaign({ slug }: { slug: string }) {
               onClick={() => void action("claim")}
               className="touch-target mt-4 rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground disabled:opacity-50"
             >
-              {busy ? "Confirming claim…" : "Claim one Phoenix Pass"}
+              {busy ? "Opening Telegram…" : "Continue in Telegram"}
             </button>
             <button
               disabled={busy}

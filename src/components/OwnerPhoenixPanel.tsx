@@ -4,6 +4,7 @@ import { featureRpc } from "@/lib/featureRpc";
 
 type Campaign = {
   slug: string;
+  url_prefix: string;
   title: string;
   max_claims: number;
   claimed_count: number;
@@ -13,7 +14,8 @@ type Campaign = {
 };
 const fresh = (): Campaign => ({
   slug: "",
-  title: "Phoenix Pass",
+  url_prefix: "diwali-pass",
+  title: "Diwali Pass",
   max_claims: 100,
   claimed_count: 0,
   active: false,
@@ -170,8 +172,8 @@ export function OwnerPhoenixPanel() {
         draft.max_claims < Math.max(1, draft.claimed_count)
       )
         throw Error("Check the link name, heading and claim limit.");
-      await featureRpc("website_manage_campaign", {
-        p_action: "save",
+      await featureRpc("website_save_campaign", {
+        p_prefix: draft.url_prefix,
         p_slug: draft.slug,
         p_title: draft.title,
         p_max: draft.max_claims,
@@ -282,16 +284,57 @@ export function OwnerPhoenixPanel() {
                   Use as template
                 </button>
                 <button
+                  disabled={busy}
+                  className={button}
+                  onClick={() =>
+                    void run(async () => {
+                      await featureRpc("website_manage_campaign", {
+                        p_action: c.active ? "pause" : "resume",
+                        p_slug: c.slug,
+                      });
+                      await load();
+                    })
+                  }
+                >
+                  {c.active ? "Pause" : "Resume"}
+                </button>
+                <button
+                  disabled={busy}
+                  className={`${button} text-destructive`}
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        `Delete ${c.title}? Its public link will close. Awarded passes and reward history will be preserved.`,
+                      )
+                    )
+                      return;
+                    void run(async () => {
+                      await featureRpc("website_manage_campaign", {
+                        p_action: "delete",
+                        p_slug: c.slug,
+                      });
+                      if (draft.slug === c.slug) {
+                        setDraft(fresh());
+                        setExisting(false);
+                      }
+                      await load();
+                      setMessage("Campaign deleted. Awarded rewards were preserved.");
+                    });
+                  }}
+                >
+                  Delete
+                </button>
+                <button
                   className={button}
                   onClick={() =>
                     void run(async () => {
                       try {
                         await navigator.clipboard.writeText(
-                          `${location.origin}/phoenix-pass/claim/${c.slug}`,
+                          `${location.origin}/${c.url_prefix}/${c.slug}`,
                         );
                         setMessage("Claim link copied.");
                       } catch {
-                        setMessage(`${location.origin}/phoenix-pass/claim/${c.slug}`);
+                        setMessage(`${location.origin}/${c.url_prefix}/${c.slug}`);
                       }
                     })
                   }
@@ -313,6 +356,16 @@ export function OwnerPhoenixPanel() {
               onChange={(e) => setDraft({ ...draft, slug: e.target.value.toLowerCase() })}
               className={`${input} mt-2`}
               placeholder="community-october"
+            />
+          </label>
+          <label className="text-sm">
+            URL prefix
+            <input
+              value={draft.url_prefix}
+              maxLength={60}
+              onChange={(e) => setDraft({ ...draft, url_prefix: e.target.value.toLowerCase() })}
+              className={`${input} mt-2`}
+              placeholder="diwali-pass"
             />
           </label>
           <label className="text-sm">
@@ -362,8 +415,8 @@ export function OwnerPhoenixPanel() {
         </fieldset>
         <p className="mt-3 text-xs text-muted-foreground">
           Campaigns save with this button so incomplete edits cannot accidentally open a public
-          giveaway. Pausing preserves all existing claims. The original /claim/tesla link keeps the
-          original campaign receipts.
+          giveaway. Pausing preserves all existing claims. Existing reward receipts are always
+          preserved.
         </p>
         <button disabled={busy} onClick={save} className={`${button} mt-4`}>
           Save campaign
@@ -373,9 +426,9 @@ export function OwnerPhoenixPanel() {
         <summary className="cursor-pointer font-bold">Owner guide and automation facts</summary>
         <p className="mt-3 text-sm text-muted-foreground">
           Find the exact registered email before granting. Publish a campaign only after checking
-          the dates and total limit. A verified account and browser checks reduce repeat claims; a
-          website cannot prove a permanent physical device identity. Notification acknowledgement
-          does not remove a reward from My Rewards. Manual announcements are preserved.
+          the dates and total limit. Telegram membership verification protects campaign claims.
+          Notification acknowledgement does not remove a reward from My Rewards. Manual
+          announcements are preserved.
         </p>
         {health && (
           <dl className="mt-4 grid gap-3 sm:grid-cols-2">

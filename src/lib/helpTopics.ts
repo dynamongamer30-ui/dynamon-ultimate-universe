@@ -81,13 +81,13 @@ export const HELP_TOPICS = [
   },
   {
     id: "campaigns",
-    title: "Phoenix campaign links and claim protection",
+    title: "Claim a campaign reward",
     steps: [
       "Open the official campaign URL, sign in with an eligible verified account, and complete the website security check.",
-      "Each campaign allows one claim per account and one per recognized browser identity. A browser identity is not a permanent phone hardware ID.",
-      "Campaigns can be paused, not yet started, ended or fully claimed. Failed verification does not reserve a prize. Retrying a confirmed claim must not award another pass.",
+      "Continue in the official Telegram bot, confirm your website account, and join the required communities. Your reward is added automatically after membership is confirmed.",
+      "Campaign availability and dates appear on its page. Find successfully claimed rewards in My Rewards.",
     ],
-    link: "/phoenix-pass/claim/tesla",
+    link: "/diwali-pass/bonus",
   },
   {
     id: "notifications",

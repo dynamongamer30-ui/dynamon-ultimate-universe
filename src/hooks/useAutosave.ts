@@ -19,6 +19,7 @@ export function useAutosave<T>({
   const [revision, setRevision] = useState(0);
   const committed = useRef<string | null>(null);
   const running = useRef(false);
+
   const paused = useRef(false);
   const active = useRef(true);
   const latest = useRef({ value, ready, save, validate });
@@ -109,5 +110,27 @@ export function useAutosave<T>({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [ready]);
-  return { status, error, saveNow: flush, saving: status === "Saving…" };
+  const publish = async (next: T) => {
+    // Wait for an earlier autosave; then publish through the same write boundary.
+    while (running.current) await new Promise((resolve) => setTimeout(resolve, 25));
+    const invalid = latest.current.validate?.(next);
+    if (invalid) throw Error(invalid);
+    running.current = true;
+    setStatus("Saving…");
+    setError(null);
+    try {
+      await latest.current.save(next);
+      committed.current = JSON.stringify(next);
+      paused.current = false;
+      setStatus("Saved");
+    } catch (cause) {
+      paused.current = true;
+      setStatus("Not saved");
+      setError(cause instanceof Error ? cause.message : "Publication failed.");
+      throw cause;
+    } finally {
+      running.current = false;
+    }
+  };
+  return { status, error, saveNow: flush, publish, saving: status === "Saving…" };
 }

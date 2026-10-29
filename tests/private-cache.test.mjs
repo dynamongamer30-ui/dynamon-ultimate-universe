@@ -60,11 +60,21 @@ test("private SSR, session-bearing requests and error pages cannot enter shared 
       "/achievements",
       "/notifications",
       "/rewards",
-      "/claim/tesla",
+      "/diwali-pass/bonus",
+      "/festival-pass/community",
       "/unlock",
       "/generator?ref=local-fixture",
     ])
       await check(path);
+    for (const path of ["/claim/tesla", "/phoenix-pass/claim/bonus"]) {
+      const response = await server.fetch(new Request(`https://fixture.test${path}`), {}, {});
+      assert.equal(response.status, 308);
+      assert.equal(response.headers.get("cache-control"), "private, no-store");
+      assert.equal(
+        response.headers.get("location"),
+        path.includes("tesla") ? "/diwali-pass/tesla" : "/diwali-pass/bonus",
+      );
+    }
     await check("/mods", { authorization: "Bearer local-fixture" });
     await check("/", { cookie: "local-fixture=1" });
     responseHeaders = { ...responseHeaders, "set-cookie": "local-fixture=1; Secure; HttpOnly" };
