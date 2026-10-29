@@ -1,3 +1,4 @@
+import { BuildUpdateIndicator } from "@/hooks/useBuildActivity";
 import { useRef } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { Link } from "@tanstack/react-router";
@@ -179,6 +180,7 @@ export function ModCard({
             {mod.name}
           </Heading>
         </Link>
+        <BuildUpdateIndicator mod={mod} />
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{mod.tagline}</p>
 
         <div className="mt-4 flex flex-wrap gap-1.5">

@@ -15,6 +15,10 @@ test("private SSR, session-bearing requests and error pages cannot enter shared 
     )
       .replace('import "./lib/error-capture";', "")
       .replace(
+        /import\s*\{\s*campaignProxy\s*\}\s*from\s*[^;]+;/,
+        "const campaignProxy=async()=>null;",
+      )
+      .replace(
         /import\s*\{\s*siteImageResponse\s*\}\s*from\s*[^;]+;/,
         "const siteImageResponse=async()=>null;",
       )

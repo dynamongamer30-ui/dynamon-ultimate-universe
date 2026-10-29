@@ -7,6 +7,7 @@ export type DiscoverySearch = {
   elements?: string;
   rating?: number;
   version?: string;
+  compare?: string;
 };
 
 export const DISCOVERY_ELEMENTS: Element[] = [
@@ -59,7 +60,21 @@ export function normalizeDiscoverySearch(raw: Record<string, unknown>): Discover
     result.version = raw.version;
   // TanStack merges validated search with the input search object. Explicit
   // undefined values overwrite invalid known keys while serializing compactly.
+  const compare =
+    typeof raw.compare === "string"
+      ? [
+          ...new Set(
+            raw.compare
+              .slice(0, 300)
+              .split(",")
+              .filter((slug) => /^[a-z0-9][a-z0-9-]{0,79}$/.test(slug)),
+          ),
+        ]
+          .slice(0, 3)
+          .join(",") || undefined
+      : undefined;
   return {
+    ...(Object.hasOwn(raw, "compare") ? { compare } : {}),
     q: result.q,
     sort: result.sort,
     elements: result.elements,

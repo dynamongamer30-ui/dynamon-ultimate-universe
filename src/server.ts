@@ -1,3 +1,4 @@
+import { campaignProxy } from "./lib/campaignProxy.server";
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
@@ -26,7 +27,7 @@ function withSecurityHeaders(response: Response, request: Request): Response {
     if (!headers.has(name)) headers.set(name, value);
   }
   const privatePath =
-    /^\/(?:admin(?:[-/]|$)|auth(?:\/|$)|profile(?:\/|$)|favorites(?:\/|$)|achievements(?:\/|$)|notifications(?:\/|$)|rewards(?:\/|$)|claim(?:\/|$)|unlock(?:\/|$)|generator(?:\/|$))/.test(
+    /^\/(?:admin(?:[-/]|$)|auth(?:\/|$)|profile(?:\/|$)|favorites(?:\/|$)|achievements(?:\/|$)|notifications(?:\/|$)|rewards(?:\/|$)|claim(?:\/|$)|phoenix-pass(?:\/|$)|api\/phoenix(?:\/|$)|unlock(?:\/|$)|generator(?:\/|$))/.test(
       new URL(request.url).pathname,
     );
   if (
@@ -78,6 +79,8 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const campaign = await campaignProxy(request, (env ?? {}) as Record<string, unknown>);
+      if (campaign) return withSecurityHeaders(campaign, request);
       const image = await siteImageResponse(request);
       if (image) return withSecurityHeaders(image, request);
       const handler = await getServerEntry();

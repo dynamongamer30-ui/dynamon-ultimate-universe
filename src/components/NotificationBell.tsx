@@ -1,3 +1,5 @@
+import { NotificationDetail } from "./NotificationDetail";
+import type { AppNotification } from "@/lib/notifications";
 import { Link, useLocation } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Bell, Check } from "lucide-react";
@@ -5,7 +7,6 @@ import { useEffect, useRef, useState } from "react";
 import { playClick } from "@/lib/sound";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationBody } from "@/components/NotificationBody";
-import { NotificationClaim } from "@/components/NotificationClaim";
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -22,6 +23,7 @@ function timeAgo(iso: string): string {
 export function NotificationBell() {
   const { items, readIds, unreadCount, markAllRead, markOneRead, sender, loading, error, refresh } =
     useNotifications();
+  const [opened, setOpened] = useState<AppNotification | null>(null);
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -56,6 +58,7 @@ export function NotificationBell() {
         }
       }}
     >
+      <NotificationDetail notification={opened} onClose={() => setOpened(null)} />
       <button
         ref={trigger}
         type="button"
@@ -172,7 +175,17 @@ export function NotificationBell() {
                             <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/70">
                               {timeAgo(n.created_at)}
                             </p>
-                            <NotificationClaim notification={n} />
+                            <button
+                              type="button"
+                              className="touch-target mt-2 text-xs underline"
+                              onClick={() => {
+                                setOpen(false);
+                                setOpened(n);
+                                void markOneRead(n.id);
+                              }}
+                            >
+                              Open notification
+                            </button>
                           </div>
                         </div>
                       </div>

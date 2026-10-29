@@ -53,6 +53,7 @@ declare global {
         el: HTMLElement,
         opts: {
           sitekey: string;
+          action?: string;
           callback: (token: string) => void;
           "error-callback"?: () => void;
           "expired-callback"?: () => void;

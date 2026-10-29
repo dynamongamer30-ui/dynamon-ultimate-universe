@@ -1,3 +1,4 @@
+import { TrackBuildView } from "@/hooks/useBuildActivity";
 import "@/components/build-experience.css";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
@@ -194,6 +195,7 @@ function ModDetail() {
 
   return (
     <PageShell>
+      <TrackBuildView mod={mod} />
       <Link
         to="/mods"
         onMouseDown={playClick}

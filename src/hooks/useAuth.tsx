@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { clearBuildActivity } from "@/lib/buildActivity";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -59,6 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const previousIdentity = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const next = session?.user.id;
+    const previous = previousIdentity.current;
+    previousIdentity.current = next;
+    if (previous && previous !== next) clearBuildActivity(previous);
+  }, [session?.user.id]);
+
   // Mark the user active on real visits, not just fresh logins. Supabase's
   // last_sign_in_at only updates on an actual login event — a returning
   // user whose session is still valid (the normal case) never re-triggers
@@ -87,7 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user?.id]);
 
   const signOut = async () => {
+    const id = session?.user.id;
     await supabase.auth.signOut();
+    if (id) clearBuildActivity(id);
   };
 
   return (

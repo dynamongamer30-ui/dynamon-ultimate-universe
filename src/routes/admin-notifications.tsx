@@ -43,7 +43,10 @@ function AdminNotifications() {
   const resource = useOwnerResource(
     useCallback((signal: AbortSignal) => listNotifications(signal), []),
   );
-  const items = resource.data ?? [];
+  const [view, setView] = useState<"manual" | "automated">("manual");
+  const items = (resource.data ?? []).filter((n) =>
+    view === "automated" ? n.source_kind === "automated" : n.source_kind !== "automated",
+  );
   const loading = resource.loading;
   const mutation = useOwnerMutation();
   const sending = mutation.saving,
@@ -56,6 +59,27 @@ function AdminNotifications() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
+  useEffect(() => {
+    if (view !== "automated" || editingId || sending) return;
+    let active = true;
+    const refresh = () => {
+      if (document.hidden) return;
+      void listNotifications(AbortSignal.timeout(10000))
+        .then((rows) => {
+          if (active) resource.setData(rows);
+        })
+        .catch(() => {
+          /* Preserve last confirmed list on transient failure. */
+        });
+    };
+    const timer = setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [view, editingId, sending, resource.setData]);
   const cancelEdit = () => {
     if (mutation.saving) return;
     setEditingId(null);
@@ -150,6 +174,18 @@ function AdminNotifications() {
         </div>
       </header>
 
+      <div className="mb-5 flex flex-wrap gap-2" aria-label="Notification categories">
+        {(["manual", "automated"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            aria-pressed={view === v}
+            className="touch-target rounded-full border border-border bg-card px-4 py-2 text-sm"
+          >
+            {v === "manual" ? "Manual announcements" : "Automation & delivery"}
+          </button>
+        ))}
+      </div>
       {mutation.error && (
         <p role="alert" className="mb-4 break-words text-sm text-destructive">
           {mutation.error}
@@ -241,6 +277,35 @@ function AdminNotifications() {
           <h2 className="mb-4 font-display text-lg font-bold">
             Sent ({resource.error ? "unavailable" : items.length})
           </h2>
+          {view === "automated" && (
+            <div className="mb-4 rounded-xl border border-border p-4 text-sm">
+              <p className="font-semibold">Active automated deliveries</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Personal reward notices clear after acknowledgement; eligible rewards remain in My
+                Rewards. Manual announcements stay in their separate list.
+              </p>
+              <ul className="mt-3 space-y-1">
+                {Object.entries(
+                  items.reduce<Record<string, number>>((groups, n) => {
+                    const label =
+                      new Date(n.created_at).toLocaleDateString() +
+                      " � " +
+                      (n.reward_kind === "phoenix_pass"
+                        ? "Phoenix Pass"
+                        : n.reward_kind
+                          ? "Key reward"
+                          : "Automation");
+                    groups[label] = (groups[label] ?? 0) + 1;
+                    return groups;
+                  }, {}),
+                ).map(([label, count]) => (
+                  <li key={label}>
+                    {label}: {count} pending notice{count === 1 ? "" : "s"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : resource.error ? (

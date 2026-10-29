@@ -48,7 +48,7 @@ function ClaimPage() {
   const current = useRef(identity);
   current.current = identity;
 
-  if (pathname === "/claim/tesla") return <Outlet />;
+  if (pathname.startsWith("/claim/tesla")) return <Outlet />;
   return (
     <ClaimSession
       key={identity}

@@ -1,3 +1,4 @@
+import { AccountOverview } from "@/components/AccountOverview";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -169,6 +170,7 @@ function ProfileEditor({
             Manage your trainer identity. Save when you are ready.
           </p>
         </header>
+        <AccountOverview />
         <div className="grid min-w-0 gap-5 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:items-start">
           {/* Identity card */}
           <motion.aside

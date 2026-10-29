@@ -15,6 +15,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ModsRouteImport } from './routes/mods'
+import { Route as HelpRouteImport } from './routes/help'
 import { Route as GeneratorRouteImport } from './routes/generator'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as DisclaimerRouteImport } from './routes/disclaimer'
@@ -33,6 +34,7 @@ import { Route as ModsIndexRouteImport } from './routes/mods.index'
 import { Route as ModsSlugRouteImport } from './routes/mods.$slug'
 import { Route as LinksGetKeyRouteImport } from './routes/links.get-key'
 import { Route as ClaimTeslaRouteImport } from './routes/claim.tesla'
+import { Route as PhoenixPassClaimSlugRouteImport } from './routes/phoenix-pass.claim.$slug'
 import { Route as ApiBotCatalogRouteImport } from './routes/api.bot.catalog'
 
 const UnlockRoute = UnlockRouteImport.update({
@@ -63,6 +65,11 @@ const NotificationsRoute = NotificationsRouteImport.update({
 const ModsRoute = ModsRouteImport.update({
   id: '/mods',
   path: '/mods',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GeneratorRoute = GeneratorRouteImport.update({
@@ -155,6 +162,11 @@ const ClaimTeslaRoute = ClaimTeslaRouteImport.update({
   path: '/tesla',
   getParentRoute: () => ClaimRoute,
 } as any)
+const PhoenixPassClaimSlugRoute = PhoenixPassClaimSlugRouteImport.update({
+  id: '/phoenix-pass/claim/$slug',
+  path: '/phoenix-pass/claim/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBotCatalogRoute = ApiBotCatalogRouteImport.update({
   id: '/api/bot/catalog',
   path: '/api/bot/catalog',
@@ -176,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
   '/generator': typeof GeneratorRoute
+  '/help': typeof HelpRoute
   '/mods': typeof ModsRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/privacy': typeof PrivacyRoute
@@ -187,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/mods/$slug': typeof ModsSlugRoute
   '/mods/': typeof ModsIndexRoute
   '/api/bot/catalog': typeof ApiBotCatalogRoute
+  '/phoenix-pass/claim/$slug': typeof PhoenixPassClaimSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -203,6 +217,7 @@ export interface FileRoutesByTo {
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
   '/generator': typeof GeneratorRoute
+  '/help': typeof HelpRoute
   '/notifications': typeof NotificationsRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -213,6 +228,7 @@ export interface FileRoutesByTo {
   '/mods/$slug': typeof ModsSlugRoute
   '/mods': typeof ModsIndexRoute
   '/api/bot/catalog': typeof ApiBotCatalogRoute
+  '/phoenix-pass/claim/$slug': typeof PhoenixPassClaimSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -230,6 +246,7 @@ export interface FileRoutesById {
   '/disclaimer': typeof DisclaimerRoute
   '/favorites': typeof FavoritesRoute
   '/generator': typeof GeneratorRoute
+  '/help': typeof HelpRoute
   '/mods': typeof ModsRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/privacy': typeof PrivacyRoute
@@ -241,6 +258,7 @@ export interface FileRoutesById {
   '/mods/$slug': typeof ModsSlugRoute
   '/mods/': typeof ModsIndexRoute
   '/api/bot/catalog': typeof ApiBotCatalogRoute
+  '/phoenix-pass/claim/$slug': typeof PhoenixPassClaimSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -259,6 +277,7 @@ export interface FileRouteTypes {
     | '/disclaimer'
     | '/favorites'
     | '/generator'
+    | '/help'
     | '/mods'
     | '/notifications'
     | '/privacy'
@@ -270,6 +289,7 @@ export interface FileRouteTypes {
     | '/mods/$slug'
     | '/mods/'
     | '/api/bot/catalog'
+    | '/phoenix-pass/claim/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -286,6 +306,7 @@ export interface FileRouteTypes {
     | '/disclaimer'
     | '/favorites'
     | '/generator'
+    | '/help'
     | '/notifications'
     | '/privacy'
     | '/profile'
@@ -296,6 +317,7 @@ export interface FileRouteTypes {
     | '/mods/$slug'
     | '/mods'
     | '/api/bot/catalog'
+    | '/phoenix-pass/claim/$slug'
   id:
     | '__root__'
     | '/'
@@ -312,6 +334,7 @@ export interface FileRouteTypes {
     | '/disclaimer'
     | '/favorites'
     | '/generator'
+    | '/help'
     | '/mods'
     | '/notifications'
     | '/privacy'
@@ -323,6 +346,7 @@ export interface FileRouteTypes {
     | '/mods/$slug'
     | '/mods/'
     | '/api/bot/catalog'
+    | '/phoenix-pass/claim/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -340,6 +364,7 @@ export interface RootRouteChildren {
   DisclaimerRoute: typeof DisclaimerRoute
   FavoritesRoute: typeof FavoritesRoute
   GeneratorRoute: typeof GeneratorRoute
+  HelpRoute: typeof HelpRoute
   ModsRoute: typeof ModsRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -348,6 +373,7 @@ export interface RootRouteChildren {
   UnlockRoute: typeof UnlockRoute
   LinksGetKeyRoute: typeof LinksGetKeyRoute
   ApiBotCatalogRoute: typeof ApiBotCatalogRoute
+  PhoenixPassClaimSlugRoute: typeof PhoenixPassClaimSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -392,6 +418,13 @@ declare module '@tanstack/react-router' {
       path: '/mods'
       fullPath: '/mods'
       preLoaderRoute: typeof ModsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/generator': {
@@ -520,6 +553,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClaimTeslaRouteImport
       parentRoute: typeof ClaimRoute
     }
+    '/phoenix-pass/claim/$slug': {
+      id: '/phoenix-pass/claim/$slug'
+      path: '/phoenix-pass/claim/$slug'
+      fullPath: '/phoenix-pass/claim/$slug'
+      preLoaderRoute: typeof PhoenixPassClaimSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/bot/catalog': {
       id: '/api/bot/catalog'
       path: '/api/bot/catalog'
@@ -567,6 +607,7 @@ const rootRouteChildren: RootRouteChildren = {
   DisclaimerRoute: DisclaimerRoute,
   FavoritesRoute: FavoritesRoute,
   GeneratorRoute: GeneratorRoute,
+  HelpRoute: HelpRoute,
   ModsRoute: ModsRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
   PrivacyRoute: PrivacyRoute,
@@ -575,6 +616,7 @@ const rootRouteChildren: RootRouteChildren = {
   UnlockRoute: UnlockRoute,
   LinksGetKeyRoute: LinksGetKeyRoute,
   ApiBotCatalogRoute: ApiBotCatalogRoute,
+  PhoenixPassClaimSlugRoute: PhoenixPassClaimSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

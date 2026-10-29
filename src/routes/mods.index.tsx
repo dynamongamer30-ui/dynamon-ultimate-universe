@@ -1,5 +1,6 @@
+import { SavedSearches } from "@/components/SavedSearches";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Search, TrendingUp, Clock, Heart, Download, Star, Sparkles, X } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { BuildComparison } from "@/components/BuildComparison";
@@ -45,20 +46,22 @@ export const Route = createFileRoute("/mods/")({
 
 function ModsPage() {
   const { mods } = useSiteSettings();
-  const [compareSlugs, setCompareSlugs] = useState<string[]>([]);
-  const compared = compareSlugs
-    .map((slug) => mods.find((m) => m.slug === slug))
-    .filter((m) => m !== undefined);
-  const toggleCompare = (slug: string) =>
-    setCompareSlugs((current) =>
-      current.includes(slug)
-        ? current.filter((s) => s !== slug)
-        : current.length < 3
-          ? [...current, slug]
-          : current,
-    );
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
+  const compareSlugs = (search.compare?.split(",") ?? []).filter((slug) =>
+    mods.some((mod) => mod.slug === slug),
+  );
+  const compared = compareSlugs.map((slug) => mods.find((mod) => mod.slug === slug)!);
+  const setCompareSlugs = (next: string[]) =>
+    updateSearch({ compare: next.join(",") || undefined });
+  const toggleCompare = (slug: string) =>
+    setCompareSlugs(
+      compareSlugs.includes(slug)
+        ? compareSlugs.filter((s) => s !== slug)
+        : compareSlugs.length < 3
+          ? [...compareSlugs, slug]
+          : compareSlugs,
+    );
   const q = search.q ?? "";
   const sort = search.sort ?? "latest";
   const elements = useMemo(
@@ -319,6 +322,12 @@ function ModsPage() {
         )}
       </header>
 
+      <SavedSearches
+        search={search}
+        open={(preset) =>
+          void navigate({ search: normalizeDiscoverySearch(preset), resetScroll: false })
+        }
+      />
       <p id="mods-result-status" aria-live="polite" className="mt-5 text-sm text-muted-foreground">
         {filtered.length} {filtered.length === 1 ? "build" : "builds"} found
         {activeFilters > 0 || q ? " with the current discovery settings" : ""}.

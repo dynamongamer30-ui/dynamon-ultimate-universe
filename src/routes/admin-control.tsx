@@ -1,3 +1,5 @@
+import { OwnerPhoenixPanel } from "@/components/OwnerPhoenixPanel";
+import { BrandLogoUpload } from "@/components/BrandLogoUpload";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { useAutosave } from "@/hooks/useAutosave";
@@ -234,6 +236,12 @@ function BrandingEditor({ initial, onSaved }: { initial: SiteBranding; onSaved: 
       <p role="status" className="text-sm text-muted-foreground">
         {autosave.status} · Changes save automatically.
       </p>
+      <BrandLogoUpload
+        current={v.logoUrl}
+        onPublish={(url, icon) =>
+          setV((previous) => ({ ...previous, logoUrl: url, ...(icon ? { faviconUrl: url } : {}) }))
+        }
+      />
       <Grid>
         <Field label="Circular brand image URL">
           <input
@@ -897,100 +905,7 @@ const inp =
   "w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary";
 
 function RewardsEditor() {
-  const [email, setEmail] = useState("");
-  const { saving: busy, error: grantError, run } = useOwnerMutation();
-  const [uncertain, setUncertain] = useState(false);
-  const [lastGrant, setLastGrant] = useState<{ email: string; at: string } | null>(null);
-  const grant = () => {
-    if (uncertain || busy) return;
-    const trimmed = email.trim();
-    if (!trimmed) {
-      toast.error("Enter a user's email first.");
-      return;
-    }
-    void run(async (signal) => {
-      let result: unknown;
-      try {
-        const { data, error } = await supabase
-          .rpc("admin_grant_phoenix_pass" as never, { p_email: trimmed } as never)
-          .abortSignal(signal)
-          .retry(false);
-        if (error) {
-          if (["42501", "PGRST301", "PGRST302"].includes(error.code))
-            throw new Error("Owner access was denied. Sign in again before granting a pass.");
-          setUncertain(true);
-          throw new Error(
-            "Grant outcome was not confirmed. Check the recipient's pass and notification before trying again.",
-          );
-        }
-        result = data;
-      } catch (cause) {
-        if (!(cause instanceof Error && cause.message.startsWith("Owner access")))
-          setUncertain(true);
-        throw cause;
-      }
-      const res = result as { ok?: boolean; error?: string } | null;
-      if (signal.aborted || typeof res?.ok !== "boolean") {
-        setUncertain(true);
-        throw new Error(
-          "Grant outcome was not confirmed. Check the recipient's pass and notification before trying again.",
-        );
-      }
-      if (!res.ok) {
-        const errors: Record<string, string> = {
-          user_not_found:
-            "No signed-up user with that email. Check the address they used to sign in.",
-          not_owner: "Only the owner account can grant rewards.",
-        };
-        throw new Error(
-          errors[res.error ?? ""] ?? "The server declined the grant. Your email draft is retained.",
-        );
-      }
-      toast.success(`Phoenix Pass grant confirmed for ${trimmed}`);
-      setLastGrant({ email: trimmed, at: new Date().toLocaleString() });
-      setEmail("");
-    });
-  };
-
-  return (
-    <Card
-      saving={busy}
-      error={grantError}
-      title="Grant Phoenix Pass"
-      desc="Instantly gives any signed-in user a Phoenix Pass — auto-claimed, no 24h wait, active for 30 days, exactly like a normal claimed pass. They'll get a notification too."
-    >
-      <Field label="User's email (must already be signed up)">
-        <div className="flex gap-2">
-          <input
-            type="email"
-            aria-label="Reward recipient email"
-            disabled={uncertain || busy}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") grant();
-            }}
-            placeholder="user@example.com"
-            className={inp}
-          />
-          <button
-            onClick={grant}
-            disabled={busy || uncertain}
-            className="press inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{" "}
-            Grant
-          </button>
-        </div>
-      </Field>
-      {lastGrant && (
-        <p className="mt-3 text-xs text-muted-foreground">
-          Last granted: <span className="font-semibold text-foreground">{lastGrant.email}</span> at{" "}
-          {lastGrant.at}
-        </p>
-      )}
-    </Card>
-  );
+  return <OwnerPhoenixPanel />;
 }
 function Card({
   title,

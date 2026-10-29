@@ -773,6 +773,7 @@ export type Database = {
         Row: {
           body: string;
           burn_after_read: boolean;
+          source_kind: string;
           created_at: string;
           id: string;
           reward_kind: string | null;
@@ -783,6 +784,7 @@ export type Database = {
         Insert: {
           body: string;
           burn_after_read?: boolean;
+          source_kind?: string;
           created_at?: string;
           id?: string;
           reward_kind?: string | null;
@@ -793,6 +795,7 @@ export type Database = {
         Update: {
           body?: string;
           burn_after_read?: boolean;
+          source_kind?: string;
           created_at?: string;
           id?: string;
           reward_kind?: string | null;

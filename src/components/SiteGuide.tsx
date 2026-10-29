@@ -129,6 +129,9 @@ export function SiteGuide() {
           <ArrowRight size={16} aria-hidden="true" />
         </Link>
       </div>
+      <Link to="/help" onClick={close} className="mx-6 mb-4 inline-flex text-sm underline">
+        Read the complete beginner guide →
+      </Link>
       <div className="site-guide-progress" aria-label={`Guide step ${step + 1} of ${STEPS.length}`}>
         {STEPS.map((item, index) => (
           <span key={item.label} data-complete={index <= step} />

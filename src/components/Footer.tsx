@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { SocialStrip, useSocials } from "./SocialStrip";
-import { Sparkles } from "lucide-react";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export function Footer() {
   const SOCIALS = useSocials();
+  const { branding } = useSiteSettings();
   return (
     <footer className="site-footer material-l2 mt-24 border-t border-border/60 bg-background/60">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -13,14 +14,16 @@ export function Footer() {
           <div>
             <div className="flex items-center gap-2">
               <span
-                className="grid h-9 w-9 place-items-center rounded-lg"
+                className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full"
                 style={{ background: "var(--gradient-primary)" }}
               >
-                <Sparkles className="h-4 w-4 text-primary-foreground" />
+                <img
+                  src={branding.logoUrl}
+                  alt=""
+                  className="h-full w-full rounded-full object-cover"
+                />
               </span>
-              <span className="font-display text-lg font-bold">
-                Dynamon <span className="text-gradient">Universe</span>
-              </span>
+              <span className="font-display text-lg font-bold">{branding.siteName}</span>
             </div>
             <p className="mt-3 max-w-sm text-sm text-muted-foreground">
               A fan-made hub dedicated only to Dynamons World modded builds. Crafted with care by
@@ -53,6 +56,11 @@ export function Footer() {
                   className="touch-target inline-flex items-center transition-colors hover:text-primary-ink"
                 >
                   About us
+                </Link>
+              </li>
+              <li>
+                <Link to="/help" className="touch-target inline-flex items-center">
+                  Help & Guide
                 </Link>
               </li>
               <li>

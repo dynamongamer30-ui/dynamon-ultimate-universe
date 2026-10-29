@@ -1,3 +1,4 @@
+import { RewardHistory } from "@/components/RewardHistory";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
@@ -37,6 +38,7 @@ function Rewards() {
   const { user } = useAuth();
   return (
     <PageShell>
+      <RewardHistory />
       {/* Hero */}
       <section
         aria-labelledby="rewards-title"

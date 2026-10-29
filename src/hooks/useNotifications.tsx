@@ -45,7 +45,7 @@ export function useNotifications() {
       }),
     staleTime: 60_000,
     gcTime: 0,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
     retry: false,
   });
   const senderQuery = useQuery({
@@ -59,7 +59,10 @@ export function useNotifications() {
   const data = userId ? query.data : undefined;
   const readIds = useMemo(() => new Set(data?.reads ?? []), [data?.reads]);
   const items = useMemo(
-    () => (data?.list ?? []).filter((n) => !n.burn_after_read || !readIds.has(n.id)),
+    () =>
+      (data?.list ?? []).filter(
+        (n) => !(n.burn_after_read || n.source_kind === "automated") || !readIds.has(n.id),
+      ),
     [data?.list, readIds],
   );
   const unread = useMemo(() => items.filter((n) => !readIds.has(n.id)), [items, readIds]);

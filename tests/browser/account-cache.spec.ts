@@ -102,6 +102,16 @@ test("account reads are shared, failed saves roll back and sign-out clears priva
           burn_after_read: false,
         },
       ];
+    } else if (url.pathname.endsWith("/rpc/website_acknowledge_notification")) {
+      readWrites++;
+      readMethods.push(request.method());
+      if (rejectRead) {
+        status = 403;
+        data = { message: "Fixture receipt denied" };
+      } else {
+        read = true;
+        data = { ok: true };
+      }
     } else if (url.pathname.endsWith("/notification_reads")) {
       if (request.method() === "GET") {
         reads.receipts++;
@@ -127,10 +137,9 @@ test("account reads are shared, failed saves roll back and sign-out clears priva
   expect(reads.likes).toBe(1);
   expect(reads.favorites).toBe(1);
   expect(reads.profile).toBe(1);
-  expect(reads.inbox).toBe(1);
-  expect(reads.receipts).toBe(1);
-  expect(reads.sender).toBe(1);
-  await expect(page.getByRole("button", { name: "Notifications", exact: true })).toHaveText("1");
+  expect(reads.inbox).toBe(0);
+  expect(reads.receipts).toBe(0);
+  expect(reads.sender).toBe(0);
   await page
     .getByRole("button", { name: "Open menu", exact: true })
     .or(page.getByRole("button", { name: "Close menu", exact: true }))
@@ -162,17 +171,18 @@ test("account reads are shared, failed saves roll back and sign-out clears priva
   await expect(
     page.getByRole("heading", { name: "Fixture release update", exact: true }),
   ).toBeVisible();
+  expect(readMethods).toEqual([]);
+  await page.getByRole("button", { name: "Open notification", exact: true }).click();
   await expect.poll(() => readMethods.join(",")).toBe("POST");
-  await expect(page.getByRole("button", { name: "Notifications", exact: true })).toHaveText("1");
+  await page.getByRole("button", { name: "Close notification", exact: true }).click();
   rejectRead = false;
-  await page.getByRole("button", { name: "Notifications", exact: true }).click();
-  await page.getByRole("button", { name: "Mark all read", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Notifications", exact: true })).toHaveText("");
+  await page.getByRole("button", { name: "Open notification", exact: true }).click();
+  await expect.poll(() => read).toBe(true);
+  await page.getByRole("button", { name: "Close notification", exact: true }).click();
   expect(readWrites).toBe(2);
   expect(reads.inbox - inboxReads).toBeLessThanOrEqual(2);
   expect(reads.receipts - receiptReads).toBeLessThanOrEqual(2);
   expect(reads.sender).toBe(1);
-  await page.getByRole("button", { name: "Notifications", exact: true }).click();
   const beforeFilter = { ...reads };
   await page.getByRole("button", { name: "Rewards", exact: true }).click();
   await expect(page.getByText("No rewards in this inbox.", { exact: true })).toBeVisible();

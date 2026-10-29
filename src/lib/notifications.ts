@@ -1,3 +1,4 @@
+import { featureRpc } from "./featureRpc";
 /**
  * Notifications data layer — Supabase-backed.
  *
@@ -22,6 +23,8 @@ export interface AppNotification {
   reward_kind: "vip_key" | "phoenix_pass" | "trainer_dg_key" | "trainer_vip_key" | null;
   reward_ref: string | null;
   burn_after_read: boolean;
+  source_kind?: "manual" | "automated";
+  target_user_id?: string | null;
 }
 
 export interface SenderProfile {
@@ -47,7 +50,9 @@ export async function getSenderProfile(signal?: AbortSignal): Promise<SenderProf
 export async function listNotifications(signal?: AbortSignal): Promise<AppNotification[]> {
   const { data, error } = await supabase
     .from("notifications")
-    .select("id,title,body,created_at,reward_kind,reward_ref,burn_after_read")
+    .select(
+      "id,title,body,created_at,reward_kind,reward_ref,burn_after_read,source_kind,target_user_id",
+    )
     .order("created_at", { ascending: false })
     .abortSignal(signal ?? AbortSignal.timeout(10000))
     .retry(false);
@@ -82,11 +87,13 @@ export async function listMyReadIds(signal?: AbortSignal): Promise<string[]> {
 
 export async function markRead(ids: string[], userId: string): Promise<void> {
   if (ids.length === 0) return;
-  const rows = ids.map((notification_id) => ({ notification_id, user_id: userId }));
-  const { error } = await supabase.from("notification_reads").upsert(rows, {
-    onConflict: "notification_id,user_id",
-  });
-  if (error) throw new Error(error.message);
+  void userId;
+  for (let offset = 0; offset < ids.length; offset += 100) {
+    const result = await featureRpc<{ ok: boolean }>("website_acknowledge_notification", {
+      p_ids: ids.slice(offset, offset + 100),
+    });
+    if (result?.ok !== true) throw new Error("Acknowledgement not confirmed");
+  }
 }
 
 export async function createNotification(
@@ -98,7 +105,9 @@ export async function createNotification(
   const { data, error } = await supabase
     .from("notifications")
     .insert({ title, body, ...(id ? { id } : {}) })
-    .select("id,title,body,created_at,reward_kind,reward_ref,burn_after_read")
+    .select(
+      "id,title,body,created_at,reward_kind,reward_ref,burn_after_read,source_kind,target_user_id",
+    )
     .abortSignal(signal ?? AbortSignal.timeout(10000))
     .maybeSingle()
     .retry(false);
@@ -127,7 +136,9 @@ export async function updateNotification(
     .from("notifications")
     .update({ title, body })
     .eq("id", id)
-    .select("id,title,body,created_at,reward_kind,reward_ref,burn_after_read")
+    .select(
+      "id,title,body,created_at,reward_kind,reward_ref,burn_after_read,source_kind,target_user_id",
+    )
     .abortSignal(signal ?? AbortSignal.timeout(10000))
     .maybeSingle()
     .retry(false);

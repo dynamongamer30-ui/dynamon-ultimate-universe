@@ -1,3 +1,4 @@
+import { HELP_TOPICS } from "@/lib/helpTopics";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -79,6 +80,11 @@ export function Header() {
       )
     : [];
 
+  const helpResults = q.trim()
+    ? HELP_TOPICS.filter((t) =>
+        (t.title + " " + t.steps.join(" ")).toLowerCase().includes(q.trim().toLowerCase()),
+      ).slice(0, 4)
+    : [];
   const brandLogo = /^(https:\/\/|\/(?!\/))/.test(branding.logoUrl || "")
     ? branding.logoUrl
     : "/dynamon-gamer-avatar.png";
@@ -226,11 +232,27 @@ export function Header() {
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                {results.length > 0 && (
+                {(results.length > 0 || helpResults.length > 0) && (
                   <ul
                     id="search-results"
                     className="mt-3 max-h-72 space-y-1 overflow-auto rounded-xl border border-border bg-card/40 p-2"
                   >
+                    {helpResults.map((topic) => (
+                      <li key={topic.id}>
+                        <Link
+                          to="/help"
+                          hash={topic.id}
+                          onClick={() => {
+                            setSearchOpen(false);
+                            setQ("");
+                          }}
+                          className="touch-target flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-card"
+                        >
+                          <Compass size={14} />
+                          Guide: {topic.title}
+                        </Link>
+                      </li>
+                    ))}
                     {results.map((m) => (
                       <li key={m.slug}>
                         <button
@@ -251,7 +273,7 @@ export function Header() {
                     ))}
                   </ul>
                 )}
-                {q && results.length === 0 && (
+                {q && results.length === 0 && helpResults.length === 0 && (
                   <p className="mt-3 px-2 text-sm text-muted-foreground">No mods match "{q}".</p>
                 )}
               </div>
@@ -300,6 +322,13 @@ export function Header() {
                   </Link>
                 ))}
               </div>
+              <Link
+                to="/help"
+                onClick={() => setOpen(false)}
+                className="touch-target mt-2 flex items-center rounded-xl px-3 text-sm"
+              >
+                Help & Guide
+              </Link>
               {user && (
                 <div className="mt-3 grid gap-1 border-t border-border pt-3 sm:grid-cols-2">
                   <p className="royal-menu-group-title sm:col-span-2">Your account</p>

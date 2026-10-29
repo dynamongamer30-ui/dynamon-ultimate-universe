@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Columns3, X } from "lucide-react";
 import type { Mod } from "@/lib/mods";
@@ -13,6 +13,9 @@ export function BuildComparison({
   remove: (slug: string) => void;
   clear: () => void;
 }) {
+  const [differences, setDifferences] = useState(false);
+  const [share, setShare] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   if (!builds.length) return null;
@@ -73,6 +76,46 @@ export function BuildComparison({
             <X size={20} />
           </button>
         </div>
+        <div className="flex flex-wrap items-center gap-4 px-5 pb-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={differences}
+              onChange={(e) => setDifferences(e.target.checked)}
+            />
+            Differences only
+          </label>
+          <button
+            className="touch-target rounded-lg border border-border px-3 text-sm"
+            onClick={async () => {
+              const url = new URL("/mods", window.location.origin);
+              url.searchParams.set("compare", builds.map((b) => b.slug).join(","));
+              setShare(url.href);
+              try {
+                await navigator.clipboard.writeText(url.href);
+                setShareMessage("Comparison link copied");
+              } catch {
+                setShareMessage("Copy the comparison link below");
+              }
+            }}
+          >
+            Copy comparison link
+          </button>
+        </div>
+        {share && (
+          <div className="px-5 pb-4">
+            <p role="status" className="text-xs text-muted-foreground">
+              {shareMessage}
+            </p>
+            <input
+              aria-label="Comparison share link"
+              readOnly
+              value={share}
+              onFocus={(e) => e.target.select()}
+              className="control-input mt-2 w-full rounded-lg border p-2 text-xs"
+            />
+          </div>
+        )}
         <div
           className="comparison-scroll"
           tabIndex={0}
@@ -108,22 +151,30 @@ export function BuildComparison({
                 ["Updated", ...builds.map((b) => b.updated || "Not listed")],
                 ["Downloads", ...builds.map((b) => formatCount(b.downloads))],
                 ["Rating", ...builds.map((b) => b.baseRating.toFixed(1))],
-              ].map(([label, ...values]) => (
-                <tr key={label}>
-                  <th scope="row">{label}</th>
-                  {values.map((value, i) => (
-                    <td key={builds[i].slug}>{value}</td>
-                  ))}
-                </tr>
-              ))}
-              {features.map((feature) => (
-                <tr key={feature}>
-                  <th scope="row">{feature}</th>
-                  {builds.map((build) => (
-                    <td key={build.slug}>{build.features.includes(feature) ? "Listed" : "—"}</td>
-                  ))}
-                </tr>
-              ))}
+              ]
+                .filter(([, ...values]) => !differences || new Set(values).size > 1)
+                .map(([label, ...values]) => (
+                  <tr key={label}>
+                    <th scope="row">{label}</th>
+                    {values.map((value, i) => (
+                      <td key={builds[i].slug}>{value}</td>
+                    ))}
+                  </tr>
+                ))}
+              {features
+                .filter(
+                  (feature) =>
+                    !differences ||
+                    new Set(builds.map((b) => b.features.includes(feature))).size > 1,
+                )
+                .map((feature) => (
+                  <tr key={feature}>
+                    <th scope="row">{feature}</th>
+                    {builds.map((build) => (
+                      <td key={build.slug}>{build.features.includes(feature) ? "Listed" : "—"}</td>
+                    ))}
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>

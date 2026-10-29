@@ -1,3 +1,5 @@
+import { NotificationDetail } from "@/components/NotificationDetail";
+import type { AppNotification } from "@/lib/notifications";
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bell, BellOff, Check } from "lucide-react";
@@ -5,7 +7,6 @@ import { PageShell } from "@/components/PageShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationBody } from "@/components/NotificationBody";
-import { NotificationClaim } from "@/components/NotificationClaim";
 import { Skeleton } from "@/components/Skeleton";
 
 export const Route = createFileRoute("/notifications")({
@@ -30,7 +31,9 @@ function fmt(iso: string): string {
 
 function NotificationsPage() {
   const { user } = useAuth();
-  const { items, readIds, loading, error, refresh, markAllRead, sender } = useNotifications();
+  const { items, readIds, loading, error, refresh, markAllRead, markOneRead, sender } =
+    useNotifications();
+  const [opened, setOpened] = useState<AppNotification | null>(null);
   const unreadCount = items.filter((n) => !readIds.has(n.id)).length;
   const [filter, setFilter] = useState<"all" | "rewards" | "updates">("all");
   const visibleItems = items.filter(
@@ -52,11 +55,12 @@ function NotificationsPage() {
     if (!user || loading || error || snapshotted.current) return;
     snapshotted.current = true;
     setUnreadOnArrival(new Set(items.filter((n) => !readIds.has(n.id)).map((n) => n.id)));
-    markAllRead();
+    // Opening the inbox must not acknowledge messages.
   }, [user, loading, error, items, readIds, markAllRead]);
 
   return (
     <PageShell>
+      <NotificationDetail notification={opened} onClose={() => setOpened(null)} />
       <header
         aria-labelledby="notifications-title"
         className="route-hero edge-light rounded-2xl glass p-8 sm:p-12"
@@ -202,7 +206,16 @@ function NotificationsPage() {
                     <p className="notification-copy mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                       <NotificationBody text={n.body} />
                     </p>
-                    <NotificationClaim notification={n} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpened(n);
+                        void markOneRead(n.id);
+                      }}
+                      className="touch-target mt-3 rounded-lg border border-border px-4 py-2 text-sm font-semibold"
+                    >
+                      Open notification
+                    </button>
                   </div>
                 </div>
               </li>

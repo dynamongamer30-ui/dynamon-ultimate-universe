@@ -1,3 +1,4 @@
+import { ContinueBrowsing } from "@/hooks/useBuildActivity";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
@@ -72,7 +73,7 @@ const FAQ_ITEMS = [
 
 function Index() {
   const reducedMotion = useReducedMotionPreference();
-  const { mods } = useSiteSettings();
+  const { mods, branding } = useSiteSettings();
   // Newest version first (1.13.33, then 1.13.32, then 1.13.31 ...).
   // The first build is automatically the featured one.
   const sorted = sortByLatest(mods);
@@ -104,7 +105,7 @@ function Index() {
                 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-primary-ink"
               >
                 <span className="inline-block h-px w-8 bg-primary" aria-hidden />
-                Dynamon Gamer / The elemental collection
+                {branding.heroEyebrow}
               </motion.p>
 
               <motion.h1
@@ -114,9 +115,9 @@ function Index() {
                 id="homepage-title"
                 className="mt-6 max-w-[16ch] font-display text-[clamp(1.5rem,7.7vw,4.5rem)] font-bold leading-[1.03] tracking-[-0.045em] text-balance lg:text-[clamp(2.25rem,4.6vw,4.5rem)]"
               >
-                Find your
+                {branding.heroTitle}
                 <br />
-                <span className="text-gradient">element.</span>
+                <span className="text-gradient">{branding.heroHighlight}</span>
               </motion.h1>
 
               <motion.p
@@ -125,8 +126,7 @@ function Index() {
                 transition={reducedMotion ? { duration: 0 } : { ...spring, delay: 0.12 }}
                 className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg text-pretty"
               >
-                Discover Dynamons World builds, compare what changed, and find your next adventure.
-                Clear release notes. A guided download. Your progress, connected.
+                {branding.heroSubtitle}
               </motion.p>
 
               <motion.div
@@ -141,9 +141,17 @@ function Index() {
                   onMouseEnter={playHover}
                   className="press touch-target group inline-flex items-center gap-2 rounded-xl border border-primary/45 bg-primary px-6 py-3 text-sm font-bold text-primary-foreground glow-primary transition-[filter,box-shadow] hover:brightness-110 hover:shadow-[0_0_34px_-8px_oklch(0.66_0.21_318_/_0.8)]"
                 >
-                  Browse every build
+                  {branding.primaryCta}
                   <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
+                {branding.secondaryCta && (
+                  <Link
+                    to="/help"
+                    className="touch-target inline-flex items-center rounded-xl border border-border px-5 py-3 text-sm font-semibold"
+                  >
+                    {branding.secondaryCta}
+                  </Link>
+                )}
               </motion.div>
 
               {/* Honest stats — machined row */}
@@ -199,6 +207,7 @@ function Index() {
         </div>
       </section>
 
+      <ContinueBrowsing />
       {/* ── ELEMENT TICKER ───────────────────────────────── */}
       <section className="mt-14 overflow-hidden border-y border-border py-3" aria-hidden>
         <div className="animate-ticker flex w-max items-center gap-8 whitespace-nowrap">

@@ -16,6 +16,7 @@ const staticPages = [
   { path: "/", changefreq: "daily", priority: "1.0" },
   { path: "/mods", changefreq: "daily", priority: "0.9" },
   { path: "/rewards", changefreq: "weekly", priority: "0.5" },
+  { path: "/help", changefreq: "monthly", priority: "0.5" },
   { path: "/about", changefreq: "monthly", priority: "0.3" },
   { path: "/contact", changefreq: "monthly", priority: "0.3" },
   { path: "/disclaimer", changefreq: "monthly", priority: "0.2" },
