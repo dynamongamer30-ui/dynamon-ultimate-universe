@@ -38,6 +38,7 @@ export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: strin
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [ownerDemo, setOwnerDemo] = useState(false);
   const [telegramUrl, setTelegramUrl] = useState("");
   const [intent, setIntent] = useState("");
   const [token, setToken] = useState("");
@@ -94,7 +95,10 @@ export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: strin
           body: JSON.stringify({ action: "status" }),
         });
         const data = await response.json();
-        if (response.ok && data.claimed && identity.current === session.user.id) setSuccess(true);
+        if (response.ok && identity.current === session.user.id) {
+          setOwnerDemo(data.demo === true);
+          if (data.claimed && data.demo !== true) setSuccess(true);
+        }
       } catch {
         /* Refresh status remains available. */
       }
@@ -108,6 +112,7 @@ export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: strin
     setToken("");
     setTelegramUrl("");
     setSuccess(false);
+    setOwnerDemo(false);
     setError("");
   }, [user?.id]);
   useEffect(() => {
@@ -222,7 +227,7 @@ export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: strin
   };
   const available =
     campaign?.active &&
-    campaign.remaining > 0 &&
+    (campaign.remaining > 0 || ownerDemo) &&
     (!campaign.starts_at || Date.parse(campaign.starts_at) <= Date.now()) &&
     (!campaign.ends_at || Date.parse(campaign.ends_at) > Date.now());
   return (
@@ -254,6 +259,7 @@ export function PhoenixCampaign({ slug, prefix }: { slug: string; prefix?: strin
         ) : (
           <p className="mt-5">This campaign is unavailable.</p>
         )}
+        {ownerDemo && <p className="mt-3 text-sm text-muted-foreground">Owner demonstration: claims do not reduce the public campaign quota.</p>}
         {error && (
           <p role="alert" className="mt-4 text-sm text-destructive">
             {error}
