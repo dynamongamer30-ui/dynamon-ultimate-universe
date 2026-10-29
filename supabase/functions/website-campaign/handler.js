@@ -98,7 +98,7 @@ export function createCampaignHandler(env, requestFetch = fetch) {
       const text = await request.text();
       if (encoder.encode(text).length > 8192) return result({ error: "request_too_large" }, 413);
       const stamp = request.headers.get("x-dg-proxy-time");
-      const proxyIp = request.headers.get("x-forwarded-for") || "unknown";
+      const proxyIp = request.headers.get("x-dg-proxy-ip") || "unknown";
       if (
         !env.CAMPAIGN_PROXY_SECRET ||
         !stamp ||
@@ -167,7 +167,7 @@ export function createCampaignHandler(env, requestFetch = fetch) {
       )
         return result({ error: "verification_expired" }, 403);
       const browserHash = await sign(secret, "browser-id", browser.id);
-      const ip = request.headers.get("x-forwarded-for") || "unknown";
+      const ip = proxyIp;
       const ipHash = await sign(secret, "campaign-ip", ip);
       if (
         !(await rpc("website_campaign_rate", {

@@ -30,7 +30,8 @@ export async function campaignProxy(
   }
   // Never trust a browser-supplied X-Forwarded-For. Cloudflare supplies CF-Connecting-IP.
   const ip = request.headers.get("cf-connecting-ip") || "unknown";
-  forwarded.set("x-forwarded-for", ip);
+  // The upstream gateway can rewrite X-Forwarded-For. Sign a dedicated header instead.
+  forwarded.set("x-dg-proxy-ip", ip);
   if (request.method === "POST") {
     const stamp = String(Date.now());
     const encoder = new TextEncoder();

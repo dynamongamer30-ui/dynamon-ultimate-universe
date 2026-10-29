@@ -40,6 +40,7 @@ test("same-origin proxy signs trusted network identity and preserves secure cook
           "content-type": "application/json",
           authorization: "Bearer member-jwt",
           "x-forwarded-for": "forged",
+          "x-dg-proxy-ip": "forged",
           "cf-connecting-ip": "192.0.2.1",
         },
         body,
@@ -51,7 +52,8 @@ test("same-origin proxy signs trusted network identity and preserves secure cook
     assert.match(response.headers.get("cache-control"), /no-store/);
     assert.equal(calls.length, 1);
     const headers = calls[0].options.headers;
-    assert.equal(headers.get("x-forwarded-for"), "192.0.2.1");
+    assert.equal(headers.get("x-dg-proxy-ip"), "192.0.2.1");
+    assert.equal(headers.get("x-forwarded-for"), null);
     assert.equal(headers.get("authorization"), "Bearer member-jwt");
     const proof = createHmac("sha256", secret)
       .update(["proxy", headers.get("x-dg-proxy-time"), "test", "192.0.2.1", body].join("\n"))
