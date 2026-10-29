@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MAX_BRAND_LOGO_BYTES, removeUnusedBrandLogo } from "@/lib/brandLogoStorage";
 import { supabase } from "@/integrations/supabase/client";
 
 function confirmedWithin<T>(pending: PromiseLike<T>, milliseconds: number): Promise<T> {
@@ -61,6 +62,7 @@ export function BrandLogoUpload({
     setError("");
     setMessage("");
     let bitmap: ImageBitmap | undefined;
+    let staged: { url: string; owner: string } | undefined;
     try {
       const {
         data: { user },
@@ -118,9 +120,19 @@ export function BrandLogoUpload({
       } = await confirmedWithin(supabase.auth.getUser(), 15000);
       if (run !== generation.current || stillUser?.id !== user.id) return;
       const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      staged = { url: data.publicUrl, owner: user.id };
       await onPublish(data.publicUrl, alsoIcon);
       setMessage("Logo published successfully.");
+      try {
+        await removeUnusedBrandLogo(supabase, current, user.id);
+      } catch {
+        setMessage(
+          "Logo published. The previous file could not be removed; please retry when connected.",
+        );
+      }
     } catch (cause) {
+      // A failed or uncertain save may already have committed: reread references first.
+      if (staged) await removeUnusedBrandLogo(supabase, staged.url, staged.owner).catch(() => {});
       if (run === generation.current)
         setError(cause instanceof Error ? cause.message : "Upload failed. Retry when ready.");
     } finally {
@@ -149,7 +161,7 @@ export function BrandLogoUpload({
           />
         </div>
         <label className="text-sm">
-          Choose PNG, JPEG or WebP (up to 8 MB)
+          Choose PNG, JPEG or WebP (up to 15 MB)
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp"
@@ -164,9 +176,10 @@ export function BrandLogoUpload({
                   ["image/png", "image/jpeg", "image/webp"].includes(next.type) ||
                   (!next.type && /\.(png|jpe?g|webp)$/i.test(next.name))
                 ) ||
-                next.size > 8 * 1024 * 1024
+                next.size > MAX_BRAND_LOGO_BYTES
               ) {
-                setError("Choose a PNG, JPEG or WebP smaller than 8 MB.");
+                setFile(null);
+                setError("Choose a PNG, JPEG or WebP of 15 MB or less.");
                 return;
               }
               setFile(next);
@@ -220,7 +233,11 @@ export function BrandLogoUpload({
             setError("");
             setMessage("");
             void onPublish("/dynamon-gamer-avatar.png", alsoIcon)
-              .then(() => {
+              .then(async () => {
+                const {
+                  data: { user },
+                } = await supabase.auth.getUser();
+                if (user) await removeUnusedBrandLogo(supabase, current, user.id);
                 setFile(null);
                 setMessage("Default logo published.");
               })
