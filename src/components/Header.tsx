@@ -21,6 +21,7 @@ import { playClick } from "@/lib/sound";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useGamification } from "@/hooks/useGamification";
+import { NotificationBell } from "@/components/NotificationBell";
 import { LevelBadge } from "@/components/LevelBadge";
 import { StreakBadge } from "@/components/StreakBadge";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
@@ -438,17 +439,20 @@ export function Header() {
         )}
       </header>
       {user && (
-        <div aria-label="Trainer progress" className="border-b border-border/50 bg-background">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-2 text-sm">
+        <div aria-label="Trainer progress" className="relative site-chrome border-b border-border/50 bg-background">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 py-2 text-sm">
             <LevelBadge compact />
             {streak.current > 0 && <StreakBadge compact />}
-            <Link
-              to="/rewards"
-              className="ml-auto inline-flex min-h-9 items-center gap-2 text-muted-foreground"
-            >
-              <Gift className="h-4 w-4" />
-              Rewards
-            </Link>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <Link
+                to="/rewards"
+                className="touch-target inline-flex items-center gap-2 rounded-lg px-2 text-muted-foreground hover:text-foreground"
+              >
+                <Gift className="h-4 w-4" />
+                Rewards
+              </Link>
+              <NotificationBell />
+            </div>
           </div>
         </div>
       )}

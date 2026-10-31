@@ -293,3 +293,26 @@ test("claim key layout fits narrow and wide screens with accessible copy targets
     await page.screenshot({ path: info.outputPath(`claim-key-${width}.png`), fullPage: true });
   }
 });
+
+test("claim errors keep their recovery button below the message on mobile", async ({ page }) => {
+  const state = await fixture(page);
+  state.body = { ok: false, error: "invalid_or_expired" };
+  await open(page, "phoenix_pass");
+  await page.getByRole("button", { name: "Claim now", exact: true }).click();
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("This pass is unavailable");
+  for (const width of [320, 390, 820]) {
+    await page.setViewportSize({ width, height: 900 });
+    const message = await alert.locator("p").boundingBox();
+    const action = await alert.getByRole("link", { name: "Check Rewards" }).boundingBox();
+    expect(message).not.toBeNull();
+    expect(action).not.toBeNull();
+    expect(action!.y - (message!.y + message!.height)).toBeGreaterThanOrEqual(16);
+    expect(action!.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  const bell = page.getByRole("button", { name: "Notifications", exact: true });
+  await bell.click();
+  await page.getByRole("link", { name: "View all notifications", exact: true }).click();
+  await expect(page).toHaveURL(/\/notifications$/);
+});

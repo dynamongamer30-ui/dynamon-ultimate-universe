@@ -25,6 +25,15 @@ test("signed-out rewards stay public without account lookups or claim calls", as
   await expect(page.getByRole("region", { name: "Your rewards", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Copy key|Claim your key/ })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByRole("complementary", { name: "Website preview notice" })).toHaveCount(0);
+  for (const width of [320, 390, 820]) {
+    await page.setViewportSize({ width, height: 900 });
+    const vault = await page.locator("#my-rewards").boundingBox();
+    const hero = await page.getByRole("region", { name: "Two prizes. Every single day." }).boundingBox();
+    expect(vault).not.toBeNull();
+    expect(hero).not.toBeNull();
+    expect(hero!.y - (vault!.y + vault!.height)).toBeGreaterThanOrEqual(24);
+  }
   await page.screenshot({ path: info.outputPath("rewards-signed-out.png") });
   expect(rewardRequests).toEqual([]);
   expect(errors).toEqual([]);

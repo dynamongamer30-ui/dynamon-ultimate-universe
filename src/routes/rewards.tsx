@@ -42,7 +42,7 @@ function Rewards() {
       {/* Hero */}
       <section
         aria-labelledby="rewards-title"
-        className="route-hero relative overflow-hidden edge-light rounded-2xl glass p-8 sm:p-14"
+        className="route-hero mt-8 relative overflow-hidden edge-light rounded-2xl glass p-8 sm:p-14"
       >
         <div
           className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl"

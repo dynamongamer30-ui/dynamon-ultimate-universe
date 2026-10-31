@@ -1079,3 +1079,12 @@ p {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
+
+/* Keep the mobile inbox below both the main header and trainer actions. */
+@media (max-width: 640px) {
+  .trainer-notification-popover {
+    top: calc(9rem + var(--safe-area-top));
+    max-height: min(32rem, calc(100dvh - 10rem - var(--safe-area-top)));
+    overflow-y: auto;
+  }
+}

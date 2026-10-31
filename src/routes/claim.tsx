@@ -309,12 +309,12 @@ function ClaimSession({
         ) : result?.kind === "error" ? (
           <div
             role="alert"
-            className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6 text-center"
+            className="flex flex-col items-center gap-5 rounded-2xl border border-destructive/40 bg-destructive/5 p-6 text-center"
           >
-            <p className="text-sm text-destructive">{result.message}</p>
+            <p className="w-full text-sm leading-relaxed text-destructive">{result.message}</p>
             <Link
               to="/rewards"
-              className="touch-target mt-4 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-card/60"
+              className="touch-target inline-flex max-w-full items-center justify-center rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-card/60"
             >
               Check Rewards
             </Link>
