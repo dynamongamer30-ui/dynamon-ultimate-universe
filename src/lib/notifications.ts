@@ -47,13 +47,21 @@ export async function getSenderProfile(signal?: AbortSignal): Promise<SenderProf
   return data as SenderProfile;
 }
 
-export async function listNotifications(signal?: AbortSignal): Promise<AppNotification[]> {
-  const { data, error } = await supabase
+export async function listNotifications(
+  signal?: AbortSignal,
+  recipientId?: string,
+): Promise<AppNotification[]> {
+  let request = supabase
     .from("notifications")
     .select(
       "id,title,body,created_at,reward_kind,reward_ref,burn_after_read,source_kind,target_user_id",
     )
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false });
+  // Owners can inspect every recipient in the admin list, but their personal
+  // inbox must use the same recipient scope as the acknowledgement RPC.
+  if (recipientId)
+    request = request.or(`target_user_id.is.null,target_user_id.eq.${recipientId}`);
+  const { data, error } = await request
     .abortSignal(signal ?? AbortSignal.timeout(10000))
     .retry(false);
   if (error) throw new Error(error.message);
@@ -69,7 +77,9 @@ export async function listNotifications(signal?: AbortSignal): Promise<AppNotifi
     )
   )
     throw new Error("Invalid notification response");
-  return data as AppNotification[];
+  return (recipientId
+    ? data.filter((row) => row.target_user_id == null || row.target_user_id === recipientId)
+    : data) as AppNotification[];
 }
 
 /** Ids of notifications the current user has already read. */
@@ -89,10 +99,13 @@ export async function markRead(ids: string[], userId: string): Promise<void> {
   if (ids.length === 0) return;
   void userId;
   for (let offset = 0; offset < ids.length; offset += 100) {
-    const result = await featureRpc<{ ok: boolean }>("website_acknowledge_notification", {
-      p_ids: ids.slice(offset, offset + 100),
-    });
-    if (result?.ok !== true) throw new Error("Acknowledgement not confirmed");
+    const batch = ids.slice(offset, offset + 100);
+    const result = await featureRpc<{ ok: boolean; acknowledged: number }>(
+      "website_acknowledge_notification",
+      { p_ids: batch },
+    );
+    if (result?.ok !== true || result.acknowledged !== batch.length)
+      throw new Error("Acknowledgement not confirmed");
   }
 }
 

@@ -38,7 +38,7 @@ export function useNotifications() {
     queryFn: ({ signal }): Promise<Inbox> =>
       boundedRead(signal, async (requestSignal) => {
         const [list, reads] = await Promise.all([
-          listNotifications(requestSignal),
+          listNotifications(requestSignal, userId),
           listMyReadIds(requestSignal),
         ]);
         return { list, reads };
