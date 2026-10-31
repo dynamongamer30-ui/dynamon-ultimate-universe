@@ -135,7 +135,7 @@ export function Header() {
             ))}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <div className="grid shrink-0 grid-cols-[repeat(3,44px)] items-center gap-1 sm:gap-2">
             <button
               onClick={() => {
                 setSearchOpen((v) => !v);
@@ -440,14 +440,16 @@ export function Header() {
       </header>
       {user && (
         <div aria-label="Trainer progress" className="relative site-chrome border-b border-border/50 bg-background">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 py-2 text-sm">
-            <LevelBadge compact />
-            {streak.current > 0 && <StreakBadge compact />}
-            <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 text-sm sm:gap-4 sm:px-6 lg:px-8">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <LevelBadge compact />
+              {streak.current > 0 && <StreakBadge compact />}
+            </div>
+            <div className="grid shrink-0 grid-cols-[repeat(3,44px)] items-center gap-1 sm:gap-2">
               <NotificationBell />
               <Link
                 to="/rewards"
-                className="touch-target inline-flex items-center gap-2 rounded-lg px-2 text-muted-foreground hover:text-foreground"
+                className="touch-target col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-lg text-muted-foreground hover:text-foreground"
               >
                 <Gift className="h-4 w-4" />
                 Rewards
