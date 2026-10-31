@@ -12,6 +12,7 @@ import {
   Trophy,
   Shield,
   Bell,
+  Gift,
   KeyRound,
   Compass,
 } from "lucide-react";
@@ -134,7 +135,7 @@ export function Header() {
             ))}
           </nav>
 
-          <div className="grid shrink-0 grid-cols-3 items-center gap-1 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <button
               onClick={() => {
                 setSearchOpen((v) => !v);
@@ -176,11 +177,6 @@ export function Header() {
             >
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            {user && (
-              <div className="col-start-1 row-start-2">
-                <NotificationBell />
-              </div>
-            )}
           </div>
         </div>
 
@@ -447,6 +443,16 @@ export function Header() {
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 py-2 text-sm">
             <LevelBadge compact />
             {streak.current > 0 && <StreakBadge compact />}
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <NotificationBell />
+              <Link
+                to="/rewards"
+                className="touch-target inline-flex items-center gap-2 rounded-lg px-2 text-muted-foreground hover:text-foreground"
+              >
+                <Gift className="h-4 w-4" />
+                Rewards
+              </Link>
+            </div>
           </div>
         </div>
       )}
