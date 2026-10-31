@@ -19,7 +19,6 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AuroraCursor } from "@/components/AuroraCursor";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
-import { PWAInstall } from "@/components/PWAInstall";
 import { SITE_URL, canonicalUrl, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { SiteSettingsProvider } from "@/hooks/useSiteSettings";
@@ -153,6 +152,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
     ],
     scripts: [
+      {
+        children: `window.addEventListener("beforeinstallprompt",function(event){event.preventDefault()});`,
+      },
       organizationJsonLd(),
       websiteJsonLd(),
       {
@@ -163,7 +165,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/site-icon" },
       { rel: "apple-touch-icon", href: "/site-icon" },
       { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
   shellComponent: RootShell,
@@ -236,7 +237,6 @@ function RootComponent() {
                     }}
                   />
                   <NotificationOptIn />
-                  <PWAInstall />
                   <DailyCheckIn />
                 </MotionConfig>
               </ConfirmProvider>

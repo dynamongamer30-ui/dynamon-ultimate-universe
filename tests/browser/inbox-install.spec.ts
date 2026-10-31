@@ -211,113 +211,19 @@ test("notification disclosure closes on Escape, focus departure and navigation",
   await expect(panel(page)).toHaveCount(0);
 });
 
-async function suggestInstall(page: Page, mode: "hold" | "reject" = "hold") {
-  await page.evaluate((mode) => {
-    const state = window as unknown as {
-      promptCalls: number;
-      finishInstall?: () => void;
-      suggestAgain?: () => void;
-    };
-    state.promptCalls = 0;
-    state.suggestAgain = () => {
+test("automatic install prompts stay disabled across navigation and reloads", async ({ page }) => {
+  await fixture(page, false);
+  await open(page);
+  for (let visit = 0; visit < 2; visit++) {
+    const canceled = await page.evaluate(() => {
       const event = new Event("beforeinstallprompt", { cancelable: true });
-      Object.assign(event, {
-        prompt: async () => {
-          state.promptCalls++;
-          if (mode === "reject") throw new Error("Local install withdrawn");
-        },
-        userChoice: new Promise((resolve) => {
-          state.finishInstall = () => resolve({ outcome: "dismissed" });
-        }),
-      });
       window.dispatchEvent(event);
-    };
-    state.suggestAgain();
-  }, mode);
-  await expect(installRegion(page)).toBeVisible({ timeout: 10000 });
-}
-
-test("install suggestion submits once while pending and fits narrow layouts", async ({
-  page,
-}, info) => {
-  await fixture(page, false);
-  await open(page);
-  await suggestInstall(page);
-  for (const width of [320, 820, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
-    await expect(installRegion(page)).toBeInViewport({ ratio: 1 });
-    expect(
-      await installRegion(page).evaluate((element) => getComputedStyle(element).position),
-    ).toBe("fixed");
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-      ),
-    ).toBe(true);
-    for (const button of await installRegion(page).getByRole("button").all())
-      expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    await page.screenshot({ path: info.outputPath(`install-controls-${width}.png`) });
-  }
-  await page.screenshot({ path: info.outputPath("install-controls.png") });
-  await installRegion(page)
-    .getByRole("button", { name: "Install", exact: true })
-    .evaluate((button) => {
-      (button as HTMLButtonElement).click();
-      (button as HTMLButtonElement).click();
+      return event.defaultPrevented;
     });
-  await expect(
-    installRegion(page).getByRole("button", { name: "Installing…", exact: true }),
-  ).toBeDisabled();
-  expect(
-    await page.evaluate(() => (window as unknown as { promptCalls: number }).promptCalls),
-  ).toBe(1);
-  await page.evaluate(() =>
-    (window as unknown as { finishInstall?: () => void }).finishInstall?.(),
-  );
-  await expect(installRegion(page)).toHaveCount(0);
-});
-
-test("withdrawn install eligibility closes without an unhandled error", async ({ page }) => {
-  await fixture(page, false);
-  await open(page);
-  await suggestInstall(page, "reject");
-  await installRegion(page).getByRole("button", { name: "Install", exact: true }).click();
-  await expect(installRegion(page)).toHaveCount(0);
-  expect(
-    await page.evaluate(() => (window as unknown as { promptCalls: number }).promptCalls),
-  ).toBe(1);
-});
-
-test("install dismissal survives blocked storage and repeated eligibility events", async ({
-  page,
-}) => {
-  await fixture(page, false);
-  await open(page);
-  await suggestInstall(page);
-  await page.evaluate(() => {
-    Storage.prototype.setItem = () => {
-      throw new DOMException("Local blocked storage", "SecurityError");
-    };
-  });
-  await installRegion(page)
-    .getByRole("button", { name: "Dismiss install suggestion", exact: true })
-    .click();
-  await page.evaluate(() => (window as unknown as { suggestAgain?: () => void }).suggestAgain?.());
-  await page.waitForTimeout(4500);
-  await expect(installRegion(page)).toHaveCount(0);
-  expect(
-    await page.evaluate(() => (window as unknown as { promptCalls: number }).promptCalls),
-  ).toBe(0);
-});
-
-test("installed event dismisses the suggestion and prevents another prompt", async ({ page }) => {
-  await fixture(page, false);
-  await open(page);
-  await suggestInstall(page);
-  await page.evaluate(() => {
-    window.dispatchEvent(new Event("appinstalled"));
-    (window as unknown as { suggestAgain?: () => void }).suggestAgain?.();
-  });
-  await page.waitForTimeout(4500);
-  await expect(installRegion(page)).toHaveCount(0);
+    expect(canceled).toBe(true);
+    await page.waitForTimeout(4500);
+    await expect(installRegion(page)).toHaveCount(0);
+    await expect(page.locator('link[rel="manifest"]')).toHaveCount(0);
+    if (visit === 0) await page.reload({ waitUntil: "domcontentloaded" });
+  }
 });
