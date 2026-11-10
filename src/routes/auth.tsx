@@ -8,7 +8,7 @@ import { AvatarPicker } from "@/components/AvatarPicker";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile, isProfileComplete, type Profile } from "@/hooks/useProfile";
 import { useUsernameAvailability, type UsernameStatus } from "@/hooks/useUsernameAvailability";
 import { ProfileLoadError } from "@/components/ProfileLoadError";
 import { toast } from "sonner";
@@ -37,6 +37,7 @@ function AuthPage() {
   const { user, loading } = useAuth();
   const {
     profile,
+    complete,
     loading: profileLoading,
     loaded: profileLoaded,
     error: profileError,
@@ -59,10 +60,13 @@ function AuthPage() {
   };
 
   // Route transitions can briefly remount the old outlet; redirect only while auth is active.
+  // Onboarding is mandatory: a profile row exists for every account from the
+  // moment Google sign-in completes, so redirecting on row existence let
+  // accounts with no username or gender straight through to /mods.
   useEffect(() => {
     if (pathname !== "/auth" || loading || profileLoading || (profileError && !profileLoaded))
       return;
-    if (user && profile) {
+    if (user && complete) {
       if (redirectingUser.current === user.id) return;
       redirectingUser.current = user.id;
       const destination = afterAuthPath();
@@ -74,8 +78,8 @@ function AuthPage() {
       navigate({ to: destination });
     }
     if (!user) redirectingUser.current = null;
-    if (user && !profile) setStep("profile");
-  }, [pathname, user, profile, loading, profileLoading, profileError, profileLoaded, navigate]);
+    if (user && !complete) setStep("profile");
+  }, [pathname, user, complete, loading, profileLoading, profileError, profileLoaded, navigate]);
 
   const handleGoogle = async () => {
     playClick();
@@ -143,7 +147,7 @@ function AuthPage() {
             ) : step === "credentials" && !user ? (
               <CredentialsStep key="creds" busy={busy} onGoogle={handleGoogle} />
             ) : (
-              <ProfileStep key={user?.id ?? "profile"} onDone={refresh} />
+              <ProfileStep key={user?.id ?? "profile"} profile={profile} onDone={refresh} />
             )}
           </AnimatePresence>
         </motion.div>
@@ -234,12 +238,17 @@ function CredentialsStep({ busy, onGoogle }: { busy: boolean; onGoogle: () => vo
   );
 }
 
-function ProfileStep({ onDone }: { onDone: () => Promise<void> }) {
+function ProfileStep({ profile, onDone }: { profile: Profile | null; onDone: () => Promise<void> }) {
   const reducedMotion = useReducedMotionPreference();
   const { user } = useAuth();
-  const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [gender, setGender] = useState<"male" | "female" | "other" | null>(null);
+  const [username, setUsername] = useState(profile?.username ?? "");
+  const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
+  const [gender, setGender] = useState<"male" | "female" | "other" | null>(
+    profile?.gender ?? null,
+  );
+  // Google supplies a picture at signup, but the avatar picker only accepts the
+  // built-in hero avatars. Anything that is not one of those has to be re-picked
+  // here, or a Google photo would satisfy the avatar requirement on its own.
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const availability = useUsernameAvailability(username);
@@ -261,8 +270,12 @@ function ProfileStep({ onDone }: { onDone: () => Promise<void> }) {
       toast.error("Not signed in");
       return;
     }
+    if (!username.trim() || !isValidUsername(username.trim())) {
+      toast.error("Pick a valid username (3-24 letters, numbers or _)");
+      return;
+    }
     if (!availability.canSubmit) {
-      toast.error("Pick a valid, available username");
+      toast.error("Pick an available username");
       return;
     }
     if (!displayName.trim()) {
@@ -325,13 +338,13 @@ function ProfileStep({ onDone }: { onDone: () => Promise<void> }) {
           Build your trainer
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Only takes a moment. You can update it anytime.
+          One last step. Every field below is required before you can continue.
         </p>
       </div>
 
       <fieldset disabled={busy} className="min-w-0 space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Username" hint="3–24 chars, letters, numbers, _">
+          <Field label="Username" hint="3-24 chars, letters, numbers, _">
             <div className="relative">
               <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -404,51 +417,38 @@ function ProfileStep({ onDone }: { onDone: () => Promise<void> }) {
             </p>
             {gender && (
               <p className="text-xs text-muted-foreground">
-                {gender === "female"
-                  ? "10 female heroes"
-                  : gender === "male"
-                    ? "10 male heroes"
-                    : "All 20 heroes"}
+                {gender === "female" ? "10 female heroes" : "10 male heroes"}
               </p>
             )}
           </div>
           <div className="mt-3">
-            {gender ? (
-              <AvatarPicker value={avatarId} onChange={setAvatarId} gender={gender} />
-            ) : (
-              <p className="rounded-xl border border-dashed border-border bg-background/40 p-6 text-center text-sm text-muted-foreground">
-                Pick a gender to see your heroes.
-              </p>
-            )}
+            <AvatarPicker value={avatarId} onChange={setAvatarId} gender={gender} />
           </div>
         </div>
 
         <button
           type="submit"
           disabled={busy || !availability.canSubmit}
+          onMouseDown={playClick}
           aria-busy={busy}
           className="touch-target inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary-foreground glow-primary transition-transform hover:scale-[1.01] disabled:opacity-60"
           style={{ background: "var(--gradient-primary)" }}
         >
-          {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-          Enter the Universe
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          Save and continue
         </button>
         {saveError && (
           <p role="alert" className="text-sm text-rose-300">
-            Could not save your profile. Your changes are still here. Please try again.
+            Could not save your profile. Your details are still here. Please try again.
           </p>
         )}
       </fieldset>
-
-      <p className="text-center text-xs text-muted-foreground">
-        By continuing you agree to our{" "}
-        <Link to="/disclaimer" className="text-primary-ink hover:underline">
-          Disclaimer & Safety
-        </Link>
-        .
-      </p>
     </motion.form>
   );
+}
+
+function isValidUsername(value: string) {
+  return /^[a-zA-Z0-9_]{3,24}$/.test(value);
 }
 
 function Field({
@@ -461,15 +461,15 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <div className="flex items-baseline justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {label}
-        </span>
-        {hint && <span className="text-xs text-muted-foreground/80">{hint}</span>}
-      </div>
+    <div className="min-w-0">
+      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </label>
+      {hint && (
+        <p className="mt-1 text-xs leading-4 text-muted-foreground sm:min-h-8">{hint}</p>
+      )}
       <div className="mt-1.5">{children}</div>
-    </label>
+    </div>
   );
 }
 
@@ -482,35 +482,34 @@ function UsernameBadge({ status }: { status: UsernameStatus }) {
     invalid: { text: "invalid", c: "text-amber-400" },
     error: { text: "unverified", c: "text-rose-400" },
   } as const;
-  const s = map[status];
+  const entry = map[status];
   return (
     <span
-      role="status"
-      className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wider ${s.c}`}
+      className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold ${entry.c}`}
     >
-      {s.text}
+      {entry.text}
     </span>
   );
 }
 
 function GoogleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden>
+    <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
       <path
         fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+        d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47a5.57 5.57 0 0 1-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82Z"
       />
       <path
         fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09A11.99 11.99 0 0 0 12 24Z"
       />
       <path
         fill="#FBBC05"
-        d="M5.84 14.09A6.99 6.99 0 0 1 5.47 12c0-.73.13-1.44.36-2.09V7.07H2.18a11 11 0 0 0 0 9.86l3.66-2.84z"
+        d="M5.27 14.29a7.2 7.2 0 0 1 0-4.58V6.62H1.29a11.99 11.99 0 0 0 0 10.76l3.98-3.09Z"
       />
       <path
         fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
+        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.7 0 3.99 2.47 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75Z"
       />
     </svg>
   );
