@@ -6,6 +6,7 @@ import { DexThemes } from "@/components/DexThemes";
 const CONTROLS: [string, string][] = [
   ["app", "Block game payload loading"],
   ["mods", "Block all mod access"],
+  ["riftPounce", "Rift Pounce (Dark Void PvE ability)"],
   ["god", "God mode"],
   ["oneHit", "One-hit damage"],
   ["crit", "Critical hits"],
@@ -81,6 +82,8 @@ export function DexControls() {
         </h2>
         <p className="my-3 text-sm text-muted-foreground">
           Checked means locked. Changes save automatically and apply on the next game launch.
+          Rift Pounce controls the bundled Dark Void mark and damage bonus in protected sessions;
+          offline PvE without a server lock remains available.
         </p>
         <p className="mb-4 text-xs text-muted-foreground">
           Shop compatibility is always enabled in the current DEX. Retired stat and defense
