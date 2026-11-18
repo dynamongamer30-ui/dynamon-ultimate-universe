@@ -1088,3 +1088,75 @@ p {
     overflow-y: auto;
   }
 }
+
+
+/* Professional layout refinement: shared geometry and quiet, consistent surfaces. */
+:root {
+  --site-content-width: 80rem;
+  --site-gutter: clamp(1rem, 2.8vw, 2rem);
+  --site-section-gap: clamp(2.5rem, 5vw, 4.5rem);
+  --site-card-gap: clamp(1rem, 2vw, 1.5rem);
+}
+.layout-container {
+  width: min(100% - (var(--site-gutter) * 2), var(--site-content-width));
+  margin-inline: auto;
+}
+.page-content {
+  width: min(100% - (var(--site-gutter) * 2), var(--site-content-width));
+  max-width: none;
+  padding-inline: 0;
+  padding-top: clamp(1.25rem, 2.5vw, 2.25rem);
+  padding-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+.site-header > .layout-container,
+.site-footer > .layout-container {
+  max-width: var(--site-content-width);
+}
+.page-content h1 {
+  line-height: 1.08;
+  text-wrap: balance;
+}
+.page-content h2,
+.page-content h3 {
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.page-content p,
+.page-content li {
+  text-wrap: pretty;
+}
+.page-content :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  max-width: 100%;
+}
+.page-content :where(button, a, input, select, textarea) {
+  -webkit-tap-highlight-color: transparent;
+}
+.page-content :where(.route-hero, header[aria-labelledby]) {
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+}
+.page-content :where(.surface-l1, .glass, .glass-l1, .glass-l2, .glass-l3) {
+  min-width: 0;
+}
+.page-content :where(.grid, .flex) > * {
+  min-width: 0;
+}
+.site-footer {
+  margin-top: clamp(3rem, 7vw, 6rem);
+}
+.site-footer > .layout-container {
+  padding-top: clamp(2rem, 4vw, 3.5rem);
+  padding-bottom: clamp(2rem, 4vw, 3.5rem);
+}
+@media (max-width: 639px) {
+  .page-content {
+    padding-top: 1.25rem;
+    padding-bottom: 2.5rem;
+  }
+  .page-content :where(.route-hero, header[aria-labelledby]) {
+    margin-bottom: 1.5rem;
+  }
+  .site-footer > .layout-container {
+    padding-top: 2rem;
+    padding-bottom: max(2rem, var(--safe-area-bottom));
+  }
+}
