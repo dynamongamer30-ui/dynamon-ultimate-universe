@@ -10,7 +10,7 @@ export function Footer() {
       <div className="layout-container">
         <SocialStrip />
 
-        <div className="mt-12 grid gap-10 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1.2fr]">
+        <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:mt-12 lg:grid-cols-[2fr_1fr_1fr_1.2fr] lg:gap-10">
           <div>
             <div className="flex items-center gap-2">
               <span
