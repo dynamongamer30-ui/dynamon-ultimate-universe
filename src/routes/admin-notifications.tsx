@@ -159,7 +159,7 @@ function AdminNotifications() {
         <ArrowLeft className="h-4 w-4" /> Back to dashboard
       </Link>
 
-      <header className="mb-8 flex items-center gap-3">
+      <header className="admin-route-hero edge-light rounded-2xl glass mb-8 flex items-center gap-3 p-5 sm:p-7">
         <span
           className="grid h-11 w-11 place-items-center rounded-2xl text-primary-foreground"
           style={{ background: "var(--gradient-primary)" }}
