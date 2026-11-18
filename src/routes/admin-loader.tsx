@@ -60,7 +60,7 @@ function LoaderShell() {
 
   return (
     <PageShell>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <header className="admin-route-hero route-hero edge-light rounded-2xl glass mb-6 flex flex-wrap items-center justify-between gap-3 p-5 sm:p-7">
         <div>
           <h1 className="font-display text-3xl font-bold">OTA Loader</h1>
           <p className="text-sm text-muted-foreground">
@@ -71,7 +71,7 @@ function LoaderShell() {
         <div className="flex items-center gap-2">
           <span className="hidden text-xs text-muted-foreground sm:inline">{user?.email}</span>
         </div>
-      </div>
+      </header>
 
       <AdminKeyCard current={adminKey} onSave={saveKey} />
 
