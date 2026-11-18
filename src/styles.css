@@ -1162,7 +1162,7 @@ p {
 }
 
 /* Route-level rhythm: make page intros and section transitions predictable. */
-.page-content :where(.route-hero) {
+.page-content :where(.route-hero.edge-light, .route-hero.rounded-2xl) {
   padding: clamp(1.25rem, 3vw, 2.75rem);
   border-radius: var(--radius-command);
   scroll-margin-top: 6.5rem;
@@ -1186,7 +1186,7 @@ p {
   border-radius: var(--radius-surface);
 }
 @media (max-width: 639px) {
-  .page-content :where(.route-hero) {
+  .page-content :where(.route-hero.edge-light, .route-hero.rounded-2xl) {
     padding: 1.25rem;
     border-radius: 1rem;
   }
