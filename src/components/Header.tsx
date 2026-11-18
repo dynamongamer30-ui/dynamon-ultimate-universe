@@ -94,7 +94,7 @@ export function Header() {
   return (
     <>
       <header className="site-header sticky top-0 site-chrome border-b border-border/60 bg-background/95 backdrop-blur-md">
-        <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 lg:px-8">
+        <div className="layout-container flex min-h-20 items-center justify-between gap-2 py-3 sm:gap-4">
           <Link
             to="/"
             onMouseDown={playClick}
@@ -440,7 +440,7 @@ export function Header() {
       </header>
       {user && (
         <div aria-label="Trainer progress" className="relative site-chrome border-b border-border/50 bg-background">
-          <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 text-sm sm:gap-4 sm:px-6 lg:px-8">
+          <div className="layout-container grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 py-2 text-sm sm:gap-4">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <LevelBadge compact />
               {streak.current > 0 && <StreakBadge compact />}
