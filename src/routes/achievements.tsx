@@ -22,7 +22,7 @@ function AchievementsPage() {
   const { user } = useAuth();
   return (
     <PageShell>
-      <header className="edge-light rounded-2xl glass p-8 sm:p-12">
+      <header className="route-hero edge-light rounded-2xl glass p-8 sm:p-12">
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-300">
           <Trophy className="h-3.5 w-3.5" /> Progression
         </p>
