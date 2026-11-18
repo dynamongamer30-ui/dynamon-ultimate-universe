@@ -107,7 +107,7 @@ function ControlPanel() {
           <ArrowLeft className="h-3.5 w-3.5" /> Back to dashboard
         </Link>
       </div>
-      <header className="mt-4 edge-light rounded-2xl glass p-6 sm:p-10">
+      <header className="admin-route-hero route-hero mt-4 edge-light rounded-2xl glass p-6 sm:p-10">
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-ink">
           <Shield className="h-3.5 w-3.5" /> Owner Control Panel
         </p>
