@@ -1131,7 +1131,7 @@ p {
 .page-content :where(button, a, input, select, textarea) {
   -webkit-tap-highlight-color: transparent;
 }
-.page-content :where(.route-hero, header[aria-labelledby]) {
+.page-content :where(.route-hero.edge-light, .route-hero.rounded-2xl, header[aria-labelledby]) {
   margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
 }
 .page-content :where(.surface-l1, .glass, .glass-l1, .glass-l2, .glass-l3) {
@@ -1152,7 +1152,7 @@ p {
     padding-top: 1.25rem;
     padding-bottom: 2.5rem;
   }
-  .page-content :where(.route-hero, header[aria-labelledby]) {
+  .page-content :where(.route-hero.edge-light, .route-hero.rounded-2xl, header[aria-labelledby]) {
     margin-bottom: 1.5rem;
   }
   .site-footer > .layout-container {
@@ -1190,7 +1190,7 @@ p {
     padding: 1.25rem;
     border-radius: 1rem;
   }
-  .page-content :where(section + section) {
+  .page-content > section + section {
     margin-top: 2rem;
   }
 }
