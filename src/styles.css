@@ -1170,7 +1170,7 @@ p {
 .page-content :where(section, article, aside) {
   scroll-margin-top: 6.5rem;
 }
-.page-content :where(section + section) {
+.page-content > section + section {
   margin-top: clamp(2.25rem, 4.5vw, 4rem);
 }
 .page-content :where(.route-hero p, header[aria-labelledby] p) {
