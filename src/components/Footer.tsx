@@ -7,7 +7,7 @@ export function Footer() {
   const { branding } = useSiteSettings();
   return (
     <footer className="site-footer material-l2 mt-24 border-t border-border/60 bg-background/60">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="layout-container">
         <SocialStrip />
 
         <div className="mt-12 grid gap-10 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1.2fr]">
