@@ -1160,3 +1160,37 @@ p {
     padding-bottom: max(2rem, var(--safe-area-bottom));
   }
 }
+
+/* Route-level rhythm: make page intros and section transitions predictable. */
+.page-content :where(.route-hero) {
+  padding: clamp(1.25rem, 3vw, 2.75rem);
+  border-radius: var(--radius-command);
+  scroll-margin-top: 6.5rem;
+}
+.page-content :where(section, article, aside) {
+  scroll-margin-top: 6.5rem;
+}
+.page-content :where(section + section) {
+  margin-top: clamp(2.25rem, 4.5vw, 4rem);
+}
+.page-content :where(.route-hero p, header[aria-labelledby] p) {
+  max-width: 68ch;
+}
+.page-content :where(.route-actions) {
+  gap: 0.625rem;
+}
+.page-content :where(.control-input, input, select, textarea) {
+  border-radius: var(--radius-control);
+}
+.page-content :where(.filter-tray) {
+  border-radius: var(--radius-surface);
+}
+@media (max-width: 639px) {
+  .page-content :where(.route-hero) {
+    padding: 1.25rem;
+    border-radius: 1rem;
+  }
+  .page-content :where(section + section) {
+    margin-top: 2rem;
+  }
+}
