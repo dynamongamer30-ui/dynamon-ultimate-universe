@@ -1194,3 +1194,16 @@ p {
     margin-top: 2rem;
   }
 }
+
+.page-content .admin-route-hero {
+  max-width: none;
+  margin-bottom: clamp(1.25rem, 2.5vw, 2rem);
+  padding: clamp(1.25rem, 2.5vw, 2rem);
+}
+.page-content .admin-route-hero h1 {
+  margin-top: 0.5rem;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+}
+.page-content .admin-route-hero p {
+  max-width: 72ch;
+}
