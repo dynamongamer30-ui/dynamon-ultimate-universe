@@ -89,7 +89,7 @@ function KeysAdmin() {
 
   return (
     <PageShell>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <header className="admin-route-hero route-hero edge-light rounded-2xl glass mb-6 flex flex-wrap items-center justify-between gap-3 p-5 sm:p-7">
         <div>
           <h1 className="font-display text-3xl font-bold">Key System</h1>
           <p className="text-sm text-muted-foreground">
@@ -99,7 +99,7 @@ function KeysAdmin() {
         <div className="flex items-center gap-2">
           <span className="hidden text-xs text-muted-foreground sm:inline">{user?.email}</span>
         </div>
-      </div>
+      </header>
 
       <nav aria-label="Key system sections" className="mb-6">
         <div className="flex flex-wrap gap-1 rounded-2xl border border-border bg-card/60 p-1 text-xs font-semibold sm:inline-flex sm:rounded-full">
