@@ -28,7 +28,7 @@ export function AnnouncementBanner() {
     <div
       className={`relative z-40 border-b bg-gradient-to-r px-4 py-2.5 text-center text-sm font-medium ${tone}`}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-center gap-2">
+      <div className="layout-container flex items-center justify-center gap-2">
         <Megaphone className="h-4 w-4 shrink-0" aria-hidden="true" />
         {announcement.href ? (
           <a href={announcement.href} target="_blank" rel="noreferrer" className="hover:underline">
