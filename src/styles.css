@@ -1098,12 +1098,13 @@ p {
   --site-card-gap: clamp(1rem, 2vw, 1.5rem);
 }
 .layout-container {
-  width: min(100% - (var(--site-gutter) * 2), var(--site-content-width));
+  width: calc(100% - var(--site-gutter) - var(--site-gutter));
+  max-width: var(--site-content-width);
   margin-inline: auto;
 }
 .page-content {
-  width: min(100% - (var(--site-gutter) * 2), var(--site-content-width));
-  max-width: none;
+  width: calc(100% - var(--site-gutter) - var(--site-gutter));
+  max-width: var(--site-content-width);
   padding-inline: 0;
   padding-top: clamp(1.25rem, 2.5vw, 2.25rem);
   padding-bottom: clamp(2.5rem, 5vw, 4rem);
