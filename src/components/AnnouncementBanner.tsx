@@ -26,7 +26,7 @@ export function AnnouncementBanner() {
 
   return (
     <div
-      className={`relative z-40 border-b bg-gradient-to-r px-4 py-2.5 text-center text-sm font-medium ${tone}`}
+      className={`relative z-40 border-b bg-gradient-to-r py-2.5 text-center text-sm font-medium ${tone}`}
     >
       <div className="layout-container flex items-center justify-center gap-2">
         <Megaphone className="h-4 w-4 shrink-0" aria-hidden="true" />
