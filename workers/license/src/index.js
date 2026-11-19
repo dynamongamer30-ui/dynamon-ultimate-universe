@@ -1,3 +1,4 @@
+import { publicUiConfig, safeLink } from "./public-ui.js";
 // Pure policy helpers: no credentials, database access, or request state.
 function licenseReason(activation, keyData, fingerprint, now) {
   if (!activation || !keyData) return "no-login";
@@ -15,6 +16,15 @@ function licenseReason(activation, keyData, fingerprint, now) {
 }
 function maintenance(config, locks) {
   return config === true || !!(locks && (locks.app === true || locks.mods === true));
+}
+function mandatoryUpdate(update, version) {
+  const installed = Number.isSafeInteger(version) && version >= 0 ? version : 0;
+  return (
+    update?.Enabled === true &&
+    update.Force === true &&
+    Number.isSafeInteger(update.VersionCode) &&
+    update.VersionCode > installed
+  );
 }
 
 /* Royal Void 0.3 compatible DG Worker.
@@ -41,6 +51,132 @@ async function safeR2Get(bucket, key) {
   } catch (_) {
     return null;
   }
+}
+
+// Exactly one private R2 object holds both wire formats and their AES keys.
+const ACTIVE_PAYLOAD = "active_payload";
+async function readActive(bucket) {
+  if (!bucket) return null;
+  // Read the small private metadata for checks; do not parse the 7 MB legacy format.
+  if (typeof bucket.head === "function") {
+    const head = await bucket.head(ACTIVE_PAYLOAD);
+    if (!head) return null;
+    const m = head.customMetadata || {};
+    if (m.format === "DG-ACTIVE-PAYLOAD-2") {
+      if (!isBuildId(m.build)) throw Error("Invalid active build metadata");
+      const ranges = {
+        legacy: { offset: 0, length: Number(m.legacy_length) },
+        split: { offset: Number(m.split_offset), length: Number(m.split_length) },
+      };
+      for (const r of Object.values(ranges))
+        if (
+          !Number.isSafeInteger(r.offset) ||
+          !Number.isSafeInteger(r.length) ||
+          r.offset < 0 ||
+          r.length <= 0 ||
+          r.offset + r.length > 10000000
+        )
+          throw Error("Invalid active payload range");
+      return {
+        build: m.build,
+        ranges,
+        etag: head.etag,
+        variants: {
+          legacy: { key_b64: m.legacy_key, ct_sha: m.legacy_sha },
+          split: { key_b64: m.split_key, ct_sha: m.split_sha },
+        },
+      };
+    }
+  }
+  const object = await bucket.get(ACTIVE_PAYLOAD);
+  return object ? await object.json() : null;
+}
+async function activeView(bucket, active, name) {
+  if (!active.ranges) return active.variants[name];
+  const object = await bucket.get(ACTIVE_PAYLOAD, {
+    range: active.ranges[name],
+    onlyIf: { etagMatches: active.etag },
+  });
+  // A concurrent overwrite must not mix old metadata with new ciphertext.
+  if (!object || !object.body) throw Error("Payload changed during loading; retry");
+  const view = await object.json();
+  if (view.build !== active.build || view.ct_sha !== active.variants[name].ct_sha)
+    throw Error("Payload changed during loading; retry");
+  return view;
+}
+function publicPayload(view) {
+  return {
+    build: view.build,
+    protocol: view.protocol,
+    min_client: view.min_client,
+    issued: view.issued,
+    ct_b64: view.ct_b64,
+    iv_b64: view.iv_b64,
+    sig_b64: view.sig_b64,
+    ct_sha: view.ct_sha,
+    meta_sig_b64: view.meta_sig_b64,
+  };
+}
+function validView(view, build, client) {
+  return (
+    view &&
+    view.build === build &&
+    view.protocol === 2 &&
+    view.min_client === client &&
+    Number.isSafeInteger(view.issued) &&
+    view.issued > 0 &&
+    typeof view.ct_b64 === "string" &&
+    view.ct_b64.length >= 24 &&
+    view.ct_b64.length <= MAX_PAYLOAD_B64_CHARS &&
+    typeof view.ct_sha === "string" &&
+    /^[a-f0-9]{64}$/.test(view.ct_sha) &&
+    typeof view.iv_b64 === "string" &&
+    /^[A-Za-z0-9+/]{16}$/.test(view.iv_b64) &&
+    typeof view.key_b64 === "string" &&
+    /^[A-Za-z0-9+/]{43}=$/.test(view.key_b64) &&
+    typeof view.sig_b64 === "string" &&
+    /^[A-Za-z0-9+/]{86}==$/.test(view.sig_b64) &&
+    typeof view.meta_sig_b64 === "string" &&
+    /^[A-Za-z0-9+/]{86}==$/.test(view.meta_sig_b64)
+  );
+}
+async function cleanupPayloadStorage(bucket, kv) {
+  let complete = true,
+    removed = 0;
+  // These are payload-owned namespaces only. Never delete unrelated bucket data.
+  for (const prefix of ["ct:", "key:"]) {
+    if (!bucket || typeof bucket.list !== "function" || typeof bucket.delete !== "function") {
+      complete = false;
+      continue;
+    }
+    // Bound the work per upload. Very large old archives can use the admin cleanup route again.
+    for (let page = 0; page < 2; page++) {
+      const result = await bucket.list({ prefix, limit: 1000 });
+      const keys = result.objects.map((object) => object.key);
+      if (keys.length) {
+        await bucket.delete(keys);
+        removed += keys.length;
+      }
+      if (!result.truncated) break;
+      if (page === 1) complete = false;
+    }
+  }
+  if (bucket && typeof bucket.delete === "function")
+    await bucket.delete(["current_build", "current_build_v4"]);
+  else complete = false;
+  if (kv && typeof kv.list === "function" && typeof kv.delete === "function") {
+    for (const prefix of ["ct:", "key:"]) {
+      const result = await kv.list({ prefix, limit: 20 });
+      for (const item of result.keys) {
+        await kv.delete(item.name);
+        removed++;
+      }
+      if (!result.list_complete) complete = false;
+    }
+    await kv.delete("current_build");
+    await kv.delete("current_build_v4");
+  } else if (kv) complete = false;
+  return { cleanup_complete: complete, removed };
 }
 
 // VIP keys are prefixed "VIP-" or "DGVIP-" (case-insensitive).
@@ -150,7 +286,17 @@ function dexBrandConfig(value) {
   return { name: name || "Dynamon Gamer", edition: text(value.edition, "Royal Void", 60), links };
 }
 
-const DEX_THEME_IDS = ["dark", "fire", "thunder", "water", "earth", "diamond", "gold", "spirit"];
+const DEX_THEME_IDS = [
+  "royal_black",
+  "dark",
+  "fire",
+  "thunder",
+  "water",
+  "earth",
+  "diamond",
+  "gold",
+  "spirit",
+];
 const DEX_THEME_COLORS = [
   "background",
   "panel",
@@ -190,6 +336,7 @@ function dexThemeConfig(value) {
 
 function publicAppConfig(config) {
   const cfg = config && typeof config === "object" ? config : {};
+  const ui = publicUiConfig(cfg);
   const update = cfg.Update && typeof cfg.Update === "object" ? cfg.Update : {};
   const links = cfg.Links && typeof cfg.Links === "object" ? cfg.Links : {};
   const tutorial = cfg.Tutorial && typeof cfg.Tutorial === "object" ? cfg.Tutorial : {};
@@ -205,15 +352,17 @@ function publicAppConfig(config) {
   const tutorialUrl =
     safePublicUrl(cfg.TutorialUrl) ||
     (tutorialId ? safePublicUrl("https://youtu.be/" + encodeURIComponent(tutorialId)) : "");
-  const updateUrl = safePublicUrl(update.UpdateUrl);
+  const updateUrl = safeLink(update.UpdateUrl);
 
   return {
     AppVersion: Number.isFinite(Number(cfg.AppVersion)) ? Number(cfg.AppVersion) : 0,
     Maintenance: Boolean(cfg.Maintenance),
+    Ui: ui,
     TutorialUrl: tutorialUrl,
     FeatureLocks: featureLocks,
     Update: {
       Enabled: Boolean(update.Enabled) && Boolean(updateUrl),
+      Force: update.Force === true,
       VersionCode: Number.isFinite(Number(update.VersionCode)) ? Number(update.VersionCode) : 0,
       VersionName: text(update.VersionName, "", 40),
       Title: text(update.Title, "Update Available", 120),
@@ -223,6 +372,8 @@ function publicAppConfig(config) {
       UpdateUrl: updateUrl,
     },
     Links: {
+      GetKey: ui.links.getkey,
+      Website: ui.links.website,
       Info: safePublicUrl(links.Info),
       Admin: safePublicUrl(links.Admin),
       Youtube: safePublicUrl(links.Youtube),
@@ -266,7 +417,7 @@ export default {
     const DG_R2 = env.DG_R2;
 
     // Supabase REST shim (replaces Firebase). Set SUPABASE_URL + SUPABASE_SERVICE_KEY.
-    const SB_URL = (env.SUPABASE_URL || "").replace(/\/+$/, "");
+    const SB_URL = (env.SUPABASE_URL || "").replace(/\/+$"/, "");
     const SB_MAP = {
       BannedDevices: "banned_devices",
       ActivatedUsers: "activated_users",
@@ -355,6 +506,18 @@ export default {
         }
       }
       return valid;
+    };
+    const strictConfig = async (policyOnly = false) => {
+      const r = await fetch(
+        SB_URL +
+          "/rest/v1/app_config?select=id,data" +
+          (policyOnly ? "&id=in.(Maintenance,Update)" : ""),
+        { headers: sbHead(), signal: AbortSignal.timeout(5000) },
+      );
+      if (!r.ok) throw Error("Configuration unavailable");
+      const rows = await r.json();
+      if (!Array.isArray(rows)) throw Error("Invalid configuration");
+      return Object.fromEntries(rows.map((row) => [row.id, row.data]));
     };
 
     const fbGet = async (p) => {
@@ -457,12 +620,25 @@ export default {
     try {
       // ---------- loader: fetch encrypted payload (public, no secret here) ----------
       if (path === "/payload" && req.method === "GET") {
+        const active = await readActive(DG_R2);
+        if (active) {
+          const requested = url.searchParams.get("build");
+          if (requested && requested !== active.build)
+            return json({ error: "stale_build", retry: true }, 409);
+          const view = await activeView(
+            DG_R2,
+            active,
+            url.searchParams.get("client") === "4" ? "split" : "legacy",
+          );
+          return json(publicPayload(view));
+        }
         const requestedBuild = url.searchParams.get("build");
         if (requestedBuild && !isBuildId(requestedBuild)) return json({ error: "no payload" }, 404);
-        const currentObject = await safeR2Get(DG_R2, "current_build");
+        const pointer =
+          url.searchParams.get("client") === "4" ? "current_build_v4" : "current_build";
+        const currentObject = await safeR2Get(DG_R2, pointer);
         const build =
-          requestedBuild ||
-          (currentObject ? await currentObject.text() : await KV.get("current_build"));
+          requestedBuild || (currentObject ? await currentObject.text() : await KV.get(pointer));
         if (!isBuildId(build)) return json({ error: "no build" }, 404);
         const payloadObject = await safeR2Get(DG_R2, "ct:" + build);
         const ct = payloadObject ? await payloadObject.json() : await KV.get("ct:" + build, "json");
@@ -483,6 +659,10 @@ export default {
       // ---------- loader: gated key check + login tripwire ----------
       if (path === "/check" && req.method === "POST") {
         const d = await body();
+        const policy = await strictConfig(true);
+        if (policy.Maintenance === true) return json({ blocked: true, reason: "maintenance" });
+        if (mandatoryUpdate(policy.Update, d.client_version_code))
+          return json({ blocked: true, reason: "update_required" });
         const fp = d.fp,
           build = d.build,
           ctsha = d.ctsha;
@@ -521,11 +701,11 @@ export default {
         const fresh =
           last > 0 && last <= Date.now() + 60000 && Date.now() - last <= LOGIN_GRACE * 1000;
         if (!phoenixPass && (!au || !fresh)) {
-          // Block the mod but do NOT ban — user just needs to log in properly.
+          // Block the mod but do NOT ban â user just needs to log in properly.
           return json({ blocked: true, reason: "no-login" });
         }
 
-        const maintenanceMode = await fbGet("Config/Maintenance");
+        const maintenanceMode = policy.Maintenance;
         const featureLocks = await fbGet("Config/FeatureLocks");
         if (maintenance(maintenanceMode, featureLocks))
           return json({ blocked: true, reason: "maintenance" });
@@ -534,8 +714,19 @@ export default {
           const reason = licenseReason(au, license, fp, Date.now());
           if (reason) return json({ blocked: true, reason });
         }
-        const keyObject = await safeR2Get(DG_R2, "key:" + build);
-        const kf = keyObject ? await keyObject.json() : await KV.get("key:" + build, "json");
+        const active = await readActive(DG_R2);
+        let kf;
+        if (active) {
+          if (build !== active.build)
+            return json({ blocked: true, reason: "stale-build", retry: true });
+          // Select by the signed ciphertext digest, not by an untrusted client label.
+          const view = Object.values(active.variants).find((v) => v.ct_sha === ctsha);
+          if (!view) return json({ blocked: true, reason: "integrity" });
+          kf = view;
+        } else {
+          const keyObject = await safeR2Get(DG_R2, "key:" + build);
+          kf = keyObject ? await keyObject.json() : await KV.get("key:" + build, "json");
+        }
         if (!kf) return json({ banned: true, reason: "unknown build" });
 
         if (ctsha && kf.ct_sha && ctsha !== kf.ct_sha) {
@@ -568,7 +759,7 @@ export default {
       // Configuration storage also contains internal and third-party operational
       // values. Never return the raw Config object to an unauthenticated client.
       if (path === "/config" && req.method === "GET") {
-        const cfg = (await fbGet("Config")) || {};
+        const cfg = await strictConfig();
         return json(publicAppConfig(cfg));
       }
 
@@ -577,6 +768,10 @@ export default {
       // key + device fingerprint here; ALL trust decisions happen server-side.
       if (path === "/verify-key" && req.method === "POST") {
         const d = await body();
+        const policy = await strictConfig(true);
+        if (policy.Maintenance === true) return json({ ok: false, error: "maintenance" }, 503);
+        if (mandatoryUpdate(policy.Update, d.client_version_code))
+          return json({ ok: false, error: "update_required" }, 426);
         const key = String(d.key || "").trim();
         const fp = String(d.fp || "").trim();
         if (!key || !fp) return json({ ok: false, error: "bad_request" });
@@ -657,80 +852,73 @@ export default {
       if (path === "/admin/upload-payload" && req.method === "POST") {
         if (!(await isAdmin())) return json({ error: "forbidden" }, 403);
         const d = await body();
+        if (d.format !== "DG-ACTIVE-PAYLOAD-1") {
+          return json(
+            {
+              error: "use_update_payload_once",
+              message: "Use the unified updater so both DEX formats stay compatible.",
+            },
+            400,
+          );
+        }
         if (
           !isBuildId(d.build) ||
-          !isBoundedString(d.ct_b64, MAX_PAYLOAD_B64_CHARS) ||
-          !isBoundedString(d.key_b64, MAX_PAYLOAD_B64_CHARS)
+          !d.variants ||
+          !validView(d.variants.legacy, d.build, 3) ||
+          !validView(d.variants.split, d.build, 4)
         )
-          return json({ error: "need build, ct_b64, key_b64" }, 400);
-        const ctValue = JSON.stringify({
-          ct_b64: d.ct_b64,
-          iv_b64: d.iv_b64 || "",
-          sig_b64: d.sig_b64 || "",
-          ct_sha: d.ct_sha || "",
-          protocol: d.protocol,
-          issued: d.issued,
-          min_client: d.min_client,
-          meta_sig_b64: d.meta_sig_b64,
-        });
-        const keyValue = JSON.stringify({ key_b64: d.key_b64, ct_sha: d.ct_sha || "" });
-        const byteLength = (value) => new TextEncoder().encode(value).byteLength;
+          return json({ error: "invalid_unified_payload" }, 400);
+        const legacy = JSON.stringify(publicPayload(d.variants.legacy));
+        const split = JSON.stringify(publicPayload(d.variants.split));
+        const bytes = (value) => new TextEncoder().encode(value).byteLength;
+        const value = legacy + "\n" + split;
+        if (bytes(value) > 10000000) return json({ error: "payload_too_large" }, 413);
+        if (!DG_R2) return json({ error: "r2_binding_missing" }, 503);
+        const customMetadata = {
+          format: "DG-ACTIVE-PAYLOAD-2",
+          build: d.build,
+          legacy_length: String(bytes(legacy)),
+          split_offset: String(bytes(legacy) + 1),
+          split_length: String(bytes(split)),
+          legacy_key: d.variants.legacy.key_b64,
+          legacy_sha: d.variants.legacy.ct_sha,
+          split_key: d.variants.split.key_b64,
+          split_sha: d.variants.split.ct_sha,
+        };
         try {
-          await DG_R2.put("ct:" + d.build, ctValue, {
-            httpMetadata: { contentType: "application/json" },
+          await DG_R2.put(ACTIVE_PAYLOAD, value, {
+            httpMetadata: { contentType: "application/octet-stream" },
+            customMetadata,
           });
-        } catch (e) {
-          return json(
-            {
-              error: "payload_storage_failed",
-              operation: "ciphertext",
-              bytes: byteLength(ctValue),
-              message: String(e && e.message ? e.message : e).slice(0, 200),
-            },
-            413,
-          );
+        } catch (_) {
+          return json({ error: "payload_storage_failed" }, 503);
         }
+        // Publication is one overwrite. Cleanup errors must not be reported as an upload failure.
+        let cleaned = { cleanup_complete: false };
         try {
-          await DG_R2.put("key:" + d.build, keyValue, {
-            httpMetadata: { contentType: "application/json" },
-          });
-        } catch (e) {
-          return json(
-            {
-              error: "payload_storage_failed",
-              operation: "key",
-              bytes: byteLength(keyValue),
-              message: String(e && e.message ? e.message : e).slice(0, 200),
-            },
-            413,
-          );
-        }
+          cleaned = await cleanupPayloadStorage(DG_R2, KV);
+        } catch (_) {}
         try {
-          await DG_R2.put("current_build", d.build, {
-            httpMetadata: { contentType: "text/plain; charset=utf-8" },
-          });
-        } catch (e) {
-          return json(
-            {
-              error: "payload_storage_failed",
-              operation: "current_build",
-              bytes: byteLength(d.build),
-              message: String(e && e.message ? e.message : e).slice(0, 200),
-            },
-            500,
-          );
+          const darkEclipsePolicy = await fbGet("Config/DarkEclipsePolicy");
+          if (darkEclipsePolicy && darkEclipsePolicy.enabled === true)
+            await fbPut("Config/DarkEclipsePolicy", {
+              ...darkEclipsePolicy,
+              enabled: false,
+              disabledAt: Date.now(),
+              disabledByBuild: d.build,
+            });
+        } catch (_) {}
+        return json({ ok: true, build: d.build, current: true, clients: [3, 4], ...cleaned });
+      }
+      if (path === "/admin/cleanup-payload" && req.method === "POST") {
+        if (!(await isAdmin())) return json({ error: "forbidden" }, 403);
+        const active = await readActive(DG_R2);
+        if (!active) return json({ error: "publish_unified_payload_first" }, 409);
+        try {
+          return json({ ok: true, ...(await cleanupPayloadStorage(DG_R2, KV)) });
+        } catch (_) {
+          return json({ ok: true, cleanup_complete: false });
         }
-        // Publishing any new payload ends the one-build Dark Eclipse policy.
-        const darkEclipsePolicy = await fbGet("Config/DarkEclipsePolicy");
-        if (darkEclipsePolicy && darkEclipsePolicy.enabled === true) {
-          await fbPut("Config/DarkEclipsePolicy", {
-            ...darkEclipsePolicy,
-            enabled: false,
-            disabledAt: Date.now(),
-            disabledByBuild: d.build,
-          });
-        }
-        return json({ ok: true, build: d.build, current: true });
       }
 
       // ---------- admin: ban / unban ----------
@@ -753,6 +941,15 @@ export default {
       // ---------- admin: list active devices + current build ----------
       if (path === "/admin/list" && req.method === "GET") {
         if (!(await isAdmin())) return json({ error: "forbidden" }, 403);
+        const active = await readActive(DG_R2);
+        if (active)
+          return json({
+            current_build: active.build,
+            clients: [3, 4],
+            storage_mode: "single_record",
+            active: [],
+            presence_disabled: true,
+          });
         const currentObject = await safeR2Get(DG_R2, "current_build");
         const current = currentObject ? await currentObject.text() : await KV.get("current_build");
         return json({ current_build: current, active: [], presence_disabled: true });
