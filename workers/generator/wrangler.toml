@@ -2,12 +2,28 @@ name = "generator"
 main = "src/index.js"
 compatibility_date = "2026-05-15"
 
+# Public, non-secret vendor API base.
+[vars]
+EARNLINKS_BASE = "https://earnlinks.in/api"
+
+# Internal same-account Worker service. This must target the production
+# royal-void-v2 Worker; do not replace it with a workers.dev URL fetch.
+[[services]]
+binding = "V2_API"
+service = "royal-void-v2"
+environment = "production"
+
 # ---------------------------------------------------------------------------
-# Secrets (set with `wrangler secret put <NAME>` — do NOT commit real values):
-#   SUPABASE_URL           https://<project-ref>.supabase.co
-#   SUPABASE_SERVICE_KEY   Supabase service-role key (server-side only)
-#   TURNSTILE_SECRET_KEY   Cloudflare Turnstile secret key
-#   EARNLINKS_TOKEN        Shortener API token
+# Secrets (set with `wrangler secret put <NAME>` — never commit real values):
+#   SUPABASE_URL           - https://<project-ref>.supabase.co
+#   SUPABASE_SERVICE_KEY   - Supabase service-role key (server-side only)
+#   TURNSTILE_SECRET_KEY   - Cloudflare Turnstile secret key
+#   EARNLINKS_TOKEN        - Shortener API token
+#   DEST_BASE              - Shortener destination prefix (private configuration)
+#   V2_ISSUER_KEY          - Shared only with royal-void-v2; must match there
+#
+# Required plain-text variable:
+#   EARNLINKS_BASE         - configured above
 #
 # Deploy:
 #   cd workers/generator
@@ -15,6 +31,8 @@ compatibility_date = "2026-05-15"
 #   wrangler secret put SUPABASE_SERVICE_KEY
 #   wrangler secret put TURNSTILE_SECRET_KEY
 #   wrangler secret put EARNLINKS_TOKEN
+#   wrangler secret put DEST_BASE
+#   wrangler secret put V2_ISSUER_KEY
 #   wrangler deploy
 #
 # The deployed URL becomes VITE_GEN_WORKER_URL in the web app's env.
