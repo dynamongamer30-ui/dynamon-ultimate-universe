@@ -13,7 +13,7 @@ Repository branch: `main`
 - Production records with neither a matching version nor matching name in the repo: **49**
 - Repo files with neither a matching version nor matching name in production: **22**
 
-A matching name is only a candidate correspondence, not proof that the SQL contents are identical. Supabase's migration history table records version/name metadata; it does not retain the original SQL body. Four additional migration files have now been recovered or added from verified source; 49 production-only records remain unresolved. GitHub commit-history checks for all 49 exact production-only paths returned no historical file versions in this repository.
+A matching name is only a candidate correspondence, not proof that the SQL contents are identical. Supabase's migration history table records version/name metadata; it does not retain the original SQL body. Four additional migration files have now been recovered or added from verified source; 49 production-only records remain unresolved. GitHub commit-history checks for all 49 exact production-only paths and all 17 exact production paths in the same-name timestamp-mismatch set returned no historical file versions in this repository.
 
 ## Do not do this
 
@@ -28,6 +28,8 @@ Those shortcuts can make the ledger look aligned while leaving fresh environment
 ## Same-name timestamp mismatches
 
 These repo files have the same migration name as a production record but a different version. Recover the original production SQL or otherwise prove content equivalence before renaming or repairing:
+
+GitHub commit-history checks for all 17 production-version paths returned no historical file versions. The current repo candidates are not assumed equivalent.
 
 | Production version | Production name | Repo version |
 |---|---|---|
