@@ -1,0 +1,59 @@
+name: Website CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: website-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      # Build-only placeholders. These are not production credentials and do
+      # not grant database or Worker access.
+      SUPABASE_URL: https://dfxcpxzylyycrirtnkof.supabase.co
+      SUPABASE_PROJECT_ID: dfxcpxzylyycrirtnkof
+      SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+      VITE_SUPABASE_URL: https://dfxcpxzylyycrirtnkof.supabase.co
+      VITE_SUPABASE_PROJECT_ID: dfxcpxzylyycrirtnkof
+      VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+      VITE_GEN_WORKER_URL: https://generator.dynamongamer30.workers.dev
+      VITE_LICENSE_WORKER_URL: https://dg.dynamongamer30.workers.dev
+      VITE_CIPHER_KEY: ci-only-placeholder
+      VITE_TURNSTILE_SITE_KEY: ci-placeholder
+      VITE_FIREBASE_API_KEY: ci-placeholder
+      VITE_FIREBASE_APP_ID: ci-placeholder
+      VITE_FIREBASE_AUTH_DOMAIN: ci-placeholder.firebaseapp.com
+      VITE_FIREBASE_DB_URL: https://ci-placeholder.invalid
+      VITE_FIREBASE_PROJECT_ID: ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm check
+
+      - name: Run automated tests
+        run: pnpm test
+
+      - name: Build Cloudflare Worker application
+        run: pnpm build
