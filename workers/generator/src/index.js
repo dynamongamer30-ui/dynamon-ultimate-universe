@@ -6,6 +6,9 @@
  *   SUPABASE_SERVICE_KEY   - service-role key (server-side ONLY, never bundled)
  *   TURNSTILE_SECRET_KEY   - Cloudflare Turnstile secret
  *   EARNLINKS_TOKEN        - shortener API token
+ *   EARNLINKS_BASE         - shortener API URL, e.g. https://earnlinks.in/api
+ *   DEST_BASE              - destination link ending right before the token,
+ *                            e.g. https://mysmartstudy.in/geio.php?raja=
  *
  * Storage model (MUST match the Supabase migration + web admin panel):
  *   Every former Firebase node is ONE row (id text primary key, data jsonb).
@@ -18,8 +21,6 @@
  *   POST /generate-key  -> verify captcha + rate limit, mint a ValidKey
  */
 
-const EARNLINKS_BASE = "https://earnlinks.in/api";
-const DEST_BASE = "https://itiexamshala.com/geio.php?grey=";
 const GENERATOR_PAGE = "https://dynamongamer.com/generator";
 const ALLOWED_ORIGINS = [
   "https://dynamongamer.com",
@@ -135,16 +136,20 @@ function json(data, status = 200, origin = ALLOWED_ORIGINS[0]) {
 }
 
 function isUuid(value) {
-  return (
-    typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
-  );
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 function isBoundedString(value, max) {
   return typeof value === "string" && value.length > 0 && value.length <= max;
 }
 
 async function handleStart(request, env) {
+  // Link settings come from Cloudflare secrets (rotate them when links change).
+  const EARNLINKS_BASE = env.EARNLINKS_BASE;
+  const DEST_BASE = env.DEST_BASE;
+  if (!EARNLINKS_BASE || !DEST_BASE) {
+    return new Response("Link settings missing.", { status: 500 });
+  }
+
   const gate = crypto.randomUUID();
   const nonce = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
   const now = Date.now();
@@ -161,7 +166,10 @@ async function handleStart(request, env) {
     )}&t=${Date.now()}`;
     const res = await fetch(apiUrl);
     const data = await res.json();
-    const shortUrl = data.shortenedUrl || data.shorturl || initUrl.toString();
+    const shortUrl = data.shortenedUrl || data.shorturl;
+    // If the shortener gave no link, go straight to /init instead of
+    // sending a wrong token to the destination.
+    if (!shortUrl) return Response.redirect(initUrl.toString(), 302);
     const token = shortUrl.substring(shortUrl.lastIndexOf("/") + 1);
     const finalUrl = token && token !== shortUrl ? DEST_BASE + token : shortUrl;
     return Response.redirect(finalUrl, 302);
@@ -210,9 +218,50 @@ async function handleCheckToken(request, env, origin) {
   const data = await fbGet(`/AccessTokens/${token}`, env);
   if (!data) return json({ valid: false, reason: "not_found" }, 200, origin);
   if (data.used === true) return json({ valid: false, reason: "used" }, 200, origin);
-  if (Date.now() - data.createdAt > TOKEN_TTL_MS)
-    return json({ valid: false, reason: "expired" }, 200, origin);
+  if (Date.now() - data.createdAt > TOKEN_TTL_MS) return json({ valid: false, reason: "expired" }, 200, origin);
   return json({ valid: true }, 200, origin);
+}
+
+// Register the same key in the V2 licensing store through a service binding.
+// This runs server-side only, after the existing gate, captcha and rate-limit checks.
+// The live generator must bind V2_API -> royal-void-v2 and share V2_ISSUER_KEY.
+async function registerV2License(env, key, durationSeconds, expiryEpoch) {
+  if (
+    !env.V2_API ||
+    typeof env.V2_API.fetch !== "function" ||
+    typeof env.V2_ISSUER_KEY !== "string" ||
+    env.V2_ISSUER_KEY.length < 32
+  ) {
+    return false;
+  }
+
+  try {
+    const req = new Request(
+      "https://royal-void-v2.dynamongamer30.workers.dev/v2/internal/issue",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-royalvoid-issuer-key": env.V2_ISSUER_KEY
+        },
+        body: JSON.stringify({
+          license_key: key,
+          duration_seconds: durationSeconds,
+          expires_at_epoch: expiryEpoch
+        }),
+        signal: AbortSignal.timeout(6500)
+      }
+    );
+
+    // Same-account Worker calls must use a Service Binding.
+    const response = await env.V2_API.fetch(req);
+    if (!response.ok) return false;
+
+    const payload = await response.json();
+    return payload.ok === true && payload.registered === true;
+  } catch {
+    return false;
+  }
 }
 
 async function handleGenerateKey(request, env, origin) {
@@ -226,11 +275,7 @@ async function handleGenerateKey(request, env, origin) {
   const { accessToken, turnstileToken, fingerprint } = body || {};
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
 
-  if (
-    !isUuid(accessToken) ||
-    !isBoundedString(turnstileToken, 4096) ||
-    !isBoundedString(fingerprint, 200)
-  ) {
+  if (!isUuid(accessToken) || !isBoundedString(turnstileToken, 4096) || !isBoundedString(fingerprint, 200)) {
     return json({ ok: false, error: "missing_fields" }, 400, origin);
   }
 
@@ -281,10 +326,23 @@ async function handleGenerateKey(request, env, origin) {
     typeof durationHoursCfg === "number" && durationHoursCfg > 0 ? durationHoursCfg : 24;
   const key = "DG-" + randomAlphaNum(6);
   const nowSec = Math.floor(now / 1000);
+  // Keep the original website/legacy record while provisioning V2 too.
+  // Refuse to display a key if V2 issuance fails.
+  const durationSeconds = Math.round(durationHours * 3600);
+  const expiryEpoch = nowSec + durationSeconds;
+  if (
+    !Number.isInteger(durationSeconds) ||
+    durationSeconds < 60 ||
+    durationSeconds > 604800 ||
+    !(await registerV2License(env, key, durationSeconds, expiryEpoch))
+  ) {
+    return json({ ok: false, error: "v2_registration_unavailable" }, 503, origin);
+  }
+
 
   await fbPut(`/ValidKeys/${key}`, env, {
     status: "active",
-    expiry: nowSec + durationHours * 3600,
+    expiry: expiryEpoch,
     durationHours: durationHours, // number (was "24h" string — bug fixed)
     activated: false, // boolean, not yet activated (was `now` timestamp — bug fixed)
     device: null,
@@ -315,15 +373,11 @@ async function handleGenerateKey(request, env, origin) {
     result: "success",
   });
 
-  return json(
-    {
-      ok: true,
-      key: key,
-      remaining: Math.max(0, RATE_LIMIT_MAX - timestamps.length),
-    },
-    200,
-    origin,
-  );
+  return json({
+    ok: true,
+    key: key,
+    remaining: Math.max(0, RATE_LIMIT_MAX - timestamps.length),
+  }, 200, origin);
 }
 
 export default {
