@@ -148,18 +148,21 @@ The production security changes from this audit are stored as normal SQL migrati
 
 ## Royal Void V2 production function reconciliation — 2026-11-20
 
-The production migration ledger contains the two Royal Void V2 migration records listed above:
+The production ledger still contains the two earlier Royal Void V2 migration records listed above, whose original SQL files are among the unrecovered production-only history:
 
 - `20261017073024 royal_void_v2_shadow_licensing_schema_20261017`
 - `20261017095424 royal_void_v2_issue_key_rpc_service_only_20261017`
 
-Their original SQL files are not present in the current `main` migration directory. The live database currently exposes these V2 RPCs:
+The standalone source file `supabase/reward_license_bridge.sql` was reviewed and applied as the new migration `20261119223925_royal_void_v2_claim_existing_key`. Its matching migration file is now committed under `supabase/migrations/`.
+
+The live database exposes five V2 RPCs:
 
 - `rv2_issue_key`
 - `rv2_claim_device`
 - `rv2_check_lease`
 - `rv2_admin_key_action`
+- `rv2_claim_existing_key`
 
-All four are SECURITY INVOKER functions executable only by `service_role`; none is executable by `anon` or `authenticated`. The five `rv_v2` tables are likewise not directly accessible to `anon` or `authenticated`.
+The bridge function is SECURITY INVOKER, has an empty search path, and is executable only by `service_role`; it rejects missing, expired, inactive, or already device-bound legacy keys before delegating device binding to `rv2_claim_device`. A non-existent-key probe returned no rows and did not modify customer data. The five `rv_v2` tables remain inaccessible directly to `anon` and `authenticated`.
 
-The repository previously contained a fallback call to `rv2_claim_existing_key`, but that function does not exist in the live database. The fallback has been removed from `workers/license-v2/src/index.js` so a production deployment cannot call a nonexistent RPC. Do not create a placeholder migration or invent the missing RPC. Recover the original V2 migration SQL before attempting any schema reconstruction or migration-ledger repair.
+The Royal Void V2 Worker now uses this bridge only when the ordinary V2 claim returns no license and the supplied legacy key matches the supported key format. The production Worker was redeployed from the matching `main` source; its active deployment and existing bindings were verified. No real customer key was consumed during verification.
