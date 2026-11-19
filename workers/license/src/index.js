@@ -768,13 +768,13 @@ export default {
       // key + device fingerprint here; ALL trust decisions happen server-side.
       if (path === "/verify-key" && req.method === "POST") {
         const d = await body();
+        const key = String(d.key || "").trim();
+        const fp = String(d.fp || "").trim();
+        if (!key || !fp) return json({ ok: false, error: "bad_request" }, 400);
         const policy = await strictConfig(true);
         if (policy.Maintenance === true) return json({ ok: false, error: "maintenance" }, 503);
         if (mandatoryUpdate(policy.Update, d.client_version_code))
           return json({ ok: false, error: "update_required" }, 426);
-        const key = String(d.key || "").trim();
-        const fp = String(d.fp || "").trim();
-        if (!key || !fp) return json({ ok: false, error: "bad_request" });
 
         // Banned device -> hard stop.
         const ban = await isBanned(fp);
