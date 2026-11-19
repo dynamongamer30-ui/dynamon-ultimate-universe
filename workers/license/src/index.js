@@ -295,16 +295,56 @@ export default {
         },
         extra || {},
       );
+    // Limit failed shared-admin-key attempts per Cloudflare client IP. Store only
+    // a one-way IP digest in KV, and let the short TTL release accidental lockouts.
+    const ADMIN_FAIL_LIMIT = 8;
+    const ADMIN_FAIL_TTL_SECONDS = 900;
     const isAdmin = async () => {
       const value = req.headers.get("X-Admin");
-      if (typeof env.ADMIN_KEY !== "string" || !env.ADMIN_KEY || !value || value.length > 512)
-        return false;
+      if (typeof env.ADMIN_KEY !== "string" || !env.ADMIN_KEY || !value) return false;
+
       const encoder = new TextEncoder();
-      const [a, b] = await Promise.all([
-        crypto.subtle.digest("SHA-256", encoder.encode(value)),
-        crypto.subtle.digest("SHA-256", encoder.encode(env.ADMIN_KEY)),
-      ]);
-      return crypto.subtle.timingSafeEqual(a, b);
+      const ip = req.headers.get("CF-Connecting-IP");
+      let failKey = "";
+      let attempts = 0;
+      if (ip && env.DG && typeof env.DG.get === "function") {
+        try {
+          const ipDigest = await crypto.subtle.digest("SHA-256", encoder.encode(ip));
+          const ipToken = Array.from(new Uint8Array(ipDigest), (b) =>
+            b.toString(16).padStart(2, "0"),
+          ).join("").slice(0, 32);
+          failKey = "__security:dg-admin-auth:" + ipToken;
+          const stored = Number(await env.DG.get(failKey));
+          attempts = Number.isFinite(stored) && stored > 0 ? Math.floor(stored) : 0;
+        } catch (_) {
+          // KV failure must not lock out the owner; the high-entropy secret remains required.
+          failKey = "";
+          attempts = 0;
+        }
+      }
+      if (attempts >= ADMIN_FAIL_LIMIT) return false;
+
+      let valid = false;
+      if (value.length <= 512) {
+        const [a, b] = await Promise.all([
+          crypto.subtle.digest("SHA-256", encoder.encode(value)),
+          crypto.subtle.digest("SHA-256", encoder.encode(env.ADMIN_KEY)),
+        ]);
+        valid = crypto.subtle.timingSafeEqual(a, b);
+      }
+
+      if (failKey && env.DG) {
+        try {
+          if (valid) await env.DG.delete(failKey);
+          else
+            await env.DG.put(failKey, String(attempts + 1), {
+              expirationTtl: ADMIN_FAIL_TTL_SECONDS,
+            });
+        } catch (_) {
+          // Preserve existing admin availability if KV is temporarily unavailable.
+        }
+      }
+      return valid;
     };
 
     const fbGet = async (p) => {
