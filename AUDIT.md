@@ -39,7 +39,7 @@
 
 1. **GitHub:** add the correct dedicated Container app signing identity as `RV_CONTAINER_KEYSTORE_BASE64`, `RV_CONTAINER_KEYSTORE_PASSWORD`, `RV_CONTAINER_KEY_ALIAS`, and `RV_CONTAINER_KEY_PASSWORD`. Separately add the LSPosed signing identity as `RV_KEYSTORE_BASE64`, `RV_KEYSTORE_PASSWORD`, `RV_KEY_ALIAS`, and `RV_KEY_PASSWORD` only after confirming its expected certificate. The R18-pinned and R19-persistent workflows expect different fingerprints.
 2. **GitHub:** provide or extract the Dynamon Gamer Bot source archive into a tracked source tree if a full code audit is required.
-3. **Supabase:** recover and provide the original SQL files for the 52 production-only migration records, especially the original Royal Void V2 schema migrations. Do not reconstruct or blank-fill them.
+3. **Supabase:** recover and provide the original SQL files for the 49 production-only migration records, especially the original Royal Void V2 schema migrations. Do not reconstruct or blank-fill them.
 4. **Cloudflare:** enable account 2FA; confirm the origin IP and certificate; redeploy the website Worker from GitHub `main`; resolve the Generator compatibility-date mismatch before its next deployment.
 5. **Production acceptance:** perform Google sign-in, profile loading, download/license redemption, campaign/reward claim, and `.space` redirect checks using real user flows. These were not simulated with customer credentials.
 
