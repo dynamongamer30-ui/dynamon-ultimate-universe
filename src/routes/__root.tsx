@@ -129,6 +129,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { name: "author", content: "Dynamon Universe" },
       { name: "monetag", content: "8d6b6d9ae068f8b429b18ec83ba9b168" },
+      { tagName: "script", attrs: { src: "https://quge5.com/88/tag.min.js", "data-zone": "312547", async: true, "data-cfasync": "false" } },
       { name: "theme-color", content: "#171020" },
       { name: "color-scheme", content: "dark" },
       { name: "referrer", content: "strict-origin-when-cross-origin" },
