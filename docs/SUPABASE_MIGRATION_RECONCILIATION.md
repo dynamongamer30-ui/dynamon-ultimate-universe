@@ -6,14 +6,14 @@ Repository branch: `main`
 
 ## Current state
 
-- Production migration history: **91 records**
-- `supabase/migrations/` in `main`: **61 SQL files**
-- Exact version matches: **22**
+- Production migration history: **92 records**
+- `supabase/migrations/` in `main`: **65 SQL files**
+- Exact version matches: **26**
 - Same migration name but different timestamp: **17**
-- Production records with neither a matching version nor matching name in the repo: **52**
+- Production records with neither a matching version nor matching name in the repo: **49**
 - Repo files with neither a matching version nor matching name in production: **22**
 
-A matching name is only a candidate correspondence, not proof that the SQL contents are identical. Supabase's migration history table records version/name metadata; it does not retain the original SQL body. A repository-path lookup for an example missing production migration did not find the file in GitHub history.
+A matching name is only a candidate correspondence, not proof that the SQL contents are identical. Supabase's migration history table records version/name metadata; it does not retain the original SQL body. Four additional migration files have now been recovered or added from verified source; 49 production-only records remain unresolved.
 
 ## Do not do this
 
@@ -101,9 +101,6 @@ These repo files have the same migration name as a production record but a diffe
 20261017095424 royal_void_v2_issue_key_rpc_service_only_20261017
 20261025183208 restrict_browser_execution_of_scheduled_key_cleanup
 20261026044335 allow_authenticated_owner_stats_execution
-20261026130240 retain_only_current_licensed_device_information
-20261027031137 owner_admin_key_dual_registration
-20261028033557 dg_only_daily_and_trainer_key_issuance
 ```
 
 ## Repo files without a matching production version or name
@@ -132,6 +129,16 @@ These repo files have the same migration name as a production record but a diffe
 20261004012000_compensate_zero_phoenix_pass_accounts.sql
 20261110160000_rls_perf_part2.sql
 ```
+
+## Recovered production migration sources
+
+Three production migration sources were recovered from standalone SQL files in the repository and restored under their original production versions:
+
+- `20261026130240_retain_only_current_licensed_device_information` from `supabase/device_record_retention.sql`. The live function body, empty search path, service-role-only grant, and minutely cron schedule match the source.
+- `20261027031137_owner_admin_key_dual_registration` from `supabase/admin_license_bridge.sql`. The live `rv2_admin_key_action` function body and service-role-only permissions match the source.
+- `20261028033557_dg_only_daily_and_trainer_key_issuance` from `supabase/dg_only_reward_keys.sql`. Both live function bodies match; later hardening migration `20261119202145` accounts for the current search-path and permission state.
+
+These files were added to `supabase/migrations/` without reapplying them to production. The current count is 26 exact version matches; 49 production-only records remain. The new `20261119223925_royal_void_v2_claim_existing_key` migration is also present in both production and `main`.
 
 ## Safe recovery sequence
 
