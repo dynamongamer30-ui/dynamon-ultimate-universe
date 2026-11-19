@@ -1,14 +1,14 @@
 # Supabase production migration reconciliation
 
-Last checked: 2026-11-19
+Last checked: 2026-11-20
 Project: `dfxcpxzylyycrirtnkof`
 Repository branch: `main`
 
 ## Current state
 
-- Production migration history: **89 records**
-- `supabase/migrations/` in `main`: **59 SQL files**
-- Exact version matches: **20**
+- Production migration history: **91 records**
+- `supabase/migrations/` in `main`: **61 SQL files**
+- Exact version matches: **22**
 - Same migration name but different timestamp: **17**
 - Production records with neither a matching version nor matching name in the repo: **52**
 - Repo files with neither a matching version nor matching name in production: **22**
