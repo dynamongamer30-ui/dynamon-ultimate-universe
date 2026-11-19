@@ -68,3 +68,8 @@ The live owner-flag reconciliation migration remains applied; it updates profile
 Website changes polish header/catalog search, announcement tap targets, override-aware related-build versions, and version-bound unlock redemption. Dependencies were patched with pnpm workspace overrides. Final checks on the latest source passed: 101/101 tests, TypeScript, changed-file ESLint, Prettier, 9/9 Playwright checks across phone/tablet/desktop, and production build (`BUILD_EXIT=0`). Full repository lint still has unrelated errors in untouched files. Production and full dependency audits reported zero known advisories.
 
 The recent user-added Monetag script and service-worker assets remain intact; their mutable third-party execution/privacy implications are documented in the detailed report. Tests mock the vendor domains and do not validate registration or vendor behavior. The Supabase CLI project ref matches production, but the deployed Cloudflare `SUPABASE_URL` binding value was not read; live Worker-to-database mapping and GitHub-to-Cloudflare auto-deploy remain unverified. No Cloudflare settings or deployment were changed. The `.com` `www` origin remains unresolved.
+
+
+## Git delivery
+
+The reviewed changes were committed and pushed to `main` as `f919a5b` (`fix: secure download sessions and polish search UI`). The remote `main` ref was verified at the pushed commit. No Cloudflare deployment or configuration change was made.
