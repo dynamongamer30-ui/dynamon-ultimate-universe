@@ -9,8 +9,10 @@
 - `workers/license-v2/src/index.js` now calls the legacy-key bridge only when the regular V2 claim has no license and the key format is eligible. The source and production Worker were reconciled.
 - `workers/license-v2/wrangler.toml` now documents the existing production Worker name, compatibility date, public `SUPABASE_URL`, and secret bindings.
 - Website HSTS source was aligned in `src/server.ts` and `public/_headers` with the Cloudflare zone policy: 180-day max-age, without `includeSubDomains`. The currently deployed website Worker bundle still contains the previous one-year `includeSubDomains` value; redeploy the website Worker from `main` to apply the source correction.
-- The `royal-void-container` main-branch release workflow now refuses to generate or publish a temporary signing certificate. Its latest run correctly stopped because the four persistent signing secrets are absent. The old R19 signing workflow remains separate and uses a private release backup; do not assume the same certificate is correct for every app.
-- The stale R19 signing-continuity workflow no longer pushes from a feature branch; it is manual-only.
+- The Container app's main-branch release workflow now requires its own `RV_CONTAINER_KEYSTORE_BASE64`, `RV_CONTAINER_KEYSTORE_PASSWORD`, `RV_CONTAINER_KEY_ALIAS`, and `RV_CONTAINER_KEY_PASSWORD` secrets; its latest run stopped safely because they are absent.
+- LSPosed build workflows use the separate `RV_KEYSTORE_BASE64`, `RV_KEYSTORE_PASSWORD`, `RV_KEY_ALIAS`, and `RV_KEY_PASSWORD` secrets. The experimental build workflows are manual-only and refuse temporary signing certificates.
+- The invalid duplicate `build-lsposed.yml` workflow was archived under `docs/legacy-workflows/` and replaced with a manual-only retirement notice. The R19 signing-continuity workflow is also manual-only.
+- R18-pinned and R19-persistent signing workflows expect different certificate fingerprints; never reuse a key between them without confirming the target app's expected fingerprint.
 - `Dynamon-Gamer-Bot` stores its application source in release ZIP archives rather than a normal tracked source tree. The root README was reviewed, but the archive's application code has not been fully audited.
 
 ## Supabase production
@@ -35,7 +37,7 @@
 
 ## Owner actions still required
 
-1. **GitHub:** add the correct persistent signing identity as `RV_KEYSTORE_BASE64`, `RV_KEYSTORE_PASSWORD`, `RV_KEY_ALIAS`, and `RV_KEY_PASSWORD` in the `royal-void-container` repository. Confirm which certificate belongs to that app before reusing the R19 backup; the R18-pinned and R19-persistent workflows expect different certificate fingerprints.
+1. **GitHub:** add the correct dedicated Container app signing identity as `RV_CONTAINER_KEYSTORE_BASE64`, `RV_CONTAINER_KEYSTORE_PASSWORD`, `RV_CONTAINER_KEY_ALIAS`, and `RV_CONTAINER_KEY_PASSWORD`. Separately add the LSPosed signing identity as `RV_KEYSTORE_BASE64`, `RV_KEYSTORE_PASSWORD`, `RV_KEY_ALIAS`, and `RV_KEY_PASSWORD` only after confirming its expected certificate. The R18-pinned and R19-persistent workflows expect different fingerprints.
 2. **GitHub:** provide or extract the Dynamon Gamer Bot source archive into a tracked source tree if a full code audit is required.
 3. **Supabase:** recover and provide the original SQL files for the 52 production-only migration records, especially the original Royal Void V2 schema migrations. Do not reconstruct or blank-fill them.
 4. **Cloudflare:** enable account 2FA; confirm the origin IP and certificate; redeploy the website Worker from GitHub `main`; resolve the Generator compatibility-date mismatch before its next deployment.
