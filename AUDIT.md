@@ -17,7 +17,7 @@
 
 ## Supabase production
 
-- Production migration ledger: **92** records. GitHub `supabase/migrations`: **65** SQL files. Reconciliation: **26 exact version matches**, **17 same-name/different-timestamp**, **49 production-only**, **22 repo-only**. Three previously standalone SQL sources were recovered as their original production migration files and verified against live function bodies/cron configuration. Do not run `supabase db push` until the original missing migration SQL is recovered.
+- Production migration ledger: **92** records. GitHub `supabase/migrations`: **65** SQL files. Reconciliation: **26 exact version matches**, **17 same-name/different-timestamp**, **49 production-only**, **22 repo-only**. Three previously standalone SQL sources were recovered as their original production migration files and verified against live function bodies/cron configuration. Do not run `supabase db push` until the original missing migration SQL is recovered. GitHub history checks found no original file versions for the 49 production-only records or the 17 same-name timestamp mismatches.
 - The existing source `supabase/reward_license_bridge.sql` was reviewed and applied as migration `20261119223925_royal_void_v2_claim_existing_key`; the matching migration file is committed on `main`.
 - The new `rv2_claim_existing_key` function is SECURITY INVOKER, has an empty search path, and is executable only by `service_role`. An invalid-key probe returned no rows; no real customer key was activated during verification.
 - The five `rv_v2` tables remain inaccessible directly to `anon` and `authenticated`. The five V2 RPCs are service-role-only.
