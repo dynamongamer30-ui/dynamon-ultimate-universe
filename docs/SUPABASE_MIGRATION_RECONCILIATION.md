@@ -13,7 +13,7 @@ Repository branch: `main`
 - Production records with neither a matching version nor matching name in the repo: **49**
 - Repo files with neither a matching version nor matching name in production: **22**
 
-A matching name is only a candidate correspondence, not proof that the SQL contents are identical. Supabase's migration history table records version/name metadata; it does not retain the original SQL body. Four additional migration files have now been recovered or added from verified source; 49 production-only records remain unresolved.
+A matching name is only a candidate correspondence, not proof that the SQL contents are identical. Supabase's migration history table records version/name metadata; it does not retain the original SQL body. Four additional migration files have now been recovered or added from verified source; 49 production-only records remain unresolved. GitHub commit-history checks for all 49 exact production-only paths returned no historical file versions in this repository.
 
 ## Do not do this
 
