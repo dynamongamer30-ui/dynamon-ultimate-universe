@@ -128,6 +128,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Compare Dynamons World builds by feature set, version, element, ratings, and community signals. Explore release notes, rewards, and guided unlock access.",
       },
       { name: "author", content: "Dynamon Universe" },
+      { name: "monetag", content: "8d6b6d9ae068f8b429b18ec83ba9b168" },
       { name: "theme-color", content: "#171020" },
       { name: "color-scheme", content: "dark" },
       { name: "referrer", content: "strict-origin-when-cross-origin" },
