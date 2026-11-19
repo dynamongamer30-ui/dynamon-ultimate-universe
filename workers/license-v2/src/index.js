@@ -1,10 +1,10 @@
 import { ownerKeyAction } from "./owner-keys.js";
 import { checkAppPolicy } from "./app-policy.js";
-// Royal Void V2 isolated staging API.
-// Create a NEW Worker named royal-void-v2.
-// Do not replace dg, generator or the website Worker.
+// Royal Void V2 production licensing API.
+// This Worker serves the Android V2 gate and the generator's internal issuer.
+// Keep the existing production Worker and its bindings; do not create a parallel environment.
 
-const VERSION = "v2-staging-20261017";
+const VERSION = "v2-production-20261120";
 const te = new TextEncoder();
 
 const json = (data, status = 200) =>
@@ -395,7 +395,7 @@ export default {
       return json({
         service: "royal-void-v2-api",
         version: VERSION,
-        status: "staging",
+        status: "production",
         configured: ready(env),
       });
     }
