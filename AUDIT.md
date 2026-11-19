@@ -15,6 +15,10 @@
 - LSPosed build workflows use the separate `RV_KEYSTORE_BASE64`, `RV_KEYSTORE_PASSWORD`, `RV_KEY_ALIAS`, and `RV_KEY_PASSWORD` secrets. The experimental build workflows are manual-only and refuse temporary signing certificates.
 - The invalid duplicate `build-lsposed.yml` workflow was archived under `docs/legacy-workflows/` and replaced with a manual-only retirement notice. The R19 signing-continuity workflow is also manual-only.
 - R18-pinned and R19-persistent signing workflows expect different certificate fingerprints; never reuse a key between them without confirming the target app's expected fingerprint.
+- The `royal-void-container` Android manifest was reviewed: cleartext traffic and app backup are disabled; only Internet and notification permissions are declared; the diagnostic activity is not exported. Its WebView disables file/content access, exposes no JavaScript bridge, denies permission requests, and only permits narrowly allowlisted Firebase requests after explicit user opt-in. The experimental virtual engine remains disabled by default; this app is still an alpha diagnostic build, not a verified virtual-machine release.
+- The Container APK workflow's change filter now includes all Gradle modules. It requires a dedicated permanent Container signing identity and optionally pins the certificate through the `RV_CONTAINER_CERT_SHA256` repository variable. The first accepted signed build must be device-tested and its fingerprint recorded.
+- The `Dex-Protection` workflow now downloads R8 8.3.37 from Google Maven and verifies the pinned SHA-256 before use.
+- The Dynamon Gamer Bot repository keeps its Node.js application in a release ZIP rather than tracked source files. The archive filename inventory contains `.env.example` but no `.env`, keystore, PEM, or database files; this is not a substitute for reviewing the archived source code.
 - `Dynamon-Gamer-Bot` stores its application source in release ZIP archives rather than a normal tracked source tree. The root README was reviewed, but the archive's application code has not been fully audited.
 
 ## Supabase production
@@ -39,11 +43,12 @@
 
 ## Owner actions still required
 
-1. **GitHub:** add the correct dedicated Container app signing identity as `RV_CONTAINER_KEYSTORE_BASE64`, `RV_CONTAINER_KEYSTORE_PASSWORD`, `RV_CONTAINER_KEY_ALIAS`, and `RV_CONTAINER_KEY_PASSWORD`. Separately add the LSPosed signing identity as `RV_KEYSTORE_BASE64`, `RV_KEYSTORE_PASSWORD`, `RV_KEY_ALIAS`, and `RV_KEY_PASSWORD` only after confirming its expected certificate. The R18-pinned and R19-persistent workflows expect different fingerprints.
+1. **GitHub:** add the dedicated Container app signing secrets `RV_CONTAINER_KEYSTORE_BASE64`, `RV_CONTAINER_KEYSTORE_PASSWORD`, `RV_CONTAINER_KEY_ALIAS`, and `RV_CONTAINER_KEY_PASSWORD`. After the first accepted signed build, set the repository variable `RV_CONTAINER_CERT_SHA256` to the printed certificate fingerprint. Add the separate LSPosed `RV_KEYSTORE_*` secrets only if those builds are needed, and only after confirming the correct R18/R19 certificate.
 2. **GitHub:** provide or extract the Dynamon Gamer Bot source archive into a tracked source tree if a full code audit is required.
 3. **Supabase:** recover and provide the original SQL files for the 49 production-only migration records, especially the original Royal Void V2 schema migrations. Do not reconstruct or blank-fill them.
 4. **Cloudflare:** enable account 2FA; confirm the origin IP and certificate; redeploy the website Worker from GitHub `main`; resolve the Generator compatibility-date mismatch before its next deployment.
 5. **Production acceptance:** perform Google sign-in, profile loading, download/license redemption, campaign/reward claim, and `.space` redirect checks using real user flows. These were not simulated with customer credentials.
+6. **Royal Void Container:** install and exercise the signed alpha APK on the target Android device, verify import/diagnostic WebView behavior and permissions, and keep the experimental engine disabled unless a separate device-validation pass is completed.
 
 ---
 
