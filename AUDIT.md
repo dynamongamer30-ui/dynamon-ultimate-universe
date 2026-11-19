@@ -1,3 +1,48 @@
+# Current infrastructure status — 2026-11-20
+
+> This status update supersedes earlier point-in-time findings in the historical audit below. It records the current GitHub `main`, Supabase production, and Cloudflare production state.
+
+## GitHub and deployment source reconciliation
+
+- The website repository now has a main-only CI workflow. Latest run: **101/101 tests passed**, TypeScript check passed, and the Cloudflare application build passed. No branch or staging environment was created.
+- `workers/generator/src/index.js` was synchronized from the active production Generator Worker. The source now includes the V2 license registration path that had been present in Cloudflare but missing from GitHub. `workers/generator/wrangler.toml` now declares the production `V2_API` service binding and required secret names.
+- `workers/license-v2/src/index.js` now calls the legacy-key bridge only when the regular V2 claim has no license and the key format is eligible. The source and production Worker were reconciled.
+- `workers/license-v2/wrangler.toml` now documents the existing production Worker name, compatibility date, public `SUPABASE_URL`, and secret bindings.
+- Website HSTS source was aligned in `src/server.ts` and `public/_headers` with the Cloudflare zone policy: 180-day max-age, without `includeSubDomains`. The currently deployed website Worker bundle still contains the previous one-year `includeSubDomains` value; redeploy the website Worker from `main` to apply the source correction.
+- The `royal-void-container` main-branch release workflow now refuses to generate or publish a temporary signing certificate. Its latest run correctly stopped because the four persistent signing secrets are absent. The old R19 signing workflow remains separate and uses a private release backup; do not assume the same certificate is correct for every app.
+- The stale R19 signing-continuity workflow no longer pushes from a feature branch; it is manual-only.
+- `Dynamon-Gamer-Bot` stores its application source in release ZIP archives rather than a normal tracked source tree. The root README was reviewed, but the archive's application code has not been fully audited.
+
+## Supabase production
+
+- Production migration ledger: **92** records. GitHub `supabase/migrations`: **62** SQL files. Reconciliation: **23 exact matches**, **17 same-name/different-timestamp**, **52 production-only**, **22 repo-only**. Do not run `supabase db push` until the original missing migration SQL is recovered.
+- The existing source `supabase/reward_license_bridge.sql` was reviewed and applied as migration `20261119223925_royal_void_v2_claim_existing_key`; the matching migration file is committed on `main`.
+- The new `rv2_claim_existing_key` function is SECURITY INVOKER, has an empty search path, and is executable only by `service_role`. An invalid-key probe returned no rows; no real customer key was activated during verification.
+- The five `rv_v2` tables remain inaccessible directly to `anon` and `authenticated`. The five V2 RPCs are service-role-only.
+- Latest advisors: health **0 findings**; security: 14 RLS-enabled/no-policy informational findings, 31 authenticated-executable SECURITY DEFINER warnings, and 1 leaked-password-protection warning; performance: 21 unused-index informational findings. The 14 no-policy tables have no direct `anon` or `authenticated` table privileges. No anonymous execution was found for the flagged SECURITY DEFINER functions.
+- Current identity-provider records show Google only. The leaked-password advisory should be revisited if password sign-in is ever enabled.
+
+## Cloudflare production
+
+- `dynamongamer.com`: TLS 1.2 minimum, HTTPS redirects, 180-day HSTS without subdomain preload, and Cloudflare Managed Free WAF ruleset active.
+- `dynamongamer.space`: HTTPS and redirect to `.com`; no managed WAF entrypoint because it is configured as a redirect domain.
+- Both zones remain on SSL Full, not Full (strict), pending confirmation that origin `66.223.49.89` is correct and has a valid origin certificate.
+- The production `royal-void-v2` Worker is on version 10 at 100% traffic. Its modules match GitHub `main`; existing bindings were preserved. `workers.dev` is enabled and preview URLs are disabled.
+- The active `dg` Worker source matches GitHub `main`.
+- The active Generator Worker source matches GitHub `main`, but its deployed version has no explicit compatibility date while `workers/generator/wrangler.toml` declares `2026-05-15`. Resolve this before a future redeploy; do not change the runtime date blindly.
+- The website Worker uses the `ASSETS` binding and `CAMPAIGN_PROXY_SECRET`. Its HSTS source fix is committed but still needs a production redeploy.
+- The suspiciously named managed response ruleset was not attached to an active phase entrypoint; it was left untouched. Worker observability and Logpush remain disabled. No DNS records, origin settings, secret values, or R2 access settings were changed in this continuation.
+
+## Owner actions still required
+
+1. **GitHub:** add the correct persistent signing identity as `RV_KEYSTORE_BASE64`, `RV_KEYSTORE_PASSWORD`, `RV_KEY_ALIAS`, and `RV_KEY_PASSWORD` in the `royal-void-container` repository. Confirm which certificate belongs to that app before reusing the R19 backup; the R18-pinned and R19-persistent workflows expect different certificate fingerprints.
+2. **GitHub:** provide or extract the Dynamon Gamer Bot source archive into a tracked source tree if a full code audit is required.
+3. **Supabase:** recover and provide the original SQL files for the 52 production-only migration records, especially the original Royal Void V2 schema migrations. Do not reconstruct or blank-fill them.
+4. **Cloudflare:** enable account 2FA; confirm the origin IP and certificate; redeploy the website Worker from GitHub `main`; resolve the Generator compatibility-date mismatch before its next deployment.
+5. **Production acceptance:** perform Google sign-in, profile loading, download/license redemption, campaign/reward claim, and `.space` redirect checks using real user flows. These were not simulated with customer credentials.
+
+---
+
 | Area | Item | Detail | Status |
 |---|---|---|---|
 | Scope | Live database | Read-only inspection of Supabase project dfxcpxzylyycrirtnkof. No SQL writes or migration application performed in this session. | Verified |
