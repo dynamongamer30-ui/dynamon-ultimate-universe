@@ -330,7 +330,17 @@ export default {
           crypto.subtle.digest("SHA-256", encoder.encode(value)),
           crypto.subtle.digest("SHA-256", encoder.encode(env.ADMIN_KEY)),
         ]);
-        valid = crypto.subtle.timingSafeEqual(a, b);
+        if (typeof crypto.subtle.timingSafeEqual === "function") {
+          valid = crypto.subtle.timingSafeEqual(a, b);
+        } else {
+          // Node's WebCrypto lacks Cloudflare's timingSafeEqual extension; both
+          // SHA-256 digests are fixed at 32 bytes, so compare every byte.
+          const left = new Uint8Array(a);
+          const right = new Uint8Array(b);
+          let mismatch = 0;
+          for (let i = 0; i < left.length; i++) mismatch |= left[i] ^ right[i];
+          valid = mismatch === 0;
+        }
       }
 
       if (failKey && env.DG) {
