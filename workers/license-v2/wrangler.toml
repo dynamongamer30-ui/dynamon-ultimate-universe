@@ -1,0 +1,25 @@
+name = "royal-void-v2"
+main = "src/index.js"
+compatibility_date = "2026-10-17"
+workers_dev = true
+
+[vars]
+SUPABASE_URL = "https://dfxcpxzylyycrirtnkof.supabase.co"
+
+# ---------------------------------------------------------------------------
+# Secrets (set with `wrangler secret put <NAME>`; never commit values):
+#   SUPABASE_SERVICE_KEY  - Supabase service-role key (server-side only)
+#   LICENSE_HMAC_PEPPER   - HMAC key for hashing Royal Void license keys
+#   SESSION_SIGNING_SECRET - HMAC key for short-lived challenge and lease tokens
+#   V2_ISSUER_KEY         - shared only with the generator Worker
+#
+# Production endpoints:
+#   /v2/challenge
+#   /v2/activate
+#   /v2/renew
+#   /v2/internal/issue   - generator service binding only; issuer key required
+#   /v2/admin/keys       - owner JWT + owner-role check required
+#
+# Keep this Worker on the existing production service. Do not create a
+# staging/test Worker or expose any secret in client-side code.
+# ---------------------------------------------------------------------------
