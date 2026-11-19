@@ -28,14 +28,21 @@ export function AnnouncementBanner() {
     <div
       className={`relative z-40 border-b bg-gradient-to-r px-4 py-2.5 text-center text-sm font-medium ${tone}`}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-center gap-2">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-1.5">
         <Megaphone className="h-4 w-4 shrink-0" aria-hidden="true" />
         {announcement.href ? (
-          <a href={announcement.href} target="_blank" rel="noreferrer" className="hover:underline">
+          <a
+            href={announcement.href}
+            target="_blank"
+            rel="noreferrer"
+            className="touch-target inline-flex min-h-11 max-w-full items-center justify-center rounded-lg px-2 text-center leading-snug [overflow-wrap:anywhere] hover:bg-white/5 hover:underline"
+          >
             {announcement.message}
           </a>
         ) : (
-          <span>{announcement.message}</span>
+          <span className="min-w-0 max-w-full leading-snug [overflow-wrap:anywhere]">
+            {announcement.message}
+          </span>
         )}
         <button
           onClick={() => {

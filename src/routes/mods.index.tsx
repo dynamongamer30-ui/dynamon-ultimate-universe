@@ -147,13 +147,26 @@ function ModsPage() {
           {formatCount(totalDownloads)}+ downloads across all builds.
         </p>
 
-        <div className="mt-8 grid gap-3">
-          <div className="relative">
+        <div className="mt-8 grid gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-primary-ink">
+                Discover
+              </p>
+              <h2 className="mt-1 font-display text-xl font-bold tracking-tight sm:text-2xl">
+                Search the vault
+              </h2>
+            </div>
+            <span className="rounded-full border border-border/80 bg-card/70 px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+              {filtered.length} {filtered.length === 1 ? "build" : "builds"}
+            </span>
+          </div>
+          <div className="group relative rounded-2xl border border-border/80 bg-card/40 p-1.5 shadow-lg shadow-primary/5 transition-colors focus-within:border-primary/45">
             <label htmlFor="mods-search" className="sr-only">
               Search mods, features
             </label>
             <Search
-              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              className="pointer-events-none absolute left-5 top-1/2 z-10 h-[18px] w-[18px] -translate-y-1/2 text-primary-ink"
               aria-hidden="true"
             />
             <input
@@ -166,14 +179,14 @@ function ModsPage() {
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search mods, features…"
               aria-describedby="mods-result-status"
-              className="control-input w-full rounded-lg border py-3 pl-11 pr-11 text-sm outline-none transition-colors focus:border-primary"
+              className="control-input h-14 w-full rounded-xl border border-transparent bg-background/70 py-3 pl-12 pr-12 text-sm shadow-inner outline-none transition-[background-color,border-color,box-shadow] placeholder:text-muted-foreground/75 focus:border-primary/35 focus:bg-background focus:ring-2 focus:ring-primary/15"
             />
             {q && (
               <button
                 type="button"
                 onClick={() => setQ("")}
                 aria-label="Clear mod search"
-                className="touch-target absolute right-1 top-1/2 grid -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className="touch-target absolute right-2 top-1/2 grid -translate-y-1/2 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>

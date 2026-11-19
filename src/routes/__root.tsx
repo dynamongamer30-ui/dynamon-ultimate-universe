@@ -180,7 +180,12 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en" data-website-theme="royal-black" suppressHydrationWarning>
       <head>
         <HeadContent />
-        <script src="https://quge5.com/88/tag.min.js" data-zone="312552" async data-cfasync="false"></script>
+        <script
+          src="https://quge5.com/88/tag.min.js"
+          data-zone="312552"
+          async
+          data-cfasync="false"
+        ></script>
       </head>
       <body>
         {children}

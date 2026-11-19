@@ -34,7 +34,7 @@ import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { Cipher } from "@/lib/cipher";
 import { getFingerprint } from "@/lib/fingerprint";
-import { getMod, mods, formatCount, elementTheme, type Mod } from "@/lib/mods";
+import { getMod, formatCount, elementTheme, type Mod } from "@/lib/mods";
 import { breadcrumbJsonLd, pageSeoHead, softwareAppJsonLd } from "@/lib/seo";
 import { playClick } from "@/lib/sound";
 import { toast } from "sonner";
@@ -113,7 +113,7 @@ function ModDetail() {
   const reducedMotion = useReducedMotionPreference();
   const { mod } = Route.useLoaderData() as { mod: Mod };
   const { user } = useAuth();
-  const { overrides, allMods, loading: settingsLoading } = useSiteSettings();
+  const { overrides, allMods, mods: visibleMods, loading: settingsLoading } = useSiteSettings();
   const navigate = useNavigate();
   const theme = elementTheme[mod.element];
   const [tab, setTab] = useState<"overview" | "changelog">("overview");
@@ -488,7 +488,7 @@ function ModDetail() {
           More from the vault
         </h2>
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {mods
+          {visibleMods
             .filter((m) => m.slug !== mod.slug)
             .slice(0, 3)
             .map((m) => {
@@ -558,6 +558,7 @@ function ModDetail() {
         <FollowGate
           modName={blendedMod.name}
           slug={mod.slug}
+          version={blendedMod.version}
           followUrl={followUrl}
           onClose={() => setGateOpen(false)}
         />
@@ -569,11 +570,13 @@ function ModDetail() {
 function FollowGate({
   modName,
   slug,
+  version,
   followUrl,
   onClose,
 }: {
   modName: string;
   slug: string;
+  version: string;
   followUrl: string;
   onClose: () => void;
 }) {
@@ -620,7 +623,7 @@ function FollowGate({
         localStorage.setItem("dg_token", res.token);
       }
 
-      navigate({ to: "/unlock" });
+      navigate({ to: "/unlock", search: { v: version } });
     } catch (e) {
       setErrMsg(e instanceof Error ? e.message : "Something went wrong.");
       setStep("error");

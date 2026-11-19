@@ -146,9 +146,9 @@ export function Header() {
               ref={searchButtonRef}
               aria-expanded={searchOpen}
               aria-controls="site-search-panel"
-              className="header-control press touch-target grid place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-[color,border-color,box-shadow] hover:border-primary/55 hover:text-foreground"
+              className="header-control press touch-target grid place-items-center rounded-xl border border-primary/35 bg-gradient-to-br from-primary/20 via-card to-card text-primary-ink shadow-lg shadow-primary/10 transition-[transform,color,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/70 hover:shadow-primary/20"
             >
-              <Search className="h-4 w-4" />
+              <Search className="h-[18px] w-[18px]" />
             </button>
 
             <Link
@@ -191,92 +191,124 @@ export function Header() {
               transition={reducedMotion ? { duration: 0 } : { duration: 0.18 }}
               role="region"
               aria-label="Site search"
-              className="overflow-hidden border-t border-border/60 bg-background"
+              className="overflow-hidden border-t border-border/60 bg-background/95 backdrop-blur-xl"
             >
-              <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <label htmlFor="site-search" className="sr-only">
-                    Search mods, elements, and features
-                  </label>
-                  <input
-                    id="site-search"
-                    name="site-search"
-                    type="search"
-                    autoComplete="off"
-                    aria-controls="search-results"
-                    autoFocus
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        e.preventDefault();
+              <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-5">
+                <div className="rounded-2xl border border-border/80 bg-card/75 p-3 shadow-xl shadow-primary/5 sm:p-5">
+                  <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-primary-ink">
+                        Quick find
+                      </p>
+                      <p className="mt-1 font-display text-lg font-bold leading-tight">
+                        Search the vault
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Builds, features, elements &amp; guides
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary-ink" />
+                    <label htmlFor="site-search" className="sr-only">
+                      Search mods, elements, and features
+                    </label>
+                    <input
+                      id="site-search"
+                      name="site-search"
+                      type="search"
+                      autoComplete="off"
+                      aria-controls={q.trim() ? "search-results" : undefined}
+                      autoFocus
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          setSearchOpen(false);
+                          setQ("");
+                          searchButtonRef.current?.focus();
+                        }
+                      }}
+                      placeholder="Search mods, elements, features…"
+                      className="h-12 w-full rounded-xl border border-border/80 bg-background/70 py-3 pl-11 pr-12 text-sm shadow-inner outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/75 focus:border-primary/70 focus:ring-2 focus:ring-primary/15"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
                         setSearchOpen(false);
                         setQ("");
                         searchButtonRef.current?.focus();
-                      }
-                    }}
-                    placeholder="Search mods, elements, features…"
-                    className="w-full rounded-xl border border-border bg-card py-3 pl-11 pr-12 text-sm outline-none focus:border-primary"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchOpen(false);
-                      setQ("");
-                      searchButtonRef.current?.focus();
-                      playClick();
-                    }}
-                    aria-label="Close search"
-                    className="touch-target absolute right-1 top-1/2 grid -translate-y-1/2 place-items-center rounded-lg text-muted-foreground hover:bg-card hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                        playClick();
+                      }}
+                      aria-label="Close search"
+                      className="touch-target absolute right-1 top-1/2 grid -translate-y-1/2 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {q.trim() && (
+                    <div id="search-results" aria-live="polite" className="mt-3">
+                      {results.length > 0 || helpResults.length > 0 ? (
+                        <>
+                          <p className="mb-2 px-1 text-xs font-medium text-muted-foreground">
+                            {results.length + helpResults.length} matching result
+                            {results.length + helpResults.length === 1 ? "" : "s"}
+                          </p>
+                          <ul className="max-h-72 space-y-1 overflow-auto rounded-xl border border-border/70 bg-background/45 p-2">
+                            {helpResults.map((topic) => (
+                              <li key={topic.id}>
+                                <Link
+                                  to="/help"
+                                  hash={topic.id}
+                                  onClick={() => {
+                                    setSearchOpen(false);
+                                    setQ("");
+                                  }}
+                                  className="touch-target flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-card"
+                                >
+                                  <Compass size={14} />
+                                  Guide: {topic.title}
+                                </Link>
+                              </li>
+                            ))}
+                            {results.slice(0, 6).map((m) => (
+                              <li key={m.slug}>
+                                <button
+                                  onClick={() => {
+                                    setSearchOpen(false);
+                                    setQ("");
+                                    navigate({ to: "/mods/$slug", params: { slug: m.slug } });
+                                  }}
+                                  className="touch-target flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-card"
+                                >
+                                  <img
+                                    src={m.image}
+                                    alt=""
+                                    className="h-9 w-9 rounded-lg object-cover"
+                                  />
+                                  <div className="min-w-0">
+                                    <p className="truncate font-semibold">{m.name}</p>
+                                    <p className="truncate text-xs text-muted-foreground">
+                                      {m.tagline}
+                                    </p>
+                                  </div>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-border bg-background/45 px-4 py-5 text-center">
+                          <p className="text-sm font-semibold">No matches yet</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Try a build name, element, feature, or help topic.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {(results.length > 0 || helpResults.length > 0) && (
-                  <ul
-                    id="search-results"
-                    className="mt-3 max-h-72 space-y-1 overflow-auto rounded-xl border border-border bg-card/40 p-2"
-                  >
-                    {helpResults.map((topic) => (
-                      <li key={topic.id}>
-                        <Link
-                          to="/help"
-                          hash={topic.id}
-                          onClick={() => {
-                            setSearchOpen(false);
-                            setQ("");
-                          }}
-                          className="touch-target flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-card"
-                        >
-                          <Compass size={14} />
-                          Guide: {topic.title}
-                        </Link>
-                      </li>
-                    ))}
-                    {results.map((m) => (
-                      <li key={m.slug}>
-                        <button
-                          onClick={() => {
-                            setSearchOpen(false);
-                            setQ("");
-                            navigate({ to: "/mods/$slug", params: { slug: m.slug } });
-                          }}
-                          className="touch-target flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-card"
-                        >
-                          <img src={m.image} alt="" className="h-9 w-9 rounded-lg object-cover" />
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold">{m.name}</p>
-                            <p className="truncate text-xs text-muted-foreground">{m.tagline}</p>
-                          </div>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {q && results.length === 0 && helpResults.length === 0 && (
-                  <p className="mt-3 px-2 text-sm text-muted-foreground">No mods match "{q}".</p>
-                )}
               </div>
             </motion.div>
           )}
@@ -439,7 +471,10 @@ export function Header() {
         )}
       </header>
       {user && (
-        <div aria-label="Trainer progress" className="relative site-chrome border-b border-border/50 bg-background">
+        <div
+          aria-label="Trainer progress"
+          className="relative site-chrome border-b border-border/50 bg-background"
+        >
           <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 text-sm sm:gap-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <LevelBadge compact />

@@ -69,7 +69,11 @@ function mapRedeemError(code?: string): string {
     case "fingerprint_mismatch":
       return "This link was started on a different phone. Please finish the download on the same device you started it on.";
     case "version_mismatch":
-      return "Something changed while you were waiting. Please start the download again.";
+      return "This build changed while you were waiting. Please start the download again to verify the current version.";
+    case "account_mismatch":
+      return "This download pass belongs to a different account. Please start again while signed in to your account.";
+    case "authentication_required":
+      return "Please sign in again, then restart the download from the build page.";
     case "expired":
       return "This link took too long and has expired. Please start the download again.";
     case "too_fast":
@@ -289,11 +293,7 @@ function StatusIcon({ status }: { status: StageStatus }) {
 }
 function UnlockPage() {
   const reducedMotion = useReducedMotionPreference();
-  // The secure-session RPC currently stores the mod slug in its legacy
-  // `modVersion` field, while this page previously supplied the human build
-  // version. Leave the optional version pin unset until the database contract
-  // can be migrated safely; token, fingerprint, timing, and one-time burn
-  // checks remain enforced server-side.
+  const { v: buildVersion } = Route.useSearch();
   const [stages, setStages] = useState<Stage[]>(INITIAL_STAGES);
   const [done, setDone] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -365,7 +365,11 @@ function UnlockPage() {
             fn: string,
             args: Record<string, unknown>,
           ) => Promise<{ data: unknown; error: { message: string } | null }>
-        )("redeem_secure_session", { p_token: token, p_fingerprint: fingerprint });
+        )("redeem_secure_session", {
+          p_token: token,
+          p_fingerprint: fingerprint,
+          p_version: buildVersion ?? null,
+        });
         if (error) throw new Error("Secure channel error. Please try again.");
         redeemed = data as typeof redeemed;
         if (!redeemed || !redeemed.ok) {
