@@ -144,3 +144,22 @@ These repo files have the same migration name as a production record but a diffe
 ## Recent production migrations already synced to main
 
 The production security changes from this audit are stored as normal SQL migration files in this repository, including owner-flag hardening, role-check scoping, RLS auth-initplan optimisation, owner-policy consolidation, demo-owner RPC scoping, and the latest public-RPC/search-path hardening.
+
+
+## Royal Void V2 production function reconciliation — 2026-11-20
+
+The production migration ledger contains the two Royal Void V2 migration records listed above:
+
+- `20261017073024 royal_void_v2_shadow_licensing_schema_20261017`
+- `20261017095424 royal_void_v2_issue_key_rpc_service_only_20261017`
+
+Their original SQL files are not present in the current `main` migration directory. The live database currently exposes these V2 RPCs:
+
+- `rv2_issue_key`
+- `rv2_claim_device`
+- `rv2_check_lease`
+- `rv2_admin_key_action`
+
+All four are SECURITY INVOKER functions executable only by `service_role`; none is executable by `anon` or `authenticated`. The five `rv_v2` tables are likewise not directly accessible to `anon` or `authenticated`.
+
+The repository previously contained a fallback call to `rv2_claim_existing_key`, but that function does not exist in the live database. The fallback has been removed from `workers/license-v2/src/index.js` so a production deployment cannot call a nonexistent RPC. Do not create a placeholder migration or invent the missing RPC. Recover the original V2 migration SQL before attempting any schema reconstruction or migration-ledger repair.
