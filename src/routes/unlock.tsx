@@ -369,7 +369,7 @@ function UnlockPage() {
         while (Date.now() < deadline) {
           await sleep(Math.min(1000, deadline - Date.now()));
         }
-        localStorage.removeItem("dg_wait_until");
+        // Keep the deadline until redemption succeeds so recoverable errors can be retried.
       });
       // The server independently checks the same minimum wait and atomically
       // consumes the one-time token. Client timing is only a user-facing wait.
@@ -414,6 +414,7 @@ function UnlockPage() {
       });
       try {
         localStorage.removeItem("dg_token");
+        localStorage.removeItem("dg_wait_until");
       } catch {
         /* ignore */
       }
