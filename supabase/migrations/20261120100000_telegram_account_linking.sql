@@ -143,3 +143,29 @@ end;
 $$;
 revoke all on function public.unlink_bot_account() from public, anon;
 grant execute on function public.unlink_bot_account() to authenticated;
+
+-- Bot-initiated unlink follows the exact same 15-day rule as the website action.
+create or replace function public.unlink_bot_account_from_telegram(p_telegram_id bigint)
+returns jsonb language plpgsql security definer set search_path = public, auth as $$
+declare l public.bot_account_links%rowtype;
+begin
+  if auth.role() <> 'service_role' then
+    raise exception 'Service role required' using errcode='42501';
+  end if;
+  if p_telegram_id is null or p_telegram_id <= 0 then
+    return jsonb_build_object('ok',false,'error','invalid_request');
+  end if;
+  select * into l from public.bot_account_links
+    where telegram_id=p_telegram_id and unlinked_at is null for update;
+  if not found then return jsonb_build_object('ok',false,'error','not_linked'); end if;
+  if now() < l.unlink_eligible_at then
+    return jsonb_build_object('ok',false,'error','unlink_restricted','eligible_at',l.unlink_eligible_at);
+  end if;
+  update public.bot_account_links set unlinked_at=now() where id=l.id;
+  insert into public.bot_account_link_events(user_id,telegram_id,event_type)
+    values(l.user_id,l.telegram_id,'unlinked');
+  return jsonb_build_object('ok',true,'unlinked_at',now());
+end;
+$$;
+revoke all on function public.unlink_bot_account_from_telegram(bigint) from public, anon, authenticated;
+grant execute on function public.unlink_bot_account_from_telegram(bigint) to service_role;
