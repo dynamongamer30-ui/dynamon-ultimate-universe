@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
@@ -33,7 +33,6 @@ export function isProfileComplete(profile: Profile | null | undefined): boolean 
 export function useProfile() {
   const { user } = useAuth();
   const userId = user?.id;
-  const client = useQueryClient();
   const query = useQuery({
     queryKey: ["my-profile", userId],
     enabled: !!userId,
@@ -45,21 +44,24 @@ export function useProfile() {
       return (row as Profile | null) ?? null;
     },
     staleTime: 60_000,
-    gcTime: 0,
-    refetchOnWindowFocus: false,
-    retry: false,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: true,
+    // Retry transient network / gateway failures instead of immediately
+    // presenting an error screen for a single dropped request.
+    retry: (failureCount, error) => failureCount < 2,
+    retryDelay: (attempt) => Math.min(1_000 * 2 ** attempt, 5_000),
   });
   const refresh = useCallback(async () => {
-    if (userId) await client.invalidateQueries({ queryKey: ["my-profile", userId], exact: true });
-  }, [client, userId]);
+    await query.refetch();
+  }, [query.refetch]);
   const profile = userId ? (query.data ?? null) : null;
   return {
     profile,
     /**
      * Derived, not a database column. `/auth` sends a signed-in visitor to
      * `/mods` only when this is true, so an account that never finished setup
-     * is always routed back to the profile step — including the 559 accounts
-     * that already have a partially filled row.
+     * is always routed back to the profile step — including partially filled
+     * rows.
      */
     complete: isProfileComplete(profile),
     loading: !!userId && query.isPending,
