@@ -242,6 +242,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof NotificationsRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
+  '/telegram/link': typeof TelegramLinkRoute
   '/rewards': typeof RewardsRoute
   '/unlock': typeof UnlockRoute
   '/$campaignPrefix/$slug': typeof CampaignPrefixSlugRoute
@@ -338,6 +339,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/privacy'
     | '/profile'
+    | '/telegram/link'
     | '/rewards'
     | '/unlock'
     | '/$campaignPrefix/$slug'
