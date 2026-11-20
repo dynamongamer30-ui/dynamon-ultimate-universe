@@ -20,7 +20,7 @@ test("download session identity is stable across create and redeem pages", () =>
 
   assert.match(redeem, /import \{ getDownloadDeviceId \} from "@\/lib\/fingerprint"/);
   assert.match(redeem, /const fp = getDownloadDeviceId\(\)/);
-  assert.match(redeem, /p_fingerprint: fp/);
+  assert.match(redeem, /p_fingerprint: fingerprint/);
 });
 
 test("generator fingerprint remains separate from download browser identity", () => {
