@@ -606,7 +606,7 @@ function FollowGate({
       });
       if (error)
         throw new Error("We couldn’t reach the server. Check your internet and try again.");
-      const res = data as { ok: boolean; token?: string; error?: string } | null;
+      const res = data as { ok: boolean; token?: string; error?: string; waitSeconds?: number } | null;
       if (!res || !res.ok || !res.token) {
         const map: Record<string, string> = {
           rate_limited: "You’ve tried a few times in a row. Please wait a minute, then try again.",
@@ -619,8 +619,12 @@ function FollowGate({
 
       try {
         localStorage.setItem("dg_token", Cipher.encrypt(res.token));
+        const waitSeconds = Number.isFinite(res.waitSeconds)
+          ? Math.max(0, Math.min(1800, Math.floor(res.waitSeconds!)))
+          : 120;
+        localStorage.setItem("dg_wait_until", String(Date.now() + waitSeconds * 1000));
       } catch {
-        localStorage.setItem("dg_token", res.token);
+        throw new Error("Enable site storage in your browser, then restart the download.");
       }
 
       navigate({ to: "/unlock", search: { v: version } });
@@ -632,13 +636,12 @@ function FollowGate({
 
   const handleFollow = () => {
     playClick();
+    // Open the external step synchronously to avoid popup blockers, then mint
+    // the pass immediately. The server's wait window starts at pass creation,
+    // not after the external step has already finished.
     window.open(followUrl, "_blank", "noopener,noreferrer");
-    // Short delay so the follow feels earned, then verify server-side.
     setWaiting(true);
-    setTimeout(() => {
-      setWaiting(false);
-      void goToUnlock();
-    }, 4000);
+    void goToUnlock();
   };
 
   useEffect(() => {
