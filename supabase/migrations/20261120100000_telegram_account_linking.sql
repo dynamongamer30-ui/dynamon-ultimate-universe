@@ -169,3 +169,14 @@ end;
 $$;
 revoke all on function public.unlink_bot_account_from_telegram(bigint) from public, anon, authenticated;
 grant execute on function public.unlink_bot_account_from_telegram(bigint) to service_role;
+
+
+-- Owner read-only account-linking manager. No browser-side unlink or handoff
+-- operations are granted; normal unlink remains subject to the 15-day RPC.
+grant select on public.bot_account_links, public.bot_account_link_events to authenticated;
+drop policy if exists bot_account_links_owner_read on public.bot_account_links;
+create policy bot_account_links_owner_read on public.bot_account_links
+  for select to authenticated using (public.is_owner_user(auth.uid()));
+drop policy if exists bot_account_link_events_owner_read on public.bot_account_link_events;
+create policy bot_account_link_events_owner_read on public.bot_account_link_events
+  for select to authenticated using (public.is_owner_user(auth.uid()));
