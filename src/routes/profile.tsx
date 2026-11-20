@@ -171,6 +171,20 @@ function ProfileEditor({
           </p>
         </header>
         <AccountOverview />
+        <section className="mb-5 flex flex-col gap-4 rounded-2xl border border-blue-500/30 bg-blue-500/5 p-5 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-display text-lg font-bold">Telegram connection</h2>
+            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+              Link your Google website account to @DYNAMONHELPERBOT with a short-lived, single-use verification.
+            </p>
+          </div>
+          <Link
+            to="/telegram/link"
+            className="touch-target inline-flex shrink-0 items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
+          >
+            Manage Telegram link
+          </Link>
+        </section>
         <div className="grid min-w-0 gap-5 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:items-start">
           {/* Identity card */}
           <motion.aside
