@@ -33,7 +33,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { Cipher } from "@/lib/cipher";
-import { getFingerprint } from "@/lib/fingerprint";
+import { getDownloadDeviceId } from "@/lib/fingerprint";
 import { getMod, formatCount, elementTheme, type Mod } from "@/lib/mods";
 import { breadcrumbJsonLd, pageSeoHead, softwareAppJsonLd } from "@/lib/seo";
 import { playClick } from "@/lib/sound";
@@ -594,8 +594,8 @@ function FollowGate({
   const goToUnlock = async () => {
     setStep("verifying");
     try {
-      const fingerprint = await getFingerprint();
-      if (!fingerprint) throw new Error("Could not verify this device.");
+      const fingerprint = getDownloadDeviceId();
+      if (!fingerprint) throw new Error("Enable site storage in your browser, then restart the download.");
 
       // Server-side only: mints a one-time token and stores the link
       // (still ciphertext) in secure_sessions. The link itself never
