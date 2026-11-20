@@ -629,6 +629,7 @@ function FollowGate({
 
       navigate({ to: "/unlock", search: { v: version } });
     } catch (e) {
+      setWaiting(false);
       setErrMsg(e instanceof Error ? e.message : "Something went wrong.");
       setStep("error");
     }
