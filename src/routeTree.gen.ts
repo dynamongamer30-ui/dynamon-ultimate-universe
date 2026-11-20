@@ -38,6 +38,7 @@ import { Route as LinksGetKeyRouteImport } from './routes/links.get-key'
 import { Route as ModsIndexRouteImport } from './routes/mods.index'
 import { Route as ModsSlugRouteImport } from './routes/mods.$slug'
 import { Route as ApiBotCatalogRouteImport } from './routes/api.bot.catalog'
+import { Route as ApiBotGuidesRouteImport } from './routes/api.bot.guides'
 import { Route as PhoenixPassClaimSlugRouteImport } from './routes/phoenix-pass.claim.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -185,6 +186,11 @@ const ApiBotCatalogRoute = ApiBotCatalogRouteImport.update({
   path: '/api/bot/catalog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBotGuidesRoute = ApiBotGuidesRouteImport.update({
+  id: '/api/bot/guides',
+  path: '/api/bot/guides',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PhoenixPassClaimSlugRoute = PhoenixPassClaimSlugRouteImport.update({
   id: '/phoenix-pass/claim/$slug',
   path: '/phoenix-pass/claim/$slug',
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/mods/$slug': typeof ModsSlugRoute
   '/mods/': typeof ModsIndexRoute
   '/api/bot/catalog': typeof ApiBotCatalogRoute
+  '/api/bot/guides': typeof ApiBotGuidesRoute
   '/phoenix-pass/claim/$slug': typeof PhoenixPassClaimSlugRoute
 }
 export interface FileRoutesByTo {
@@ -318,6 +325,7 @@ export interface FileRouteTypes {
     | '/mods/$slug'
     | '/mods/'
     | '/api/bot/catalog'
+    | '/api/bot/guides'
     | '/phoenix-pass/claim/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -410,6 +418,7 @@ export interface RootRouteChildren {
   DiwaliPassSlugRoute: typeof DiwaliPassSlugRoute
   LinksGetKeyRoute: typeof LinksGetKeyRoute
   ApiBotCatalogRoute: typeof ApiBotCatalogRoute
+  ApiBotGuidesRoute: typeof ApiBotGuidesRoute
   PhoenixPassClaimSlugRoute: typeof PhoenixPassClaimSlugRoute
 }
 
@@ -618,6 +627,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBotCatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bot/guides': {
+      id: '/api/bot/guides'
+      path: '/api/bot/guides'
+      fullPath: '/api/bot/guides'
+      preLoaderRoute: typeof ApiBotGuidesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/phoenix-pass/claim/$slug': {
       id: '/phoenix-pass/claim/$slug'
       path: '/phoenix-pass/claim/$slug'
@@ -677,6 +693,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiwaliPassSlugRoute: DiwaliPassSlugRoute,
   LinksGetKeyRoute: LinksGetKeyRoute,
   ApiBotCatalogRoute: ApiBotCatalogRoute,
+  ApiBotGuidesRoute: ApiBotGuidesRoute,
   PhoenixPassClaimSlugRoute: PhoenixPassClaimSlugRoute,
 }
 export const routeTree = rootRouteImport
