@@ -17,6 +17,7 @@ import { Route as AdminControlRouteImport } from './routes/admin-control'
 import { Route as AdminKeysRouteImport } from './routes/admin-keys'
 import { Route as AdminLoaderRouteImport } from './routes/admin-loader'
 import { Route as AdminNotificationsRouteImport } from './routes/admin-notifications'
+import { Route as AdminSupportRouteImport } from './routes/admin-support'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ClaimRouteImport } from './routes/claim'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -79,6 +80,11 @@ const AdminLoaderRoute = AdminLoaderRouteImport.update({
 const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   id: '/admin-notifications',
   path: '/admin-notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSupportRoute = AdminSupportRouteImport.update({
+  id: '/admin-support',
+  path: '/admin-support',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/admin-keys': typeof AdminKeysRoute
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
+  '/admin-support': typeof AdminSupportRoute
   '/auth': typeof AuthRoute
   '/claim': typeof ClaimRouteWithChildren
   '/contact': typeof ContactRoute
@@ -400,6 +407,7 @@ export interface RootRouteChildren {
   AdminKeysRoute: typeof AdminKeysRoute
   AdminLoaderRoute: typeof AdminLoaderRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
+  AdminSupportRoute: typeof AdminSupportRoute
   AuthRoute: typeof AuthRoute
   ClaimRoute: typeof ClaimRouteWithChildren
   ContactRoute: typeof ContactRoute
@@ -478,6 +486,13 @@ declare module '@tanstack/react-router' {
       path: '/admin-notifications'
       fullPath: '/admin-notifications'
       preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-support': {
+      id: '/admin-support'
+      path: '/admin-support'
+      fullPath: '/admin-support'
+      preLoaderRoute: typeof AdminSupportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
