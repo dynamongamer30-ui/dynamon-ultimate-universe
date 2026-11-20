@@ -668,6 +668,7 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsRoute: NotificationsRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
+  TelegramLinkRoute: TelegramLinkRoute,
   RewardsRoute: RewardsRoute,
   UnlockRoute: UnlockRoute,
   CampaignPrefixSlugRoute: CampaignPrefixSlugRoute,
