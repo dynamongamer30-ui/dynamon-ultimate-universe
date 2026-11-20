@@ -128,7 +128,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Compare Dynamons World builds by feature set, version, element, ratings, and community signals. Explore release notes, rewards, and guided unlock access.",
       },
       { name: "author", content: "Dynamon Universe" },
-      { name: "monetag", content: "8d6b6d9ae068f8b429b18ec83ba9b168" },
 
       { name: "theme-color", content: "#171020" },
       { name: "color-scheme", content: "dark" },
@@ -180,12 +179,6 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en" data-website-theme="royal-black" suppressHydrationWarning>
       <head>
         <HeadContent />
-        <script
-          src="https://quge5.com/88/tag.min.js"
-          data-zone="312552"
-          async
-          data-cfasync="false"
-        ></script>
       </head>
       <body>
         {children}
