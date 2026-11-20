@@ -19,7 +19,7 @@ import {
 import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
 import { Cipher } from "@/lib/cipher";
-import { getFingerprint } from "@/lib/fingerprint";
+import { getDownloadDeviceId } from "@/lib/fingerprint";
 import { playError, playSoft, playUnlock } from "@/lib/sound";
 
 type UnlockSearch = { v?: string };
@@ -346,10 +346,10 @@ function UnlockPage() {
       });
       // 1. Compute the device fingerprint that the server will verify against.
       const fingerprint = await runStage(1, async () => {
-        const fp = await getFingerprint();
+        const fp = getDownloadDeviceId();
         if (!fp)
           throw new Error(
-            "We could not recognise your device. Try turning off private/incognito mode, then start again.",
+            "We could not establish this browser's download identity. Enable site storage, then restart the download.",
           );
         return fp;
       });
