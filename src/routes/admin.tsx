@@ -258,6 +258,12 @@ function AdminPage() {
             <Shield className="h-4 w-4" /> Open Control Panel
           </Link>
           <Link
+            to="/admin-support"
+            className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/10 px-5 py-2.5 text-sm font-semibold text-blue-300 hover:bg-blue-500/20"
+          >
+            Support Inbox
+          </Link>
+          <Link
             to="/admin-notifications"
             className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold transition-colors hover:border-primary/40 hover:text-primary-ink"
           >
