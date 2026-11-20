@@ -28,6 +28,7 @@ import { Route as ModsRouteImport } from './routes/mods'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as TelegramLinkRouteImport } from './routes/telegram.link'
 import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as UnlockRouteImport } from './routes/unlock'
 import { Route as CampaignPrefixSlugRouteImport } from './routes/$campaignPrefix.$slug'
@@ -134,6 +135,11 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TelegramLinkRoute = TelegramLinkRouteImport.update({
+  id: '/telegram/link',
+  path: '/telegram/link',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RewardsRoute = RewardsRouteImport.update({
   id: '/rewards',
   path: '/rewards',
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof NotificationsRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
+  '/telegram/link': typeof TelegramLinkRoute
   '/rewards': typeof RewardsRoute
   '/unlock': typeof UnlockRoute
   '/$campaignPrefix/$slug': typeof CampaignPrefixSlugRoute
@@ -300,6 +307,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/privacy'
     | '/profile'
+    | '/telegram/link'
     | '/rewards'
     | '/unlock'
     | '/$campaignPrefix/$slug'
@@ -393,6 +401,7 @@ export interface RootRouteChildren {
   NotificationsRoute: typeof NotificationsRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
+  TelegramLinkRoute: typeof TelegramLinkRoute
   RewardsRoute: typeof RewardsRoute
   UnlockRoute: typeof UnlockRoute
   CampaignPrefixSlugRoute: typeof CampaignPrefixSlugRoute
@@ -535,6 +544,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/telegram/link': {
+      id: '/telegram/link'
+      path: '/telegram/link'
+      fullPath: '/telegram/link'
+      preLoaderRoute: typeof TelegramLinkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rewards': {
