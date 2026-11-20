@@ -246,6 +246,7 @@ export interface FileRoutesByTo {
   '/admin-keys': typeof AdminKeysRoute
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
+  '/admin-support': typeof AdminSupportRoute
   '/auth': typeof AuthRoute
   '/claim': typeof ClaimRouteWithChildren
   '/contact': typeof ContactRoute
@@ -278,6 +279,7 @@ export interface FileRoutesById {
   '/admin-keys': typeof AdminKeysRoute
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
+  '/admin-support': typeof AdminSupportRoute
   '/auth': typeof AuthRoute
   '/claim': typeof ClaimRouteWithChildren
   '/contact': typeof ContactRoute
@@ -311,6 +313,7 @@ export interface FileRouteTypes {
     | '/admin-keys'
     | '/admin-loader'
     | '/admin-notifications'
+    | '/admin-support'
     | '/auth'
     | '/claim'
     | '/contact'
@@ -486,6 +489,13 @@ declare module '@tanstack/react-router' {
       path: '/admin-notifications'
       fullPath: '/admin-notifications'
       preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-support': {
+      id: '/admin-support'
+      path: '/admin-support'
+      fullPath: '/admin-support'
+      preLoaderRoute: typeof AdminSupportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin-support': {
@@ -690,6 +700,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminKeysRoute: AdminKeysRoute,
   AdminLoaderRoute: AdminLoaderRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
+  AdminSupportRoute: AdminSupportRoute,
   AuthRoute: AuthRoute,
   ClaimRoute: ClaimRouteWithChildren,
   ContactRoute: ContactRoute,
