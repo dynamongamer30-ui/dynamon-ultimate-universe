@@ -53,7 +53,7 @@ const INITIAL_STAGES: Stage[] = [
   { id: 1, title: "Reading your download settings", Icon: Timer, status: "pending" },
   { id: 2, title: "Checking your pass", Icon: ShieldCheck, status: "pending" },
   { id: 3, title: "Confirming it's the same device", Icon: Fingerprint, status: "pending" },
-  { id: 4, title: "Confirming the wait time", Icon: Cpu, status: "pending" },
+  { id: 4, title: "Completing secure wait period", Icon: Cpu, status: "pending" },
   { id: 5, title: "Unsealing your download", Icon: Unlock, status: "pending" },
 ];
 
@@ -353,9 +353,26 @@ function UnlockPage() {
           );
         return fp;
       });
-      // 2-4. Server-side verification. A single SECURITY DEFINER RPC checks the
-      // session, fingerprint, timing window and ATOMICALLY burns the token — none
-      // of this logic or the link is exposed to the browser.
+      // Wait for the exact server-configured minimum period. The deadline is
+      // written when create_secure_session mints the token, so the server and
+      // browser measure the same interval.
+      await runStage(4, async () => {
+        let deadline = 0;
+        try {
+          deadline = Number(localStorage.getItem("dg_wait_until") || 0);
+        } catch {
+          throw new Error("Enable site storage, then restart the download.");
+        }
+        if (!Number.isFinite(deadline) || deadline <= 0) {
+          throw new Error("Your secure wait timer is missing. Please start the download again.");
+        }
+        while (Date.now() < deadline) {
+          await sleep(Math.min(1000, deadline - Date.now()));
+        }
+        localStorage.removeItem("dg_wait_until");
+      });
+      // The server independently checks the same minimum wait and atomically
+      // consumes the one-time token. Client timing is only a user-facing wait.
       let redeemed: { ok: boolean; error?: string; link?: string; encrypted?: boolean } | null =
         null;
       await runStage(2, async () => {
@@ -379,9 +396,6 @@ function UnlockPage() {
       // 3-4 are validated inside the RPC; surface them as completed UX steps.
       await runStage(3, async () => {
         /* fingerprint verified server-side */
-      });
-      await runStage(4, async () => {
-        /* timing verified server-side */
       });
       // 5. Resolve the final link. New sessions return plaintext; legacy sessions
       // return an encrypted blob we decrypt locally for backward compatibility.
