@@ -18,6 +18,7 @@ import { Route as AdminKeysRouteImport } from './routes/admin-keys'
 import { Route as AdminLoaderRouteImport } from './routes/admin-loader'
 import { Route as AdminNotificationsRouteImport } from './routes/admin-notifications'
 import { Route as AdminSupportRouteImport } from './routes/admin-support'
+import { Route as AdminAccountLinksRouteImport } from './routes/admin-account-links'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ClaimRouteImport } from './routes/claim'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -85,6 +86,11 @@ const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
 const AdminSupportRoute = AdminSupportRouteImport.update({
   id: '/admin-support',
   path: '/admin-support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAccountLinksRoute = AdminAccountLinksRouteImport.update({
+  id: '/admin-account-links',
+  path: '/admin-account-links',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
   '/admin-support': typeof AdminSupportRoute
+  '/admin-account-links': typeof AdminAccountLinksRoute
   '/auth': typeof AuthRoute
   '/claim': typeof ClaimRouteWithChildren
   '/contact': typeof ContactRoute
@@ -247,6 +254,7 @@ export interface FileRoutesByTo {
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
   '/admin-support': typeof AdminSupportRoute
+  '/admin-account-links': typeof AdminAccountLinksRoute
   '/auth': typeof AuthRoute
   '/claim': typeof ClaimRouteWithChildren
   '/contact': typeof ContactRoute
@@ -280,6 +288,7 @@ export interface FileRoutesById {
   '/admin-loader': typeof AdminLoaderRoute
   '/admin-notifications': typeof AdminNotificationsRoute
   '/admin-support': typeof AdminSupportRoute
+  '/admin-account-links': typeof AdminAccountLinksRoute
   '/auth': typeof AuthRoute
   '/claim': typeof ClaimRouteWithChildren
   '/contact': typeof ContactRoute
@@ -314,6 +323,7 @@ export interface FileRouteTypes {
     | '/admin-loader'
     | '/admin-notifications'
     | '/admin-support'
+    | '/admin-account-links'
     | '/auth'
     | '/claim'
     | '/contact'
@@ -412,6 +422,7 @@ export interface RootRouteChildren {
   AdminLoaderRoute: typeof AdminLoaderRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminSupportRoute: typeof AdminSupportRoute
+  AdminAccountLinksRoute: typeof AdminAccountLinksRoute
   AuthRoute: typeof AuthRoute
   ClaimRoute: typeof ClaimRouteWithChildren
   ContactRoute: typeof ContactRoute
@@ -497,6 +508,20 @@ declare module '@tanstack/react-router' {
       path: '/admin-support'
       fullPath: '/admin-support'
       preLoaderRoute: typeof AdminSupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-account-links': {
+      id: '/admin-account-links'
+      path: '/admin-account-links'
+      fullPath: '/admin-account-links'
+      preLoaderRoute: typeof AdminAccountLinksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-account-links': {
+      id: '/admin-account-links'
+      path: '/admin-account-links'
+      fullPath: '/admin-account-links'
+      preLoaderRoute: typeof AdminAccountLinksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -695,6 +720,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLoaderRoute: AdminLoaderRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminSupportRoute: AdminSupportRoute,
+  AdminAccountLinksRoute: AdminAccountLinksRoute,
   AuthRoute: AuthRoute,
   ClaimRoute: ClaimRouteWithChildren,
   ContactRoute: ContactRoute,
