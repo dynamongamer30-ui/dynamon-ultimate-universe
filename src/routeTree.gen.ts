@@ -347,6 +347,7 @@ export interface FileRouteTypes {
     | '/admin-keys'
     | '/admin-loader'
     | '/admin-notifications'
+    | '/admin-support'
     | '/auth'
     | '/claim'
     | '/contact'
