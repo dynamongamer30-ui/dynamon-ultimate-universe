@@ -133,15 +133,15 @@ export function DexControls() {
   return (
     <div className="space-y-6">
       <DexThemes />
-      <section className="rounded-2xl border border-[#d4af37]/30 bg-[#0a0a0f] p-5 text-[#f5f0e1] shadow-[0_0_40px_rgba(124,58,237,0.15)]">
-        <h2 className="text-xl font-bold text-[#d4af37]">
+      <section className="rounded-2xl border border-border bg-card/60 p-5">
+        <h2 className="text-xl font-bold">
           Royal Black feature access ({CONTROLS.length} controls)
         </h2>
-        <p className="my-3 text-sm text-[#b8b2c8]">
+        <p className="my-3 text-sm text-muted-foreground">
           Switch on = locked. Changes save automatically and apply on the next game launch.
           Everything starts unlocked.
         </p>
-        <p className="mb-4 text-xs text-[#8a84a0]">
+        <p className="mb-4 text-xs text-muted-foreground">
           Shop compatibility is always enabled in the current DEX. Retired stat and defense
           overrides are not exposed.
         </p>
@@ -151,7 +151,7 @@ export function DexControls() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search features"
-            className="min-h-11 flex-1 rounded-xl border border-[#7c3aed]/40 bg-black px-3 text-sm outline-none focus:border-[#d4af37]"
+            className="min-h-11 flex-1 rounded-xl border border-border bg-card px-3 text-sm outline-none focus:border-primary"
           />
           <Button type="button" variant="outline" onClick={() => setAll(true)}>
             Lock all
@@ -159,7 +159,7 @@ export function DexControls() {
           <Button type="button" variant="outline" onClick={() => setAll(false)}>
             Unlock all
           </Button>
-          <span className="text-xs text-[#d4af37]">{lockedCount} locked</span>
+          <span className="text-xs font-semibold text-primary-ink">{lockedCount} locked</span>
         </div>
         <div className="space-y-5">
           {GROUPS.map((group) => {
@@ -169,14 +169,14 @@ export function DexControls() {
             if (!shown.length) return null;
             return (
               <div key={group.title}>
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#a78bfa]">
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                   {group.title}
                 </h3>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {shown.map(([key, label]) => (
                     <label
                       key={key}
-                      className={`flex min-h-11 items-center gap-3 rounded-xl border px-3 ${locks[key] === true ? "border-rose-500/50 bg-rose-950/30" : "border-[#7c3aed]/25 bg-black/60"}`}
+                      className={`flex min-h-11 items-center gap-3 rounded-xl border px-3 ${locks[key] === true ? "border-destructive/50 bg-destructive/10" : "border-border bg-card"}`}
                     >
                       <input
                         type="checkbox"
@@ -184,7 +184,9 @@ export function DexControls() {
                         onChange={(e) => setLocks({ ...locks, [key]: e.target.checked })}
                       />
                       <span className="flex-1 text-sm">{label}</span>
-                      <span className="text-xs">{locks[key] === true ? "Locked" : "Unlocked"}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {locks[key] === true ? "Locked" : "Unlocked"}
+                      </span>
                     </label>
                   ))}
                 </div>
