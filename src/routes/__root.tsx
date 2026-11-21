@@ -156,13 +156,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         children: `window.addEventListener("beforeinstallprompt",function(event){event.preventDefault()});`,
       },
-      {
-        src: "https://quge5.com/88/tag.min.js",
-        async: true,
-        // @ts-expect-error Monetag requires data attributes on its script tag.
-        "data-zone": "313374",
-        "data-cfasync": "false",
-      },
       organizationJsonLd(),
       websiteJsonLd(),
       {
