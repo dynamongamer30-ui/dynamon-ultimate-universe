@@ -71,7 +71,15 @@ function AccountPreferences({ user }: { user: User }) {
     const controller = new AbortController();
     readController.current = controller;
     try {
-      if (!manual && sessionStorage.getItem(`notif-skipped:${user.id}`)) return;
+      // Skip the automatic lookup when the user was already asked (remembered on this
+      // device) or dismissed the prompt this session. Opening the preferences manually
+      // still reads fresh data from the server.
+      if (
+        !manual &&
+        (sessionStorage.getItem(`notif-skipped:${user.id}`) ||
+          localStorage.getItem(`notif-asked:${user.id}`))
+      )
+        return;
     } catch {
       /* Optional storage. */
     }
@@ -94,6 +102,13 @@ function AccountPreferences({ user }: { user: User }) {
       setEmail(data?.email_opt_in ?? true);
       setPush(data?.push_opt_in ?? true);
       setLoadState("ready");
+      if (data?.asked_at) {
+        try {
+          localStorage.setItem(`notif-asked:${user.id}`, "1");
+        } catch {
+          /* Optional storage. */
+        }
+      }
       if (!manual && !data?.asked_at) {
         const skipKey = `notif-skipped:${user.id}`;
         let skipped = false;
@@ -178,6 +193,11 @@ function AccountPreferences({ user }: { user: User }) {
       if (prefsError || !data?.some((row) => row.user_id === user.id))
         throw prefsError ?? new Error("Preferences not confirmed");
       if (!active.current) return;
+      try {
+        localStorage.setItem(`notif-asked:${user.id}`, "1");
+      } catch {
+        /* Optional storage. */
+      }
       playSuccess();
       toast.success("Preferences saved");
       setOpen(false);
