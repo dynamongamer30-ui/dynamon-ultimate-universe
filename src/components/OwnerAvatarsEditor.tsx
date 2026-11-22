@@ -257,7 +257,10 @@ export function OwnerAvatarsEditor() {
       };
       setUploaded(draft);
       const { data, error } = await waitForUpload(
-        supabase.storage.from("avatars").upload(path, file, { upsert: false }),
+        supabase.storage
+          .from("avatars")
+          // Every avatar gets a unique name and is never overwritten, so browsers can keep it for a year.
+          .upload(path, file, { upsert: false, cacheControl: "31536000" }),
         signal,
       );
       if (signal.aborted)

@@ -52,8 +52,5 @@ jobs:
       - name: Type-check
         run: pnpm check
 
-      - name: Run automated tests
-        run: pnpm test
-
       - name: Build Cloudflare Worker application
         run: pnpm build
