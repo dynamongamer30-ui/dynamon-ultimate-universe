@@ -153,13 +153,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
     ],
     scripts: [
-      // Monetag ad tag (zone 313516)
-      {
-        src: "https://quge5.com/88/tag.min.js",
-        async: true,
-        "data-zone": "313516",
-        "data-cfasync": "false",
-      },
       {
         children: `window.addEventListener("beforeinstallprompt",function(event){event.preventDefault()});`,
       },
