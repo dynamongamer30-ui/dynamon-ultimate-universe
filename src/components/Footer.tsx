@@ -79,6 +79,16 @@ export function Footer() {
                   Sign in
                 </Link>
               </li>
+              <li>
+                <a
+                  href="https://ardance.org/4/97d23481fddba82b5b17b7053df015e7"
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="touch-target inline-flex items-center transition-colors hover:text-primary-ink"
+                >
+                  Support us
+                </a>
+              </li>
             </ul>
           </div>
 
