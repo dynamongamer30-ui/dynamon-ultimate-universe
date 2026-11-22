@@ -153,6 +153,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
     ],
     scripts: [
+      // Adsterra Social Bar (site-wide)
+      {
+        src: "https://bellnewyork.org/14/adf5b1ee6b832f9be47b5e77eb5bad0d",
+        async: true,
+        "data-cfasync": "false",
+      },
+      // Adsterra Popunder (site-wide)
+      {
+        src: "https://accountut.com/1/0fe92fbb2314bcf356364608867b7da9",
+        async: true,
+        "data-cfasync": "false",
+      },
       {
         children: `window.addEventListener("beforeinstallprompt",function(event){event.preventDefault()});`,
       },
