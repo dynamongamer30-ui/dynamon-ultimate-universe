@@ -584,6 +584,15 @@ bot.command("post_schedules", async (ctx) => {
   if(!data?.length) return ctx.reply("No scheduled posts.");
   await ctx.reply(data.map(x=>`${x.id} | ${x.status}\nPost: ${x.post_id}\n${new Date(x.scheduled_at).toLocaleString()}${x.last_error?"\n"+x.last_error:""}`).join("\n\n"));
 });
+bot.command("post_schedule_retry", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\s+/)[1];
+  if(!id) return ctx.reply("Usage: /post_schedule_retry <schedule-uuid>");
+  const {data,error}=await db.from("vextro_scheduled_posts").update({status:"scheduled",scheduled_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()})
+    .eq("id",id).eq("status","failed").select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Failed schedule not found.");
+  await ctx.reply("Failed schedule queued for retry. The publisher checks the post state before sending to avoid duplicate sends where possible.");
+});
 bot.command("post_schedule_cancel", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id=ctx.message.text.split(/\s+/)[1];
@@ -1025,6 +1034,16 @@ bot.on("text", async (ctx, next) => {
 });
 
 bot.catch((error, ctx) => { log.error({ err: error, updateId: ctx.update.update_id }, "Telegram update failed"); });
+process.on("unhandledRejection", (reason) => {
+  log.fatal({ err: reason }, "Unhandled promise rejection; restarting bot process");
+  void sendOwnerNotice("VEXTRO BOT encountered an unhandled error and is restarting. Check host logs after restart.");
+  process.exit(1);
+});
+process.on("uncaughtException", (error) => {
+  log.fatal({ err: error }, "Uncaught exception; restarting bot process");
+  void sendOwnerNotice("VEXTRO BOT encountered a fatal exception and is restarting. Check host logs after restart.");
+  process.exit(1);
+});
 registerGuideAdmin(bot, ownerOnly, writeAudit);
 registerUpdateCommands(bot, ownerOnly, config.OWNER_TELEGRAM_ID);
 registerOwnerMenu(bot, ownerOnly);
