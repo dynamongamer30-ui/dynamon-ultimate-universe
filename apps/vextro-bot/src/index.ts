@@ -890,6 +890,26 @@ bot.command("broadcast_test", async (ctx) => {
     await ctx.reply("Test message delivered to Owner chat only.");
   } catch(sendError) { log.error({err:sendError},"Broadcast test failed"); await ctx.reply("Test delivery failed."); }
 });
+bot.command("broadcast_reconcile", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/broadcast_reconcile(?:@\w+)?\s+([0-9a-f-]{36})\s+(\d+)\s+(sent|retry)$/i);
+  if(!m) return ctx.reply("Usage: /broadcast_reconcile <broadcast-uuid> <telegram-user-id> <sent|retry>. Check the user's chat before choosing.");
+  const jobId=m[1]!,telegramId=Number(m[2]),action=m[3]!.toLowerCase();
+  const {data:job,error:jobError}=await db.from("vextro_broadcast_jobs").select("status").eq("id",jobId).maybeSingle();
+  if(jobError||!job||!["running","failed","paused"].includes(job.status)) return ctx.reply("Broadcast must be running, failed or paused to reconcile.");
+  const {data:recipient,error:recipientError}=await db.from("vextro_broadcast_recipients").select("id").eq("job_id",jobId).eq("telegram_id",telegramId).eq("status","uncertain").maybeSingle();
+  if(recipientError||!recipient) return ctx.reply("No uncertain delivery exists for that user and broadcast.");
+  if(action==="sent"){
+    const {error}=await db.from("vextro_broadcast_recipients").update({status:"sent",sent_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()}).eq("id",recipient.id).eq("status","uncertain");
+    if(error) return ctx.reply("Delivery could not be marked as sent.");
+  }else{
+    const {error}=await db.from("vextro_broadcast_recipients").update({status:"pending",attempts:0,next_attempt_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()}).eq("id",recipient.id).eq("status","uncertain");
+    if(error) return ctx.reply("Delivery could not be queued for retry.");
+  }
+  if(job.status==="failed") await db.from("vextro_broadcast_jobs").update({status:"running",completed_at:null,updated_at:new Date().toISOString()}).eq("id",jobId).eq("status","failed");
+  await writeAudit("broadcast.delivery_reconciled",telegramId,jobId+" -> "+action);
+  await ctx.reply(action==="sent"?"Recipient marked delivered; no duplicate message was sent.":"Recipient queued for retry. Retry is now safe only because you confirmed the user did not receive the previous attempt.");
+});
 bot.command("broadcast_retry", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id=ctx.message.text.split(/\s+/)[1];
@@ -935,12 +955,15 @@ bot.command("broadcast_status", async (ctx) => {
     db.from("vextro_broadcast_recipients").select("status",{count:"exact"}).eq("job_id",id)
   ]);
   if(error||countError||!job) return ctx.reply("Broadcast status unavailable.");
-  const [{count:sent},{count:failed},{count:pending}]=await Promise.all([
+  const [{count:sent},{count:failed},{count:pending},{count:uncertain}]=await Promise.all([
     db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",id).eq("status","sent"),
     db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",id).eq("status","failed"),
-    db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",id).in("status",["pending","sending"])
+    db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",id).in("status",["pending","sending"]),
+    db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",id).eq("status","uncertain")
   ]);
-  await ctx.reply(`Broadcast ${id}\nStatus: ${job.status}\nTotal: ${count??0}\nSent: ${sent??0}\nFailed/retrying: ${failed??0}\nPending: ${pending??0}\nScheduled: ${job.scheduled_at?formatOwnerDateTime(job.scheduled_at,config.OWNER_TIMEZONE):"immediate"}`);
+  await ctx.reply("Broadcast "+id+"\nStatus: "+job.status+"\nTotal: "+(count??0)+"\nSent: "+(sent??0)+"\nFailed/retrying: "+(failed??0)+"\nDelivery uncertain: "+(uncertain??0)+"\nPending/sending: "+(pending??0)+
+    "\nScheduled: "+(job.scheduled_at?formatOwnerDateTime(job.scheduled_at,config.OWNER_TIMEZONE):"immediate")+
+    ((uncertain??0)>0?"\nUse /broadcast_reconcile "+id+" <telegram-user-id> sent|retry after checking each chat.":""));
 });
 bot.command("post_schedule", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -1666,7 +1689,7 @@ bot.command("admin_help", async (ctx) => {
     "SUPPORT\n/tickets <page> | /ticket <uuid> | /ticket_history <uuid> | /ticket_media <uuid> <type> <file-id> [caption] | /reply <uuid> <message> | /ticket_priority <uuid> <priority> | /ticket_category <uuid> <category> | /ticket_note <uuid> <note> | /ticket_search <term> | /reopen_ticket <uuid> | /close_ticket <uuid>",
     "CONTENT\n/posts <page> | /post_draft <title> | /post_edit <uuid> <title+body> | /post_media <uuid> <type> <file-id> | /post_format <uuid> <plain|html|markdownv2> | /post_buttons <uuid> <label|url lines> | /post_preview <uuid> | /post_publish <uuid> | /post_reconcile <uuid> published <message-id> OR draft | /post_schedule <uuid> <ISO time> | /post_schedules | /post_schedule_cancel <uuid> | /post_schedule_retry <uuid>",
     "GUIDES\n/guide_list | /guide_create <id> <category> <title> | /guide_edit <id> <language> <title|steps> | /guide_preview <id> [language] | /guide_media <id> <type> <file-id> | /guide_buttons <id> <label|url> | /guide_publish <id> | /guide_unpublish <id> | /guide_delete <id> | /guide_keyword <id> <language> <term> | /guide_review | /guide_review_approve | /guide_review_reject | /welcome_set | /welcome_preview | /welcome_reset",
-    "BROADCASTS\n/broadcasts [status] [page] | /broadcast_draft <message> | /broadcast_edit <uuid> <message> | /broadcast_format <uuid> <plain|html|markdownv2> | /broadcast_media <uuid> <type> <file-id> | /broadcast_clear_media <uuid> | /broadcast_buttons <uuid> <label|https-url lines> | /broadcast_clear_buttons <uuid> | /broadcast_translation <uuid> <en|hi|vi> <message> | /broadcast_clear_translation <uuid> <lang> | /broadcast_preview <uuid> [language] | /broadcast_test <uuid> [language] | /broadcast_schedule <uuid> <ISO time> | /broadcast_confirm <uuid> | /broadcast_pause | /broadcast_resume | /broadcast_cancel | /broadcast_retry | /broadcast_status",
+    "BROADCASTS\n/broadcasts [status] [page] | /broadcast_draft <message> | /broadcast_edit <uuid> <message> | /broadcast_format <uuid> <plain|html|markdownv2> | /broadcast_media <uuid> <type> <file-id> | /broadcast_clear_media <uuid> | /broadcast_buttons <uuid> <label|https-url lines> | /broadcast_clear_buttons <uuid> | /broadcast_translation <uuid> <en|hi|vi> <message> | /broadcast_clear_translation <uuid> <lang> | /broadcast_preview <uuid> [language] | /broadcast_test <uuid> [language] | /broadcast_schedule <uuid> <ISO time> | /broadcast_confirm <uuid> | /broadcast_pause | /broadcast_resume | /broadcast_cancel | /broadcast_retry | /broadcast_reconcile <uuid> <telegram-id> <sent|retry> | /broadcast_status",
     "MODERATION\n/moderation_rules | /moderation_add | /moderation_edit | /moderation_remove | /allow_hosts | /allow_host | /edit_allow_host | /remove_allow_host | /warn_user | /mute_user | /unmute_user | /group_ban | /group_unban | /moderation_stats",
     "OPERATIONS\n/admin_menu | /analytics | /bot_status | /settings | /logs | /log_search | /audit_recent | /audit_search | /health | /membership_check | /membership_diagnose | /membership_set_channel | /membership_set_group | /membership_reset | /maintenance_on | /maintenance_off | /maintenance_status | /backup_create | /backup_list | /backup_verify | /backup_restore_confirm | /backup_status | /backup_runs | /update_check | /update_approve | /update_install | /update_rollback | /update_status"
   ];
