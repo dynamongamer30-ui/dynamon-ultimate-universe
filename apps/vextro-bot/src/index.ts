@@ -1217,6 +1217,24 @@ bot.command("warn_user", async (ctx) => {
   try { await bot.telegram.sendMessage(id,"You received a moderation warning in the VEXTRO group: "+m[2]!.slice(0,500)); } catch {}
   await ctx.reply("Moderation warning recorded.");
 });
+bot.command("moderation_edit", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/moderation_edit(?:@\w+)?\s+(\d+)\s+([\s\S]+)$/i);
+  if(!m) return ctx.reply("Usage: /moderation_edit <rule-id> <new phrase or hostname>");
+  const value=m[2]!.trim().toLowerCase();
+  if(!value||value.length>253) return ctx.reply("Rule value must be 1–253 characters.");
+  const {data,error}=await db.from("dgbot_moderation_rules").update({value,updated_at:new Date().toISOString()}).eq("id",Number(m[1])).is("deleted_at",null).select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Active moderation rule not found or update failed.");
+  await writeAudit("moderation.rule_updated",null,"Rule "+m[1]+" updated"); await ctx.reply("Moderation rule updated.");
+});
+bot.command("edit_allow_host", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/edit_allow_host(?:@\w+)?\s+(\d+)\s+([a-z0-9.-]{1,253})(?:\s+(subdomains))?$/i);
+  if(!m||m[2]!.includes("..")||m[2]!.startsWith(".")||m[2]!.endsWith(".")) return ctx.reply("Usage: /edit_allow_host <id> <hostname> [subdomains]");
+  const {data,error}=await db.from("dgbot_allowlist").update({host:m[2]!.toLowerCase(),include_subdomains:Boolean(m[3])}).eq("id",Number(m[1])).is("deleted_at",null).select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Allowed host not found or update failed.");
+  await writeAudit("moderation.allow_host_updated",null,String(m[1])); await ctx.reply("Allowed host updated.");
+});
 bot.command("moderation_remove", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id = Number(ctx.message.text.split(/\s+/)[1]);
@@ -1257,7 +1275,7 @@ bot.command("admin_help", async (ctx) => {
     "CONTENT\n/post_draft <title> | /post_edit <uuid> <title+body> | /post_media <uuid> <type> <file-id> | /post_buttons <uuid> <label|url lines> | /post_preview <uuid> | /post_publish <uuid> | /post_schedule <uuid> <ISO time> | /post_schedules | /post_schedule_cancel <uuid> | /post_schedule_retry <uuid>",
     "GUIDES\n/guide_create <id> <category> <title> | /guide_edit <id> <language> <title|steps> | /guide_media | /guide_buttons | /guide_publish | /guide_delete | /guide_keyword | /guide_review | /guide_review_approve | /guide_review_reject | /welcome_set | /welcome_preview | /welcome_reset",
     "BROADCASTS\n/broadcasts | /broadcast_draft | /broadcast_edit | /broadcast_delete | /broadcast_preview | /broadcast_test | /broadcast_schedule | /broadcast_confirm | /broadcast_pause | /broadcast_resume | /broadcast_cancel | /broadcast_retry | /broadcast_status",
-    "MODERATION\n/moderation_rules | /moderation_add | /moderation_remove | /allow_hosts | /allow_host | /remove_allow_host | /warn_user | /mute_user | /unmute_user | /group_ban | /group_unban | /moderation_stats",
+    "MODERATION\n/moderation_rules | /moderation_add | /moderation_edit | /moderation_remove | /allow_hosts | /allow_host | /remove_allow_host | /warn_user | /mute_user | /unmute_user | /group_ban | /group_unban | /moderation_stats",
     "OPERATIONS\n/admin_menu | /analytics | /bot_status | /settings | /audit_recent | /audit_search | /health | /membership_check | /maintenance_on | /maintenance_off | /maintenance_status | /backup_create | /backup_list | /backup_verify | /backup_restore_confirm | /backup_status | /backup_runs | /update_check | /update_approve | /update_install | /update_rollback | /update_status"
   ];
   for(const section of sections) await ctx.reply(section);
@@ -1269,7 +1287,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /ticket_history, /ticket_note, /ticket_priority, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_format, /post_buttons, /post_preview, /post_edit, /post_publish, /post_reconcile, /post_remove, /broadcasts, /broadcast_draft, /broadcast_edit, /broadcast_delete, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /ticket_history, /ticket_note, /ticket_priority, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_format, /post_buttons, /post_preview, /post_edit, /post_publish, /post_reconcile, /post_remove, /broadcasts, /broadcast_draft, /broadcast_edit, /broadcast_delete, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_edit, /moderation_remove, /allow_hosts, /allow_host, /edit_allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
