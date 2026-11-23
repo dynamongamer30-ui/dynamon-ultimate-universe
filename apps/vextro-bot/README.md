@@ -23,7 +23,7 @@ Optional settings include `OWNER_TIMEZONE` (defaults to `Asia/Kolkata`; all sche
 - Onboarding, required channel+group membership verification, membership diagnostics, English/Hindi Roman/Vietnamese language selection and user menu.
 - Website account linking using a 256-bit one-time token; only SHA-256 is stored and the existing website `approve_bot_link(text)` RPC remains authoritative.
 - User profiles with Telegram name/username and throttled last-seen tracking, access restrictions, language administration and active-user analytics.
-- Support ticket creation, category, conversation history, user text/media attachments, Owner text/media replies, internal notes, priority, search, close and reopen.
+- Support ticket creation, category, conversation history, user photo/video/document/audio/voice attachments, Owner text/media replies, internal notes, priority, search, close and reopen.
 - Multilingual guide editor, media/buttons, publish/archive, keyword and review-queue workflows; published guides are available to users.
 - Channel post drafts, editing, previews, photo/video/document/animation attachments, HTTPS buttons, publishing and Owner-timezone scheduled publishing.
 - Persistent broadcasts with membership-verified audience snapshot, Owner confirmation, preview/test, Owner-timezone scheduling, pause/resume/cancel, delivery queue, retry-after handling, retry and results.
@@ -39,6 +39,6 @@ Optional settings include `OWNER_TIMEZONE` (defaults to `Asia/Kolkata`; all sche
 - Backup encryption is disabled until `BACKUP_PASSPHRASE` is configured. Offsite copies require a custom HTTPS endpoint and token; it must accept the encrypted bytes and return JSON containing the matching `sha256`.
 - Release checks and Owner approvals work independently. Automatic installation/rollback requires a custom hosting webhook implementing `action: deploy` and `action: rollback`. No provider-specific webhook is wired by default; do not assume deployment works until the host endpoint is configured and tested.
 - Telegram moderation restrictions require the bot to be an administrator with the relevant group permissions. If Telegram rejects a moderation action, the failure is logged and shown to the Owner.
-- Account unlink is intentionally not implemented because no verified unlink RPC was found; direct table mutation would bypass the live 15-day unlink eligibility rule. Backup restore also skips website-owned account-link and guide tables to preserve the website's authority and unlink eligibility.
+- Account unlink is intentionally not implemented because no verified unlink RPC was found; `/account`, `/unlink_status` and `/unlink` show the 15-day eligibility date but do not mutate website-owned link rows. Backup restore also skips website-owned account-link and guide tables to preserve the website's authority and unlink eligibility.
 - The legacy backup writer previously recorded repeated failures. The VEXTRO encrypted backup engine uses its own artifact table and private storage bucket; configure the passphrase before relying on it.
 - CI verifies TypeScript, Vitest and the production build. CI is not proof of live Telegram token, membership, hosting or webhook acceptance.
