@@ -7,6 +7,7 @@ import { createOneTimeLinkToken } from "./security.js";
 const log = pino({ level: config.LOG_LEVEL, redact: ["*.token", "*.password", "*.secret", "*.authorization"] });
 const bot = new Telegraf(config.BOT_TOKEN);
 const textLimit = 4000;
+const publishingPosts = new Set<string>();
 type Lang = "en" | "hi" | "vi";
 
 const messages: Record<Lang, { welcome: string; member: string; choose: string; unlinked: string; linked: string; linkCreated: string; help: string; support: string; ticketCreated: string; error: string }> = {
@@ -204,6 +205,88 @@ bot.command("close_ticket", async (ctx) => {
   if (error || !ticket) return ctx.reply("Ticket not found or could not be closed.");
   try { await bot.telegram.sendMessage(Number(ticket.telegram_id), `Your support ticket ${id} has been closed. You can open a new ticket anytime with /support.`); } catch (sendError) { log.warn({ err: sendError, ticketId: id }, "Ticket close notification failed"); }
   await ctx.reply("Ticket closed.");
+});
+
+bot.command("posts", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const { data, error } = await db.from("dgbot_posts").select("id,title,state,updated_at").is("deleted_at", null).neq("state", "removed").order("updated_at", { ascending: false }).limit(20);
+  if (error) { log.error({ err: error }, "Post list failed"); return ctx.reply("Post list unavailable."); }
+  if (!data?.length) return ctx.reply("No posts yet. Create one with /post_draft Title\\nBody.");
+  await ctx.reply(data.map((p) => `[${p.state}] ${p.id}\\n${p.title}`).join("\\n\\n"));
+});
+bot.command("post_draft", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const payload = ctx.message.text.replace(/^\\/post_draft(?:@\\w+)?\\s*/i, "").trim();
+  const split = payload.indexOf("\\n");
+  const title = (split < 0 ? payload : payload.slice(0, split)).trim();
+  const body = (split < 0 ? "" : payload.slice(split + 1)).trim();
+  if (title.length < 1 || title.length > 120 || body.length > 4096 || title.length + body.length + (body ? 2 : 0) > 4096) return ctx.reply("Usage: /post_draft Title\\nBody. Title: 1–120 characters; total post: up to 4096 characters.");
+  const { data, error } = await db.from("dgbot_posts").insert({ title, body, state: "draft" }).select("id").single();
+  if (error || !data) { log.error({ err: error }, "Post draft creation failed"); return ctx.reply("Could not create the draft."); }
+  await ctx.reply(`Draft created: ${data.id}\\nPreview: /post_preview ${data.id}\\nEdit: /post_edit ${data.id} Title\\nBody`);
+});
+bot.command("post_preview", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id = ctx.message.text.split(/\\s+/)[1];
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /post_preview <post-uuid>");
+  const { data, error } = await db.from("dgbot_posts").select("title,body,state").eq("id", id).is("deleted_at", null).maybeSingle();
+  if (error || !data) return ctx.reply("Post not found.");
+  await ctx.reply(`[${data.state}] ${data.title}\\n\\n${data.body || "(No body)"}`.slice(0, 4096));
+});
+bot.command("post_edit", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const match = ctx.message.text.match(/^\\/post_edit(?:@\\w+)?\\s+([0-9a-f-]{36})\\s+([\\s\\S]+)$/i);
+  if (!match) return ctx.reply("Usage: /post_edit <post-uuid> Title\\nBody");
+  const id = match[1]!;
+  const payload = match[2]!;
+  const split = payload.indexOf("\\n");
+  const title = (split < 0 ? payload : payload.slice(0, split)).trim();
+  const body = (split < 0 ? "" : payload.slice(split + 1)).trim();
+  if (title.length < 1 || title.length > 120 || body.length > 4096 || title.length + body.length + (body ? 2 : 0) > 4096) return ctx.reply("Title must be 1–120 characters and the full post must fit Telegram's 4096-character limit.");
+  const { data, error } = await db.from("dgbot_posts").update({ title, body, updated_at: new Date().toISOString() }).eq("id", id).eq("state", "draft").is("deleted_at", null).select("id").maybeSingle();
+  if (error || !data) return ctx.reply("Draft not found or no longer editable.");
+  await ctx.reply(`Draft updated: ${id}`);
+});
+bot.command("post_publish", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const channelId = config.PUBLISH_CHANNEL_ID;
+  if (!channelId) return ctx.reply("Publishing is disabled. Set PUBLISH_CHANNEL_ID in the host environment first.");
+  const id = ctx.message.text.split(/\\s+/)[1];
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /post_publish <post-uuid>");
+  if (publishingPosts.has(id)) return ctx.reply("This post is already being published.");
+  publishingPosts.add(id);
+  try {
+    const { data, error } = await db.from("dgbot_posts").select("title,body,state,channel_message_id").eq("id", id).is("deleted_at", null).maybeSingle();
+    if (error || !data) return ctx.reply("Post not found.");
+    if (data.state === "published" && data.channel_message_id) return ctx.reply(`Already published. Telegram message ID: ${data.channel_message_id}`);
+    if (data.state !== "draft") return ctx.reply("Only draft posts can be published.");
+    const message = await bot.telegram.sendMessage(channelId, data.body ? `${data.title}\\n\\n${data.body}` : data.title);
+    const { error: updateError } = await db.from("dgbot_posts").update({ state: "published", channel_message_id: message.message_id, updated_at: new Date().toISOString() }).eq("id", id).eq("state", "draft");
+    if (updateError) {
+      log.error({ err: updateError, postId: id, telegramMessageId: message.message_id }, "Published post could not be recorded");
+      return ctx.reply(`Telegram accepted the post (message ${message.message_id}), but the database update failed. Do not retry until you verify the channel to avoid duplicate posting.`);
+    }
+    await ctx.reply(`Published to ${channelId}. Telegram message ID: ${message.message_id}`);
+  } catch (error) {
+    log.error({ err: error, postId: id }, "Post publishing failed");
+    await ctx.reply("Publishing failed. Check channel permissions and try again.");
+  } finally { publishingPosts.delete(id); }
+});
+bot.command("post_remove", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id = ctx.message.text.split(/\\s+/)[1];
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /post_remove <post-uuid>");
+  const { data, error } = await db.from("dgbot_posts").select("state,channel_message_id").eq("id", id).is("deleted_at", null).maybeSingle();
+  if (error || !data) return ctx.reply("Post not found.");
+  if (data.state === "published") {
+    const channelId = config.PUBLISH_CHANNEL_ID;
+    if (!channelId || !data.channel_message_id) return ctx.reply("Cannot remove the Telegram post: publishing channel or message ID is missing.");
+    try { await bot.telegram.deleteMessage(channelId, Number(data.channel_message_id)); }
+    catch (sendError) { log.error({ err: sendError, postId: id }, "Published Telegram post removal failed"); return ctx.reply("Telegram could not remove the published post. Database state was not changed."); }
+  }
+  const { error: updateError } = await db.from("dgbot_posts").update({ state: "removed", deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
+  if (updateError) { log.error({ err: updateError, postId: id }, "Post removal persistence failed"); return ctx.reply("Post was removed from Telegram if published, but the database update failed. Verify before retrying."); }
+  await ctx.reply("Post marked as removed.");
 });
 
 bot.command("guides", async (ctx) => {
