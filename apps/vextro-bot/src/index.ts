@@ -928,6 +928,53 @@ bot.command("moderation_add", async (ctx) => {
   if (error || !data) { log.error({ err: error }, "Moderation rule creation failed"); return ctx.reply("Could not add the rule."); }
   await ctx.reply(`Moderation rule added: #${data.id}. Note: rule enforcement in incoming group messages is not enabled in this runtime yet.`);
 });
+bot.command("allow_hosts", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const {data,error}=await db.from("dgbot_allowlist").select("id,host,include_subdomains,account").is("deleted_at",null).order("created_at",{ascending:false}).limit(50);
+  if(error) return ctx.reply("Allowlist unavailable.");
+  await ctx.reply(data?.length?data.map(x=>"#"+x.id+" "+x.host+(x.include_subdomains?" (+ subdomains)":"")+(x.account?" | "+x.account:"")).join("\n"):"No allowed hosts.");
+});
+bot.command("allow_host", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/allow_host(?:@\w+)?\s+([a-z0-9.-]{1,253})(?:\s+(subdomains))?$/i);
+  if(!m||m[1]!.includes("..")||m[1]!.startsWith(".")||m[1]!.endsWith(".")) return ctx.reply("Usage: /allow_host <hostname> [subdomains]");
+  const {data,error}=await db.from("dgbot_allowlist").insert({host:m[1]!.toLowerCase(),include_subdomains:Boolean(m[2])}).select("id").single();
+  if(error||!data) return ctx.reply("Could not add allowed host.");
+  await writeAudit("moderation.allow_host",null,m[1]!); await ctx.reply("Allowed host added: #"+data.id);
+});
+bot.command("remove_allow_host", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=Number(ctx.message.text.split(/\s+/)[1]);
+  if(!Number.isSafeInteger(id)||id<1) return ctx.reply("Usage: /remove_allow_host <id>");
+  const {data,error}=await db.from("dgbot_allowlist").update({deleted_at:new Date().toISOString()}).eq("id",id).is("deleted_at",null).select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Active allowed host not found.");
+  await writeAudit("moderation.allow_host_removed",null,String(id)); await ctx.reply("Allowed host removed.");
+});
+bot.command("group_ban", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/group_ban(?:@\w+)?\s+(\d+)\s+([\s\S]+)$/i);
+  if(!m) return ctx.reply("Usage: /group_ban <telegram-id> <reason>");
+  const id=Number(m[1]); if(!Number.isSafeInteger(id)||id<1||id===config.OWNER_TELEGRAM_ID) return ctx.reply("Invalid target.");
+  try{await ctx.telegram.banChatMember(config.REQUIRED_GROUP_ID,id);await writeAudit("moderation.group_ban",id,m[2]!.slice(0,200));await ctx.reply("User banned from required group.");}
+  catch(error){log.error({err:error,targetId:id},"Group ban failed");await ctx.reply("Group ban failed. Verify bot admin permissions.");}
+});
+bot.command("group_unban", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=Number(ctx.message.text.split(/\s+/)[1]);
+  if(!Number.isSafeInteger(id)||id<1) return ctx.reply("Usage: /group_unban <telegram-id>");
+  try{await ctx.telegram.unbanChatMember(config.REQUIRED_GROUP_ID,id,{only_if_banned:true});await writeAudit("moderation.group_unban",id,"Owner lifted group ban");await ctx.reply("User unbanned from required group.");}
+  catch(error){log.error({err:error,targetId:id},"Group unban failed");await ctx.reply("Group unban failed. Verify bot admin permissions.");}
+});
+bot.command("mute_user", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/mute_user(?:@\w+)?\s+(\d+)\s+(\d{1,4})\s+([\s\S]+)$/i);
+  if(!m) return ctx.reply("Usage: /mute_user <telegram-id> <minutes 1-1440> <reason>");
+  const id=Number(m[1]),minutes=Number(m[2]);
+  if(!Number.isSafeInteger(id)||id<1||id===config.OWNER_TELEGRAM_ID||minutes<1||minutes>1440) return ctx.reply("Invalid target or mute duration.");
+  try{await ctx.telegram.callApi("restrictChatMember",{chat_id:config.REQUIRED_GROUP_ID,user_id:id,permissions:{can_send_messages:false},until_date:Math.floor(Date.now()/1000)+minutes*60});
+    await writeAudit("moderation.mute",id,m[3]!.slice(0,200));await ctx.reply("User muted for "+minutes+" minutes.");}
+  catch(error){log.error({err:error,targetId:id},"Group mute failed");await ctx.reply("Mute failed. Verify bot admin permissions.");}
+});
 bot.command("moderation_remove", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id = Number(ctx.message.text.split(/\s+/)[1]);
@@ -967,7 +1014,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
@@ -981,10 +1028,16 @@ bot.on("text", async (ctx, next) => {
     const hosts = [...ctx.message.text.matchAll(/https?:\/\/[^\s<>()]+/gi)].map((m) => {
       try { return new URL(m[0]).hostname.toLowerCase().replace(/^www\./, ""); } catch { return ""; }
     }).filter(Boolean);
+    const { data: allowlist, error: allowError } = await db.from("dgbot_allowlist").select("host,include_subdomains").is("deleted_at", null).limit(500);
+    if (allowError) throw allowError;
+    const isAllowedHost = (host: string) => (allowlist ?? []).some(item => {
+      const allowed = String(item.host).toLowerCase();
+      return host === allowed || (item.include_subdomains && host.endsWith("." + allowed));
+    });
     const matched = (rules ?? []).find((rule) => {
       const value = String(rule.value).toLocaleLowerCase();
       return rule.kind === "blocked_phrase" ? body.includes(value)
-        : rule.kind === "blocked_host" ? hosts.some((host) => host === value || host.endsWith("." + value)) : false;
+        : rule.kind === "blocked_host" ? hosts.some((host) => (host === value || host.endsWith("." + value)) && !isAllowedHost(host)) : false;
     });
     const now=Date.now();
     const activity=moderationActivity.get(ctx.from.id) ?? {times:[],lastText:"",repeats:0};
