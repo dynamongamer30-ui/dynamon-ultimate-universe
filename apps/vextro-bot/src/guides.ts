@@ -5,6 +5,44 @@ type OwnerCheck = (ctx: Context) => boolean;
 type Audit = (action: string, target: number | null, reason: string) => Promise<void>;
 
 export function registerGuideAdmin(bot: Telegraf<Context>, ownerOnly: OwnerCheck, writeAudit: Audit) {
+  bot.command("guide_list", async (ctx) => {
+    if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+    const {data,error}=await db.from("dgbot_guides").select("id,category,title,published,updated_at").is("deleted_at",null).order("updated_at",{ascending:false}).limit(50);
+    if(error) return ctx.reply("Guide list unavailable.");
+    if(!data?.length) return ctx.reply("No guides exist yet.");
+    await ctx.reply(data.map(g=>"["+ (g.published?"published":"draft") +"] "+g.id+" | "+g.category+"\n"+String((g.title as Record<string,string>).en??g.id)).join("\n\n"));
+  });
+  bot.command("guide_preview", async (ctx) => {
+    if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+    const m=ctx.message.text.match(/^\/guide_preview(?:@\w+)?\s+([a-z0-9_-]{1,31})(?:\s+(en|hi-Latn|vi))?$/i);
+    if(!m) return ctx.reply("Usage: /guide_preview <id> [en|hi-Latn|vi]");
+    const locale=(m[2]??"en") as "en"|"hi-Latn"|"vi";
+    const {data,error}=await db.from("dgbot_guides").select("title,steps,media,buttons,published").eq("id",m[1]!).is("deleted_at",null).maybeSingle();
+    if(error||!data) return ctx.reply("Guide not found.");
+    const title=data.title as Record<string,string>,steps=data.steps as Record<string,unknown>;
+    const raw=steps[locale]??steps.en??[];
+    const body=Array.isArray(raw)?raw.map((x,i)=>(i+1)+". "+String(x)).join("\n"):String(raw);
+    const heading=title[locale]??title.en??m[1]!;
+    const media=data.media as {type?:string;file_id?:string;caption?:string}|null;
+    const buttons=Array.isArray(data.buttons)?data.buttons as Array<{text:string;url:string}>:[];
+    const markup=buttons.length?{reply_markup:{inline_keyboard:buttons.map(b=>[{text:b.text,url:b.url}])}}:{};
+    const caption=((media?.caption?media.caption+"\n\n":"")+heading+"\n\n"+body).slice(0,1024);
+    await ctx.reply("Preview ("+(data.published?"published":"draft")+")");
+    if(media?.file_id&&media.type==="photo") return ctx.replyWithPhoto(media.file_id,{caption,...markup});
+    if(media?.file_id&&media.type==="video") return ctx.replyWithVideo(media.file_id,{caption,...markup});
+    if(media?.file_id&&media.type==="document") return ctx.replyWithDocument(media.file_id,{caption,...markup});
+    if(media?.file_id&&media.type==="animation") return ctx.replyWithAnimation(media.file_id,{caption,...markup});
+    return ctx.reply((heading+"\n\n"+body).slice(0,4000),markup);
+  });
+  bot.command("guide_unpublish", async (ctx) => {
+    if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+    const id=ctx.message.text.split(/\s+/)[1];
+    if(!id) return ctx.reply("Usage: /guide_unpublish <id>");
+    const {data,error}=await db.from("dgbot_guides").update({published:false,updated_at:new Date().toISOString()}).eq("id",id).is("deleted_at",null).select("id").maybeSingle();
+    if(error||!data) return ctx.reply("Guide not found or could not be unpublished.");
+    await writeAudit("guide.unpublished",null,id);
+    await ctx.reply("Guide "+id+" is now unpublished.");
+  });
   bot.command("guide_create", async (ctx) => {
     if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
     const m = ctx.message.text.match(/^\/guide_create(?:@\w+)?\s+([a-z0-9][a-z0-9_-]{0,30})\s+([a-z0-9_-]{1,64})\s+([\s\S]+)$/i);
