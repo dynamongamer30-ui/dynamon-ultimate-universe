@@ -21,6 +21,7 @@ const schema = z.object({
   DEPLOY_WEBHOOK_URL: z.string().url().refine((value) => new URL(value).protocol === "https:", "HTTPS required").optional(),
   DEPLOY_WEBHOOK_SECRET: z.string().min(16).optional(),
   UPDATE_CHECK_INTERVAL_HOURS: z.coerce.number().int().min(1).max(72).default(6),
+  OWNER_TIMEZONE: z.string().default("Asia/Kolkata").refine((value) => { try { new Intl.DateTimeFormat("en-US", { timeZone: value }); return true; } catch { return false; } }, "Valid IANA timezone required"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info")
 }).superRefine((value, ctx) => {
   if (Boolean(value.BACKUP_OFFSITE_URL) !== Boolean(value.BACKUP_OFFSITE_TOKEN)) {
