@@ -51,6 +51,22 @@ function mainMenu(language: Lang) {
 function homeMenu(language: Lang) {
   return Markup.inlineKeyboard([[Markup.button.callback(menuLabels[language].home,"menu:home")]]);
 }
+function membershipJoinKeyboard(language:Lang) {
+  const channelId=runtimeMembership.channelId;
+  const channelUrl=config.REQUIRED_CHANNEL_URL||(channelId.startsWith("@")?"https://t.me/"+channelId.slice(1):"");
+  const groupUrl=config.REQUIRED_GROUP_URL||"";
+  const row=[];
+  if(channelUrl) row.push(Markup.button.url("Join channel",channelUrl));
+  if(groupUrl) row.push(Markup.button.url("Join group",groupUrl));
+  row.push(Markup.button.callback(menuLabels[language].verify,"membership:verify"));
+  return Markup.inlineKeyboard([row]);
+}
+function membershipPrompt(language:Lang) {
+  const channelId=runtimeMembership.channelId;
+  const hasChannel=Boolean(config.REQUIRED_CHANNEL_URL||(channelId.startsWith("@")&&channelId.length>1));
+  const hasGroup=Boolean(config.REQUIRED_GROUP_URL);
+  return messages[language].member+(!hasChannel||!hasGroup?"\nIf a join button is missing, ask the Owner for the private invite link.":"");
+}
 function ownerOnly(ctx: Context): boolean {
   return ctx.from?.id === config.OWNER_TELEGRAM_ID;
 }
@@ -180,7 +196,7 @@ bot.start(async (ctx) => {
     await saveUser(ctx.from.id);
     const lang = await getLanguage(ctx.from.id);
     if (!(await isMember(ctx))) {
-      await ctx.reply(messages[lang].member, Markup.inlineKeyboard([[Markup.button.callback(menuLabels[lang].verify, "membership:verify")]]));
+      await ctx.reply(membershipPrompt(lang),membershipJoinKeyboard(lang));
       return;
     }
     await ctx.reply(await getWelcome(lang), mainMenu(lang));
@@ -193,7 +209,7 @@ bot.action("membership:verify", async (ctx) => {
   const lang = await getLanguage(ctx.from.id);
   if (await isMember(ctx)) {
     await ctx.editMessageText(await getWelcome(lang), mainMenu(lang));
-  } else await ctx.reply(messages[lang].member);
+  } else await ctx.reply(membershipPrompt(lang),membershipJoinKeyboard(lang));
 });
 
 bot.command("language", async (ctx) => {
@@ -1129,6 +1145,16 @@ bot.on("new_chat_members", async (ctx) => {
   if(!names.length) return;
   await ctx.reply("Welcome "+names.join(", ")+"! Please read /rules and start a private chat with the bot using /start to verify membership and access support.");
 });
+bot.command("membership_status", async (ctx) => {
+  if(!ctx.from) return;
+  const lang=await getLanguage(ctx.from.id);
+  const results=await Promise.all([runtimeMembership.channelId,runtimeMembership.groupId].map(async chatId=>{
+    try{const member=await bot.telegram.getChatMember(chatId,ctx.from!.id);return ["creator","administrator","member"].includes(member.status)||(member.status==="restricted"&&member.is_member);}
+    catch{return false;}
+  }));
+  await ctx.reply("Channel: "+(results[0]?"joined":"not joined")+"\nGroup: "+(results[1]?"joined":"not joined")+"\nOverall: "+(results.every(Boolean)?"verified":"verification required"),
+    membershipJoinKeyboard(lang));
+});
 bot.action("membership:status", async (ctx) => {
   await ctx.answerCbQuery();
   if(!ctx.from) return;
@@ -1138,7 +1164,7 @@ bot.action("membership:status", async (ctx) => {
     catch{return false;}
   }));
   await ctx.reply("Channel: "+(results[0]?"joined":"not joined")+"\nGroup: "+(results[1]?"joined":"not joined")+"\nOverall: "+(results.every(Boolean)?"verified":"verification required"),
-    Markup.inlineKeyboard([[Markup.button.callback("Verify again","membership:verify")],[Markup.button.callback(menuLabels[lang].home,"menu:home")]]));
+    membershipJoinKeyboard(lang));
 });
 bot.action("tickets:mine", async (ctx) => {
   await ctx.answerCbQuery();
