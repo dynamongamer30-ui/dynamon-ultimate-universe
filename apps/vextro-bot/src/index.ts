@@ -1141,7 +1141,7 @@ bot.command("moderation_add", async (ctx) => {
   if (kind === "blocked_host" && !/^[a-z0-9.-]{1,253}$/i.test(value)) return ctx.reply("Blocked host must be a hostname, without a URL or path.");
   const { data, error } = await db.from("dgbot_moderation_rules").insert({ kind, value }).select("id").single();
   if (error || !data) { log.error({ err: error }, "Moderation rule creation failed"); return ctx.reply("Could not add the rule."); }
-  await ctx.reply(`Moderation rule added: #${data.id}. Note: rule enforcement in incoming group messages is not enabled in this runtime yet.`);
+  return ctx.reply("Moderation rule added: #" + data.id + ". Text messages in the required group are checked automatically; media captions are checked separately.");
 });
 bot.command("allow_hosts", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -1273,7 +1273,7 @@ bot.command("admin_help", async (ctx) => {
     "USERS\n/users <page> | /user <id> | /ban_user <id> | /unban_user <id> | /user_language <id> <en|hi|vi> | /language_stats",
     "SUPPORT\n/tickets <page> | /ticket <uuid> | /reply <uuid> <message> | /ticket_priority <uuid> <priority> | /ticket_category <uuid> <category> | /ticket_note <uuid> <note> | /ticket_search <term> | /reopen_ticket <uuid> | /close_ticket <uuid>",
     "CONTENT\n/post_draft <title> | /post_edit <uuid> <title+body> | /post_media <uuid> <type> <file-id> | /post_buttons <uuid> <label|url lines> | /post_preview <uuid> | /post_publish <uuid> | /post_schedule <uuid> <ISO time> | /post_schedules | /post_schedule_cancel <uuid> | /post_schedule_retry <uuid>",
-    "GUIDES\n/guide_create <id> <category> <title> | /guide_edit <id> <language> <title|steps> | /guide_media | /guide_buttons | /guide_publish | /guide_delete | /guide_keyword | /guide_review | /guide_review_approve | /guide_review_reject | /welcome_set | /welcome_preview | /welcome_reset",
+    "GUIDES\n/guide_list | /guide_create <id> <category> <title> | /guide_edit <id> <language> <title|steps> | /guide_preview <id> [language] | /guide_media <id> <type> <file-id> | /guide_buttons <id> <label|url> | /guide_publish <id> | /guide_unpublish <id> | /guide_delete <id> | /guide_keyword <id> <language> <term> | /guide_review | /guide_review_approve | /guide_review_reject | /welcome_set | /welcome_preview | /welcome_reset",
     "BROADCASTS\n/broadcasts | /broadcast_draft | /broadcast_edit | /broadcast_delete | /broadcast_preview | /broadcast_test | /broadcast_schedule | /broadcast_confirm | /broadcast_pause | /broadcast_resume | /broadcast_cancel | /broadcast_retry | /broadcast_status",
     "MODERATION\n/moderation_rules | /moderation_add | /moderation_edit | /moderation_remove | /allow_hosts | /allow_host | /remove_allow_host | /warn_user | /mute_user | /unmute_user | /group_ban | /group_unban | /moderation_stats",
     "OPERATIONS\n/admin_menu | /analytics | /bot_status | /settings | /audit_recent | /audit_search | /health | /membership_check | /maintenance_on | /maintenance_off | /maintenance_status | /backup_create | /backup_list | /backup_verify | /backup_restore_confirm | /backup_status | /backup_runs | /update_check | /update_approve | /update_install | /update_rollback | /update_status"
@@ -1287,7 +1287,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /ticket_history, /ticket_note, /ticket_priority, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_format, /post_buttons, /post_preview, /post_edit, /post_publish, /post_reconcile, /post_remove, /broadcasts, /broadcast_draft, /broadcast_edit, /broadcast_delete, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_edit, /moderation_remove, /allow_hosts, /allow_host, /edit_allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
+  await ctx.reply("VEXTRO BOT Owner Dashboard\nRegistered users: " + (users ?? 0) + "\nOpen tickets: " + (openTickets ?? 0) + "\n\nUse /admin_help for the complete command reference or /admin_menu for the control center.");
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
@@ -1318,6 +1318,11 @@ bot.on("text", async (ctx, next) => {
     activity.times.push(now);
     if(body===activity.lastText) activity.repeats+=1; else {activity.lastText=body;activity.repeats=1;}
     moderationActivity.set(ctx.from.id,activity);
+    while (moderationActivity.size > 5000) {
+      const oldest = moderationActivity.keys().next().value;
+      if (oldest === undefined) break;
+      moderationActivity.delete(oldest);
+    }
     const flood=activity.times.length>5 || activity.repeats>=3;
     if (!matched && !flood) return next();
     const reason=matched?String(matched.kind)+": "+String(matched.value).slice(0,150):"rate_limit_or_repeated_message";
