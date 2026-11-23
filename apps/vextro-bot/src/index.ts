@@ -19,8 +19,13 @@ function ownerOnly(ctx: Context): boolean {
   return ctx.from?.id === config.OWNER_TELEGRAM_ID;
 }
 async function saveUser(telegramId: number, language?: Lang): Promise<void> {
-  const payload = language ? { telegram_id: telegramId, language, updated_at: new Date().toISOString() } : { telegram_id: telegramId, updated_at: new Date().toISOString() };
-  const { error } = await db.from("bot_users").upsert(payload, { onConflict: "telegram_id" });
+  let selectedLanguage = language;
+  if (!selectedLanguage) {
+    const existing = await db.from("bot_users").select("language").eq("telegram_id", telegramId).maybeSingle();
+    if (existing.error) throw existing.error;
+    selectedLanguage = existing.data?.language === "hi" || existing.data?.language === "vi" ? existing.data.language : "en";
+  }
+  const { error } = await db.from("bot_users").upsert({ telegram_id: telegramId, language: selectedLanguage, updated_at: new Date().toISOString() }, { onConflict: "telegram_id" });
   if (error) throw error;
 }
 async function getLanguage(telegramId: number): Promise<Lang> {
@@ -57,7 +62,7 @@ async function createLink(ctx: Context, telegramId: number): Promise<void> {
     if (error) throw error;
     const url = new URL("/telegram/link", config.WEBSITE_URL);
     url.searchParams.set("token", token.raw);
-    await ctx.reply(`${messages.en.linkCreated}\n${url.toString()}`, { disable_web_page_preview: true });
+    await ctx.reply(`${messages.en.linkCreated}\n${url.toString()}`, { link_preview_options: { is_disabled: true } });
   } catch (error) {
     log.error({ err: error }, "Link request creation failed");
     await ctx.reply(messages.en.error);
