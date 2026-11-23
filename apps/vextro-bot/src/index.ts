@@ -1211,10 +1211,14 @@ bot.command("audit_recent", async (ctx) => {
 });
 bot.command("moderation_rules", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const { data, error } = await db.from("dgbot_moderation_rules").select("id,kind,value,created_at").is("deleted_at", null).order("created_at", { ascending: false }).limit(30);
-  if (error) return ctx.reply("Moderation rules unavailable.");
-  if (!data?.length) return ctx.reply("No active moderation rules.");
-  await ctx.reply(data.map((rule) => `#${rule.id} [${rule.kind}] ${rule.value}`).join("\n"));
+  const kind=ctx.message.text.split(/\s+/)[1];
+  if(kind&&kind!=="blocked_host"&&kind!=="blocked_phrase") return ctx.reply("Usage: /moderation_rules [blocked_host|blocked_phrase]");
+  let query=db.from("dgbot_moderation_rules").select("id,kind,value,created_at").is("deleted_at",null).order("created_at",{ascending:false}).limit(30);
+  if(kind) query=query.eq("kind",kind);
+  const {data,error}=await query;
+  if(error) return ctx.reply("Moderation rules unavailable.");
+  if(!data?.length) return ctx.reply("No active moderation rules.");
+  await ctx.reply(data.map(rule=>"#"+rule.id+" ["+rule.kind+"] "+rule.value).join("\n"));
 });
 bot.command("moderation_add", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
