@@ -13,6 +13,8 @@ const schema = z.object({
   BOT_PUBLIC_USERNAME: z.string().regex(/^[A-Za-z0-9_]{5,32}$/).optional(),
   BACKUP_PASSPHRASE: z.string().min(16).optional(),
   BACKUP_BUCKET: z.string().min(1).default("vextro-backups"),
+  BACKUP_OFFSITE_URL: z.string().url().optional(),
+  BACKUP_OFFSITE_TOKEN: z.string().min(16).optional(),
   BACKUP_INTERVAL_HOURS: z.coerce.number().int().min(1).max(720).default(24),
   BACKUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   GITHUB_REPOSITORY: z.string().default("dynamongamer30-ui/dynamon-ultimate-universe"),
