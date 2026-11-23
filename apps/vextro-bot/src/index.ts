@@ -757,6 +757,14 @@ bot.hears(/^\/guide_([a-z0-9][a-z0-9_-]{0,30})$/, async (ctx) => {
   return ctx.reply(heading + "\n\n" + body.slice(0,textLimit), markup);
 });
 
+bot.on("left_chat_member", async (ctx) => {
+  if(String(ctx.chat.id)!==config.REQUIRED_GROUP_ID) return;
+  const departed=ctx.message.left_chat_member;
+  if(departed.is_bot) return;
+  moderationActivity.delete(departed.id);
+  await db.from("dgbot_user_state").delete().eq("telegram_id",departed.id);
+  await writeAudit("membership.left_group",departed.id,"Member left the required group; transient state cleared");
+});
 bot.command("membership_status", async (ctx) => {
   if(!ctx.from) return;
   const results=await Promise.all([config.REQUIRED_CHANNEL_ID,config.REQUIRED_GROUP_ID].map(async chatId=>{
