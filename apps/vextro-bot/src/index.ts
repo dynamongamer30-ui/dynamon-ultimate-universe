@@ -245,11 +245,15 @@ bot.command("support", async (ctx) => {
 
 bot.command("tickets", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const page = Math.max(1, Number(ctx.message.text.split(/\s+/)[1]) || 1);
-  const { data, error } = await db.from("bot_support_tickets").select("id,telegram_id,subject,status,priority,created_at").neq("status", "closed").order("created_at", { ascending: false }).range((page-1)*20,page*20-1);
-  if (error) { log.error({ err: error }, "Ticket list failed"); return ctx.reply("Ticket list unavailable."); }
-  if (!data?.length) return ctx.reply(page===1?"No open support tickets.":"No tickets on this page.");
-  await ctx.reply("Tickets — page "+page+"\n"+data.map((t) => "[" + t.status + "/" + t.priority + "] " + t.id + "\nUser: " + t.telegram_id + "\n" + t.subject).join("\n\n")+"\nNext: /tickets "+(page+1));
+  const args=ctx.message.text.split(/\s+/);
+  const status=["open","pending","closed"].includes(args[1]??"")?args[1]:undefined;
+  const page=Math.max(1,Number(args[status?2:1])||1);
+  let query=db.from("bot_support_tickets").select("id,telegram_id,subject,status,priority,created_at").order("created_at",{ascending:false});
+  if(status) query=query.eq("status",status); else query=query.neq("status","closed");
+  const {data,error}=await query.range((page-1)*20,page*20-1);
+  if(error){log.error({err:error},"Ticket list failed");return ctx.reply("Ticket list unavailable.");}
+  if(!data?.length) return ctx.reply("No tickets on this page.");
+  await ctx.reply("Tickets — page "+page+(status?" | "+status:" | open")+"\n"+data.map(t=>"["+t.status+"/"+t.priority+"] "+t.id+"\nUser: "+t.telegram_id+"\n"+t.subject).join("\n\n")+"\nNext: /tickets "+(status?status+" ":"")+(page+1));
 });
 bot.command("ticket", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -370,11 +374,15 @@ bot.command("close_ticket", async (ctx) => {
 
 bot.command("posts", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const page = Math.max(1, Number(ctx.message.text.split(/\s+/)[1]) || 1);
-  const { data, error } = await db.from("dgbot_posts").select("id,title,state,updated_at").is("deleted_at", null).neq("state", "removed").order("updated_at", { ascending: false }).range((page-1)*20,page*20-1);
-  if (error) { log.error({ err: error }, "Post list failed"); return ctx.reply("Post list unavailable."); }
-  if (!data?.length) return ctx.reply(page===1?"No posts yet. Create one with /post_draft Title\\nBody.":"No posts on this page.");
-  await ctx.reply("Posts — page "+page+"\n"+data.map((p) => "[" + p.state + "] " + p.id + "\n" + p.title).join("\n\n")+"\nNext: /posts "+(page+1));
+  const args=ctx.message.text.split(/\s+/);
+  const state=["draft","published","removed"].includes(args[1]??"")?args[1]:undefined;
+  const page=Math.max(1,Number(args[state?2:1])||1);
+  let query=db.from("dgbot_posts").select("id,title,state,updated_at").order("updated_at",{ascending:false});
+  if(state==="removed") query=query.eq("state","removed"); else {query=query.is("deleted_at",null).neq("state","removed");if(state) query=query.eq("state",state);}
+  const {data,error}=await query.range((page-1)*20,page*20-1);
+  if(error){log.error({err:error},"Post list failed");return ctx.reply("Post list unavailable.");}
+  if(!data?.length) return ctx.reply("No posts on this page.");
+  await ctx.reply("Posts — page "+page+(state?" | "+state:"")+"\n"+data.map(p=>"["+p.state+"] "+p.id+"\n"+p.title).join("\n\n")+"\nNext: /posts "+(state?state+" ":"")+(page+1));
 });
 bot.command("post_draft", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -927,11 +935,15 @@ bot.action("support:help", async (ctx) => { await ctx.answerCbQuery(); const lan
 
 bot.command("users", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const page = Math.max(1, Number(ctx.message.text.split(/\s+/)[1]) || 1);
-  const { data, error } = await db.from("bot_users").select("telegram_id,language,created_at,updated_at").order("updated_at", { ascending: false }).range((page-1)*20,page*20-1);
-  if (error) return ctx.reply("User list unavailable.");
-  if (!data?.length) return ctx.reply(page===1?"No registered users.":"No users on this page.");
-  await ctx.reply("Users — page "+page+"\n"+data.map((user) => user.telegram_id + " | " + user.language + " | " + new Date(user.updated_at).toLocaleDateString()).join("\n")+"\nNext: /users "+(page+1));
+  const args=ctx.message.text.split(/\s+/);
+  const language=["en","hi","vi"].includes(args[1]??"")?args[1]:undefined;
+  const page=Math.max(1,Number(args[language?2:1])||1);
+  let query=db.from("bot_users").select("telegram_id,language,created_at,updated_at").order("updated_at",{ascending:false});
+  if(language) query=query.eq("language",language);
+  const {data,error}=await query.range((page-1)*20,page*20-1);
+  if(error) return ctx.reply("User list unavailable.");
+  if(!data?.length) return ctx.reply("No users on this page.");
+  await ctx.reply("Users — page "+page+(language?" | language "+language:"")+"\n"+data.map(u=>u.telegram_id+" | "+u.language+" | "+new Date(u.updated_at).toLocaleDateString()).join("\n")+"\nNext: /users "+(language?language+" ":"")+(page+1));
 });
 bot.command("user", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
