@@ -119,6 +119,7 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
             } catch (publishError) {
               const reason = publishError instanceof Error ? publishError.message.slice(0, 500) : "Publish failed";
               await db.from("vextro_scheduled_posts").update({ status: "failed", last_error: reason, updated_at: new Date().toISOString() }).eq("id", item.id);
+              if (ownerId) { try { await bot.telegram.sendMessage(ownerId, "Scheduled post failed. Schedule: " + item.id + "\nReason: " + reason + "\nUse /post_schedule_retry " + item.id + " after fixing the issue."); } catch {} }
             }
           }
           await db.from("vextro_scheduled_posts").update({ status: "scheduled", last_error: "Recovered stale worker lease", updated_at: new Date().toISOString() })
