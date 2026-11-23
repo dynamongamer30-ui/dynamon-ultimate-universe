@@ -10,7 +10,7 @@ Node.js 26 + TypeScript + Telegraf Telegram bot runtime. Uses the existing Supab
 - Build: `npm run build`
 - Start: `npm start`
 
-Run from this directory. The production entry point is `dist/index.js`. The start script caps the V8 heap at 256 MB for KataBump's small free-tier memory allocation. `dotenv/config` loads a root `.env` file; use `.env.example` as the template.
+Run from this directory. The production entry point is `dist/index.js`. The start script caps the V8 heap at 256 MB for KataBump's small free-tier memory allocation. `dotenv/config` loads a root `.env` file; use `.env.example` as the template. Blank optional entries in that template are treated as unset.
 
 ## Required environment
 
