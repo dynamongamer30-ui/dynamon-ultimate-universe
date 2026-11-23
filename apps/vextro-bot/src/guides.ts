@@ -1,8 +1,122 @@
 import type { Context, Telegraf } from "telegraf";
+import { Markup } from "telegraf";
 import { db } from "./supabase.js";
+import { captureFormattedInput } from "./formatting.js";
 
 type OwnerCheck = (ctx: Context) => boolean;
 type Audit = (action: string, target: number | null, reason: string) => Promise<void>;
+
+// Tap-to-edit flow: owner taps "Title" / "Body" on a guide, bot asks for the new
+// text, owner sends it using Telegram's own formatting bar (bold/italic/etc.),
+// the bot captures the exact formatting via entitiesToMarkdownV2 and stores it.
+// Replaces the old /guide_edit <id> <locale> <title> | <steps> command for
+// anyone who wants the tap-driven flow; the slash command still works too.
+interface PendingGuideEdit {
+  guideId: string;
+  locale: "en" | "hi-Latn" | "vi";
+  field: "title" | "step";
+  expiresAt: number;
+}
+const pendingGuideEdits = new Map<number, PendingGuideEdit>();
+const EDIT_TIMEOUT_MS = 5 * 60 * 1000;
+
+function guideEditKeyboard(guideId: string, locale: string) {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback("Title ›", `guide:set:title:${guideId}:${locale}`)],
+    [Markup.button.callback("Add step ›", `guide:set:step:${guideId}:${locale}`)],
+    [Markup.button.callback("Preview ›", `guide:preview:${guideId}:${locale}`)],
+    [Markup.button.callback("× Cancel", "guide:edit:cancel")]
+  ]);
+}
+
+export function registerGuideEditorFlow(bot: Telegraf<Context>, ownerOnly: OwnerCheck, writeAudit: Audit) {
+  // Entry point: /guide_editor <id> [locale] opens the tap-driven editor for a guide.
+  bot.command("guide_editor", async (ctx) => {
+    if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+    const m = ctx.message.text.match(/^\/guide_editor(?:@\w+)?\s+([a-z0-9_-]{1,31})(?:\s+(en|hi-Latn|vi))?$/i);
+    if (!m) return ctx.reply("Usage: /guide_editor <id> [en|hi-Latn|vi]");
+    const locale = (m[2] ?? "en") as "en" | "hi-Latn" | "vi";
+    const { data, error } = await db.from("dgbot_guides").select("id").eq("id", m[1]!).is("deleted_at", null).maybeSingle();
+    if (error || !data) return ctx.reply("Guide not found.");
+    await ctx.reply(
+      "Editing guide *" + m[1] + "* — locale `" + locale + "`\nUse Telegram's own bold/italic/etc\\. formatting when you send text; it is saved exactly as you send it\\.",
+      { parse_mode: "MarkdownV2", ...guideEditKeyboard(m[1]!, locale) }
+    );
+  });
+
+  bot.action(/^guide:set:(title|step):([a-z0-9_-]{1,31}):(en|hi-Latn|vi)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!ownerOnly(ctx) || !ctx.from) return ctx.reply("Access denied.");
+    const [, field, guideId, locale] = ctx.match as unknown as [string, "title" | "step", string, "en" | "hi-Latn" | "vi"];
+    pendingGuideEdits.set(ctx.from.id, { guideId, locale, field, expiresAt: Date.now() + EDIT_TIMEOUT_MS });
+    await ctx.reply(
+      field === "title"
+        ? "Send the new title now. Format it with Telegram's formatting bar (bold/italic/etc.) — it will be saved exactly as sent."
+        : "Send the next step now. Formatting is preserved exactly as you send it."
+    );
+  });
+
+  bot.action("guide:edit:cancel", async (ctx) => {
+    await ctx.answerCbQuery("Cancelled");
+    if (ctx.from) pendingGuideEdits.delete(ctx.from.id);
+  });
+
+  bot.action(/^guide:preview:([a-z0-9_-]{1,31}):(en|hi-Latn|vi)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!ownerOnly(ctx)) return;
+    const [, guideId, locale] = ctx.match as unknown as [string, string, "en" | "hi-Latn" | "vi"];
+    await sendGuidePreview(ctx, guideId, locale);
+  });
+
+  // Intercepts the owner's next text message ONLY when a tap-to-edit is pending;
+  // otherwise calls next() so every other handler keeps working unchanged.
+  bot.on("text", async (ctx, next) => {
+    if (!ctx.from) return next();
+    const pending = pendingGuideEdits.get(ctx.from.id);
+    if (!pending) return next();
+    if (Date.now() > pending.expiresAt) {
+      pendingGuideEdits.delete(ctx.from.id);
+      await ctx.reply("That edit expired after 5 minutes. Open /guide_editor again to retry.");
+      return;
+    }
+    if (!ownerOnly(ctx)) return next();
+    const captured = captureFormattedInput(ctx);
+    if (!captured) return next();
+    pendingGuideEdits.delete(ctx.from.id);
+
+    const { data, error } = await db.from("dgbot_guides").select("title,steps").eq("id", pending.guideId).is("deleted_at", null).maybeSingle();
+    if (error || !data) return ctx.reply("Guide not found — it may have been deleted mid-edit.");
+
+    if (pending.field === "title") {
+      const titles = { ...(data.title as Record<string, string>), [pending.locale]: captured.markdown };
+      const { error: updateError } = await db.from("dgbot_guides").update({ title: titles, title_format: "MarkdownV2", updated_at: new Date().toISOString() }).eq("id", pending.guideId);
+      if (updateError) return ctx.reply("Save failed. Nothing was changed.");
+      await writeAudit("guide.title_edited", null, pending.guideId + ":" + pending.locale);
+    } else {
+      const steps = { ...(data.steps as Record<string, unknown>) };
+      const existing = Array.isArray(steps[pending.locale]) ? (steps[pending.locale] as string[]) : [];
+      steps[pending.locale] = [...existing, captured.markdown];
+      const { error: updateError } = await db.from("dgbot_guides").update({ steps, steps_format: "MarkdownV2", updated_at: new Date().toISOString() }).eq("id", pending.guideId);
+      if (updateError) return ctx.reply("Save failed. Nothing was changed.");
+      await writeAudit("guide.step_added", null, pending.guideId + ":" + pending.locale);
+    }
+
+    await ctx.reply("✓ Saved — formatting preserved exactly as sent.", guideEditKeyboard(pending.guideId, pending.locale));
+  });
+}
+
+async function sendGuidePreview(ctx: Context, guideId: string, locale: "en" | "hi-Latn" | "vi") {
+  const { data, error } = await db.from("dgbot_guides").select("title,steps,title_format").eq("id", guideId).is("deleted_at", null).maybeSingle();
+  if (error || !data) return ctx.reply("Guide not found.");
+  const title = (data.title as Record<string, string>)[locale] ?? (data.title as Record<string, string>).en ?? guideId;
+  const steps = (data.steps as Record<string, unknown>)[locale] as unknown;
+  const body = Array.isArray(steps) ? steps.map((s, i) => (i + 1) + ". " + String(s)).join("\n") : "";
+  const isMarkdown = data.title_format === "MarkdownV2";
+  await ctx.reply(
+    (title + (body ? "\n\n" + body : "")).slice(0, 4000),
+    isMarkdown ? { parse_mode: "MarkdownV2" } : {}
+  );
+}
 
 export function registerGuideAdmin(bot: Telegraf<Context>, ownerOnly: OwnerCheck, writeAudit: Audit) {
   bot.command("guide_list", async (ctx) => {
