@@ -901,8 +901,9 @@ bot.command("membership_diagnose", async (ctx) => {
     try{
       const [chat,member]=await Promise.all([bot.telegram.getChat(chatId),bot.telegram.getChatMember(chatId,me.id)]);
       const admin=member.status==="administrator"||member.status==="creator";
+      const chatInfo=chat as {title?:string;type:string};
       const permissions=member as {can_delete_messages?:boolean;can_restrict_members?:boolean;can_invite_users?:boolean};
-      return label+": "+chat.title+" ("+chat.type+")\nID: "+chatId+"\nBot status: "+member.status+
+      return label+": "+(chatInfo.title??"chat")+" ("+chatInfo.type+")\nID: "+chatId+"\nBot status: "+member.status+
         "\nAdmin: "+(admin?"yes":"no")+
         (label==="Group"?"\nCan delete messages: "+(permissions.can_delete_messages?"yes":"no")+"\nCan restrict members: "+(permissions.can_restrict_members?"yes":"no"):"");
     }catch(error){return label+": inaccessible\nID: "+chatId+"\nReason: "+(error instanceof Error?error.message:"unknown Telegram API error");}
