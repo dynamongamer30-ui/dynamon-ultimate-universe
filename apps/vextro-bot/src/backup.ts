@@ -112,7 +112,9 @@ export async function restoreBackup(id: string, restoredBy: number) {
   for (const table of backupTables) {
     const rows = snapshot.tables[table.name] ?? [];
     for (let i = 0; i < rows.length; i += 500) {
-      const { error } = await (db as any).from(table.name).upsert(rows.slice(i, i + 500), { onConflict: table.conflict });
+      const { error } = await db.rpc("vextro_restore_table_rows", {
+        p_table: table.name, p_conflict: table.conflict, p_rows: rows.slice(i, i + 500)
+      });
       if (error) throw new Error(`Restore failed at ${table.name}: ${error.message}`);
     }
     restored[table.name] = rows.length;
