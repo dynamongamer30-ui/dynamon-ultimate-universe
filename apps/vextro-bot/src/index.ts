@@ -1140,13 +1140,17 @@ bot.command("analytics", async (ctx) => {
 });
 bot.command("backup_create", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const progress=await ctx.reply("Creating encrypted backup, uploading it to private storage and verifying integrity...");
   try {
     const backup=await createBackup(ctx.from.id);
-    await writeAudit("backup.created",null,`Encrypted backup ${backup.id} verified`);
-    await ctx.reply(`Backup created and verified.\nID: ${backup.id}\nBytes: ${backup.bytes}\nCreated: ${new Date(backup.created_at).toLocaleString()}`);
+    await writeAudit("backup.created",null,"Encrypted backup "+backup.id+" verified");
+    await ctx.telegram.editMessageText(ctx.chat.id,progress.message_id,undefined,
+      "Backup created and verified.\nID: "+backup.id+"\nBytes: "+backup.bytes+"\nCreated: "+new Date(backup.created_at).toLocaleString()+
+      "\nOffsite: "+(backup.offsite_verified_at?"verified":backup.offsite_error?"failed":"not configured"));
   } catch(error) {
     log.error({err:error},"Manual backup failed");
-    await ctx.reply(`Backup failed: ${error instanceof Error?error.message:"unknown error"}`);
+    await ctx.telegram.editMessageText(ctx.chat.id,progress.message_id,undefined,
+      "Backup failed: "+(error instanceof Error?error.message:"unknown error")).catch(()=>ctx.reply("Backup failed. Check Owner logs."));
   }
 });
 bot.command("backup_list", async (ctx) => {
