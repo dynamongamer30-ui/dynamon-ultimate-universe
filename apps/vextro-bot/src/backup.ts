@@ -110,7 +110,7 @@ export async function verifyBackup(id: string) {
     return { valid: false, error: error instanceof Error ? error.message : "Verification failed" };
   }
 }
-async function applyBackupSnapshot(snapshot: BackupSnapshot) {
+async function applyBackupSnapshot(snapshot: Snapshot) {
   const restored: Record<string, number> = {};
   for (const table of backupTables) {
     const rows = snapshot.tables[table.name] ?? [];
