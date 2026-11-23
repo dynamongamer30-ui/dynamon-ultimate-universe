@@ -1089,13 +1089,11 @@ bot.on("text", async (ctx, next) => {
 bot.catch((error, ctx) => { log.error({ err: error, updateId: ctx.update.update_id }, "Telegram update failed"); });
 process.on("unhandledRejection", (reason) => {
   log.fatal({ err: reason }, "Unhandled promise rejection; restarting bot process");
-  void sendOwnerNotice("VEXTRO BOT encountered an unhandled error and is restarting. Check host logs after restart.");
-  process.exit(1);
+  void sendOwnerNotice("VEXTRO BOT encountered an unhandled error and is restarting. Check host logs after restart.").finally(() => process.exit(1));
 });
 process.on("uncaughtException", (error) => {
   log.fatal({ err: error }, "Uncaught exception; restarting bot process");
-  void sendOwnerNotice("VEXTRO BOT encountered a fatal exception and is restarting. Check host logs after restart.");
-  process.exit(1);
+  void sendOwnerNotice("VEXTRO BOT encountered a fatal exception and is restarting. Check host logs after restart.").finally(() => process.exit(1));
 });
 registerGuideAdmin(bot, ownerOnly, writeAudit);
 registerUpdateCommands(bot, ownerOnly, config.OWNER_TELEGRAM_ID);
