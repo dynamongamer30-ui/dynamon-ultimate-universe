@@ -1515,8 +1515,19 @@ bot.on("message", async (ctx, next) => {
     try{await ctx.deleteMessage();}catch(deleteError){log.warn({err:deleteError},"Media caption moderation delete failed");}
     const {error}=await db.from("vextro_moderation_events").insert({telegram_id:ctx.from.id,chat_id:ctx.chat.id,event_type:"warning",reason});
     if(error) log.error({err:error},"Media caption moderation event failed");
+    const {count:priorWarnings}=await db.from("vextro_moderation_events").select("*",{count:"exact",head:true})
+      .eq("telegram_id",ctx.from.id).eq("chat_id",ctx.chat.id).eq("event_type","warning")
+      .gte("created_at",new Date(Date.now()-24*3600_000).toISOString());
+    let restricted=false;
+    if((priorWarnings??0)>=3){
+      try{
+        await ctx.telegram.callApi("restrictChatMember",{chat_id:ctx.chat.id,user_id:ctx.from.id,permissions:{can_send_messages:false},until_date:Math.floor(Date.now()/1000)+3600});
+        await db.from("vextro_moderation_events").insert({telegram_id:ctx.from.id,chat_id:ctx.chat.id,event_type:"restricted",reason:"three moderation warnings within 24 hours"});
+        restricted=true;
+      }catch(restrictError){log.warn({err:restrictError,userId:ctx.from.id},"Automatic media-caption restriction failed");}
+    }
     await writeAudit("moderation.media_caption_removed",ctx.from.id,reason);
-    try{await ctx.reply("This media caption was removed because it matched a group moderation rule.");}catch{}
+    try{await ctx.reply(restricted?"This media caption was removed. You have been restricted for one hour after repeated violations.":"This media caption was removed because it matched a group moderation rule.");}catch{}
   }catch(error){log.error({err:error},"Media caption moderation check failed; media was not removed");return next();}
 });
 
