@@ -975,6 +975,33 @@ bot.command("mute_user", async (ctx) => {
     await writeAudit("moderation.mute",id,m[3]!.slice(0,200));await ctx.reply("User muted for "+minutes+" minutes.");}
   catch(error){log.error({err:error,targetId:id},"Group mute failed");await ctx.reply("Mute failed. Verify bot admin permissions.");}
 });
+bot.command("unmute_user", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=Number(ctx.message.text.split(/\s+/)[1]);
+  if(!Number.isSafeInteger(id)||id<1) return ctx.reply("Usage: /unmute_user <telegram-id>");
+  try {
+    await ctx.telegram.callApi("restrictChatMember",{chat_id:config.REQUIRED_GROUP_ID,user_id:id,permissions:{
+      can_send_messages:true,can_send_audios:true,can_send_documents:true,can_send_photos:true,can_send_videos:true,
+      can_send_video_notes:true,can_send_voice_notes:true,can_send_polls:true,can_send_other_messages:true,
+      can_add_web_page_previews:true,can_invite_users:true
+    }});
+    await db.from("vextro_moderation_events").insert({telegram_id:id,chat_id:Number(config.REQUIRED_GROUP_ID),event_type:"released",reason:"Owner manually unmuted user"});
+    await writeAudit("moderation.unmute",id,"Owner manually unmuted user");
+    await ctx.reply("User unmuted in the required group.");
+  } catch(error) { log.error({err:error,targetId:id},"Group unmute failed"); await ctx.reply("Unmute failed. Verify bot admin permissions."); }
+});
+bot.command("warn_user", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/warn_user(?:@\w+)?\s+(\d+)\s+([\s\S]+)$/i);
+  if(!m) return ctx.reply("Usage: /warn_user <telegram-id> <reason>");
+  const id=Number(m[1]);
+  if(!Number.isSafeInteger(id)||id<1||id===config.OWNER_TELEGRAM_ID) return ctx.reply("Invalid target.");
+  const {error}=await db.from("vextro_moderation_events").insert({telegram_id:id,chat_id:Number(config.REQUIRED_GROUP_ID),event_type:"warning",reason:m[2]!.slice(0,200)});
+  if(error) return ctx.reply("Warning could not be recorded.");
+  await writeAudit("moderation.manual_warning",id,m[2]!.slice(0,200));
+  try { await bot.telegram.sendMessage(id,"You received a moderation warning in the VEXTRO group: "+m[2]!.slice(0,500)); } catch {}
+  await ctx.reply("Moderation warning recorded.");
+});
 bot.command("moderation_remove", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id = Number(ctx.message.text.split(/\s+/)[1]);
@@ -1014,7 +1041,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
