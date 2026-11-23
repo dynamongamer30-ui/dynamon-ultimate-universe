@@ -128,7 +128,7 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
           .in("status", ["running"]).limit(50);
         if (activeError) throw activeError;
         for (const job of active ?? []) {
-          const [{count:pending},{count:sending},{count:retryableFailed},{count:sent},{count:failed},{count:uncertain}] = await Promise.all([
+          const [pendingQ,sendingQ,retryableQ,sentQ,failedQ,uncertainQ]=await Promise.all([
             db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",job.id).eq("status","pending"),
             db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",job.id).eq("status","sending"),
             db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",job.id).eq("status","failed").lt("attempts",5),
@@ -136,17 +136,22 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
             db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",job.id).eq("status","failed"),
             db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",job.id).eq("status","uncertain")
           ]);
-          if(!(pending||sending||retryableFailed)){
-            const finalStatus=(failed??0)+(uncertain??0)>0?"failed":"completed";
-            const { data: completed } = await db.from("vextro_broadcast_jobs").update({
-              status:finalStatus,sent_count:sent??0,failed_count:(failed??0)+(uncertain??0),
+          const queryError=[pendingQ.error,sendingQ.error,retryableQ.error,sentQ.error,failedQ.error,uncertainQ.error].find(Boolean);
+          if(queryError) throw queryError;
+          const pending=pendingQ.count??0,sending=sendingQ.count??0,retryableFailed=retryableQ.count??0;
+          const sent=sentQ.count??0,failed=failedQ.count??0,uncertain=uncertainQ.count??0;
+          if(!pending&&!sending&&!retryableFailed){
+            const finalStatus=failed+uncertain>0?"failed":"completed";
+            const { data: completed,error:completeError } = await db.from("vextro_broadcast_jobs").update({
+              status:finalStatus,sent_count:sent,failed_count:failed+uncertain,
               completed_at:new Date().toISOString(),updated_at:new Date().toISOString()
             }).eq("id",job.id).eq("status","running").select("id").maybeSingle();
+            if(completeError) throw completeError;
             if(completed&&ownerId){
               try{
                 const note=uncertain
-                  ? "Broadcast requires manual delivery reconciliation. Uncertain recipients: "+uncertain+". Use /broadcast_reconcile "+job.id+" <telegram-user-id> sent|retry after checking each chat."
-                  : "Broadcast "+(finalStatus==="completed"?"completed":"finished with failures")+": "+job.id+"\nSent: "+(sent??0)+"\nFailed: "+(failed??0);
+                  ? "Broadcast requires manual delivery reconciliation. Uncertain recipients: "+uncertain+"; failed: "+failed+". Use /broadcast_reconcile "+job.id+" <telegram-user-id> sent|retry after checking each chat."
+                  : "Broadcast "+(finalStatus==="completed"?"completed":"finished with failures")+": "+job.id+"\nSent: "+sent+"\nFailed: "+failed;
                 await bot.telegram.sendMessage(ownerId,note);
               }catch{}
             }
