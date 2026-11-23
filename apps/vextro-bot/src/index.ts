@@ -1311,7 +1311,7 @@ bot.command("moderation_remove", async (ctx) => {
   if (!Number.isSafeInteger(id) || id < 1) return ctx.reply("Usage: /moderation_remove <rule-id>");
   const { data, error } = await db.from("dgbot_moderation_rules").update({ deleted_at: new Date().toISOString() }).eq("id", id).is("deleted_at", null).select("id").maybeSingle();
   if (error || !data) return ctx.reply("Active rule not found.");
-  await ctx.reply(`Moderation rule #${id} removed.`);
+  await ctx.reply("Moderation rule #" + id + " removed.");
 });
 
 bot.command("health", async (ctx) => {
@@ -1457,8 +1457,8 @@ bot.on("text", async (ctx, next) => {
     const { error } = await db.from("bot_support_messages").insert({ ticket_id: ticket.id, sender_type: "user", sender_telegram_id: ctx.from.id, body });
     if (error) throw error;
     await db.from("bot_support_tickets").update({ status: "open", updated_at: new Date().toISOString() }).eq("id", ticket.id);
-    await ctx.reply(`Added to support ticket ${ticket.id}.`);
-    await sendOwnerNotice(`New message on ticket ${ticket.id} from ${ctx.from.id}:\n${body.slice(0, 1500)}\nView: /ticket ${ticket.id}`);
+    await ctx.reply("Added to support ticket " + ticket.id + ".");
+    await sendOwnerNotice("New message on ticket " + ticket.id + " from " + ctx.from.id + ":\n" + body.slice(0,1500) + "\nView: /ticket " + ticket.id);
   } catch (error) { log.error({ err: error }, "Support follow-up failed"); await ctx.reply(messages.en.error); }
 });
 
