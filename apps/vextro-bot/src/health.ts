@@ -32,10 +32,10 @@ export function startHealthMonitor(bot: Telegraf<Context>, ownerId: number, inte
     const failure = report.database === "failed" || report.telegram === "failed" ? report.detail.join("\n") : "";
     if (failure && failure !== previousFailure) {
       previousFailure = failure;
-      try { await bot.telegram.sendMessage(ownerId, "VEXTRO BOT health alert\n" + failure); } catch {}
+      try { await bot.telegram.sendMessage(ownerId, "Dynamon Assistant health alert\n" + failure); } catch {}
     } else if (!failure && previousFailure) {
       previousFailure = "";
-      try { await bot.telegram.sendMessage(ownerId, "VEXTRO BOT health recovered.\n" + report.detail.join("\n")); } catch {}
+      try { await bot.telegram.sendMessage(ownerId, "Dynamon Assistant health recovered.\n" + report.detail.join("\n")); } catch {}
     }
   };
   void run();
