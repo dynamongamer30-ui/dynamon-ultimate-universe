@@ -2,7 +2,7 @@ import { Telegraf, Markup, type Context } from "telegraf";
 import pino from "pino";
 import { config } from "./config.js";
 import { db } from "./supabase.js";
-import { createOneTimeLinkToken } from "./security.js";\nimport { publishPost, startJobWorkers } from "./jobs.js";
+import { createOneTimeLinkToken } from "./security.js";\nimport { publishPost, startJobWorkers } from "./jobs.js";\nimport { createBackup, listBackups, restoreBackup, startBackupScheduler, verifyBackup } from "./backup.js";
 
 const log = pino({ level: config.LOG_LEVEL, redact: ["*.token", "*.password", "*.secret", "*.authorization"] });
 const bot = new Telegraf(config.BOT_TOKEN);
@@ -552,6 +552,46 @@ bot.command("analytics", async (ctx) => {
   if (errors.length) { log.error({ errors }, "Analytics query failed"); return ctx.reply("Analytics are temporarily unavailable."); }
   await ctx.reply(`VEXTRO BOT Analytics\nRegistered users: ${users.count ?? 0}\nLinked accounts: ${links.count ?? 0}\nOpen support tickets: ${tickets.count ?? 0}\nPublished channel posts: ${posts.count ?? 0}\nRecorded backup failures: ${backups.count ?? 0}`);
 });
+bot.command("backup_create", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  try {
+    const backup=await createBackup(ctx.from.id);
+    await writeAudit("backup.created",null,`Encrypted backup ${backup.id} verified`);
+    await ctx.reply(`Backup created and verified.\nID: ${backup.id}\nBytes: ${backup.bytes}\nCreated: ${new Date(backup.created_at).toLocaleString()}`);
+  } catch(error) {
+    log.error({err:error},"Manual backup failed");
+    await ctx.reply(`Backup failed: ${error instanceof Error?error.message:"unknown error"}`);
+  }
+});
+bot.command("backup_list", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  try {
+    const items=await listBackups();
+    if(!items.length) return ctx.reply("No encrypted backups found.");
+    await ctx.reply(items.map(x=>`${x.id}\n${new Date(x.created_at).toLocaleString()} | ${x.bytes} bytes | ${x.verified_at?"verified":"not verified"}`).join("\n\n"));
+  } catch(error) { log.error({err:error},"Backup list failed"); await ctx.reply("Backup list unavailable."); }
+});
+bot.command("backup_verify", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\\s+/)[1];
+  if(!id) return ctx.reply("Usage: /backup_verify <backup-uuid>");
+  const result=await verifyBackup(id);
+  await ctx.reply(result.valid?`Backup ${id} integrity and decryption verified.`:`Verification failed: ${result.error}`);
+});
+bot.command("backup_restore_confirm", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\\s+/)[1];
+  if(!id) return ctx.reply("Usage: /backup_restore_confirm <backup-uuid>");
+  try {
+    await ctx.reply("Restore started. A fresh safety backup will be created first. Existing rows are upserted; unrelated newer rows are not deleted.");
+    const restored=await restoreBackup(id,ctx.from.id);
+    await writeAudit("backup.restored",null,`Restored backup ${id}; rows: ${JSON.stringify(restored).slice(0,140)}`);
+    await ctx.reply("Restore completed. Row counts by table:\n"+Object.entries(restored).map(([name,count])=>`${name}: ${count}`).join("\n"));
+  } catch(error) {
+    log.error({err:error,backupId:id},"Backup restore failed");
+    await ctx.reply(`Restore failed: ${error instanceof Error?error.message:"unknown error"}`);
+  }
+});
 bot.command("backup_status", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const [{ count: failed, error: countError }, { data: latest, error: latestError }] = await Promise.all([
@@ -611,7 +651,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcast_draft, /broadcast_preview, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_status, /backup_runs, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcast_draft, /broadcast_preview, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
@@ -660,5 +700,5 @@ bot.on("text", async (ctx, next) => {
 bot.catch((error, ctx) => { log.error({ err: error, updateId: ctx.update.update_id }, "Telegram update failed"); });
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
-const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID);\nprocess.once("SIGINT", stopWorkers);\nprocess.once("SIGTERM", stopWorkers);\nawait bot.launch({ dropPendingUpdates: false });
+const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID);\nconst stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER_TELEGRAM_ID, config.BACKUP_INTERVAL_HOURS) : () => {};\nprocess.once("SIGINT", () => { stopWorkers(); stopBackups(); });\nprocess.once("SIGTERM", () => { stopWorkers(); stopBackups(); });\nawait bot.launch({ dropPendingUpdates: false });
 log.info({ botUsername: config.BOT_PUBLIC_USERNAME ?? "not-configured" }, "VEXTRO BOT polling started");
