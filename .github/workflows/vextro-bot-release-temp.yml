@@ -1,0 +1,37 @@
+name: Temporary VEXTRO BOT ZIP build
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/vextro-bot/**"
+      - ".github/workflows/vextro-bot-release-temp.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+      - name: Assemble clean bot package
+        run: |
+          mkdir -p release/vextro-bot
+          cp -R apps/vextro-bot/src release/vextro-bot/src
+          cp apps/vextro-bot/tsconfig.json apps/vextro-bot/.env.example release/vextro-bot/
+          cp apps/vextro-bot/package.json release/vextro-bot/package.json
+          node -e "const fs=require('fs');const p=require('./release/vextro-bot/package.json');delete p.scripts.test;delete p.devDependencies.vitest;fs.writeFileSync('./release/vextro-bot/package.json',JSON.stringify(p,null,2)+'\\n')"
+          cd release/vextro-bot
+          npm install --no-audit --no-fund
+          npm run typecheck
+          npm run build
+          cd ../..
+          zip -qr VEXTRO-BOT-clean-source.zip release/vextro-bot
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VEXTRO-BOT-clean-source
+          path: VEXTRO-BOT-clean-source.zip
+          if-no-files-found: error
+          retention-days: 7
