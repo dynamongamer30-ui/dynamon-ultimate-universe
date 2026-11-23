@@ -903,7 +903,6 @@ bot.action("membership:status", async (ctx) => {
     try{const member=await ctx.telegram.getChatMember(chatId,ctx.from!.id);return ["creator","administrator","member"].includes(member.status)||(member.status==="restricted"&&member.is_member);}
     catch{return false;}
   }));
-  const lang=await getLanguage(ctx.from.id);
   await ctx.reply("Channel: "+(results[0]?"joined":"not joined")+"\nGroup: "+(results[1]?"joined":"not joined")+"\nOverall: "+(results.every(Boolean)?"verified":"verification required"),
     Markup.inlineKeyboard([[Markup.button.callback("Verify again","membership:verify")],[Markup.button.callback(menuLabels[lang].home,"menu:home")]]));
 });
