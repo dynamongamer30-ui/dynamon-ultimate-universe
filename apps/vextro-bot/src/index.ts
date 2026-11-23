@@ -80,7 +80,8 @@ async function createLink(ctx: Context, telegramId: number): Promise<void> {
     if (error) throw error;
     const url = new URL("/telegram/link", config.WEBSITE_URL);
     url.searchParams.set("token", token.raw);
-    await ctx.reply(`${messages.en.linkCreated}\n${url.toString()}`, { link_preview_options: { is_disabled: true } });
+    const lang = await getLanguage(telegramId);
+    await ctx.reply(messages[lang].linkCreated + "\n" + url.toString(), { link_preview_options: { is_disabled: true } });
   } catch (error) {
     log.error({ err: error }, "Link request creation failed");
     await ctx.reply(messages.en.error);
