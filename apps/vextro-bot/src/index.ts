@@ -33,10 +33,10 @@ const messages: Record<Lang, { welcome: string; member: string; choose: string; 
   vi: { welcome: "Chào mừng bạn đến với VEXTRO BOT.", member: "Hãy tham gia cả kênh và nhóm bắt buộc, sau đó nhấn Verify.", choose: "Chọn ngôn ngữ của bạn.", unlinked: "Chưa liên kết tài khoản website.", linked: "Tài khoản website đã được liên kết.", linkCreated: "Liên kết hết hạn sau 10 phút. Mở liên kết và đăng nhập website:", help: "Lệnh: /start, /language, /account, /link, /unlink_status, /unlink, /membership_status, /guides, /rules, /support, /my_tickets, /ticket_reply, /help", support: "Dùng /support kèm danh mục và tiêu đề, nội dung ở dòng tiếp theo. Trong phiếu đang mở, bạn có thể gửi ảnh, tài liệu, video, âm thanh hoặc tin nhắn thoại. Dùng /my_tickets và /ticket_reply để tiếp tục.", ticketCreated: "Đã tạo phiếu hỗ trợ.", error: "Đã xảy ra lỗi. Vui lòng thử lại sau." }
 };
 
-const menuLabels: Record<Lang, {account:string;language:string;guides:string;rules:string;support:string;tickets:string;membership:string;help:string;about:string;home:string;verify:string;createLink:string;unlinkStatus:string}> = {
-  en:{account:"Account",language:"Language",guides:"Guides",rules:"Rules",support:"Support",tickets:"My tickets",membership:"Membership",help:"Help",about:"About",home:"Home",verify:"Verify membership",createLink:"Create website link",unlinkStatus:"Unlink status"},
-  hi:{account:"Khata",language:"Bhasha",guides:"Guides",rules:"Niyam",support:"Sahayata",tickets:"Mere tickets",membership:"Sadasyata",help:"Madad",about:"Parichay",home:"Home",verify:"Membership verify karein",createLink:"Website link banayein",unlinkStatus:"Unlink status"},
-  vi:{account:"Tài khoản",language:"Ngôn ngữ",guides:"Hướng dẫn",rules:"Quy định",support:"Hỗ trợ",tickets:"Phiếu của tôi",membership:"Thành viên",help:"Trợ giúp",about:"Giới thiệu",home:"Trang chủ",verify:"Xác minh thành viên",createLink:"Tạo liên kết website",unlinkStatus:"Trạng thái hủy liên kết"}
+const menuLabels: Record<Lang, {account:string;language:string;guides:string;rules:string;support:string;tickets:string;membership:string;help:string;about:string;home:string;verify:string;createLink:string;unlinkStatus:string;joinChannel:string;joinGroup:string}> = {
+  en:{account:"Account",language:"Language",guides:"Guides",rules:"Rules",support:"Support",tickets:"My tickets",membership:"Membership",help:"Help",about:"About",home:"Home",verify:"Verify membership",createLink:"Create website link",unlinkStatus:"Unlink status",joinChannel:"Join channel",joinGroup:"Join group"},
+  hi:{account:"Khata",language:"Bhasha",guides:"Guides",rules:"Niyam",support:"Sahayata",tickets:"Mere tickets",membership:"Sadasyata",help:"Madad",about:"Parichay",home:"Home",verify:"Membership verify karein",createLink:"Website link banayein",unlinkStatus:"Unlink status",joinChannel:"Channel join karein",joinGroup:"Group join karein"},
+  vi:{account:"Tài khoản",language:"Ngôn ngữ",guides:"Hướng dẫn",rules:"Quy định",support:"Hỗ trợ",tickets:"Phiếu của tôi",membership:"Thành viên",help:"Trợ giúp",about:"Giới thiệu",home:"Trang chủ",verify:"Xác minh thành viên",createLink:"Tạo liên kết website",unlinkStatus:"Trạng thái hủy liên kết",joinChannel:"Tham gia kênh",joinGroup:"Tham gia nhóm"}
 };
 function mainMenu(language: Lang) {
   const t=menuLabels[language];
@@ -56,8 +56,8 @@ function membershipJoinKeyboard(language:Lang) {
   const channelUrl=config.REQUIRED_CHANNEL_URL||(channelId.startsWith("@")?"https://t.me/"+channelId.slice(1):"");
   const groupUrl=config.REQUIRED_GROUP_URL||"";
   const row=[];
-  if(channelUrl) row.push(Markup.button.url("Join channel",channelUrl));
-  if(groupUrl) row.push(Markup.button.url("Join group",groupUrl));
+  if(channelUrl) row.push(Markup.button.url(menuLabels[language].joinChannel,channelUrl));
+  if(groupUrl) row.push(Markup.button.url(menuLabels[language].joinGroup,groupUrl));
   row.push(Markup.button.callback(menuLabels[language].verify,"membership:verify"));
   return Markup.inlineKeyboard([row]);
 }
