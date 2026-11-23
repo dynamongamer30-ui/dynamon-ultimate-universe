@@ -11,22 +11,38 @@ export async function publishPost(bot: Telegraf<Context>, channelId: string, pos
     .eq("id", postId).is("deleted_at", null).maybeSingle();
   if (error || !data) throw error ?? new Error("Post not found");
   if (data.state === "published" && data.channel_message_id) return Number(data.channel_message_id);
-  if (data.state !== "draft") throw new Error("Only draft posts can be published");
-  const caption = data.body ? `${data.title}\n\n${data.body}` : data.title;
+  if (data.state !== "draft") {
+    if (data.state === "publishing") throw new Error("Post is in publishing state with an uncertain Telegram delivery result. Use /post_reconcile after checking the channel; do not retry automatically.");
+    throw new Error("Only draft posts can be published");
+  }
+  const { data: lease, error: leaseError } = await db.from("dgbot_posts").update({
+    state: "publishing", updated_at: new Date().toISOString()
+  }).eq("id", postId).eq("state", "draft").select("id").maybeSingle();
+  if (leaseError || !lease) throw leaseError ?? new Error("Another worker already claimed this post");
+  const caption = data.body ? data.title + "\n\n" + data.body : data.title;
   const media = data.media as PostMedia;
   const buttons = Array.isArray(data.buttons) ? data.buttons as PostButton[] : [];
   const reply_markup = buttons.length ? { inline_keyboard: buttons.map((b) => [{ text: b.text, url: b.url }]) } : undefined;
   const options = reply_markup ? { reply_markup } : {};
   let message;
-  if (media?.file_id && media.type === "photo") message = await bot.telegram.sendPhoto(channelId, media.file_id, { caption: media.caption || caption, ...options });
-  else if (media?.file_id && media.type === "video") message = await bot.telegram.sendVideo(channelId, media.file_id, { caption: media.caption || caption, ...options });
-  else if (media?.file_id && media.type === "document") message = await bot.telegram.sendDocument(channelId, media.file_id, { caption: media.caption || caption, ...options });
-  else if (media?.file_id && media.type === "animation") message = await bot.telegram.sendAnimation(channelId, media.file_id, { caption: media.caption || caption, ...options });
-  else message = await bot.telegram.sendMessage(channelId, caption, options);
+  try {
+    if (media?.file_id && media.type === "photo") message = await bot.telegram.sendPhoto(channelId, media.file_id, { caption: media.caption || caption, ...options });
+    else if (media?.file_id && media.type === "video") message = await bot.telegram.sendVideo(channelId, media.file_id, { caption: media.caption || caption, ...options });
+    else if (media?.file_id && media.type === "document") message = await bot.telegram.sendDocument(channelId, media.file_id, { caption: media.caption || caption, ...options });
+    else if (media?.file_id && media.type === "animation") message = await bot.telegram.sendAnimation(channelId, media.file_id, { caption: media.caption || caption, ...options });
+    else message = await bot.telegram.sendMessage(channelId, caption, options);
+  } catch (sendError) {
+    const errorCode = Number((sendError as { response?: { error_code?: number } })?.response?.error_code ?? 0);
+    if (errorCode) {
+      await db.from("dgbot_posts").update({ state: "draft", updated_at: new Date().toISOString() }).eq("id", postId).eq("state", "publishing");
+      throw sendError;
+    }
+    throw new Error("Telegram delivery outcome is uncertain; post remains locked in publishing state to prevent duplicates. Check the channel, then use /post_reconcile. " + (sendError instanceof Error ? sendError.message : "Network error"));
+  }
   const { error: updateError } = await db.from("dgbot_posts").update({
     state: "published", channel_message_id: message.message_id, updated_at: new Date().toISOString()
-  }).eq("id", postId).eq("state", "draft");
-  if (updateError) throw new Error(`Telegram accepted message ${message.message_id}, but post state update failed: ${updateError.message}`);
+  }).eq("id", postId).eq("state", "publishing");
+  if (updateError) throw new Error("Telegram accepted message " + message.message_id + ", but post state update failed: " + updateError.message + ". Post remains locked; use /post_reconcile " + postId + " published " + message.message_id + ".");
   return message.message_id;
 }
 
