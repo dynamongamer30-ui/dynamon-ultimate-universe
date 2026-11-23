@@ -351,13 +351,25 @@ bot.command("support", async (ctx) => {
   if (categoryMatch) { category = categoryMatch[1]!.toLowerCase(); subject = categoryMatch[2]!.trim(); }
   if (subject.length < 5 || subject.length > 120 || body.length < 1 || body.length > textLimit) return ctx.reply("Format: /support [technical|account|download|billing|other | ]Subject (5–120 characters)\nDescribe your issue on the next line (up to 4000 characters).");
   try {
+    const existingTicket = await latestOpenTicket(ctx.from.id);
+    if (existingTicket) {
+      return ctx.reply("You already have an active support ticket: " + existingTicket.id + " (" + existingTicket.status + "). Continue with /ticket_reply " + existingTicket.id + " <message> or /my_tickets. You can open another ticket after this one is closed.");
+    }
     const { data: ticket, error: ticketError } = await db.from("bot_support_tickets").insert({ telegram_id: ctx.from.id, category, subject }).select("id").single();
     if (ticketError || !ticket) throw ticketError ?? new Error("Ticket was not created");
     const { error: messageError } = await db.from("bot_support_messages").insert({ ticket_id: ticket.id, sender_type: "user", sender_telegram_id: ctx.from.id, body });
     if (messageError) { await db.from("bot_support_tickets").delete().eq("id", ticket.id); throw messageError; }
     await ctx.reply(`${messages.en.ticketCreated}\nTicket: ${ticket.id}`);
     await sendOwnerNotice(`New VEXTRO support ticket\nID: ${ticket.id}\nFrom: ${ctx.from.id}\nSubject: ${subject}\nUse /ticket ${ticket.id} to view and /reply ${ticket.id} message to respond.`);
-  } catch (error) { log.error({ err: error }, "Support ticket creation failed"); await ctx.reply(messages.en.error); }
+  } catch (error) {
+    const code = (error as { code?: string })?.code;
+    if (code === "23505") {
+      const existingTicket = await latestOpenTicket(ctx.from.id).catch(() => null);
+      if (existingTicket) return ctx.reply("You already have an active support ticket: " + existingTicket.id + ". Continue with /ticket_reply " + existingTicket.id + " <message>.");
+    }
+    log.error({ err: error }, "Support ticket creation failed");
+    await ctx.reply(messages.en.error);
+  }
 });
 
 bot.command("tickets", async (ctx) => {
