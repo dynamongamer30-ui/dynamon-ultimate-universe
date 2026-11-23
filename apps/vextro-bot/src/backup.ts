@@ -152,16 +152,20 @@ export async function listBackups() {
   if (error) throw error;
   return data ?? [];
 }
-export function startBackupScheduler(ownerId: number, intervalHours: number) {
+export function startBackupScheduler(ownerId: number, intervalHours: number, notify?: (message: string) => Promise<unknown>) {
   let stopped = false;
   const run = async () => {
     if (stopped) return;
     try {
       const { data } = await db.from("vextro_backup_artifacts").select("created_at").order("created_at", { ascending: false }).limit(1).maybeSingle();
       const due = !data || Date.now() - new Date(data.created_at).getTime() >= intervalHours * 3600_000;
-      if (due) await createBackup(ownerId);
+      if (due) {
+        const backup = await createBackup(ownerId);
+        if (notify) await notify("Scheduled encrypted backup completed and verified. ID: " + backup.id + " | " + backup.bytes + " bytes");
+      }
     } catch (error) {
       console.error("VEXTRO encrypted backup scheduler failed", error);
+      if (notify) { try { await notify("VEXTRO scheduled backup failed: " + (error instanceof Error ? error.message : "unknown error")); } catch {} }
     }
   };
   void run();
