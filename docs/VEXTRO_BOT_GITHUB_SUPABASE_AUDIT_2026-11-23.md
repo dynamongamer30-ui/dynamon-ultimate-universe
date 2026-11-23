@@ -94,3 +94,13 @@ Production includes bot-related migration ledger entries not represented by matc
 - No Supabase schema or data was modified.
 - No KataBump deployment was attempted.
 - The actual bot application source and its runtime package scripts were not present in the inspected website repository or the located deployment guide.
+
+
+## Additional legacy bot runtime audit — 2026-11-23
+
+- The live project contains 13 legacy `dgbot_*` tables in addition to the newer `bot_*` tables. They cover guides, keywords, allowlist, moderation rules, audit events, bans, posts, group help handoffs, review queue, alerts, backup runs, pending claims, and user state. All inspected `dgbot_*` tables have RLS enabled; the earlier grants review showed service-role access rather than direct anon/authenticated access.
+- Estimated row counts showed `dgbot_backup_runs` populated (212 estimated rows), while the other legacy `dgbot_*` tables were empty at the time of inspection.
+- Exact aggregate query of `dgbot_backup_runs`: all 212 recorded runs had `status='failed'`, `trigger='scheduled'`, and `error_code='db_400'`. The latest recorded finish was 2026-11-23 06:06:35 UTC.
+- The production `cron.job` list contains no backup job. The two deployed Supabase Edge Functions are unrelated maintenance/campaign functions; no backup Edge Function was found. Repository code search did not locate a writer for `dgbot_backup_runs`.
+- Root cause is not yet established. `db_400` is only the stored application error code, not enough to infer whether the failure is an invalid REST request, schema mismatch, authentication issue, or another HTTP 400. Do not enable a new scheduler or mark backups healthy until the external/legacy writer and its request/response logs are identified.
+- No backup records, cron jobs, production rows, schemas, or functions were modified during this investigation.
