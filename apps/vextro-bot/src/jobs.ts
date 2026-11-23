@@ -48,6 +48,18 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
         const { data: claimed, error } = await db.rpc("vextro_claim_broadcast_recipients", { p_limit: 20 });
         if (error) throw error;
         for (const recipient of claimed ?? []) {
+          const { data: parentJob } = await db.from("vextro_broadcast_jobs").select("status").eq("id", recipient.job_id).maybeSingle();
+          if (!parentJob || parentJob.status !== "running") {
+            const cancelled = parentJob?.status === "cancelled";
+            await db.from("vextro_broadcast_recipients").update({
+              status: cancelled ? "failed" : "pending",
+              attempts: cancelled ? 5 : recipient.attempts,
+              last_error: cancelled ? "Cancelled by Owner" : null,
+              next_attempt_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }).eq("id", recipient.id);
+            continue;
+          }
           try {
             const { data: job, error: jobError } = await db.from("vextro_broadcast_jobs").select("body").eq("id", recipient.job_id).single();
             if (jobError || !job?.body) throw jobError ?? new Error("Broadcast body missing");
