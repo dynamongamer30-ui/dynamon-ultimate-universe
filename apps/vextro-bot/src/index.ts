@@ -754,20 +754,38 @@ bot.command("backup_restore_confirm", async (ctx) => {
 });
 bot.command("backup_status", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const [{ count: failed, error: countError }, { data: latest, error: latestError }] = await Promise.all([
-    db.from("dgbot_backup_runs").select("*", { count: "exact", head: true }).eq("status", "failed"),
-    db.from("dgbot_backup_runs").select("status,trigger,started_at,finished_at,parts,bytes,error_code").order("created_at", { ascending: false }).limit(1).maybeSingle()
-  ]);
-  if (countError || latestError) return ctx.reply("Backup status unavailable.");
-  if (!latest) return ctx.reply("No backup run records exist.");
-  await ctx.reply(`Backup status\nLatest: ${latest.status} (${latest.trigger})\nStarted: ${new Date(latest.started_at).toLocaleString()}\nFinished: ${latest.finished_at ? new Date(latest.finished_at).toLocaleString() : "not finished"}\nParts: ${latest.parts ?? "—"}\nBytes: ${latest.bytes ?? "—"}\nError: ${latest.error_code ?? "none"}\nRecorded failures: ${failed ?? 0}\n\nThis command is read-only. It does not start or repair backups.`);
+  try {
+    const [artifacts, legacy] = await Promise.all([
+      listBackups(),
+      db.from("dgbot_backup_runs").select("*", { count: "exact", head: true }).eq("status", "failed")
+    ]);
+    if (legacy.error) throw legacy.error;
+    const latest = artifacts[0];
+    await ctx.reply("Encrypted application backup status\nLatest verified artifact: " +
+      (latest ? new Date(latest.created_at).toLocaleString() + " | " + latest.bytes + " bytes | " + (latest.verified_at ? "verified" : "not verified") : "none") +
+      "\nAvailable artifacts: " + artifacts.length + "\nLegacy backup failures recorded: " + (legacy.count ?? 0) +
+      "\nAutomatic encrypted backup runs every " + config.BACKUP_INTERVAL_HOURS + " hours when BACKUP_PASSPHRASE is configured.");
+  } catch (error) {
+    log.error({err:error},"Backup status failed");
+    await ctx.reply("Backup status unavailable: " + (error instanceof Error ? error.message : "unknown error"));
+  }
 });
 bot.command("backup_runs", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const { data, error } = await db.from("dgbot_backup_runs").select("id,status,trigger,started_at,finished_at,parts,bytes,error_code").order("created_at", { ascending: false }).limit(10);
-  if (error) return ctx.reply("Backup history unavailable.");
-  if (!data?.length) return ctx.reply("No backup history.");
-  await ctx.reply(data.map((run) => `#${run.id} ${run.status}/${run.trigger}\n${new Date(run.started_at).toLocaleString()} | ${run.error_code ?? "no error"}`).join("\n\n"));
+  try {
+    const [artifacts, legacy] = await Promise.all([
+      listBackups(),
+      db.from("dgbot_backup_runs").select("id,status,trigger,started_at,error_code").order("created_at",{ascending:false}).limit(5)
+    ]);
+    if (legacy.error) throw legacy.error;
+    const current = artifacts.map(x => x.id + " | encrypted | " + x.bytes + " bytes\n" + new Date(x.created_at).toLocaleString() + " | " + (x.verified_at ? "verified" : "unverified"));
+    const previous = (legacy.data ?? []).map(x => "Legacy #" + x.id + " | " + x.status + "/" + x.trigger + "\n" + new Date(x.started_at).toLocaleString() + " | " + (x.error_code ?? "no error"));
+    const rows = [...current, ...previous].slice(0,15);
+    await ctx.reply(rows.length ? rows.join("\n\n") : "No backup history.");
+  } catch (error) {
+    log.error({err:error},"Backup history failed");
+    await ctx.reply("Backup history unavailable.");
+  }
 });
 bot.command("audit_recent", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
