@@ -749,8 +749,11 @@ bot.hears(/^\/guide_([a-z0-9][a-z0-9_-]{0,30})$/, async (ctx) => {
   const buttons = Array.isArray(data.buttons) ? data.buttons as Array<{text:string;url:string}> : [];
   const markup = buttons.length ? {reply_markup:{inline_keyboard:buttons.map(b => [{text:b.text,url:b.url}])}} : {};
   const heading = title[locale] ?? title.en ?? id;
-  if (media?.file_id && media.type === "photo") return ctx.replyWithPhoto(media.file_id,{caption:(heading + "\n\n" + body).slice(0,1024),...markup});
-  if (media?.file_id && media.type === "video") return ctx.replyWithVideo(media.file_id,{caption:(heading + "\n\n" + body).slice(0,1024),...markup});
+  const caption = ((media?.caption ? media.caption + "\n\n" : "") + heading + "\n\n" + body).slice(0,1024);
+  if (media?.file_id && media.type === "photo") return ctx.replyWithPhoto(media.file_id,{caption,...markup});
+  if (media?.file_id && media.type === "video") return ctx.replyWithVideo(media.file_id,{caption,...markup});
+  if (media?.file_id && media.type === "document") return ctx.replyWithDocument(media.file_id,{caption,...markup});
+  if (media?.file_id && media.type === "animation") return ctx.replyWithAnimation(media.file_id,{caption,...markup});
   return ctx.reply(heading + "\n\n" + body.slice(0,textLimit), markup);
 });
 
