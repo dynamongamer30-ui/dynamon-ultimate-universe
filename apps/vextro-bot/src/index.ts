@@ -183,7 +183,8 @@ bot.command("reply", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const match = ctx.message.text.match(/^\/reply(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
   if (!match) return ctx.reply("Usage: /reply <ticket-uuid> <message>");
-  const id = match[1]!;\n  const body = match[2]!;
+  const id = match[1]!;
+  const body = match[2]!;
   if (body.trim().length < 1 || body.length > textLimit) return ctx.reply("Reply must be 1–4000 characters.");
   const { data: ticket, error } = await db.from("bot_support_tickets").select("telegram_id,status").eq("id", id).maybeSingle();
   if (error || !ticket) return ctx.reply("Ticket not found.");
