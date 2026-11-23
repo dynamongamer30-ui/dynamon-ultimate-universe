@@ -1155,7 +1155,7 @@ bot.command("admin", async (ctx) => {
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
 
 bot.on("text", async (ctx, next) => {
-  if (ctx.chat.type === "private" || String(ctx.chat.id) !== config.REQUIRED_GROUP_ID || !ctx.from || ownerOnly(ctx)) return next();
+  if (ctx.chat.type === "private" || String(ctx.chat.id) !== config.REQUIRED_GROUP_ID || !ctx.from || ctx.from.is_bot || ownerOnly(ctx)) return next();
   try {
     const { data: rules, error } = await db.from("dgbot_moderation_rules").select("kind,value").is("deleted_at", null).limit(250);
     if (error) throw error;
