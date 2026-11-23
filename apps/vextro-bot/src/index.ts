@@ -1789,12 +1789,16 @@ bot.on("message", async (ctx, next) => {
   if(!ticket) return ctx.reply("Create a support ticket first with /support <subject> and then send your attachment.");
   const attachment={type,file_id,...(file_name?{file_name}:{}),...(message.caption?{caption:message.caption}:{})};
   const body=message.caption?.slice(0,4000)||("User sent a "+type+" attachment.");
-  const {error}=await db.from("bot_support_messages").insert({ticket_id:ticket.id,sender_type:"user",sender_telegram_id:ctx.from.id,body,attachment,internal_note:false});
-  if(error) return ctx.reply("Attachment could not be saved. Please try again.");
+  const {data:savedMessage,error}=await db.from("bot_support_messages").insert({ticket_id:ticket.id,sender_type:"user",sender_telegram_id:ctx.from.id,body,attachment,internal_note:false}).select("id").single();
+  if(error||!savedMessage) return ctx.reply("Attachment could not be saved. Please try again.");
   await db.from("bot_support_tickets").update({updated_at:new Date().toISOString()}).eq("id",ticket.id);
   try{
     await bot.telegram.sendMessage(config.OWNER_TELEGRAM_ID,"Support ticket attachment\nTicket: "+ticket.id+"\nUser: "+ctx.from.id+"\nType: "+type);
-    await bot.telegram.copyMessage(config.OWNER_TELEGRAM_ID,ctx.chat.id,message.message_id);
+    const copied=await bot.telegram.copyMessage(config.OWNER_TELEGRAM_ID,ctx.chat.id,message.message_id);
+    const {error:referenceError}=await db.from("bot_support_messages").update({
+      attachment:{...attachment,owner_chat_id:config.OWNER_TELEGRAM_ID,owner_chat_message_id:copied.message_id}
+    }).eq("id",savedMessage.id);
+    if(referenceError) log.warn({err:referenceError,ticketId:ticket.id},"Owner chat message reference could not be saved");
   }catch(notifyError){log.warn({err:notifyError,ticketId:ticket.id},"Owner attachment notification failed");}
   await ctx.reply("Attachment added to support ticket "+ticket.id+".");
 });
