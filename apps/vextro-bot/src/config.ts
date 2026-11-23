@@ -11,7 +11,11 @@ const schema = z.object({
   REQUIRED_GROUP_ID: z.string().min(1),
   PUBLISH_CHANNEL_ID: z.string().min(1).optional(),
   BOT_PUBLIC_USERNAME: z.string().regex(/^[A-Za-z0-9_]{5,32}$/).optional(),
-  BACKUP_PASSPHRASE: z.string().min(16).optional(),\n  BACKUP_BUCKET: z.string().min(1).default("vextro-backups"),\n  BACKUP_INTERVAL_HOURS: z.coerce.number().int().min(1).max(720).default(24),\n  BACKUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),\n  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info")
+  BACKUP_PASSPHRASE: z.string().min(16).optional(),
+  BACKUP_BUCKET: z.string().min(1).default("vextro-backups"),
+  BACKUP_INTERVAL_HOURS: z.coerce.number().int().min(1).max(720).default(24),
+  BACKUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info")
 });
 
 const parsed = schema.safeParse(process.env);
