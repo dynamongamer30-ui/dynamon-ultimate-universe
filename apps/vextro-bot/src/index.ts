@@ -340,6 +340,29 @@ bot.command("my_tickets", async (ctx) => {
   if(!data?.length) return ctx.reply("You have no support tickets yet.");
   await ctx.reply(data.map(t=>"["+t.status+"] "+t.subject+"\nID: "+t.id+"\nPriority: "+t.priority).join("\n\n"));
 });
+bot.command("ticket_media", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/ticket_media(?:@\w+)?\s+([0-9a-f-]{36})\s+(photo|video|document|animation|audio|voice|video_note)\s+([A-Za-z0-9_-]{10,512})(?:\s+([\s\S]+))?$/i);
+  if(!m) return ctx.reply("Usage: /ticket_media <ticket-uuid> <type> <file-id> [caption]");
+  const {data:ticket,error:ticketError}=await db.from("bot_support_tickets").select("telegram_id,status").eq("id",m[1]!).maybeSingle();
+  if(ticketError||!ticket||ticket.status==="closed") return ctx.reply("Open support ticket not found.");
+  const type=m[2]!.toLowerCase(),file_id=m[3]!,caption=(m[4]??"").trim();
+  if(caption.length>1024) return ctx.reply("Media caption must be 1024 characters or fewer.");
+  const options=caption?{caption}: {};
+  try{
+    if(type==="photo") await bot.telegram.sendPhoto(Number(ticket.telegram_id),file_id,options);
+    else if(type==="video") await bot.telegram.sendVideo(Number(ticket.telegram_id),file_id,options);
+    else if(type==="document") await bot.telegram.sendDocument(Number(ticket.telegram_id),file_id,options);
+    else if(type==="animation") await bot.telegram.sendAnimation(Number(ticket.telegram_id),file_id,options);
+    else if(type==="audio") await bot.telegram.sendAudio(Number(ticket.telegram_id),file_id,options);
+    else if(type==="voice") await bot.telegram.sendVoice(Number(ticket.telegram_id),file_id,options);
+    else if(type==="video_note") await bot.telegram.sendVideoNote(Number(ticket.telegram_id),file_id);
+    await db.from("bot_support_messages").insert({ticket_id:m[1],sender_type:"staff",sender_telegram_id:config.OWNER_TELEGRAM_ID,body:caption||("Owner sent a "+type+" attachment."),attachment:{type,file_id,...(caption?{caption}:{})},internal_note:false});
+    await db.from("bot_support_tickets").update({updated_at:new Date().toISOString()}).eq("id",m[1]!);
+    await writeAudit("ticket.media_reply",Number(ticket.telegram_id),m[1]!);
+    await ctx.reply("Attachment sent to ticket "+m[1]+".");
+  }catch(sendError){log.error({err:sendError,ticketId:m[1]},"Ticket attachment reply failed");await ctx.reply("Attachment delivery failed.");}
+});
 bot.command("ticket_reply", async (ctx) => {
   if(!ctx.from || !(await isMember(ctx))) return ctx.reply(messages.en.member);
   const m=ctx.message.text.match(/^\/ticket_reply(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
@@ -361,9 +384,9 @@ bot.command("ticket_history", async (ctx) => {
   if(!id||!/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /ticket_history <ticket-uuid>");
   const {data:ticket,error:ticketError}=await db.from("bot_support_tickets").select("telegram_id,subject,category,status,priority").eq("id",id).maybeSingle();
   if(ticketError||!ticket) return ctx.reply("Ticket not found.");
-  const {data,error}=await db.from("bot_support_messages").select("sender_type,sender_telegram_id,body,internal_note,created_at").eq("ticket_id",id).order("created_at",{ascending:true}).limit(100);
+  const {data,error}=await db.from("bot_support_messages").select("sender_type,sender_telegram_id,body,internal_note,attachment,created_at").eq("ticket_id",id).order("created_at",{ascending:true}).limit(100);
   if(error) return ctx.reply("Ticket history unavailable.");
-  const history=(data??[]).map(m=>"["+new Date(m.created_at).toLocaleString()+"] "+(m.internal_note?"INTERNAL NOTE":m.sender_type+" "+(m.sender_telegram_id??""))+": "+m.body).join("\n\n");
+  const history=(data??[]).map(m=>"["+new Date(m.created_at).toLocaleString()+"] "+(m.internal_note?"INTERNAL NOTE":m.sender_type+" "+(m.sender_telegram_id??""))+": "+m.body+(m.attachment?" ["+String((m.attachment as {type?:string}).type??"file")+" attachment]":"")).join("\n\n");
   await ctx.reply("Ticket "+id+"\n"+ticket.subject+" | "+ticket.category+" | "+ticket.status+" | "+ticket.priority+"\nUser: "+ticket.telegram_id+"\n\n"+(history||"No messages." ).slice(0,3900));
 });
 bot.command("reopen_ticket", async (ctx) => {
@@ -1548,6 +1571,44 @@ bot.command("admin", async (ctx) => {
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
   await ctx.reply("VEXTRO BOT Owner Dashboard\nRegistered users: " + (users ?? 0) + "\nOpen tickets: " + (openTickets ?? 0) + "\n\nUse /admin_help for the complete command reference or /admin_menu for the control center.");
+});
+
+bot.on("message", async (ctx, next) => {
+  if(!ctx.from||ownerOnly(ctx)||ctx.chat.type!=="private") return next();
+  const message=ctx.message as unknown as {
+    photo?:Array<{file_id:string}>;
+    video?:{file_id:string};
+    document?:{file_id:string;file_name?:string};
+    animation?:{file_id:string};
+    audio?:{file_id:string;file_name?:string};
+    voice?:{file_id:string};
+    video_note?:{file_id:string};
+    caption?:string;
+    message_id:number;
+  };
+  let type="",file_id="",file_name:string|undefined;
+  if(message.photo?.length){type="photo";file_id=message.photo[message.photo.length-1]!.file_id;}
+  else if(message.video){type="video";file_id=message.video.file_id;}
+  else if(message.document){type="document";file_id=message.document.file_id;file_name=message.document.file_name;}
+  else if(message.animation){type="animation";file_id=message.animation.file_id;}
+  else if(message.audio){type="audio";file_id=message.audio.file_id;file_name=message.audio.file_name;}
+  else if(message.voice){type="voice";file_id=message.voice.file_id;}
+  else if(message.video_note){type="video_note";file_id=message.video_note.file_id;}
+  else return next();
+  const {data:ticket,error:ticketError}=await db.from("bot_support_tickets").select("id").eq("telegram_id",ctx.from.id)
+    .in("status",["open","pending"]).order("updated_at",{ascending:false}).limit(1).maybeSingle();
+  if(ticketError) return ctx.reply("Your attachment could not be added. Please try again.");
+  if(!ticket) return ctx.reply("Create a support ticket first with /support <subject> and then send your attachment.");
+  const attachment={type,file_id,...(file_name?{file_name}:{}),...(message.caption?{caption:message.caption}:{})};
+  const body=message.caption?.slice(0,4000)||("User sent a "+type+" attachment.");
+  const {error}=await db.from("bot_support_messages").insert({ticket_id:ticket.id,sender_type:"user",sender_telegram_id:ctx.from.id,body,attachment,internal_note:false});
+  if(error) return ctx.reply("Attachment could not be saved. Please try again.");
+  await db.from("bot_support_tickets").update({updated_at:new Date().toISOString()}).eq("id",ticket.id);
+  try{
+    await bot.telegram.sendMessage(config.OWNER_TELEGRAM_ID,"Support ticket attachment\nTicket: "+ticket.id+"\nUser: "+ctx.from.id+"\nType: "+type);
+    await bot.telegram.copyMessage(config.OWNER_TELEGRAM_ID,ctx.chat.id,message.message_id);
+  }catch(notifyError){log.warn({err:notifyError,ticketId:ticket.id},"Owner attachment notification failed");}
+  await ctx.reply("Attachment added to support ticket "+ticket.id+".");
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
