@@ -183,7 +183,7 @@ bot.action("membership:verify", async (ctx) => {
 });
 
 bot.command("language", async (ctx) => {
-  await ctx.reply(messages.en.choose, Markup.inlineKeyboard([[Markup.button.callback("English", "language:set:en"), Markup.button.callback("Hindi", "language:set:hi"), Markup.button.callback("Vietnamese", "language:set:vi")]]));
+  await ctx.reply(messages.en.choose, Markup.inlineKeyboard([[Markup.button.callback("English", "language:set:en"), Markup.button.callback("Hindi (Roman)", "language:set:hi"), Markup.button.callback("Vietnamese", "language:set:vi")],[Markup.button.callback(menuLabels[ctx.from?await getLanguage(ctx.from.id):"en"].home,"menu:home")]]));
 });
 bot.action("language:open", async (ctx) => {
   await ctx.answerCbQuery();
@@ -194,7 +194,7 @@ bot.action(/^language:set:(en|hi|vi)$/, async (ctx) => {
   const lang = ctx.match[1]! as Lang;
   await saveUser(ctx.from.id, lang);
   await ctx.answerCbQuery("Language saved");
-  await ctx.reply(await getWelcome(lang));
+  await ctx.reply(await getWelcome(lang),mainMenu(lang));
 });
 
 bot.action("account:open", async (ctx) => {
@@ -204,7 +204,7 @@ bot.action("account:open", async (ctx) => {
     const lang = await getLanguage(ctx.from.id);
     const link = await accountStatus(ctx.from.id);
     const detail = link ? `\nLinked: ${new Date(link.linked_at).toLocaleString()}\nUnlink eligible: ${new Date(link.unlink_eligible_at).toLocaleString()}` : "";
-    await ctx.reply(link ? messages[lang].linked + detail : messages[lang].unlinked, Markup.inlineKeyboard([[Markup.button.callback("Create website link", "account:link")]]));
+    await ctx.reply(link ? messages[lang].linked + detail : messages[lang].unlinked, Markup.inlineKeyboard([[Markup.button.callback(menuLabels[lang].createLink, "account:link")],[Markup.button.callback(menuLabels[lang].home,"menu:home")]]));
   } catch (error) { log.error({ err: error }, "Account status failed"); await ctx.reply(messages.en.error); }
 });
 bot.action("account:link", async (ctx) => {
@@ -775,7 +775,7 @@ bot.command("guides", async (ctx) => {
   if (!rows.length) return ctx.reply("No published guides are available yet.");
   await ctx.reply("Published guides:\n" + rows.map(g => "• " + g.title + " (/guide_" + g.id + ")").join("\n"));
 });
-bot.action("guides:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply("Use /guides to browse published guides."); });
+bot.action("guides:open", async (ctx) => { await ctx.answerCbQuery(); const lang=ctx.from?await getLanguage(ctx.from.id):"en"; await ctx.reply("Use /guides to browse published guides or /find_guide <question> to search.",homeMenu(lang)); });
 bot.hears(/^\/guide_([a-z0-9][a-z0-9_-]{0,30})$/, async (ctx) => {
   if (!ctx.from || !(await isMember(ctx))) return ctx.reply(messages.en.member);
   const id = ctx.match[1]!;
@@ -902,17 +902,17 @@ bot.action("membership:status", async (ctx) => {
     catch{return false;}
   }));
   await ctx.reply("Channel: "+(results[0]?"joined":"not joined")+"\nGroup: "+(results[1]?"joined":"not joined")+"\nOverall: "+(results.every(Boolean)?"verified":"verification required"),
-    Markup.inlineKeyboard([[Markup.button.callback("Verify again","membership:verify")],[Markup.button.callback("Home","menu:home")]]));
+    Markup.inlineKeyboard([[Markup.button.callback("Verify again","membership:verify")],[Markup.button.callback(menuLabels[lang].home,"menu:home")]]));
 });
 bot.action("tickets:mine", async (ctx) => {
   await ctx.answerCbQuery();
   if(!ctx.from||!(await isMember(ctx))) return ctx.reply(messages.en.member);
   const {data,error}=await db.from("bot_support_tickets").select("id,subject,status,priority").eq("telegram_id",ctx.from.id).order("created_at",{ascending:false}).limit(10);
   if(error) return ctx.reply(messages.en.error);
-  return ctx.reply(data?.length?data.map(t=>"["+t.status+"] "+t.subject+"\n"+t.id+" | "+t.priority).join("\n\n"):"You have no support tickets yet.");
+  return ctx.reply(data?.length?data.map(t=>"["+t.status+"] "+t.subject+"\n"+t.id+" | "+t.priority).join("\n\n"):"You have no support tickets yet.",homeMenu(await getLanguage(ctx.from.id)));
 });
-bot.action("rules:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply("Use /rules to read the published group rules."); });
-bot.action("about:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply("VEXTRO BOT\nA Telegram companion for account linking, guides and support.\nLanguages: English, Hindi (Roman), Vietnamese.\nUse /help for commands and /support to contact the Owner."); });
+bot.action("rules:open", async (ctx) => { await ctx.answerCbQuery(); const lang=ctx.from?await getLanguage(ctx.from.id):"en"; await ctx.reply("Use /rules to read the published group rules.",homeMenu(lang)); });
+bot.action("about:open", async (ctx) => { await ctx.answerCbQuery(); const lang=ctx.from?await getLanguage(ctx.from.id):"en"; await ctx.reply("VEXTRO BOT\nA Telegram companion for account linking, guides and support.\nLanguages: English, Hindi (Roman), Vietnamese.\nUse /help for commands and /support to contact the Owner.",homeMenu(lang)); });
 bot.action("menu:home", async (ctx) => {
   await ctx.answerCbQuery();
   const lang=ctx.from?await getLanguage(ctx.from.id):"en";
@@ -920,8 +920,8 @@ bot.action("menu:home", async (ctx) => {
 });
 bot.command("about", async (ctx) => ctx.reply("VEXTRO BOT\nTelegram account linking, multilingual guides, group membership verification and support.\nLanguages: English, Hindi (Roman), Vietnamese."));
 bot.command("help", async (ctx) => ctx.reply(messages.en.help));
-bot.action("help:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply(messages.en.help); });
-bot.action("support:help", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply(messages.en.support); });
+bot.action("help:open", async (ctx) => { await ctx.answerCbQuery(); const lang=ctx.from?await getLanguage(ctx.from.id):"en"; await ctx.reply(messages[lang].help,homeMenu(lang)); });
+bot.action("support:help", async (ctx) => { await ctx.answerCbQuery(); const lang=ctx.from?await getLanguage(ctx.from.id):"en"; await ctx.reply(messages[lang].support,homeMenu(lang)); });
 
 bot.command("users", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
