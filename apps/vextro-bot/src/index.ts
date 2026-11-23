@@ -357,8 +357,10 @@ bot.command("ticket_media", async (ctx) => {
     else if(type==="audio") await bot.telegram.sendAudio(Number(ticket.telegram_id),file_id,options);
     else if(type==="voice") await bot.telegram.sendVoice(Number(ticket.telegram_id),file_id,options);
     else if(type==="video_note") await bot.telegram.sendVideoNote(Number(ticket.telegram_id),file_id);
-    await db.from("bot_support_messages").insert({ticket_id:m[1],sender_type:"staff",sender_telegram_id:config.OWNER_TELEGRAM_ID,body:caption||("Owner sent a "+type+" attachment."),attachment:{type,file_id,...(caption?{caption}:{})},internal_note:false});
-    await db.from("bot_support_tickets").update({updated_at:new Date().toISOString()}).eq("id",m[1]!);
+    const {error:historyError}=await db.from("bot_support_messages").insert({ticket_id:m[1],sender_type:"staff",sender_telegram_id:config.OWNER_TELEGRAM_ID,body:caption||("Owner sent a "+type+" attachment."),attachment:{type,file_id,...(caption?{caption}:{})},internal_note:false});
+    if(historyError){log.error({err:historyError,ticketId:m[1]},"Delivered ticket attachment history write failed");return ctx.reply("Attachment was delivered, but the ticket history could not be updated. Notify the user in the ticket before sending again.");}
+    const {error:updateError}=await db.from("bot_support_tickets").update({updated_at:new Date().toISOString()}).eq("id",m[1]!);
+    if(updateError) log.warn({err:updateError,ticketId:m[1]},"Ticket timestamp update failed after media reply");
     await writeAudit("ticket.media_reply",Number(ticket.telegram_id),m[1]!);
     await ctx.reply("Attachment sent to ticket "+m[1]+".");
   }catch(sendError){log.error({err:sendError,ticketId:m[1]},"Ticket attachment reply failed");await ctx.reply("Attachment delivery failed.");}
@@ -1554,7 +1556,7 @@ bot.command("admin_help", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const sections = [
     "USERS\n/users <page> | /user <id> | /ban_user <id> | /unban_user <id> | /user_language <id> <en|hi|vi> | /language_stats",
-    "SUPPORT\n/tickets <page> | /ticket <uuid> | /ticket_history <uuid> | /reply <uuid> <message> | /ticket_priority <uuid> <priority> | /ticket_category <uuid> <category> | /ticket_note <uuid> <note> | /ticket_search <term> | /reopen_ticket <uuid> | /close_ticket <uuid>",
+    "SUPPORT\n/tickets <page> | /ticket <uuid> | /ticket_history <uuid> | /ticket_media <uuid> <type> <file-id> [caption] | /reply <uuid> <message> | /ticket_priority <uuid> <priority> | /ticket_category <uuid> <category> | /ticket_note <uuid> <note> | /ticket_search <term> | /reopen_ticket <uuid> | /close_ticket <uuid>",
     "CONTENT\n/posts <page> | /post_draft <title> | /post_edit <uuid> <title+body> | /post_media <uuid> <type> <file-id> | /post_format <uuid> <plain|html|markdownv2> | /post_buttons <uuid> <label|url lines> | /post_preview <uuid> | /post_publish <uuid> | /post_reconcile <uuid> published <message-id> OR draft | /post_schedule <uuid> <ISO time> | /post_schedules | /post_schedule_cancel <uuid> | /post_schedule_retry <uuid>",
     "GUIDES\n/guide_list | /guide_create <id> <category> <title> | /guide_edit <id> <language> <title|steps> | /guide_preview <id> [language] | /guide_media <id> <type> <file-id> | /guide_buttons <id> <label|url> | /guide_publish <id> | /guide_unpublish <id> | /guide_delete <id> | /guide_keyword <id> <language> <term> | /guide_review | /guide_review_approve | /guide_review_reject | /welcome_set | /welcome_preview | /welcome_reset",
     "BROADCASTS\n/broadcasts [status] [page] | /broadcast_draft <message> | /broadcast_edit <uuid> <message> | /broadcast_format <uuid> <plain|html|markdownv2> | /broadcast_media <uuid> <type> <file-id> | /broadcast_buttons <uuid> <label|https-url lines> | /broadcast_translation <uuid> <en|hi|vi> <message> | /broadcast_clear_translation <uuid> <lang> | /broadcast_preview <uuid> [language] | /broadcast_test <uuid> [language] | /broadcast_schedule <uuid> <ISO time> | /broadcast_confirm <uuid> | /broadcast_pause | /broadcast_resume | /broadcast_cancel | /broadcast_retry | /broadcast_status",
