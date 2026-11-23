@@ -37,6 +37,16 @@ async function saveUser(telegramId: number, language?: Lang): Promise<void> {
   const { error } = await db.from("bot_users").upsert({ telegram_id: telegramId, language: selectedLanguage, updated_at: new Date().toISOString() }, { onConflict: "telegram_id" });
   if (error) throw error;
 }
+async function getWelcome(language: Lang): Promise<string> {
+  try {
+    const {data,error}=await db.from("vextro_runtime_settings").select("value").eq("key","welcome_messages").maybeSingle();
+    if(error) throw error;
+    const values=(data?.value??{}) as Record<string,unknown>;
+    const selected=values[language];
+    if(typeof selected==="string"&&selected.trim()) return selected.slice(0,1000);
+  } catch(error) { log.warn({err:error},"Custom welcome message could not be loaded"); }
+  return messages[language].welcome;
+}
 async function getLanguage(telegramId: number): Promise<Lang> {
   const { data, error } = await db.from("bot_users").select("language").eq("telegram_id", telegramId).maybeSingle();
   if (error) throw error;
@@ -119,7 +129,7 @@ bot.start(async (ctx) => {
       await ctx.reply(messages[lang].member, Markup.inlineKeyboard([[Markup.button.callback("Verify membership", "membership:verify")]]));
       return;
     }
-    await ctx.reply(messages[lang].welcome, Markup.inlineKeyboard([
+    await ctx.reply(await getWelcome(lang), Markup.inlineKeyboard([
       [Markup.button.callback("Account", "account:open"), Markup.button.callback("Language", "language:open")],
       [Markup.button.callback("Guides", "guides:open"), Markup.button.callback("Rules", "rules:open")],
       [Markup.button.callback("Support", "support:help"), Markup.button.callback("My tickets", "tickets:mine")],
@@ -134,7 +144,7 @@ bot.action("membership:verify", async (ctx) => {
   if (!ctx.from) return;
   const lang = await getLanguage(ctx.from.id);
   if (await isMember(ctx)) {
-    await ctx.editMessageText(messages[lang].welcome, Markup.inlineKeyboard([
+    await ctx.editMessageText(await getWelcome(lang), Markup.inlineKeyboard([
       [Markup.button.callback("Account", "account:open"), Markup.button.callback("Language", "language:open")],
       [Markup.button.callback("Guides", "guides:open"), Markup.button.callback("Rules", "rules:open")],
       [Markup.button.callback("Support", "support:help"), Markup.button.callback("My tickets", "tickets:mine")],
@@ -704,7 +714,7 @@ bot.action("rules:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.r
 bot.action("about:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply("VEXTRO BOT\nA Telegram companion for account linking, guides and support.\nLanguages: English, Hindi (Roman), Vietnamese.\nUse /help for commands and /support to contact the Owner."); });
 bot.action("menu:home", async (ctx) => {
   await ctx.answerCbQuery();
-  await ctx.reply(messages.en.welcome,Markup.inlineKeyboard([
+  await ctx.reply(await getWelcome("en"),Markup.inlineKeyboard([
     [Markup.button.callback("Account","account:open"),Markup.button.callback("Language","language:open")],
     [Markup.button.callback("Guides","guides:open"),Markup.button.callback("Rules","rules:open")],
     [Markup.button.callback("Support","support:help"),Markup.button.callback("My tickets","tickets:mine")],
@@ -760,6 +770,37 @@ bot.command("unban_user", async (ctx) => {
   await ctx.reply(`User ${id} restriction lifted.`);
 });
 
+bot.command("welcome_set", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/welcome_set(?:@\w+)?\s+(en|hi|vi)\s+([\s\S]+)$/i);
+  if(!m) return ctx.reply("Usage: /welcome_set <en|hi|vi> <welcome text, max 1000 characters>");
+  const value=m[2]!.trim();
+  if(!value||value.length>1000) return ctx.reply("Welcome text must be 1–1000 characters.");
+  const {data}=await db.from("vextro_runtime_settings").select("value").eq("key","welcome_messages").maybeSingle();
+  const current=(data?.value??{}) as Record<string,unknown>;
+  const updated={...current,[m[1]!]:value};
+  const {error}=await db.from("vextro_runtime_settings").upsert({key:"welcome_messages",value:updated,updated_by:ctx.from.id,updated_at:new Date().toISOString()},{onConflict:"key"});
+  if(error) return ctx.reply("Welcome text could not be saved.");
+  await writeAudit("settings.welcome_updated",null,"Welcome text updated for "+m[1]);
+  await ctx.reply("Welcome message saved for "+m[1]+".");
+});
+bot.command("welcome_preview", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const lang=(ctx.message.text.split(/\s+/)[1]??"en") as Lang;
+  if(!["en","hi","vi"].includes(lang)) return ctx.reply("Usage: /welcome_preview <en|hi|vi>");
+  await ctx.reply(await getWelcome(lang));
+});
+bot.command("welcome_reset", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const lang=ctx.message.text.split(/\s+/)[1] as Lang;
+  if(!["en","hi","vi"].includes(lang)) return ctx.reply("Usage: /welcome_reset <en|hi|vi>");
+  const {data}=await db.from("vextro_runtime_settings").select("value").eq("key","welcome_messages").maybeSingle();
+  const current=(data?.value??{}) as Record<string,unknown>;
+  delete current[lang];
+  const {error}=await db.from("vextro_runtime_settings").upsert({key:"welcome_messages",value:current,updated_by:ctx.from.id,updated_at:new Date().toISOString()},{onConflict:"key"});
+  if(error) return ctx.reply("Welcome message reset failed.");
+  await ctx.reply("Default welcome restored for "+lang+".");
+});
 bot.command("language_stats", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const [{count:en},{count:hi},{count:vi}]=await Promise.all([
@@ -1041,7 +1082,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
