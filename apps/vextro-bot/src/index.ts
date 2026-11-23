@@ -246,14 +246,16 @@ bot.command("support", async (ctx) => {
 bot.command("tickets", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const args=ctx.message.text.split(/\s+/);
-  const status=["open","pending","closed"].includes(args[1]??"")?args[1]:undefined;
-  const page=Math.max(1,Number(args[status?2:1])||1);
+  const statuses=["open","pending","closed","all"];
+  const status=statuses.includes((args[1]??"").toLowerCase())?(args[1]!.toLowerCase()):"active";
+  const page=Math.max(1,Number(status==="active"||status==="all"?args[1]:args[2])||1);
   let query=db.from("bot_support_tickets").select("id,telegram_id,subject,status,priority,created_at").order("created_at",{ascending:false});
-  if(status) query=query.eq("status",status); else query=query.neq("status","closed");
+  if(status==="active") query=query.in("status",["open","pending"]);
+  else if(status!=="all") query=query.eq("status",status);
   const {data,error}=await query.range((page-1)*20,page*20-1);
   if(error){log.error({err:error},"Ticket list failed");return ctx.reply("Ticket list unavailable.");}
-  if(!data?.length) return ctx.reply("No tickets on this page.");
-  await ctx.reply("Tickets — page "+page+(status?" | "+status:" | open")+"\n"+data.map(t=>"["+t.status+"/"+t.priority+"] "+t.id+"\nUser: "+t.telegram_id+"\n"+t.subject).join("\n\n")+"\nNext: /tickets "+(status?status+" ":"")+(page+1));
+  if(!data?.length) return ctx.reply("No tickets on this page.\nUsage: /tickets [open|pending|closed|all] [page]");
+  await ctx.reply("Tickets — "+status+" — page "+page+"\n"+data.map(t=>"["+t.status+"/"+t.priority+"] "+t.id+"\nUser: "+t.telegram_id+"\n"+t.subject).join("\n\n")+"\nNext: /tickets "+(status==="active"?"":status+" ")+(page+1));
 });
 bot.command("ticket", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -963,7 +965,18 @@ bot.command("user", async (ctx) => {
   ]);
   if (user.error || link.error || tickets.error || ban.error) return ctx.reply("User profile could not be loaded.");
   if (!user.data) return ctx.reply("User is not registered.");
-  await ctx.reply(`User profile\nTelegram ID: ${id}\nLanguage: ${user.data.language}\nRegistered: ${new Date(user.data.created_at).toLocaleString()}\nLast active: ${new Date(user.data.updated_at).toLocaleString()}\nWebsite linked: ${link.data ? "yes" : "no"}\nSupport tickets: ${tickets.count ?? 0}\nRestricted: ${ban.data ? "yes — " + (ban.data.reason || "no reason") : "no"}`);
+  let displayName="not available",username="not available";
+  try {
+    const chat=await bot.telegram.getChat(id) as {first_name?:string;last_name?:string;username?:string};
+    displayName=[chat.first_name,chat.last_name].filter(Boolean).join(" ")||"not available";
+    username=chat.username?"@"+chat.username:"not available";
+  } catch {}
+  await ctx.reply("User profile\nTelegram ID: "+id+"\nName: "+displayName+"\nUsername: "+username+
+    "\nLanguage: "+user.data.language+"\nRegistered: "+new Date(user.data.created_at).toLocaleString()+
+    "\nLast active: "+new Date(user.data.updated_at).toLocaleString()+
+    "\nWebsite linked: "+(link.data?"yes":"no")+
+    "\nSupport tickets: "+(tickets.count??0)+
+    "\nRestricted: "+(ban.data?"yes — "+(ban.data.reason||"no reason"):"no"));
 });
 bot.command("ban_user", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
