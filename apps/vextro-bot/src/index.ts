@@ -1,5 +1,5 @@
 import { randomBytes, createHash } from "node:crypto";
-import { Telegraf, Markup } from "telegraf";
+import { Telegraf, Markup, type Context } from "telegraf";
 import pino from "pino";
 import { config } from "./config.js";
 import { db } from "./supabase.js";
@@ -25,7 +25,7 @@ async function getLanguage(telegramId: number): Promise<Lang> {
   if (error) throw error;
   return data?.language === "hi" || data?.language === "vi" ? data.language : "en";
 }
-async function isMember(ctx: Parameters<typeof bot.use>[0] extends (ctx: infer C, next: infer N) => unknown ? C : never): Promise<boolean> {
+async function isMember(ctx: Context): Promise<boolean> {
   const from = ctx.from;
   if (!from) return false;
   const statuses = await Promise.all([config.REQUIRED_CHANNEL_ID, config.REQUIRED_GROUP_ID].map(async (chatId) => {
@@ -69,7 +69,7 @@ bot.action("membership:verify", async (ctx) => {
   else await ctx.reply(messages[lang].member);
 });
 
-bot.action("language:open", async (ctx) => {
+bot.command("language", async (ctx) => {\n  await ctx.reply(messages.en.choose, Markup.inlineKeyboard([[Markup.button.callback("English", "language:set:en"), Markup.button.callback("Hindi", "language:set:hi"), Markup.button.callback("Vietnamese", "language:set:vi")]]));\n});\nbot.action("language:open", async (ctx) => {
   await ctx.answerCbQuery();
   await ctx.reply(messages.en.choose, Markup.inlineKeyboard([[Markup.button.callback("English", "language:set:en"), Markup.button.callback("Hindi", "language:set:hi"), Markup.button.callback("Vietnamese", "language:set:vi")]]));
 });
