@@ -2,7 +2,7 @@ import type { Telegraf } from "telegraf";
 import type { Context } from "telegraf";
 import { db } from "./supabase.js";
 
-type PostMedia = { type?: string; file_id?: string; caption?: string } | null;
+type PostMedia = { type?: string; file_id?: string; caption?: string; format?: string } | null;
 type PostButton = { text: string; url: string };
 
 export async function publishPost(bot: Telegraf<Context>, channelId: string, postId: string) {
@@ -23,7 +23,9 @@ export async function publishPost(bot: Telegraf<Context>, channelId: string, pos
   const media = data.media as PostMedia;
   const buttons = Array.isArray(data.buttons) ? data.buttons as PostButton[] : [];
   const reply_markup = buttons.length ? { inline_keyboard: buttons.map((b) => [{ text: b.text, url: b.url }]) } : undefined;
-  const options = reply_markup ? { reply_markup } : {};
+  const parseMode = media?.format === "HTML" ? "HTML" : media?.format === "MarkdownV2" ? "MarkdownV2" : undefined;
+  const formatOptions = parseMode ? { parse_mode: parseMode } : {};
+  const options = { ...(reply_markup ? { reply_markup } : {}), ...formatOptions };
   let message;
   try {
     if (media?.file_id && media.type === "photo") message = await bot.telegram.sendPhoto(channelId, media.file_id, { caption: media.caption || caption, ...options });
