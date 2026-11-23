@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const optionalString = (value: z.ZodTypeAny) => z.preprocess(
+const optionalString = <T extends z.ZodTypeAny>(value: T) => z.preprocess(
   (input) => input === "" || input === null ? undefined : input,
   value.optional()
 );
