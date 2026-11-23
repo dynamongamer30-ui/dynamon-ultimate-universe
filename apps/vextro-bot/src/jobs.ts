@@ -104,12 +104,12 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
     while (!stopped) {
       try {
         if (channelId) {
-          const { data: due, error } = await db.from("vextro_scheduled_posts").select("id,post_id")
+          const { data: due, error } = await db.from("vextro_scheduled_posts").select("id,post_id,attempts")
             .eq("status", "scheduled").lte("scheduled_at", new Date().toISOString()).order("scheduled_at").limit(5);
           if (error) throw error;
           for (const item of due ?? []) {
             const { data: claimed } = await db.from("vextro_scheduled_posts").update({
-              status: "publishing", attempts: 1, updated_at: new Date().toISOString()
+              status: "publishing", attempts: Number(item.attempts ?? 0) + 1, updated_at: new Date().toISOString()
             }).eq("id", item.id).eq("status", "scheduled").select("id").maybeSingle();
             if (!claimed) continue;
             try {
