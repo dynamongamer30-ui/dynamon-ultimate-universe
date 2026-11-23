@@ -47,6 +47,15 @@ async function isMember(ctx: Context): Promise<boolean> {
   }));
   return results.every(Boolean);
 }
+async function isBanned(telegramId: number): Promise<{ reason: string } | null> {
+  const { data, error } = await db.from("dgbot_bans").select("reason").eq("telegram_id", telegramId).is("deleted_at", null).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+async function writeAudit(action: string, targetId: number | null, reason: string): Promise<void> {
+  const { error } = await db.from("dgbot_audit_log").insert({ action, actor_id: config.OWNER_TELEGRAM_ID, target_id: targetId, reason: reason.slice(0, 200) });
+  if (error) log.error({ err: error, action, targetId }, "Owner audit event could not be saved");
+}
 async function accountStatus(telegramId: number) {
   const { data, error } = await db.from("bot_account_links").select("linked_at,unlink_eligible_at").eq("telegram_id", telegramId).is("unlinked_at", null).maybeSingle();
   if (error) throw error;
@@ -78,6 +87,18 @@ async function sendOwnerNotice(text: string): Promise<void> {
   try { await bot.telegram.sendMessage(config.OWNER_TELEGRAM_ID, text); }
   catch (error) { log.error({ err: error }, "Owner notification delivery failed"); }
 }
+
+bot.use(async (ctx, next) => {
+  if (!ctx.from || ownerOnly(ctx)) return next();
+  try {
+    const ban = await isBanned(ctx.from.id);
+    if (ban) return ctx.reply("This Telegram account is restricted. Contact the VEXTRO BOT Owner for a review.");
+    return next();
+  } catch (error) {
+    log.error({ err: error, telegramId: ctx.from.id }, "Access restriction check failed");
+    return ctx.reply("Access verification is temporarily unavailable. Please try again later.");
+  }
+});
 
 bot.start(async (ctx) => {
   if (!ctx.from) return;
@@ -310,6 +331,50 @@ bot.hears(/^\/guide_([a-z0-9][a-z0-9-]{1,39})$/, async (ctx) => {
 bot.command("help", async (ctx) => ctx.reply(messages.en.help));
 bot.action("help:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply(messages.en.help); });
 bot.action("support:help", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply(messages.en.support); });
+
+bot.command("users", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const { data, error } = await db.from("bot_users").select("telegram_id,language,created_at,updated_at").order("updated_at", { ascending: false }).limit(20);
+  if (error) return ctx.reply("User list unavailable.");
+  if (!data?.length) return ctx.reply("No registered users.");
+  await ctx.reply(data.map((user) => `${user.telegram_id} | ${user.language} | ${new Date(user.updated_at).toLocaleDateString()}`).join("\n"));
+});
+bot.command("user", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id = Number(ctx.message.text.split(/\s+/)[1]);
+  if (!Number.isSafeInteger(id) || id < 1) return ctx.reply("Usage: /user <telegram-id>");
+  const [user, link, tickets, ban] = await Promise.all([
+    db.from("bot_users").select("telegram_id,language,created_at,updated_at").eq("telegram_id", id).maybeSingle(),
+    db.from("bot_account_links").select("linked_at,unlink_eligible_at").eq("telegram_id", id).is("unlinked_at", null).maybeSingle(),
+    db.from("bot_support_tickets").select("*", { count: "exact", head: true }).eq("telegram_id", id),
+    db.from("dgbot_bans").select("reason").eq("telegram_id", id).is("deleted_at", null).maybeSingle()
+  ]);
+  if (user.error || link.error || tickets.error || ban.error) return ctx.reply("User profile could not be loaded.");
+  if (!user.data) return ctx.reply("User is not registered.");
+  await ctx.reply(`User profile\\nTelegram ID: ${id}\\nLanguage: ${user.data.language}\\nRegistered: ${new Date(user.data.created_at).toLocaleString()}\\nLast active: ${new Date(user.data.updated_at).toLocaleString()}\\nWebsite linked: ${link.data ? "yes" : "no"}\\nSupport tickets: ${tickets.count ?? 0}\\nRestricted: ${ban.data ? "yes — " + (ban.data.reason || "no reason") : "no"}`);
+});
+bot.command("ban_user", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const match = ctx.message.text.match(/^\/ban_user(?:@\w+)?\s+(\d+)\s+([\s\S]+)$/i);
+  if (!match) return ctx.reply("Usage: /ban_user <telegram-id> <reason>");
+  const id = Number(match[1]!);
+  const reason = match[2]!.trim();
+  if (!Number.isSafeInteger(id) || id < 1 || id === config.OWNER_TELEGRAM_ID) return ctx.reply("Invalid target Telegram ID.");
+  if (!reason || reason.length > 200) return ctx.reply("Reason must be 1–200 characters.");
+  const { error } = await db.from("dgbot_bans").upsert({ telegram_id: id, reason, created_at: new Date().toISOString(), deleted_at: null }, { onConflict: "telegram_id" });
+  if (error) { log.error({ err: error, targetId: id }, "User restriction failed"); return ctx.reply("Could not restrict this user."); }
+  await writeAudit("user.ban", id, reason);
+  await ctx.reply(`User ${id} is now restricted. The restriction is reversible with /unban_user ${id}.`);
+});
+bot.command("unban_user", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id = Number(ctx.message.text.split(/\s+/)[1]);
+  if (!Number.isSafeInteger(id) || id < 1) return ctx.reply("Usage: /unban_user <telegram-id>");
+  const { data, error } = await db.from("dgbot_bans").update({ deleted_at: new Date().toISOString() }).eq("telegram_id", id).is("deleted_at", null).select("telegram_id").maybeSingle();
+  if (error || !data) return ctx.reply("No active restriction was found for that user.");
+  await writeAudit("user.unban", id, "Owner lifted user restriction");
+  await ctx.reply(`User ${id} restriction lifted.`);
+});
 
 bot.command("analytics", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
