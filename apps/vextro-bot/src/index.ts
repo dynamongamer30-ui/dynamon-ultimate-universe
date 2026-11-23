@@ -454,7 +454,7 @@ bot.command("post_preview", async (ctx) => {
   const caption = "[" + data.state + "] " + data.title + "\n\n" + (data.body || "(No body)");
   const media = data.media as {type?:string;file_id?:string;caption?:string;format?:string}|null;
   const buttons = Array.isArray(data.buttons) ? data.buttons as Array<{text:string;url:string}> : [];
-  const parseMode = media?.format === "HTML" ? "HTML" : media?.format === "MarkdownV2" ? "MarkdownV2" : undefined;
+  const parseMode: "HTML" | "MarkdownV2" | undefined = media?.format === "HTML" ? "HTML" : media?.format === "MarkdownV2" ? "MarkdownV2" : undefined;
   const formatOptions = parseMode ? {parse_mode:parseMode} : {};
   const options = {...(buttons.length ? {reply_markup:{inline_keyboard:buttons.map(b=>[{text:b.text,url:b.url}])}} : {}),...formatOptions};
   if(media?.file_id&&media.type==="photo") return ctx.replyWithPhoto(media.file_id,{caption:(media.caption||caption).slice(0,1024),...options});
@@ -541,7 +541,7 @@ bot.command("broadcast_preview", async (ctx) => {
   const { data, error } = await db.from("vextro_broadcast_jobs").select("body,status,scheduled_at,total_count,format").eq("id", id).maybeSingle();
   if (error || !data) return ctx.reply("Broadcast not found.");
   const parseMode = data.format === "HTML" ? "HTML" : data.format === "MarkdownV2" ? "MarkdownV2" : undefined;
-  const scheduled = data.scheduled_at ? formatOwnerDateTime(data.scheduled_at,ownerTimezone) : "immediately after confirmation";
+  const scheduled = data.scheduled_at ? formatOwnerDateTime(data.scheduled_at,config.OWNER_TIMEZONE) : "immediately after confirmation";
   await ctx.reply("Preview ["+data.status+"]\nFormat: "+data.format+"\nRecipients: "+data.total_count+"\nScheduled: "+scheduled+"\n\n"+data.body,parseMode?{parse_mode:parseMode}:{});
 });
 bot.command("broadcast_format", async (ctx) => {
