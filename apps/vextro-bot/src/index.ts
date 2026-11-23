@@ -562,7 +562,15 @@ bot.command("broadcast_draft", async (ctx) => {
   if (!body || body.length > 4000) return ctx.reply("Usage: /broadcast_draft your message (1–4000 characters).");
   const { data, error } = await db.from("vextro_broadcast_jobs").insert({ created_by: ctx.from.id, body, status: "draft" }).select("id").single();
   if (error || !data) return ctx.reply("Could not create broadcast draft.");
-  await ctx.reply(`Broadcast draft ${data.id}\nPreview: /broadcast_preview ${data.id}\nOptional schedule: /broadcast_schedule ${data.id} 2026-12-01T18:00:00+05:30\nConfirm delivery: /broadcast_confirm ${data.id}`);
+  await ctx.reply("Broadcast draft "+data.id+
+    "\nEdit: /broadcast_edit "+data.id+" <message>"+
+    "\nFormat: /broadcast_format "+data.id+" <plain|html|markdownv2>"+
+    "\nMedia: /broadcast_media "+data.id+" <type> <file-id>"+
+    "\nButtons: /broadcast_buttons "+data.id+" <Label|https-url lines>"+
+    "\nTranslations: /broadcast_translation "+data.id+" <en|hi|vi> <message>"+
+    "\nPreview/test: /broadcast_preview "+data.id+" [language] | /broadcast_test "+data.id+" [language]"+
+    "\nSchedule: /broadcast_schedule "+data.id+" <YYYY-MM-DD HH:mm>"+
+    "\nConfirm: /broadcast_confirm "+data.id);;
 });
 bot.command("broadcast_preview", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -1526,7 +1534,7 @@ bot.command("admin_help", async (ctx) => {
     "SUPPORT\n/tickets <page> | /ticket <uuid> | /ticket_history <uuid> | /reply <uuid> <message> | /ticket_priority <uuid> <priority> | /ticket_category <uuid> <category> | /ticket_note <uuid> <note> | /ticket_search <term> | /reopen_ticket <uuid> | /close_ticket <uuid>",
     "CONTENT\n/posts <page> | /post_draft <title> | /post_edit <uuid> <title+body> | /post_media <uuid> <type> <file-id> | /post_format <uuid> <plain|html|markdownv2> | /post_buttons <uuid> <label|url lines> | /post_preview <uuid> | /post_publish <uuid> | /post_reconcile <uuid> published <message-id> OR draft | /post_schedule <uuid> <ISO time> | /post_schedules | /post_schedule_cancel <uuid> | /post_schedule_retry <uuid>",
     "GUIDES\n/guide_list | /guide_create <id> <category> <title> | /guide_edit <id> <language> <title|steps> | /guide_preview <id> [language] | /guide_media <id> <type> <file-id> | /guide_buttons <id> <label|url> | /guide_publish <id> | /guide_unpublish <id> | /guide_delete <id> | /guide_keyword <id> <language> <term> | /guide_review | /guide_review_approve | /guide_review_reject | /welcome_set | /welcome_preview | /welcome_reset",
-    "BROADCASTS\n/broadcasts | /broadcast_draft | /broadcast_edit | /broadcast_format | /broadcast_delete | /broadcast_preview | /broadcast_test | /broadcast_schedule | /broadcast_confirm | /broadcast_pause | /broadcast_resume | /broadcast_cancel | /broadcast_retry | /broadcast_status",
+    "BROADCASTS\n/broadcasts [status] [page] | /broadcast_draft <message> | /broadcast_edit <uuid> <message> | /broadcast_format <uuid> <plain|html|markdownv2> | /broadcast_media <uuid> <type> <file-id> | /broadcast_buttons <uuid> <label|https-url lines> | /broadcast_translation <uuid> <en|hi|vi> <message> | /broadcast_clear_translation <uuid> <lang> | /broadcast_preview <uuid> [language] | /broadcast_test <uuid> [language] | /broadcast_schedule <uuid> <ISO time> | /broadcast_confirm <uuid> | /broadcast_pause | /broadcast_resume | /broadcast_cancel | /broadcast_retry | /broadcast_status",
     "MODERATION\n/moderation_rules | /moderation_add | /moderation_edit | /moderation_remove | /allow_hosts | /allow_host | /edit_allow_host | /remove_allow_host | /warn_user | /mute_user | /unmute_user | /group_ban | /group_unban | /moderation_stats",
     "OPERATIONS\n/admin_menu | /analytics | /bot_status | /settings | /logs | /log_search | /audit_recent | /audit_search | /health | /membership_check | /membership_diagnose | /membership_set_channel | /membership_set_group | /membership_reset | /maintenance_on | /maintenance_off | /maintenance_status | /backup_create | /backup_list | /backup_verify | /backup_restore_confirm | /backup_status | /backup_runs | /update_check | /update_approve | /update_install | /update_rollback | /update_status"
   ];
