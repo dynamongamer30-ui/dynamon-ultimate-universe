@@ -283,6 +283,13 @@ bot.command("unlink_status", async (ctx) => {
   try{const lang=await getLanguage(ctx.from.id);await ctx.reply(await unlinkStatusMessage(ctx.from.id,lang),homeMenu(lang));}
   catch(error){log.error({err:error},"Unlink status failed");await ctx.reply(messages.en.error);}
 });
+function unlinkCopy(language:Lang) {
+  return ({
+    en:{prompt:"Confirm unlinking your website account from this Telegram account? This takes effect immediately. You can create a new link later.",confirm:"Confirm unlink",cancel:"Cancel",success:"Your website account has been unlinked successfully.",cancelled:"Unlink cancelled. Your website account remains linked.",restricted:"Unlink is not available yet. Eligibility: ",failed:"The account could not be unlinked. No change was made."},
+    hi:{prompt:"Kya aap website account ko is Telegram account se unlink karna chahte hain? Yeh turant hoga. Baad mein naya link bana sakte hain.",confirm:"Unlink confirm karein",cancel:"Cancel",success:"Aapka website account safalta se unlink ho gaya.",cancelled:"Unlink cancel kar diya gaya. Account abhi linked hai.",restricted:"Abhi unlink allowed nahi hai. Eligibility: ",failed:"Account unlink nahi ho saka. Koi badlav nahi hua."},
+    vi:{prompt:"Bạn có chắc muốn hủy liên kết tài khoản website với Telegram không? Thao tác có hiệu lực ngay và bạn có thể liên kết lại sau.",confirm:"Xác nhận hủy liên kết",cancel:"Hủy",success:"Tài khoản website đã được hủy liên kết.",cancelled:"Đã hủy thao tác. Tài khoản vẫn được liên kết.",restricted:"Chưa thể hủy liên kết. Thời điểm đủ điều kiện: ",failed:"Không thể hủy liên kết. Không có thay đổi nào được thực hiện."}
+  } as const)[language];
+}
 async function requestUnlinkConfirmation(ctx:Context,telegramId:number,language:Lang) {
   const status=await accountStatus(telegramId);
   if(!status) return ctx.reply(messages[language].unlinked,homeMenu(language));
@@ -290,13 +297,11 @@ async function requestUnlinkConfirmation(ctx:Context,telegramId:number,language:
   if(!Number.isFinite(eligibleAt.getTime())||Date.now()<eligibleAt.getTime()) {
     return ctx.reply(await unlinkStatusMessage(telegramId,language),homeMenu(language));
   }
-  return ctx.reply(
-    "Confirm unlinking your website account from this Telegram account? This action takes effect immediately. You can create a new link later.",
-    Markup.inlineKeyboard([
-      [Markup.button.callback("Confirm unlink","account:unlink-confirm")],
-      [Markup.button.callback("Cancel","account:unlink-cancel")]
-    ])
-  );
+  const copy=unlinkCopy(language);
+  return ctx.reply(copy.prompt,Markup.inlineKeyboard([
+    [Markup.button.callback(copy.confirm,"account:unlink-confirm")],
+    [Markup.button.callback(copy.cancel,"account:unlink-cancel")]
+  ]));
 }
 bot.action("account:unlink",async(ctx)=>{
   await ctx.answerCbQuery();
@@ -313,21 +318,21 @@ bot.action("account:unlink-confirm",async(ctx)=>{
     const result=data as {ok?:boolean;error?:string;eligible_at?:string}|null;
     const lang=await getLanguage(ctx.from.id);
     if(result?.ok===true) {
-      await ctx.reply("Your website account has been unlinked successfully.",mainMenu(lang));
+      await ctx.reply(unlinkCopy(lang).success,mainMenu(lang));
       return;
     }
     if(result?.error==="unlink_restricted") {
-      await ctx.reply("Unlink is not available yet. Eligibility: "+String(result.eligible_at??"not available"),homeMenu(lang));
+      await ctx.reply(unlinkCopy(lang).restricted+String(result.eligible_at??"not available"),homeMenu(lang));
       return;
     }
     if(result?.error==="not_linked") return ctx.reply(messages[lang].unlinked,homeMenu(lang));
-    await ctx.reply("The account could not be unlinked. No change was made.",homeMenu(lang));
+    await ctx.reply(unlinkCopy(lang).failed,homeMenu(lang));
   } catch(error) { log.error({err:error},"Account unlink RPC failed"); await ctx.reply(messages.en.error); }
 });
 bot.action("account:unlink-cancel",async(ctx)=>{
   await ctx.answerCbQuery("Cancelled");
   const lang=ctx.from?await getLanguage(ctx.from.id):"en";
-  await ctx.reply("Unlink cancelled. Your website account remains linked.",homeMenu(lang));
+  await ctx.reply(unlinkCopy(lang).cancelled,homeMenu(lang));
 });
 bot.command("unlink", async (ctx) => {
   if(!ctx.from||!(await isMember(ctx))) return ctx.reply(messages.en.member);
