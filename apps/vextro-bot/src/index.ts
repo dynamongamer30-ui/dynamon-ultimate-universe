@@ -361,6 +361,17 @@ bot.command("post_draft", async (ctx) => {
   if (error || !data) { log.error({ err: error }, "Post draft creation failed"); return ctx.reply("Could not create the draft."); }
   await ctx.reply(`Draft created: ${data.id}\nPreview: /post_preview ${data.id}\nEdit: /post_edit ${data.id} Title\nBody`);
 });
+bot.on(["photo","video","document","animation"], async (ctx, next) => {
+  if(!ownerOnly(ctx)) return next();
+  const message=ctx.message;
+  let fileId="",kind="";
+  if("photo" in message){fileId=message.photo[message.photo.length-1]?.file_id??"";kind="photo";}
+  else if("video" in message){fileId=message.video.file_id;kind="video";}
+  else if("document" in message){fileId=message.document.file_id;kind="document";}
+  else if("animation" in message){fileId=message.animation.file_id;kind="animation";}
+  if(!fileId) return ctx.reply("Could not read Telegram file ID.");
+  await ctx.reply("Media received.\nType: "+kind+"\nFile ID:\n"+fileId+"\nUse /post_media <draft-uuid> "+kind+" "+fileId+" [caption] or /guide_media <guide-id> "+kind+" "+fileId);
+});
 bot.command("post_media", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const match = ctx.message.text.match(/^\/post_media(?:@\w+)?\s+([0-9a-f-]{36})\s+(photo|video|document|animation)\s+(\S+)(?:\s+([\s\S]+))?$/i);
