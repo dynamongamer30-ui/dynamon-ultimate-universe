@@ -22,13 +22,13 @@ Optional settings include `OWNER_TIMEZONE` (defaults to `Asia/Kolkata`; all sche
 
 - Onboarding, required channel+group membership verification, membership diagnostics, English/Hindi Roman/Vietnamese language selection and user menu.
 - Website account linking using a 256-bit one-time token; only SHA-256 is stored and the existing website `approve_bot_link(text)` RPC remains authoritative.
-- User profiles, access restrictions, language administration and user analytics.
+- User profiles with Telegram name/username and throttled last-seen tracking, access restrictions, language administration and active-user analytics.
 - Support ticket creation, category, conversation history, user replies, Owner replies, internal notes, priority, search, close and reopen.
 - Multilingual guide editor, media/buttons, publish/archive, keyword and review-queue workflows; published guides are available to users.
 - Channel post drafts, editing, previews, photo/video/document/animation attachments, HTTPS buttons, publishing and Owner-timezone scheduled publishing.
 - Persistent broadcasts with membership-verified audience snapshot, Owner confirmation, preview/test, Owner-timezone scheduling, pause/resume/cancel, delivery queue, retry-after handling, retry and results.
 - Group moderation rules, host allowlist, blocked phrase/domain enforcement, rate/repeat spam checks, warnings, timed restrictions, group ban/unban and moderation analytics.
-- Owner dashboard navigation, audit log/search, runtime settings, maintenance mode and health monitoring.
+- Expanded Owner control center across users, support, broadcasts, posts, guides, moderation, membership, schedules, analytics, security/audit, backups, settings, health/logs, maintenance and updates.
 - Encrypted AES-256-GCM application-data backups, SHA-256 integrity checks, private Supabase Storage, retention, scheduled backups, restore with a safety backup, and optional offsite HTTPS copy. Website-owned account-link requests, active website account links, and website guide records are preserved rather than overwritten during bot restore.
 - GitHub release checks, Owner approval records, deployment webhook requests and rollback webhook requests.
 - Restart recovery for in-flight queue work and stale scheduled-post leases.
