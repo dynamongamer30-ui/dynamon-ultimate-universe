@@ -2,7 +2,7 @@ import { Telegraf, Markup, type Context } from "telegraf";
 import pino from "pino";
 import { config } from "./config.js";
 import { db } from "./supabase.js";
-import { createOneTimeLinkToken } from "./security.js";
+import { createOneTimeLinkToken } from "./security.js";\nimport { publishPost, startJobWorkers } from "./jobs.js";
 
 const log = pino({ level: config.LOG_LEVEL, redact: ["*.token", "*.password", "*.secret", "*.authorization"] });
 const bot = new Telegraf(config.BOT_TOKEN);
@@ -353,6 +353,126 @@ bot.command("post_remove", async (ctx) => {
   await ctx.reply("Post marked as removed.");
 });
 
+bot.command("broadcast_draft", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const body = ctx.message.text.replace(/^\\/broadcast_draft(?:@\\w+)?\\s*/i, "").trim();
+  if (!body || body.length > 4000) return ctx.reply("Usage: /broadcast_draft your message (1–4000 characters).");
+  const { data, error } = await db.from("vextro_broadcast_jobs").insert({ created_by: ctx.from.id, body, status: "draft" }).select("id").single();
+  if (error || !data) return ctx.reply("Could not create broadcast draft.");
+  await ctx.reply(`Broadcast draft ${data.id}\nPreview: /broadcast_preview ${data.id}\nOptional schedule: /broadcast_schedule ${data.id} 2026-12-01T18:00:00+05:30\nConfirm delivery: /broadcast_confirm ${data.id}`);
+});
+bot.command("broadcast_preview", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id = ctx.message.text.split(/\\s+/)[1];
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /broadcast_preview <uuid>");
+  const { data, error } = await db.from("vextro_broadcast_jobs").select("body,status,scheduled_at,total_count").eq("id", id).maybeSingle();
+  if (error || !data) return ctx.reply("Broadcast not found.");
+  await ctx.reply(`Preview [${data.status}]\nRecipients: ${data.total_count}\nScheduled: ${data.scheduled_at ? new Date(data.scheduled_at).toLocaleString() : "immediately after confirmation"}\n\n${data.body}`);
+});
+bot.command("broadcast_schedule", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const match = ctx.message.text.match(/^\\/broadcast_schedule(?:@\\w+)?\\s+([0-9a-f-]{36})\\s+(\\S+)$/i);
+  if (!match) return ctx.reply("Usage: /broadcast_schedule <uuid> <ISO-8601-with-timezone>");
+  const id = match[1]!, at = new Date(match[2]!);
+  if (!Number.isFinite(at.getTime()) || at.getTime() < Date.now() + 60_000) return ctx.reply("Choose a valid future time at least one minute from now, including timezone offset.");
+  const { data, error } = await db.from("vextro_broadcast_jobs").update({ scheduled_at: at.toISOString(), updated_at: new Date().toISOString() }).eq("id", id).eq("status", "draft").select("id").maybeSingle();
+  if (error || !data) return ctx.reply("Draft not found or schedule could not be saved.");
+  await ctx.reply(`Scheduled for ${at.toISOString()}. It will not send until you explicitly run /broadcast_confirm ${id}.`);
+});
+bot.command("broadcast_confirm", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id = ctx.message.text.split(/\\s+/)[1];
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /broadcast_confirm <uuid>");
+  const { data: job, error } = await db.from("vextro_broadcast_jobs").select("id,status,scheduled_at").eq("id", id).maybeSingle();
+  if (error || !job) return ctx.reply("Broadcast not found.");
+  if (job.status !== "draft") return ctx.reply(`Broadcast is already ${job.status}.`);
+  const recipients: Array<{job_id:string;telegram_id:number}> = [];
+  for (let from=0; ; from+=1000) {
+    const { data, error: usersError } = await db.from("bot_users").select("telegram_id").order("telegram_id").range(from, from+999);
+    if (usersError) return ctx.reply("Could not load recipient list; broadcast was not queued.");
+    for (const user of data ?? []) recipients.push({ job_id:id, telegram_id:Number(user.telegram_id) });
+    if (!data || data.length < 1000) break;
+  }
+  if (!recipients.length) return ctx.reply("No registered recipients. Broadcast remains a draft.");
+  for (let i=0; i<recipients.length; i+=500) {
+    const { error: insertError } = await db.from("vextro_broadcast_recipients").upsert(recipients.slice(i,i+500), { onConflict:"job_id,telegram_id", ignoreDuplicates:true });
+    if (insertError) return ctx.reply("Recipient queue preparation failed. No delivery was started; inspect this draft before retrying.");
+  }
+  const { error: updateError } = await db.from("vextro_broadcast_jobs").update({
+    status:"queued", confirmed_at:new Date().toISOString(), total_count:recipients.length, updated_at:new Date().toISOString()
+  }).eq("id",id).eq("status","draft");
+  if (updateError) return ctx.reply("Could not activate the queue. No messages have been sent.");
+  await writeAudit("broadcast.confirmed", null, `Broadcast ${id} confirmed for ${recipients.length} users`);
+  await ctx.reply(`Broadcast confirmed. ${recipients.length} recipients queued. Delivery will begin at ${job.scheduled_at ? new Date(job.scheduled_at).toLocaleString() : "the next worker cycle"}.`);
+});
+bot.command("broadcast_pause", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\\s+/)[1];
+  if (!id) return ctx.reply("Usage: /broadcast_pause <uuid>");
+  const { data,error }=await db.from("vextro_broadcast_jobs").update({status:"paused",updated_at:new Date().toISOString()}).eq("id",id).in("status",["queued","running"]).select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Active broadcast not found.");
+  await ctx.reply("Broadcast paused. In-flight Telegram sends may finish.");
+});
+bot.command("broadcast_resume", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\\s+/)[1];
+  if (!id) return ctx.reply("Usage: /broadcast_resume <uuid>");
+  const { data,error }=await db.from("vextro_broadcast_jobs").update({status:"running",updated_at:new Date().toISOString()}).eq("id",id).eq("status","paused").select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Paused broadcast not found.");
+  await ctx.reply("Broadcast resumed.");
+});
+bot.command("broadcast_cancel", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\\s+/)[1];
+  if (!id) return ctx.reply("Usage: /broadcast_cancel <uuid>");
+  const { data,error }=await db.from("vextro_broadcast_jobs").update({status:"cancelled",updated_at:new Date().toISOString()}).eq("id",id).in("status",["draft","queued","running","paused"]).select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Cancellable broadcast not found.");
+  await ctx.reply("Broadcast cancelled. Messages already delivered cannot be recalled.");
+});
+bot.command("broadcast_status", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\\s+/)[1];
+  if (!id) return ctx.reply("Usage: /broadcast_status <uuid>");
+  const [{data:job,error},{data:counts,count,error:countError}]=await Promise.all([
+    db.from("vextro_broadcast_jobs").select("status,total_count,scheduled_at,created_at").eq("id",id).maybeSingle(),
+    db.from("vextro_broadcast_recipients").select("status",{count:"exact"}).eq("job_id",id)
+  ]);
+  if(error||countError||!job) return ctx.reply("Broadcast status unavailable.");
+  const [{count:sent},{count:failed},{count:pending}]=await Promise.all([
+    db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",id).eq("status","sent"),
+    db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",id).eq("status","failed"),
+    db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",id).in("status",["pending","sending"])
+  ]);
+  await ctx.reply(`Broadcast ${id}\nStatus: ${job.status}\nTotal: ${count??0}\nSent: ${sent??0}\nFailed/retrying: ${failed??0}\nPending: ${pending??0}\nScheduled: ${job.scheduled_at?new Date(job.scheduled_at).toLocaleString():"immediate"}`);
+});
+bot.command("post_schedule", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const match=ctx.message.text.match(/^\\/post_schedule(?:@\\w+)?\\s+([0-9a-f-]{36})\\s+(\\S+)$/i);
+  if(!match) return ctx.reply("Usage: /post_schedule <draft-post-uuid> <ISO-8601-with-timezone>");
+  const at=new Date(match[2]!);
+  if(!Number.isFinite(at.getTime())||at.getTime()<Date.now()+60_000) return ctx.reply("Schedule must be at least one minute in the future and include timezone.");
+  const {data:post,error:postError}=await db.from("dgbot_posts").select("id,state").eq("id",match[1]!).is("deleted_at",null).maybeSingle();
+  if(postError||!post||post.state!=="draft") return ctx.reply("Only an existing draft post can be scheduled.");
+  const {data,error}=await db.from("vextro_scheduled_posts").insert({post_id:post.id,scheduled_at:at.toISOString(),created_by:ctx.from.id}).select("id").single();
+  if(error||!data) return ctx.reply("Could not schedule this post.");
+  await ctx.reply(`Post scheduled: ${data.id}\nTime: ${at.toISOString()}`);
+});
+bot.command("post_schedules", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const {data,error}=await db.from("vextro_scheduled_posts").select("id,post_id,scheduled_at,status,last_error").order("scheduled_at",{ascending:true}).limit(20);
+  if(error) return ctx.reply("Schedule list unavailable.");
+  if(!data?.length) return ctx.reply("No scheduled posts.");
+  await ctx.reply(data.map(x=>`${x.id} | ${x.status}\nPost: ${x.post_id}\n${new Date(x.scheduled_at).toLocaleString()}${x.last_error?"\n"+x.last_error:""}`).join("\n\n"));
+});
+bot.command("post_schedule_cancel", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\\s+/)[1];
+  if(!id) return ctx.reply("Usage: /post_schedule_cancel <schedule-uuid>");
+  const {data,error}=await db.from("vextro_scheduled_posts").update({status:"cancelled",updated_at:new Date().toISOString()}).eq("id",id).eq("status","scheduled").select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Pending schedule not found.");
+  await ctx.reply("Scheduled post cancelled.");
+});
+
 bot.command("guides", async (ctx) => {
   if (!ctx.from || !(await isMember(ctx))) return ctx.reply(messages.en.member);
   const { data, error } = await db.from("bot_guides").select("id,title,data").eq("published", true).eq("deleted", false).order("updated_at", { ascending: false }).limit(20);
@@ -491,7 +611,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /analytics, /backup_status, /backup_runs, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcast_draft, /broadcast_preview, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_status, /backup_runs, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
@@ -540,5 +660,5 @@ bot.on("text", async (ctx, next) => {
 bot.catch((error, ctx) => { log.error({ err: error, updateId: ctx.update.update_id }, "Telegram update failed"); });
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
-await bot.launch({ dropPendingUpdates: false });
+const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID);\nprocess.once("SIGINT", stopWorkers);\nprocess.once("SIGTERM", stopWorkers);\nawait bot.launch({ dropPendingUpdates: false });
 log.info({ botUsername: config.BOT_PUBLIC_USERNAME ?? "not-configured" }, "VEXTRO BOT polling started");
