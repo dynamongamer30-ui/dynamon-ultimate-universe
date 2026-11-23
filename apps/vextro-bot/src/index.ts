@@ -166,7 +166,7 @@ bot.action(/^language:set:(en|hi|vi)$/, async (ctx) => {
   const lang = ctx.match[1]! as Lang;
   await saveUser(ctx.from.id, lang);
   await ctx.answerCbQuery("Language saved");
-  await ctx.reply(messages[lang].welcome);
+  await ctx.reply(await getWelcome(lang));
 });
 
 bot.action("account:open", async (ctx) => {
@@ -1166,7 +1166,7 @@ process.on("uncaughtException", (error) => {
 registerGuideAdmin(bot, ownerOnly, writeAudit);
 registerUpdateCommands(bot, ownerOnly, config.OWNER_TELEGRAM_ID);
 registerOwnerMenu(bot, ownerOnly);
-const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID);
+const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID, config.OWNER_TELEGRAM_ID);
 const stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER_TELEGRAM_ID, config.BACKUP_INTERVAL_HOURS) : () => {};
 const stopHealth = startHealthMonitor(bot, config.OWNER_TELEGRAM_ID, 5);
 const stopUpdates = startUpdateMonitor(bot, config.OWNER_TELEGRAM_ID, config.UPDATE_CHECK_INTERVAL_HOURS);
