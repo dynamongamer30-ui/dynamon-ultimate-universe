@@ -370,7 +370,7 @@ bot.on(["photo","video","document","animation"], async (ctx, next) => {
   else if("document" in message){fileId=message.document.file_id;kind="document";}
   else if("animation" in message){fileId=message.animation.file_id;kind="animation";}
   if(!fileId) return ctx.reply("Could not read Telegram file ID.");
-  await ctx.reply("Media received.\nType: "+kind+"\nFile ID:\n"+fileId+"\nUse /post_media <draft-uuid> "+kind+" "+fileId+" [caption] or /guide_media <guide-id> "+kind+" "+fileId);
+  await ctx.reply("Media received.\nType: "+kind+"\nFile ID:\n"+fileId+"\nUse /post_media <draft-uuid> "+kind+" "+fileId+" [caption]. Guide media currently supports photo/video only.");
 });
 bot.command("post_media", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
