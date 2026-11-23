@@ -246,11 +246,44 @@ bot.command("post_draft", async (ctx) => {
   if (error || !data) { log.error({ err: error }, "Post draft creation failed"); return ctx.reply("Could not create the draft."); }
   await ctx.reply(`Draft created: ${data.id}\nPreview: /post_preview ${data.id}\nEdit: /post_edit ${data.id} Title\nBody`);
 });
+bot.command("post_media", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const match = ctx.message.text.match(/^\\/post_media(?:@\\w+)?\\s+([0-9a-f-]{36})\\s+(photo|video|document|animation)\\s+(\\S+)(?:\\s+([\\s\\S]+))?$/i);
+  if (!match) return ctx.reply("Usage: /post_media <post-uuid> <photo|video|document|animation> <telegram-file-id> [caption]");
+  const [, id, type, fileId, caption = ""] = match;
+  if (caption.length > 1024) return ctx.reply("Caption must be 1024 characters or fewer.");
+  const { data, error } = await db.from("dgbot_posts").update({ media: { type: type!.toLowerCase(), file_id: fileId, caption }, updated_at: new Date().toISOString() })
+    .eq("id", id!).eq("state", "draft").is("deleted_at", null).select("id").maybeSingle();
+  if (error || !data) return ctx.reply("Draft not found or media could not be saved.");
+  await ctx.reply("Media saved to draft.");
+});
+bot.command("post_buttons", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const match = ctx.message.text.match(/^\\/post_buttons(?:@\\w+)?\\s+([0-9a-f-]{36})\\s+([\\s\\S]+)$/i);
+  if (!match) return ctx.reply("Usage: /post_buttons <post-uuid> then one Label|https://url per line (maximum 8).");
+  const id = match[1]!;
+  const lines = match[2]!.split("\\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.length > 8) return ctx.reply("Maximum 8 buttons are supported.");
+  const buttons: Array<{ text: string; url: string }> = [];
+  for (const line of lines) {
+    const split = line.indexOf("|");
+    if (split < 1) return ctx.reply("Each line must use Label|https://url");
+    const label = line.slice(0, split).trim();
+    let url: URL;
+    try { url = new URL(line.slice(split + 1).trim()); } catch { return ctx.reply("Every button needs a valid HTTPS URL."); }
+    if (!label || label.length > 40 || url.protocol !== "https:") return ctx.reply("Button labels must be 1–40 characters and URLs must use HTTPS.");
+    buttons.push({ text: label, url: url.toString() });
+  }
+  const { data, error } = await db.from("dgbot_posts").update({ buttons, updated_at: new Date().toISOString() })
+    .eq("id", id).eq("state", "draft").is("deleted_at", null).select("id").maybeSingle();
+  if (error || !data) return ctx.reply("Draft not found or buttons could not be saved.");
+  await ctx.reply("Buttons saved to draft.");
+});
 bot.command("post_preview", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id = ctx.message.text.split(/\s+/)[1];
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /post_preview <post-uuid>");
-  const { data, error } = await db.from("dgbot_posts").select("title,body,state").eq("id", id).is("deleted_at", null).maybeSingle();
+  const { data, error } = await db.from("dgbot_posts").select("title,body,state,media,buttons").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error || !data) return ctx.reply("Post not found.");
   await ctx.reply(`[${data.state}] ${data.title}\n\n${data.body || "(No body)"}`.slice(0, 4096));
 });
@@ -281,7 +314,16 @@ bot.command("post_publish", async (ctx) => {
     if (error || !data) return ctx.reply("Post not found.");
     if (data.state === "published" && data.channel_message_id) return ctx.reply(`Already published. Telegram message ID: ${data.channel_message_id}`);
     if (data.state !== "draft") return ctx.reply("Only draft posts can be published.");
-    const message = await bot.telegram.sendMessage(channelId, data.body ? `${data.title}\n\n${data.body}` : data.title);
+    const caption = data.body ? `${data.title}\\n\\n${data.body}` : data.title;
+    const media = data.media as { type?: string; file_id?: string; caption?: string } | null;
+    const buttons = Array.isArray(data.buttons) ? data.buttons as Array<{ text: string; url: string }> : [];
+    const reply_markup = buttons.length ? Markup.inlineKeyboard(buttons.map((button) => Markup.button.url(button.text, button.url))) : undefined;
+    let message;
+    if (media?.file_id && media.type === "photo") message = await bot.telegram.sendPhoto(channelId, media.file_id, { caption: media.caption || caption, reply_markup });
+    else if (media?.file_id && media.type === "video") message = await bot.telegram.sendVideo(channelId, media.file_id, { caption: media.caption || caption, reply_markup });
+    else if (media?.file_id && media.type === "document") message = await bot.telegram.sendDocument(channelId, media.file_id, { caption: media.caption || caption, reply_markup });
+    else if (media?.file_id && media.type === "animation") message = await bot.telegram.sendAnimation(channelId, media.file_id, { caption: media.caption || caption, reply_markup });
+    else message = await bot.telegram.sendMessage(channelId, caption, reply_markup ? { reply_markup } : {});
     const { error: updateError } = await db.from("dgbot_posts").update({ state: "published", channel_message_id: message.message_id, updated_at: new Date().toISOString() }).eq("id", id).eq("state", "draft");
     if (updateError) {
       log.error({ err: updateError, postId: id, telegramMessageId: message.message_id }, "Published post could not be recorded");
@@ -448,10 +490,35 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /reply, /close_ticket, /posts, /post_draft, /post_preview, /post_edit, /post_publish, /post_remove, /analytics, /backup_status, /backup_runs, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /analytics, /backup_status, /backup_runs, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
+
+bot.on("text", async (ctx, next) => {
+  if (ctx.chat.type === "private" || String(ctx.chat.id) !== config.REQUIRED_GROUP_ID || !ctx.from || ownerOnly(ctx)) return next();
+  try {
+    const { data: rules, error } = await db.from("dgbot_moderation_rules").select("kind,value").is("deleted_at", null).limit(250);
+    if (error) throw error;
+    const body = ctx.message.text.toLocaleLowerCase();
+    const hosts = [...ctx.message.text.matchAll(/https?:\\/\\/[^\\s<>()]+/gi)].map((m) => {
+      try { return new URL(m[0]).hostname.toLowerCase().replace(/^www\\./, ""); } catch { return ""; }
+    }).filter(Boolean);
+    const matched = (rules ?? []).find((rule) => {
+      const value = String(rule.value).toLocaleLowerCase();
+      return rule.kind === "blocked_phrase" ? body.includes(value)
+        : rule.kind === "blocked_host" ? hosts.some((host) => host === value || host.endsWith("." + value)) : false;
+    });
+    if (!matched) return next();
+    try { await ctx.deleteMessage(); } catch (deleteError) { log.warn({ err: deleteError }, "Moderation delete failed"); }
+    try { await ctx.reply("Your message was removed because it matched a group moderation rule."); } catch {}
+    await writeAudit("moderation.message_removed", ctx.from.id, String(matched.kind) + ": " + String(matched.value).slice(0, 150));
+  } catch (error) {
+    log.error({ err: error }, "Group moderation check failed; message was not removed");
+    return next();
+  }
+});
+
 bot.on("text", async (ctx, next) => {
   if (ctx.message.text.startsWith("/")) return next();
   if (!ctx.from || ownerOnly(ctx)) return;
