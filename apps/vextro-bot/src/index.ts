@@ -6,6 +6,7 @@ import { createOneTimeLinkToken } from "./security.js";
 import { publishPost, startJobWorkers } from "./jobs.js";
 import { createBackup, listBackups, restoreBackup, startBackupScheduler, verifyBackup } from "./backup.js";
 import { runHealthCheck, startHealthMonitor } from "./health.js";
+import { registerGuideAdmin } from "./guides.js";
 
 const log = pino({ level: config.LOG_LEVEL, redact: ["*.token", "*.password", "*.secret", "*.authorization"] });
 const bot = new Telegraf(config.BOT_TOKEN);
@@ -484,20 +485,43 @@ bot.command("post_schedule_cancel", async (ctx) => {
 
 bot.command("guides", async (ctx) => {
   if (!ctx.from || !(await isMember(ctx))) return ctx.reply(messages.en.member);
-  const { data, error } = await db.from("bot_guides").select("id,title,data").eq("published", true).eq("deleted", false).order("updated_at", { ascending: false }).limit(20);
-  if (error) { log.error({ err: error }, "Guide query failed"); return ctx.reply(messages.en.error); }
-  if (!data?.length) return ctx.reply("No published guides are available yet.");
-  await ctx.reply("Published guides:\n" + data.map((g) => `• ${g.title} (/guide_${g.id})`).join("\n"));
+  const lang = await getLanguage(ctx.from.id);
+  const { data: websiteGuides, error: websiteError } = await db.from("bot_guides").select("id,title").eq("published", true).eq("deleted", false).order("updated_at", { ascending: false }).limit(20);
+  const { data: authoredGuides, error: authoredError } = await db.from("dgbot_guides").select("id,title").eq("published", true).is("deleted_at", null).order("updated_at", { ascending: false }).limit(20);
+  if (websiteError || authoredError) { log.error({ websiteError, authoredError }, "Guide query failed"); return ctx.reply(messages.en.error); }
+  const locale = lang === "hi" ? "hi-Latn" : lang;
+  const rows = [
+    ...(websiteGuides ?? []).map(g => ({ id: g.id, title: String(g.title) })),
+    ...(authoredGuides ?? []).map(g => ({ id: g.id, title: String((g.title as Record<string,string>)[locale] ?? (g.title as Record<string,string>).en ?? g.id) }))
+  ];
+  if (!rows.length) return ctx.reply("No published guides are available yet.");
+  await ctx.reply("Published guides:\n" + rows.map(g => "• " + g.title + " (/guide_" + g.id + ")").join("\n"));
 });
 bot.action("guides:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply("Use /guides to browse published guides."); });
-bot.hears(/^\/guide_([a-z0-9][a-z0-9-]{1,39})$/, async (ctx) => {
+bot.hears(/^\/guide_([a-z0-9][a-z0-9_-]{0,30})$/, async (ctx) => {
   if (!ctx.from || !(await isMember(ctx))) return ctx.reply(messages.en.member);
   const id = ctx.match[1]!;
-  const { data, error } = await db.from("bot_guides").select("title,data").eq("id", id).eq("published", true).eq("deleted", false).maybeSingle();
+  const lang = await getLanguage(ctx.from.id);
+  const { data: websiteGuide } = await db.from("bot_guides").select("title,data").eq("id", id).eq("published", true).eq("deleted", false).maybeSingle();
+  if (websiteGuide) {
+    const value = websiteGuide.data as Record<string, unknown>;
+    const body = typeof value.content === "string" ? value.content : typeof value.body === "string" ? value.body : typeof value.description === "string" ? value.description : JSON.stringify(value, null, 2);
+    return ctx.reply(String(websiteGuide.title) + "\n\n" + body.slice(0, textLimit));
+  }
+  const { data, error } = await db.from("dgbot_guides").select("title,steps,media,buttons").eq("id", id).eq("published", true).is("deleted_at", null).maybeSingle();
   if (error || !data) return ctx.reply("Guide not found.");
-  const value = data.data as Record<string, unknown>;
-  const body = typeof value.content === "string" ? value.content : typeof value.body === "string" ? value.body : typeof value.description === "string" ? value.description : JSON.stringify(value, null, 2);
-  await ctx.reply(`${data.title}\n\n${body.slice(0, textLimit)}`);
+  const locale = lang === "hi" ? "hi-Latn" : lang;
+  const title = data.title as Record<string,string>;
+  const steps = data.steps as Record<string,unknown>;
+  const raw = steps[locale] ?? steps.en ?? [];
+  const body = Array.isArray(raw) ? raw.map((x,i) => String(i+1) + ". " + String(x)).join("\n") : String(raw);
+  const media = data.media as {type?:string;file_id?:string;caption?:string}|null;
+  const buttons = Array.isArray(data.buttons) ? data.buttons as Array<{text:string;url:string}> : [];
+  const markup = buttons.length ? {reply_markup:{inline_keyboard:buttons.map(b => [{text:b.text,url:b.url}])}} : {};
+  const heading = title[locale] ?? title.en ?? id;
+  if (media?.file_id && media.type === "photo") return ctx.replyWithPhoto(media.file_id,{caption:(heading + "\n\n" + body).slice(0,1024),...markup});
+  if (media?.file_id && media.type === "video") return ctx.replyWithVideo(media.file_id,{caption:(heading + "\n\n" + body).slice(0,1024),...markup});
+  return ctx.reply(heading + "\n\n" + body.slice(0,textLimit), markup);
 });
 
 bot.command("help", async (ctx) => ctx.reply(messages.en.help));
@@ -750,6 +774,7 @@ bot.on("text", async (ctx, next) => {
 });
 
 bot.catch((error, ctx) => { log.error({ err: error, updateId: ctx.update.update_id }, "Telegram update failed"); });
+registerGuideAdmin(bot, ownerOnly, writeAudit);
 const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID);
 const stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER_TELEGRAM_ID, config.BACKUP_INTERVAL_HOURS) : () => {};
 const stopHealth = startHealthMonitor(bot, config.OWNER_TELEGRAM_ID, 5);
