@@ -99,11 +99,10 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
             if(media?.file_id){
               if(body.length>1024) throw new Error("Broadcast media caption exceeds Telegram's 1024-character limit");
               const mediaOptions={caption:body,...options};
-              deliveryAttempted=true;
-              if(media.type==="photo") await bot.telegram.sendPhoto(Number(recipient.telegram_id),media.file_id,mediaOptions);
-              else if(media.type==="video") await bot.telegram.sendVideo(Number(recipient.telegram_id),media.file_id,mediaOptions);
-              else if(media.type==="document") await bot.telegram.sendDocument(Number(recipient.telegram_id),media.file_id,mediaOptions);
-              else if(media.type==="animation") await bot.telegram.sendAnimation(Number(recipient.telegram_id),media.file_id,mediaOptions);
+              if(media.type==="photo"){deliveryAttempted=true;await bot.telegram.sendPhoto(Number(recipient.telegram_id),media.file_id,mediaOptions);}
+              else if(media.type==="video"){deliveryAttempted=true;await bot.telegram.sendVideo(Number(recipient.telegram_id),media.file_id,mediaOptions);}
+              else if(media.type==="document"){deliveryAttempted=true;await bot.telegram.sendDocument(Number(recipient.telegram_id),media.file_id,mediaOptions);}
+              else if(media.type==="animation"){deliveryAttempted=true;await bot.telegram.sendAnimation(Number(recipient.telegram_id),media.file_id,mediaOptions);}
               else throw new Error("Unsupported broadcast media type");
             }else{
               deliveryAttempted=true;
