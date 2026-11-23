@@ -10,7 +10,13 @@ import { registerGuideAdmin } from "./guides.js";
 import { registerUpdateCommands, startUpdateMonitor } from "./updates.js";
 import { registerOwnerMenu } from "./admin-menu.js";
 
-const log = pino({ level: config.LOG_LEVEL, redact: ["*.token", "*.password", "*.secret", "*.authorization"] });
+const recentLogs: string[] = [];
+const logStream = { write(chunk: string) {
+  recentLogs.push(chunk.trim());
+  if (recentLogs.length > 150) recentLogs.shift();
+  process.stdout.write(chunk);
+} };
+const log = pino({ level: config.LOG_LEVEL, redact: ["*.token", "*.password", "*.secret", "*.authorization", "*.BOT_TOKEN", "*.SUPABASE_SERVICE_ROLE_KEY", "*.BACKUP_PASSPHRASE", "*.BACKUP_OFFSITE_TOKEN", "*.DEPLOY_WEBHOOK_SECRET"] }, logStream);
 const bot = new Telegraf(config.BOT_TOKEN);
 const textLimit = 4000;
 const publishingPosts = new Set<string>();
@@ -920,6 +926,25 @@ bot.command("settings", async (ctx) => {
     "\nBackup retention: "+config.BACKUP_RETENTION_DAYS+" days\nBackup passphrase: "+(config.BACKUP_PASSPHRASE?"configured":"not configured")+"\nOffsite endpoint: "+(config.BACKUP_OFFSITE_URL&&config.BACKUP_OFFSITE_TOKEN?"configured":"not configured")+"\nRelease repository: "+config.GITHUB_REPOSITORY+
     "\nDeployment webhook: "+(config.DEPLOY_WEBHOOK_URL?"configured":"not configured")+
     "\nNo secrets are displayed.");
+});
+bot.command("logs", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  if(!recentLogs.length) return ctx.reply("No runtime log entries are buffered yet. Full process logs remain available in the hosting console.");
+  const rows=recentLogs.slice(-15).map(line=>{
+    try{
+      const item=JSON.parse(line) as Record<string,unknown>;
+      return new Date(Number(item.time??Date.now())).toISOString()+" ["+item.level+"] "+String(item.msg??"")+
+        (item.err?"\n"+JSON.stringify(item.err):"");
+    }catch{return line;}
+  });
+  await ctx.reply(rows.join("\n\n").slice(-3900));
+});
+bot.command("log_search", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const term=ctx.message.text.replace(/^\/log_search(?:@\w+)?\s*/i,"").trim().toLowerCase();
+  if(term.length<2||term.length>80) return ctx.reply("Usage: /log_search <2–80 character term>");
+  const matches=recentLogs.filter(line=>line.toLowerCase().includes(term)).slice(-15);
+  await ctx.reply(matches.length?matches.join("\n").slice(-3900):"No buffered log entries matched.");
 });
 bot.command("audit_search", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
