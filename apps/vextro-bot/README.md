@@ -16,7 +16,7 @@ Run from this directory. The production entry point is `dist/index.js`.
 
 `BOT_TOKEN`, `OWNER_TELEGRAM_ID`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `WEBSITE_URL`, `REQUIRED_CHANNEL_ID`, and `REQUIRED_GROUP_ID`.
 
-Optional settings include `PUBLISH_CHANNEL_ID`, `BOT_PUBLIC_USERNAME`, `BACKUP_PASSPHRASE`, `BACKUP_BUCKET`, `BACKUP_INTERVAL_HOURS`, `BACKUP_RETENTION_DAYS`, `BACKUP_OFFSITE_URL`, `BACKUP_OFFSITE_TOKEN`, `GITHUB_REPOSITORY`, `DEPLOY_WEBHOOK_URL`, `DEPLOY_WEBHOOK_SECRET`, and `UPDATE_CHECK_INTERVAL_HOURS`. See `.env.example`. Never commit a real secret or put the Supabase service-role key in a browser bundle.
+Optional settings include `OWNER_TIMEZONE` (defaults to `Asia/Kolkata`; all scheduled times are interpreted in this zone and stored in UTC), `PUBLISH_CHANNEL_ID`, `BOT_PUBLIC_USERNAME`, `BACKUP_PASSPHRASE`, `BACKUP_BUCKET`, `BACKUP_INTERVAL_HOURS`, `BACKUP_RETENTION_DAYS`, `BACKUP_OFFSITE_URL`, `BACKUP_OFFSITE_TOKEN`, `GITHUB_REPOSITORY`, `DEPLOY_WEBHOOK_URL`, `DEPLOY_WEBHOOK_SECRET`, and `UPDATE_CHECK_INTERVAL_HOURS`. See `.env.example`. Never commit a real secret or put the Supabase service-role key in a browser bundle.
 
 ## Implemented modules
 
@@ -25,8 +25,8 @@ Optional settings include `PUBLISH_CHANNEL_ID`, `BOT_PUBLIC_USERNAME`, `BACKUP_P
 - User profiles, access restrictions, language administration and user analytics.
 - Support ticket creation, category, conversation history, user replies, Owner replies, internal notes, priority, search, close and reopen.
 - Multilingual guide editor, media/buttons, publish/archive, keyword and review-queue workflows; published guides are available to users.
-- Channel post drafts, editing, previews, photo/video/document/animation attachments, HTTPS buttons, publishing and scheduled publishing.
-- Persistent broadcasts with audience snapshot, Owner confirmation, preview/test, schedule, pause/resume/cancel, delivery queue, retry-after handling, retry and results.
+- Channel post drafts, editing, previews, photo/video/document/animation attachments, HTTPS buttons, publishing and Owner-timezone scheduled publishing.
+- Persistent broadcasts with membership-verified audience snapshot, Owner confirmation, preview/test, Owner-timezone scheduling, pause/resume/cancel, delivery queue, retry-after handling, retry and results.
 - Group moderation rules, host allowlist, blocked phrase/domain enforcement, rate/repeat spam checks, warnings, timed restrictions, group ban/unban and moderation analytics.
 - Owner dashboard navigation, audit log/search, runtime settings, maintenance mode and health monitoring.
 - Encrypted AES-256-GCM application-data backups, SHA-256 integrity checks, private Supabase Storage, retention, scheduled backups, restore with a safety backup, and optional offsite HTTPS copy.
