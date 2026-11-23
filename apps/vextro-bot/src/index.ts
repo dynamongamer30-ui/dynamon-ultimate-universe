@@ -389,10 +389,13 @@ bot.command("broadcast_confirm", async (ctx) => {
   if (error || !job) return ctx.reply("Broadcast not found.");
   if (job.status !== "draft") return ctx.reply(`Broadcast is already ${job.status}.`);
   const recipients: Array<{job_id:string;telegram_id:number}> = [];
+  const { data: bans, error: banError } = await db.from("dgbot_bans").select("telegram_id").is("deleted_at", null);
+  if (banError) return ctx.reply("Could not verify restricted users; broadcast was not queued.");
+  const banned = new Set((bans ?? []).map((row) => Number(row.telegram_id)));
   for (let from=0; ; from+=1000) {
     const { data, error: usersError } = await db.from("bot_users").select("telegram_id").order("telegram_id").range(from, from+999);
     if (usersError) return ctx.reply("Could not load recipient list; broadcast was not queued.");
-    for (const user of data ?? []) recipients.push({ job_id:id, telegram_id:Number(user.telegram_id) });
+    for (const user of data ?? []) if (!banned.has(Number(user.telegram_id))) recipients.push({ job_id:id, telegram_id:Number(user.telegram_id) });
     if (!data || data.length < 1000) break;
   }
   if (!recipients.length) return ctx.reply("No registered recipients. Broadcast remains a draft.");
@@ -401,7 +404,7 @@ bot.command("broadcast_confirm", async (ctx) => {
     if (insertError) return ctx.reply("Recipient queue preparation failed. No delivery was started; inspect this draft before retrying.");
   }
   const { error: updateError } = await db.from("vextro_broadcast_jobs").update({
-    status:"queued", confirmed_at:new Date().toISOString(), total_count:recipients.length, updated_at:new Date().toISOString()
+    status:"queued", scheduled_at:job.scheduled_at ?? new Date().toISOString(), confirmed_at:new Date().toISOString(), total_count:recipients.length, updated_at:new Date().toISOString()
   }).eq("id",id).eq("status","draft");
   if (updateError) return ctx.reply("Could not activate the queue. No messages have been sent.");
   await writeAudit("broadcast.confirmed", null, `Broadcast ${id} confirmed for ${recipients.length} users`);
