@@ -10,13 +10,13 @@ Runtime: Node.js 26, TypeScript, Telegraf, Supabase
 - Owner-only access control, Telegram-native user and Owner menus, localized English/Hindi-Roman/Vietnamese flows, welcome editor and help.
 - Required channel+group membership gate, Owner-editable membership chat IDs, membership diagnostics, and transient-state cleanup when users leave the required group.
 - Website account linking through the existing `approve_bot_link(text)` RPC with one-time random tokens and SHA-256 token storage. No direct account-link table bypass.
-- User profile, language management, access ban/unban, language/status filters, pagination, and membership-aware broadcast audience.
+- User profile with last-seen and active-user metrics, language management, access ban/unban, language/status filters, pagination, and membership-aware broadcast audience.
 - Support ticket lifecycle: create, category, user conversation, Owner reply, internal notes, priority, search, close/reopen and Owner notifications.
 - Guide/rules manager: localized content, photo/video/document/animation media, buttons, publish/archive, keywords, search and review queue. Required guide route links are populated.
 - Universal channel post editor: drafts, edit, HTML/MarkdownV2/plain formatting, media attachments, HTTPS buttons, preview, publish, scheduled publish, cancel and retry.
 - Persistent broadcast queue: draft/edit/format/preview/test, audience verification, explicit Owner confirmation, schedule, pause/resume/cancel, retries, retry-after handling, results and completion notifications.
 - Moderation: blocked phrase/domain rules, allowlist add/edit/remove, rate/repeat spam controls, warnings, timed group mute/unmute, ban/unban, and audit records.
-- Localized user menus with Home navigation, Owner dashboard and command directory, analytics, redacted runtime log viewer, audit search, runtime membership settings, maintenance controls and health monitor.
+- Localized user menus with Home navigation, Owner dashboard and command directory, recent-activity user views, analytics, redacted runtime log viewer, audit search, runtime membership settings, maintenance controls and health monitor.
 - Encrypted AES-256-GCM backups with scrypt-derived keys, random salt/IV, SHA-256 integrity, private Supabase Storage, retention, optional HTTPS offsite copy, restore with a pre-restore safety backup, automatic safety-row recovery after a partial restore error, and explicit preservation of website-owned account-link requests, active links and guide content.
 - Release checks, Owner approval, pre-deployment safety backup, optional deployment webhook, post-deployment health validation, rollback request and safety backup.
 - Restart recovery for persistent broadcast queue work and stale scheduled-post leases.
@@ -24,7 +24,7 @@ Runtime: Node.js 26, TypeScript, Telegraf, Supabase
 
 ## Supabase changes
 
-Fourteen additive VEXTRO migrations are present in `supabase/migrations/` and applied to project `dfxcpxzylyycrirtnkof`. They add queue, settings, moderation, backup, restore, update-approval and broadcast-formatting structures. Existing website tables and the verified account-link RPC were preserved.
+Twelve additive VEXTRO migrations are present in `supabase/migrations/` and applied to project `dfxcpxzylyycrirtnkof`. They add queue, settings, moderation, backup, restore, update-approval and broadcast-formatting structures. Existing website tables and the verified account-link RPC were preserved.
 
 The historical migration drift between the website repository and production remains unresolved. Do not run a bulk migration push or replay the older repository migration history against production.
 
