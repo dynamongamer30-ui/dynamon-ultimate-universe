@@ -19,7 +19,7 @@ const moderationActivity = new Map<number, { times: number[]; lastText: string; 
 type Lang = "en" | "hi" | "vi";
 
 const messages: Record<Lang, { welcome: string; member: string; choose: string; unlinked: string; linked: string; linkCreated: string; help: string; support: string; ticketCreated: string; error: string }> = {
-  en: { welcome: "Welcome to VEXTRO BOT.", member: "Join both the required channel and group, then press Verify.", choose: "Choose your language.", unlinked: "No website account is linked.", linked: "Your website account is linked.", linkCreated: "This one-time link expires in 10 minutes. Open it and sign in to your website account:", help: "Commands: /start, /language, /account, /link, /membership_status, /guides, /rules, /support [category | ]Subject\nMessage, /my_tickets, /ticket_reply <ticket-id> <message>, /help", support: "Use /support followed by a subject, then put your message on the next line. Reply to this bot to continue your latest open ticket.", ticketCreated: "Your support ticket has been created.", error: "Something went wrong. Please try again later." },
+  en: { welcome: "Welcome to VEXTRO BOT.", member: "Join both the required channel and group, then press Verify.", choose: "Choose your language.", unlinked: "No website account is linked.", linked: "Your website account is linked.", linkCreated: "This one-time link expires in 10 minutes. Open it and sign in to your website account:", help: "Commands: /start, /language, /account, /link, /membership_status, /guides, /find_guide, /rules, /support [category | ]Subject\nMessage, /my_tickets, /ticket_reply <ticket-id> <message>, /help", support: "Use /support followed by a subject, then put your message on the next line. Reply to this bot to continue your latest open ticket.", ticketCreated: "Your support ticket has been created.", error: "Something went wrong. Please try again later." },
   hi: { welcome: "VEXTRO BOT mein aapka swagat hai.", member: "Pehle required channel aur group dono join karein, phir Verify dabayein.", choose: "Apni language chunein.", unlinked: "Koi website account linked nahi hai.", linked: "Aapka website account linked hai.", linkCreated: "Yeh link 10 minute mein expire hoga. Open karke website account mein sign in karein:", help: "Commands: /start, /language, /account, /link, /membership_status, /guides, /rules, /support, /my_tickets, /ticket_reply, /help", support: "/support ke baad subject aur agali line mein message likhein. Latest open ticket ke liye bot ko reply karein.", ticketCreated: "Support ticket ban gaya hai.", error: "Kuch galat hua. Baad mein dobara try karein." },
   vi: { welcome: "Chào mừng bạn đến với VEXTRO BOT.", member: "Hãy tham gia cả kênh và nhóm bắt buộc, sau đó nhấn Verify.", choose: "Chọn ngôn ngữ của bạn.", unlinked: "Chưa liên kết tài khoản website.", linked: "Tài khoản website đã được liên kết.", linkCreated: "Liên kết hết hạn sau 10 phút. Mở liên kết và đăng nhập website:", help: "Lệnh: /start, /language, /account, /link, /membership_status, /guides, /rules, /support, /my_tickets, /ticket_reply, /help", support: "Dùng /support kèm tiêu đề và nội dung ở dòng tiếp theo.", ticketCreated: "Đã tạo phiếu hỗ trợ.", error: "Đã xảy ra lỗi. Vui lòng thử lại sau." }
 };
@@ -664,6 +664,25 @@ bot.command("post_schedule_cancel", async (ctx) => {
   await ctx.reply("Scheduled post cancelled.");
 });
 
+bot.command("find_guide", async (ctx) => {
+  if(!ctx.from||!(await isMember(ctx))) return ctx.reply(messages.en.member);
+  const phrase=ctx.message.text.replace(/^\/find_guide(?:@\w+)?\s*/i,"").trim();
+  const safe=phrase.replace(/[^a-z0-9 -]/gi," ").replace(/\s+/g," ").trim();
+  if(safe.length<2||safe.length>120) return ctx.reply("Usage: /find_guide <2–120 character question>");
+  const lang=await getLanguage(ctx.from.id), locale=lang==="hi"?"hi-Latn":lang;
+  const {data:keywords,error}=await db.from("dgbot_guide_keywords").select("guide_id,term,confidence")
+    .in("language",[locale,"en"]).ilike("term","%"+safe+"%").is("deleted_at",null).order("confidence",{ascending:false}).limit(10);
+  if(error) return ctx.reply(messages.en.error);
+  for(const keyword of keywords??[]){
+    const {data:guide}=await db.from("dgbot_guides").select("id,title").eq("id",keyword.guide_id).eq("published",true).is("deleted_at",null).maybeSingle();
+    if(guide){
+      const title=guide.title as Record<string,string>;
+      return ctx.reply("I found a guide: "+(title[locale]??title.en??guide.id)+"\nOpen it with /guide_"+guide.id);
+    }
+  }
+  await db.from("dgbot_review_queue").insert({phrase:safe.slice(0,120),candidate_guide_id:null,confidence:0,status:"pending"});
+  await ctx.reply("I could not find a published guide for that question. Your suggestion has been sent to the Owner for review.");
+});
 bot.command("guides", async (ctx) => {
   if (!ctx.from || !(await isMember(ctx))) return ctx.reply(messages.en.member);
   const lang = await getLanguage(ctx.from.id);
