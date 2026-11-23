@@ -9,6 +9,7 @@ const retentionDays = config.BACKUP_RETENTION_DAYS;
 const backupTables: Array<{ name: string; conflict: string }> = [
   { name: "bot_users", conflict: "telegram_id" },
   { name: "bot_account_links", conflict: "id" },
+  { name: "bot_link_requests", conflict: "token_hash" },
   { name: "bot_guides", conflict: "id" },
   { name: "bot_support_tickets", conflict: "id" },
   { name: "bot_support_messages", conflict: "id" },
@@ -28,6 +29,8 @@ const backupTables: Array<{ name: string; conflict: string }> = [
   { name: "vextro_broadcast_recipients", conflict: "id" },
   { name: "vextro_scheduled_posts", conflict: "id" },
   { name: "vextro_runtime_settings", conflict: "key" },
+  { name: "vextro_moderation_events", conflict: "id" },
+  { name: "vextro_update_approvals", conflict: "tag" },
   { name: "vextro_moderation_events", conflict: "id" },
   { name: "vextro_update_approvals", conflict: "tag" },
   { name: "dgbot_backup_runs", conflict: "id" }
