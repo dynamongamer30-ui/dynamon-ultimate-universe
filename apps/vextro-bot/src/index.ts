@@ -566,13 +566,29 @@ bot.command("broadcast_draft", async (ctx) => {
 });
 bot.command("broadcast_preview", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id = ctx.message.text.split(/\s+/)[1];
-  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /broadcast_preview <uuid>");
-  const { data, error } = await db.from("vextro_broadcast_jobs").select("body,status,scheduled_at,total_count,format").eq("id", id).maybeSingle();
+  const args=ctx.message.text.split(/\s+/);
+  const id=args[1],language=(args[2]??"en") as "en"|"hi"|"vi";
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id) || !["en","hi","vi"].includes(language)) return ctx.reply("Usage: /broadcast_preview <uuid> [en|hi|vi]");
+  const { data, error } = await db.from("vextro_broadcast_jobs").select("body,status,scheduled_at,total_count,format,media,buttons,translations").eq("id", id).maybeSingle();
   if (error || !data) return ctx.reply("Broadcast not found.");
-  const parseMode = data.format === "HTML" ? "HTML" : data.format === "MarkdownV2" ? "MarkdownV2" : undefined;
+  const parseMode = (data.format === "HTML" ? "HTML" : data.format === "MarkdownV2" ? "MarkdownV2" : undefined) as "HTML"|"MarkdownV2"|undefined;
+  const translations=(data.translations??{}) as Record<string,string>;
+  const body=translations[language]??String(data.body);
   const scheduled = data.scheduled_at ? formatOwnerDateTime(data.scheduled_at,config.OWNER_TIMEZONE) : "immediately after confirmation";
-  await ctx.reply("Preview ["+data.status+"]\nFormat: "+data.format+"\nRecipients: "+data.total_count+"\nScheduled: "+scheduled+"\n\n"+data.body,parseMode?{parse_mode:parseMode}:{});
+  const media=data.media as {type?:string;file_id?:string}|null;
+  const buttons=Array.isArray(data.buttons)?data.buttons as Array<{text:string;url:string}>:[];
+  const reply_markup=buttons.length?{inline_keyboard:buttons.map(button=>[{text:button.text,url:button.url}])}:undefined;
+  const options={...(parseMode?{parse_mode:parseMode}:{}),...(reply_markup?{reply_markup}:{})};
+  await ctx.reply("Preview ["+data.status+"]\nLanguage: "+language+"\nFormat: "+data.format+"\nRecipients: "+data.total_count+"\nScheduled: "+scheduled);
+  if(media?.file_id){
+    if(body.length>1024) return ctx.reply("Media caption exceeds Telegram's 1024-character limit for this language.");
+    const mediaOptions={caption:body,...options};
+    if(media.type==="photo") return ctx.replyWithPhoto(media.file_id,mediaOptions);
+    if(media.type==="video") return ctx.replyWithVideo(media.file_id,mediaOptions);
+    if(media.type==="document") return ctx.replyWithDocument(media.file_id,mediaOptions);
+    if(media.type==="animation") return ctx.replyWithAnimation(media.file_id,mediaOptions);
+  }
+  return ctx.reply(body,options);
 });
 bot.command("broadcast_format", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -582,6 +598,75 @@ bot.command("broadcast_format", async (ctx) => {
   const {data,error}=await db.from("vextro_broadcast_jobs").update({format,updated_at:new Date().toISOString()}).eq("id",m[1]!).eq("status","draft").select("id").maybeSingle();
   if(error||!data) return ctx.reply("Only an existing draft can change format.");
   await ctx.reply("Broadcast format set to "+format+". Preview and test it before confirmation.");
+});
+bot.command("broadcast_media", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/broadcast_media(?:@\w+)?\s+([0-9a-f-]{36})\s+(photo|video|document|animation)\s+([A-Za-z0-9_-]{10,512})$/i);
+  if(!m) return ctx.reply("Usage: /broadcast_media <uuid> <photo|video|document|animation> <telegram-file-id>");
+  const {data:job,error:jobError}=await db.from("vextro_broadcast_jobs").select("body,translations").eq("id",m[1]!).eq("status","draft").maybeSingle();
+  if(jobError||!job) return ctx.reply("Only an existing draft can receive media.");
+  const translations=(job.translations??{}) as Record<string,string>;
+  if(String(job.body).length>1024||Object.values(translations).some(value=>String(value).length>1024)) return ctx.reply("Every language version must be 1024 characters or fewer before attaching media.");
+  const media={type:m[2]!.toLowerCase(),file_id:m[3]!};
+  const {error}=await db.from("vextro_broadcast_jobs").update({media,updated_at:new Date().toISOString()}).eq("id",m[1]!).eq("status","draft");
+  if(error) return ctx.reply("Broadcast media could not be saved.");
+  await ctx.reply("Broadcast media attached. Preview every language with /broadcast_preview "+m[1]+" en|hi|vi.");
+});
+bot.command("broadcast_clear_media", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\s+/)[1];
+  if(!id) return ctx.reply("Usage: /broadcast_clear_media <uuid>");
+  const {data,error}=await db.from("vextro_broadcast_jobs").update({media:null,updated_at:new Date().toISOString()}).eq("id",id).eq("status","draft").select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Draft media could not be cleared.");
+  await ctx.reply("Broadcast media removed.");
+});
+bot.command("broadcast_buttons", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/broadcast_buttons(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
+  if(!m) return ctx.reply("Usage: /broadcast_buttons <uuid> then one Label|https://url per line (max 8).");
+  const buttons=m[2]!.split(/\r?\n/).map(line=>line.trim()).filter(Boolean).map(line=>{
+    const parts=line.split("|"); return {text:(parts[0]??"").trim(),url:(parts.slice(1).join("|")).trim()};
+  });
+  if(!buttons.length||buttons.length>8||buttons.some(button=>{
+    if(!button.text||button.text.length>64||button.url.length>512) return true;
+    try{return new URL(button.url).protocol!=="https:";}catch{return true;}
+  })) return ctx.reply("Each button needs a label (1–64 chars) and a valid HTTPS URL; use 1–8 lines.");
+  const {data,error}=await db.from("vextro_broadcast_jobs").update({buttons,updated_at:new Date().toISOString()}).eq("id",m[1]!).eq("status","draft").select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Only an existing draft can change buttons.");
+  await ctx.reply("Saved "+buttons.length+" HTTPS button(s).");
+});
+bot.command("broadcast_clear_buttons", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\s+/)[1];
+  if(!id) return ctx.reply("Usage: /broadcast_clear_buttons <uuid>");
+  const {data,error}=await db.from("vextro_broadcast_jobs").update({buttons:[],updated_at:new Date().toISOString()}).eq("id",id).eq("status","draft").select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Draft buttons could not be cleared.");
+  await ctx.reply("Broadcast buttons removed.");
+});
+bot.command("broadcast_translation", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/broadcast_translation(?:@\w+)?\s+([0-9a-f-]{36})\s+(en|hi|vi)\s+([\s\S]+)$/i);
+  if(!m) return ctx.reply("Usage: /broadcast_translation <uuid> <en|hi|vi> <translated message>");
+  const {data:job,error:jobError}=await db.from("vextro_broadcast_jobs").select("translations,media").eq("id",m[1]!).eq("status","draft").maybeSingle();
+  if(jobError||!job) return ctx.reply("Only an existing draft can be translated.");
+  const body=m[3]!.trim(),limit=job.media?1024:4000;
+  if(!body||body.length>limit) return ctx.reply("Translation must be 1–"+limit+" characters for this draft.");
+  const translations={...((job.translations??{}) as Record<string,string>),[m[2]!.toLowerCase()]:body};
+  const {error}=await db.from("vextro_broadcast_jobs").update({translations,updated_at:new Date().toISOString()}).eq("id",m[1]!).eq("status","draft");
+  if(error) return ctx.reply("Translation could not be saved.");
+  await ctx.reply("Saved "+m[2]!.toLowerCase()+" translation. Preview: /broadcast_preview "+m[1]+" "+m[2]!.toLowerCase());
+});
+bot.command("broadcast_clear_translation", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/broadcast_clear_translation(?:@\w+)?\s+([0-9a-f-]{36})\s+(en|hi|vi)$/i);
+  if(!m) return ctx.reply("Usage: /broadcast_clear_translation <uuid> <en|hi|vi>");
+  const {data:job,error:jobError}=await db.from("vextro_broadcast_jobs").select("translations").eq("id",m[1]!).eq("status","draft").maybeSingle();
+  if(jobError||!job) return ctx.reply("Draft not found.");
+  const translations={...((job.translations??{}) as Record<string,string>)};
+  delete translations[m[2]!.toLowerCase()];
+  const {error}=await db.from("vextro_broadcast_jobs").update({translations,updated_at:new Date().toISOString()}).eq("id",m[1]!).eq("status","draft");
+  if(error) return ctx.reply("Translation could not be cleared.");
+  await ctx.reply("Translation removed for "+m[2]!.toLowerCase()+".");
 });
 bot.command("broadcast_edit", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
