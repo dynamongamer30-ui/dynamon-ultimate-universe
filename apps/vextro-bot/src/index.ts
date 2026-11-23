@@ -259,7 +259,7 @@ bot.command("post_media", async (ctx) => {
 });
 bot.command("post_buttons", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const match = ctx.message.text.match(/^\\/post_buttons(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
+  const match = ctx.message.text.match(/^\/post_buttons(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
   if (!match) return ctx.reply("Usage: /post_buttons <post-uuid> then one Label|https://url per line (maximum 8).");
   const id = match[1]!;
   const lines = match[2]!.split("\n").map((line) => line.trim()).filter(Boolean);
