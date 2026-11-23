@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "apps/vextro-bot/**"
+      - "docs/VEXTRO_BOT_REVISION_21_SCREEN_ACCEPTANCE.md"
       - ".github/workflows/vextro-bot-release.yml"
 
 permissions:
@@ -48,28 +49,32 @@ jobs:
       - name: Compile production runtime
         run: npm run build
 
-      - name: Assemble Telegram hosting ZIP
+      - name: Assemble complete Telegram source + deployment ZIP
         shell: bash
         run: |
           set -euo pipefail
           OUT="$GITHUB_WORKSPACE/release/VEXTRO-BOT"
           mkdir -p "$OUT"
-          cp package.json package-lock.json .env.example "$OUT/"
-          cp -R dist "$OUT/"
+          cp package.json package-lock.json .env.example README.md tsconfig.json vitest.config.ts "$OUT/"
+          cp -R src tests dist "$OUT/"
+          mkdir -p "$OUT/docs"
+          cp "$GITHUB_WORKSPACE/docs/VEXTRO_BOT_REVISION_21_SCREEN_ACCEPTANCE.md" "$OUT/docs/"
           cat > "$OUT/BUILD.txt" <<EOF
-          VEXTRO BOT Telegram deployment bundle
+          VEXTRO BOT — Revision 21 Telegram deployment bundle
           Repository: dynamongamer30-ui/dynamon-ultimate-universe
           Branch: main
           Commit: $GITHUB_SHA
           Runtime: Node.js 26
           Start command: npm start
           Hosting target: KataBump
+          Included: TypeScript source, compiled runtime, tests, package lock, env template, README, screen acceptance map
           Build verification: type-check, unit tests, production compilation passed
+          Live Telegram acceptance: requires Owner credentials and hosting configuration
           EOF
           cd "$GITHUB_WORKSPACE/release"
           zip -qr "$GITHUB_WORKSPACE/VEXTRO-BOT-KataBump.zip" VEXTRO-BOT
 
-      - name: Upload Telegram deployment ZIP
+      - name: Upload complete Telegram deployment ZIP
         uses: actions/upload-artifact@v4
         with:
           name: VEXTRO-BOT-KataBump
