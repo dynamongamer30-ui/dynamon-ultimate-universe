@@ -78,6 +78,22 @@ export async function createBackup(createdBy: number) {
     await db.storage.from(bucket).remove([path]);
     throw error ?? new Error("Backup metadata could not be saved");
   }
+  if (config.BACKUP_OFFSITE_URL && config.BACKUP_OFFSITE_TOKEN) {
+    try {
+      const response = await fetch(config.BACKUP_OFFSITE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream", Authorization: "Bearer " + config.BACKUP_OFFSITE_TOKEN, "X-Vextro-Backup-SHA256": sha256, "X-Vextro-Backup-Path": path },
+        body: encrypted,
+        signal: AbortSignal.timeout(30_000)
+      });
+      const receipt = response.ok ? await response.json() as { sha256?: string } : null;
+      if (!response.ok || receipt?.sha256 !== sha256) throw new Error("Offsite endpoint did not return the matching SHA-256 receipt");
+      await db.from("vextro_backup_artifacts").update({ offsite_url: config.BACKUP_OFFSITE_URL, offsite_verified_at: new Date().toISOString(), offsite_error: null }).eq("id", data.id);
+    } catch (offsiteError) {
+      const reason = offsiteError instanceof Error ? offsiteError.message.slice(0, 500) : "Offsite backup failed";
+      await db.from("vextro_backup_artifacts").update({ offsite_url: config.BACKUP_OFFSITE_URL, offsite_error: reason }).eq("id", data.id);
+    }
+  }
   const verification = await verifyBackup(String(data.id));
   if (!verification.valid) throw new Error("Uploaded backup did not pass integrity/decryption verification");
   await db.from("vextro_backup_artifacts").update({ verified_at: new Date().toISOString() }).eq("id", data.id);
@@ -132,7 +148,7 @@ export async function pruneBackups() {
   }
 }
 export async function listBackups() {
-  const { data, error } = await db.from("vextro_backup_artifacts").select("id,bytes,created_at,verified_at,expires_at").order("created_at", { ascending: false }).limit(20);
+  const { data, error } = await db.from("vextro_backup_artifacts").select("id,bytes,created_at,verified_at,expires_at,offsite_url,offsite_verified_at,offsite_error").order("created_at", { ascending: false }).limit(20);
   if (error) throw error;
   return data ?? [];
 }
