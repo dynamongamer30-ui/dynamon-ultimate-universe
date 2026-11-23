@@ -1165,15 +1165,16 @@ bot.command("users", async (ctx) => {
   if(["en","hi","vi"].includes(filter)) query=query.eq("language",filter);
   else if(filter==="active") query=query.gte("last_seen_at",new Date(Date.now()-24*3600_000).toISOString());
   else if(filter==="banned"){
-    const {data,error}=await db.from("dgbot_bans").select("telegram_id").is("deleted_at",null).limit(5000);
+    const {data,error}=await db.from("dgbot_bans").select("telegram_id",{count:"exact"}).is("deleted_at",null).limit(200);
     if(error) return ctx.reply("Banned-user filter unavailable.");
+    if((count??0)>200) return ctx.reply("More than 200 banned users exist; use /user <telegram-id> for individual lookup.");
     const ids=(data??[]).map(x=>Number(x.telegram_id));
     if(!ids.length) return ctx.reply("No banned users.");
     query=query.in("telegram_id",ids);
   }else if(filter==="linked"||filter==="unlinked"){
-    const {data,error,count}=await db.from("bot_account_links").select("telegram_id",{count:"exact"}).is("unlinked_at",null).limit(5000);
+    const {data,error,count}=await db.from("bot_account_links").select("telegram_id",{count:"exact"}).is("unlinked_at",null).limit(200);
     if(error) return ctx.reply("Account-link filter unavailable.");
-    if((count??0)>5000) return ctx.reply("Too many linked accounts for this filter. Use /user <telegram-id> for individual lookup.");
+    if((count??0)>200) return ctx.reply("More than 200 linked accounts exist; use /user <telegram-id> for individual lookup.");
     const ids=(data??[]).map(x=>Number(x.telegram_id));
     if(filter==="linked"){
       if(!ids.length) return ctx.reply("No linked users.");
