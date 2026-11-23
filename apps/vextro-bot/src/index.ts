@@ -5,11 +5,14 @@ import { db } from "./supabase.js";
 import { createOneTimeLinkToken } from "./security.js";
 import { publishPost, startJobWorkers } from "./jobs.js";
 import { createBackup, listBackups, restoreBackup, startBackupScheduler, verifyBackup } from "./backup.js";
+import { runHealthCheck, startHealthMonitor } from "./health.js";
 
 const log = pino({ level: config.LOG_LEVEL, redact: ["*.token", "*.password", "*.secret", "*.authorization"] });
 const bot = new Telegraf(config.BOT_TOKEN);
 const textLimit = 4000;
 const publishingPosts = new Set<string>();
+let maintenanceMode = false;
+const moderationActivity = new Map<number, { times: number[]; lastText: string; repeats: number }>();
 type Lang = "en" | "hi" | "vi";
 
 const messages: Record<Lang, { welcome: string; member: string; choose: string; unlinked: string; linked: string; linkCreated: string; help: string; support: string; ticketCreated: string; error: string }> = {
@@ -91,6 +94,7 @@ async function sendOwnerNotice(text: string): Promise<void> {
 }
 
 bot.use(async (ctx, next) => {
+  if (maintenanceMode && ctx.from && !ownerOnly(ctx)) return ctx.reply("VEXTRO BOT is temporarily in maintenance mode. Please try again later.");
   if (!ctx.from || ownerOnly(ctx)) return next();
   try {
     const ban = await isBanned(ctx.from.id);
@@ -649,6 +653,29 @@ bot.command("moderation_remove", async (ctx) => {
   await ctx.reply(`Moderation rule #${id} removed.`);
 });
 
+bot.command("health", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const report=await runHealthCheck(bot);
+  await ctx.reply("Health check at "+report.checkedAt+"\n"+report.detail.join("\n"));
+});
+bot.command("maintenance_on", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const {error}=await db.from("vextro_runtime_settings").upsert({key:"maintenance",value:{enabled:true},updated_by:ctx.from.id,updated_at:new Date().toISOString()},{onConflict:"key"});
+  if(error) return ctx.reply("Could not persist maintenance mode.");
+  maintenanceMode=true; await writeAudit("maintenance.enabled",null,"Owner enabled maintenance mode");
+  await ctx.reply("Maintenance mode enabled. Users are temporarily blocked; Owner access remains available.");
+});
+bot.command("maintenance_off", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const {error}=await db.from("vextro_runtime_settings").upsert({key:"maintenance",value:{enabled:false},updated_by:ctx.from.id,updated_at:new Date().toISOString()},{onConflict:"key"});
+  if(error) return ctx.reply("Could not persist maintenance mode.");
+  maintenanceMode=false; await writeAudit("maintenance.disabled",null,"Owner disabled maintenance mode");
+  await ctx.reply("Maintenance mode disabled.");
+});
+bot.command("maintenance_status", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  await ctx.reply("Maintenance mode: "+(maintenanceMode?"ON":"OFF"));
+});
 bot.command("admin", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const [{ count: users, error: userError }, { count: openTickets, error: ticketError }] = await Promise.all([
@@ -656,7 +683,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcast_draft, /broadcast_preview, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcast_draft, /broadcast_preview, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /maintenance_on, /maintenance_off, /maintenance_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
@@ -675,10 +702,30 @@ bot.on("text", async (ctx, next) => {
       return rule.kind === "blocked_phrase" ? body.includes(value)
         : rule.kind === "blocked_host" ? hosts.some((host) => host === value || host.endsWith("." + value)) : false;
     });
-    if (!matched) return next();
+    const now=Date.now();
+    const activity=moderationActivity.get(ctx.from.id) ?? {times:[],lastText:"",repeats:0};
+    activity.times=activity.times.filter(t=>now-t<10_000);
+    activity.times.push(now);
+    if(body===activity.lastText) activity.repeats+=1; else {activity.lastText=body;activity.repeats=1;}
+    moderationActivity.set(ctx.from.id,activity);
+    const flood=activity.times.length>5 || activity.repeats>=3;
+    if (!matched && !flood) return next();
+    const reason=matched?String(matched.kind)+": "+String(matched.value).slice(0,150):"rate_limit_or_repeated_message";
     try { await ctx.deleteMessage(); } catch (deleteError) { log.warn({ err: deleteError }, "Moderation delete failed"); }
-    try { await ctx.reply("Your message was removed because it matched a group moderation rule."); } catch {}
-    await writeAudit("moderation.message_removed", ctx.from.id, String(matched.kind) + ": " + String(matched.value).slice(0, 150));
+    await db.from("vextro_moderation_events").insert({telegram_id:ctx.from.id,chat_id:ctx.chat.id,event_type:"warning",reason});
+    const {count:priorWarnings}=await db.from("vextro_moderation_events").select("*",{count:"exact",head:true})
+      .eq("telegram_id",ctx.from.id).eq("chat_id",ctx.chat.id).eq("event_type","warning")
+      .gte("created_at",new Date(now-24*3600_000).toISOString());
+    if((priorWarnings??0)>=3){
+      try {
+        await ctx.telegram.restrictChatMember(ctx.chat.id,ctx.from.id,{can_send_messages:false},{until_date:Math.floor(now/1000)+3600});
+        await db.from("vextro_moderation_events").insert({telegram_id:ctx.from.id,chat_id:ctx.chat.id,event_type:"restricted",reason:"three moderation warnings within 24 hours"});
+        try{await ctx.reply("You have been restricted for one hour after repeated moderation violations.");}catch{}
+      } catch(restrictError) { log.warn({err:restrictError,userId:ctx.from.id},"Automatic restriction failed; verify bot admin permissions"); }
+    } else {
+      try { await ctx.reply(matched?"Your message was removed because it matched a group moderation rule.":"Please slow down. Repeated or rapid messages are not allowed."); } catch {}
+    }
+    await writeAudit("moderation.message_removed", ctx.from.id, reason);
   } catch (error) {
     log.error({ err: error }, "Group moderation check failed; message was not removed");
     return next();
@@ -705,7 +752,9 @@ bot.on("text", async (ctx, next) => {
 bot.catch((error, ctx) => { log.error({ err: error, updateId: ctx.update.update_id }, "Telegram update failed"); });
 const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID);
 const stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER_TELEGRAM_ID, config.BACKUP_INTERVAL_HOURS) : () => {};
-process.once("SIGINT", () => { stopWorkers(); stopBackups(); });
+const stopHealth = startHealthMonitor(bot, config.OWNER_TELEGRAM_ID, 5);
+try { const {data}=await db.from("vextro_runtime_settings").select("value").eq("key","maintenance").maybeSingle(); maintenanceMode=(data?.value as {enabled?:boolean}|null)?.enabled===true; } catch(error) { log.error({err:error},"Maintenance setting could not be loaded; defaulting to normal mode"); }
+process.once("SIGINT", () => { stopWorkers(); stopBackups(); stopHealth(); });
 process.once("SIGTERM", () => { stopWorkers(); stopBackups(); });
 await bot.launch({ dropPendingUpdates: false });
 log.info({ botUsername: config.BOT_PUBLIC_USERNAME ?? "not-configured" }, "VEXTRO BOT polling started");
