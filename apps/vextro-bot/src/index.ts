@@ -1157,14 +1157,35 @@ bot.action("support:help", async (ctx) => { await ctx.answerCbQuery(); const lan
 bot.command("users", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const args=ctx.message.text.split(/\s+/);
-  const language=["en","hi","vi"].includes(args[1]??"")?args[1]:undefined;
-  const page=Math.max(1,Number(args[language?2:1])||1);
-  let query=db.from("bot_users").select("telegram_id,language,created_at,updated_at,last_seen_at").order("last_seen_at",{ascending:false});
-  if(language) query=query.eq("language",language);
+  const filter=(args[1]??"all").toLowerCase();
+  const allowed=["all","active","linked","unlinked","banned","en","hi","vi"];
+  if(!allowed.includes(filter)) return ctx.reply("Usage: /users [all|active|linked|unlinked|banned|en|hi|vi] [page]");
+  const page=Math.max(1,Number(args[2]??(filter==="all"?"1":args[1]))||1);
+  let query=db.from("bot_users").select("telegram_id,language,created_at,last_seen_at").order("last_seen_at",{ascending:false});
+  if(["en","hi","vi"].includes(filter)) query=query.eq("language",filter);
+  else if(filter==="active") query=query.gte("last_seen_at",new Date(Date.now()-24*3600_000).toISOString());
+  else if(filter==="banned"){
+    const {data,error}=await db.from("dgbot_bans").select("telegram_id").is("deleted_at",null).limit(5000);
+    if(error) return ctx.reply("Banned-user filter unavailable.");
+    const ids=(data??[]).map(x=>Number(x.telegram_id));
+    if(!ids.length) return ctx.reply("No banned users.");
+    query=query.in("telegram_id",ids);
+  }else if(filter==="linked"||filter==="unlinked"){
+    const {data,error,count}=await db.from("bot_account_links").select("telegram_id",{count:"exact"}).is("unlinked_at",null).limit(5000);
+    if(error) return ctx.reply("Account-link filter unavailable.");
+    if((count??0)>5000) return ctx.reply("Too many linked accounts for this filter. Use /user <telegram-id> for individual lookup.");
+    const ids=(data??[]).map(x=>Number(x.telegram_id));
+    if(filter==="linked"){
+      if(!ids.length) return ctx.reply("No linked users.");
+      query=query.in("telegram_id",ids);
+    }else if(ids.length){
+      query=query.not("telegram_id","in","("+ids.join(",")+")");
+    }
+  }
   const {data,error}=await query.range((page-1)*20,page*20-1);
   if(error) return ctx.reply("User list unavailable.");
-  if(!data?.length) return ctx.reply("No users on this page.");
-  await ctx.reply("Users — page "+page+(language?" | language "+language:"")+"\n"+data.map(u=>u.telegram_id+" | "+u.language+" | "+(u.last_seen_at?new Date(u.last_seen_at).toLocaleDateString():"never seen")).join("\n")+"\nNext: /users "+(language?language+" ":"")+(page+1));
+  if(!data?.length) return ctx.reply("No users on this page.\nUsage: /users [all|active|linked|unlinked|banned|en|hi|vi] [page]");
+  await ctx.reply("Users — "+filter+" — page "+page+"\n"+data.map(u=>u.telegram_id+" | "+u.language+" | "+(u.last_seen_at?new Date(u.last_seen_at).toLocaleDateString():"never seen")).join("\n")+"\nNext: /users "+filter+" "+(page+1));
 });
 bot.command("user", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
