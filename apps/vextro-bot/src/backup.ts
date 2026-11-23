@@ -86,7 +86,10 @@ export async function createBackup(createdBy: number) {
   if (!verification.valid) throw new Error("Uploaded backup did not pass integrity/decryption verification");
   await db.from("vextro_backup_artifacts").update({ verified_at: new Date().toISOString() }).eq("id", data.id);
   await pruneBackups();
-  return data;
+  const { data: completed, error: completedError } = await db.from("vextro_backup_artifacts")
+    .select("id,storage_path,bytes,created_at,verified_at,offsite_url,offsite_verified_at,offsite_error").eq("id", data.id).single();
+  if (completedError || !completed) throw completedError ?? new Error("Backup metadata verification failed");
+  return completed;
 }
 export async function readBackup(id: string) {
   const { data: metadata, error } = await db.from("vextro_backup_artifacts").select("id,storage_path,sha256,bytes").eq("id", id).maybeSingle();
