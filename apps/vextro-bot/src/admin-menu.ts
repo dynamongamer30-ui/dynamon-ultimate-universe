@@ -32,9 +32,9 @@ export function registerOwnerMenu(bot: Telegraf<Context>, ownerOnly: (ctx: Conte
     const page = ctx.match[1]!;
     try {
       if (page === "users") {
-        const { data, error } = await db.from("bot_users").select("telegram_id,language,updated_at").order("updated_at", { ascending: false }).limit(15);
+        const { data, error } = await db.from("bot_users").select("telegram_id,language,last_seen_at").order("last_seen_at", { ascending: false }).limit(15);
         if (error) throw error;
-        return ctx.reply(data?.length ? data.map(x => x.telegram_id + " | " + x.language + " | " + new Date(x.updated_at).toLocaleDateString()).join("\n") : "No registered users.\nUse /users <page> for more.");
+        return ctx.reply(data?.length ? data.map(x => x.telegram_id + " | " + x.language + " | " + (x.last_seen_at ? new Date(x.last_seen_at).toLocaleDateString() : "never seen")).join("\n") : "No registered users.\nUse /users <page> for more.");
       }
       if (page === "tickets") {
         const { data, error } = await db.from("bot_support_tickets").select("id,telegram_id,subject,status,priority").neq("status", "closed").order("updated_at", { ascending: false }).limit(15);
@@ -80,15 +80,16 @@ export function registerOwnerMenu(bot: Telegraf<Context>, ownerOnly: (ctx: Conte
         return ctx.reply(data?.length?data.map(x=>"["+x.status+"] "+x.id+"\nPost: "+x.post_id+"\n"+new Date(x.scheduled_at).toLocaleString()+(x.last_error?"\n"+x.last_error:"")).join("\n\n"):"No pending or failed scheduled posts.\nUse /post_schedules for full history.");
       }
       if (page === "analytics") {
-        const [{ count: users }, { count: links }, { count: tickets }, { count: posts }, {count:sent},{count:failed}] = await Promise.all([
+        const [{ count: users }, { count: activeUsers }, { count: links }, { count: tickets }, { count: posts }, {count:sent},{count:failed}] = await Promise.all([
           db.from("bot_users").select("*", { count: "exact", head: true }),
+          db.from("bot_users").select("*", { count: "exact", head: true }).gte("last_seen_at", new Date(Date.now()-24*3600_000).toISOString()),
           db.from("bot_account_links").select("*", { count: "exact", head: true }).is("unlinked_at", null),
           db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed"),
           db.from("dgbot_posts").select("*", { count: "exact", head: true }).eq("state", "published").is("deleted_at", null),
           db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("status","sent"),
           db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("status","failed")
         ]);
-        return ctx.reply("Analytics\nUsers: " + (users ?? 0) + "\nLinked accounts: " + (links ?? 0) + "\nOpen tickets: " + (tickets ?? 0) + "\nPublished posts: " + (posts ?? 0) + "\nBroadcast sent: "+(sent??0)+"\nBroadcast failed: "+(failed??0));
+        return ctx.reply("Analytics\nUsers: " + (users ?? 0) + "\nActive users (24h): "+(activeUsers??0)+"\nLinked accounts: " + (links ?? 0) + "\nOpen tickets: " + (tickets ?? 0) + "\nPublished posts: " + (posts ?? 0) + "\nBroadcast sent: "+(sent??0)+"\nBroadcast failed: "+(failed??0));
       }
       if (page === "security") {
         const [{data:events,error:eventError},{count:bans,error:banError}] = await Promise.all([
