@@ -322,7 +322,7 @@ bot.command("analytics", async (ctx) => {
   ]);
   const errors = [users.error, links.error, tickets.error, posts.error, backups.error].filter(Boolean);
   if (errors.length) { log.error({ errors }, "Analytics query failed"); return ctx.reply("Analytics are temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Analytics\\nRegistered users: ${users.count ?? 0}\\nLinked accounts: ${links.count ?? 0}\\nOpen support tickets: ${tickets.count ?? 0}\\nPublished channel posts: ${posts.count ?? 0}\\nRecorded backup failures: ${backups.count ?? 0}`);
+  await ctx.reply(`VEXTRO BOT Analytics\nRegistered users: ${users.count ?? 0}\nLinked accounts: ${links.count ?? 0}\nOpen support tickets: ${tickets.count ?? 0}\nPublished channel posts: ${posts.count ?? 0}\nRecorded backup failures: ${backups.count ?? 0}`);
 });
 bot.command("backup_status", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -332,32 +332,32 @@ bot.command("backup_status", async (ctx) => {
   ]);
   if (countError || latestError) return ctx.reply("Backup status unavailable.");
   if (!latest) return ctx.reply("No backup run records exist.");
-  await ctx.reply(`Backup status\\nLatest: ${latest.status} (${latest.trigger})\\nStarted: ${new Date(latest.started_at).toLocaleString()}\\nFinished: ${latest.finished_at ? new Date(latest.finished_at).toLocaleString() : "not finished"}\\nParts: ${latest.parts ?? "—"}\\nBytes: ${latest.bytes ?? "—"}\\nError: ${latest.error_code ?? "none"}\\nRecorded failures: ${failed ?? 0}\\n\\nThis command is read-only. It does not start or repair backups.`);
+  await ctx.reply(`Backup status\nLatest: ${latest.status} (${latest.trigger})\nStarted: ${new Date(latest.started_at).toLocaleString()}\nFinished: ${latest.finished_at ? new Date(latest.finished_at).toLocaleString() : "not finished"}\nParts: ${latest.parts ?? "—"}\nBytes: ${latest.bytes ?? "—"}\nError: ${latest.error_code ?? "none"}\nRecorded failures: ${failed ?? 0}\n\nThis command is read-only. It does not start or repair backups.`);
 });
 bot.command("backup_runs", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const { data, error } = await db.from("dgbot_backup_runs").select("id,status,trigger,started_at,finished_at,parts,bytes,error_code").order("created_at", { ascending: false }).limit(10);
   if (error) return ctx.reply("Backup history unavailable.");
   if (!data?.length) return ctx.reply("No backup history.");
-  await ctx.reply(data.map((run) => `#${run.id} ${run.status}/${run.trigger}\\n${new Date(run.started_at).toLocaleString()} | ${run.error_code ?? "no error"}`).join("\\n\\n"));
+  await ctx.reply(data.map((run) => `#${run.id} ${run.status}/${run.trigger}\n${new Date(run.started_at).toLocaleString()} | ${run.error_code ?? "no error"}`).join("\n\n"));
 });
 bot.command("audit_recent", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const { data, error } = await db.from("dgbot_audit_log").select("action,actor_id,target_id,reason,created_at").order("created_at", { ascending: false }).limit(10);
   if (error) return ctx.reply("Audit history unavailable.");
   if (!data?.length) return ctx.reply("No audit events recorded.");
-  await ctx.reply(data.map((event) => `${event.action} | actor ${event.actor_id} | ${event.reason}\\n${new Date(event.created_at).toLocaleString()}`).join("\\n\\n"));
+  await ctx.reply(data.map((event) => `${event.action} | actor ${event.actor_id} | ${event.reason}\n${new Date(event.created_at).toLocaleString()}`).join("\n\n"));
 });
 bot.command("moderation_rules", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const { data, error } = await db.from("dgbot_moderation_rules").select("id,kind,value,created_at").is("deleted_at", null).order("created_at", { ascending: false }).limit(30);
   if (error) return ctx.reply("Moderation rules unavailable.");
   if (!data?.length) return ctx.reply("No active moderation rules.");
-  await ctx.reply(data.map((rule) => `#${rule.id} [${rule.kind}] ${rule.value}`).join("\\n"));
+  await ctx.reply(data.map((rule) => `#${rule.id} [${rule.kind}] ${rule.value}`).join("\n"));
 });
 bot.command("moderation_add", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const match = ctx.message.text.match(/^\\/moderation_add(?:@\\w+)?\\s+(blocked_host|blocked_phrase)\\s+([\\s\\S]+)$/i);
+  const match = ctx.message.text.match(/^\/moderation_add(?:@\w+)?\s+(blocked_host|blocked_phrase)\s+([\s\S]+)$/i);
   if (!match) return ctx.reply("Usage: /moderation_add blocked_host|blocked_phrase value");
   const kind = match[1]!;
   const value = match[2]!.trim();
@@ -369,7 +369,7 @@ bot.command("moderation_add", async (ctx) => {
 });
 bot.command("moderation_remove", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id = Number(ctx.message.text.split(/\\s+/)[1]);
+  const id = Number(ctx.message.text.split(/\s+/)[1]);
   if (!Number.isSafeInteger(id) || id < 1) return ctx.reply("Usage: /moderation_remove <rule-id>");
   const { data, error } = await db.from("dgbot_moderation_rules").update({ deleted_at: new Date().toISOString() }).eq("id", id).is("deleted_at", null).select("id").maybeSingle();
   if (error || !data) return ctx.reply("Active rule not found.");
