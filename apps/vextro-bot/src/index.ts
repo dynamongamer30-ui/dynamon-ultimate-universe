@@ -120,8 +120,10 @@ bot.start(async (ctx) => {
     }
     await ctx.reply(messages[lang].welcome, Markup.inlineKeyboard([
       [Markup.button.callback("Account", "account:open"), Markup.button.callback("Language", "language:open")],
-      [Markup.button.callback("Guides", "guides:open"), Markup.button.callback("Support", "support:help")],
-      [Markup.button.callback("Help", "help:open")]
+      [Markup.button.callback("Guides", "guides:open"), Markup.button.callback("Rules", "rules:open")],
+      [Markup.button.callback("Support", "support:help"), Markup.button.callback("My tickets", "tickets:mine")],
+      [Markup.button.callback("Membership", "membership:status"), Markup.button.callback("Help", "help:open")],
+      [Markup.button.callback("About", "about:open")]
     ]));
   } catch (error) { log.error({ err: error }, "Start handler failed"); await ctx.reply(messages.en.error); }
 });
@@ -131,7 +133,13 @@ bot.action("membership:verify", async (ctx) => {
   if (!ctx.from) return;
   const lang = await getLanguage(ctx.from.id);
   if (await isMember(ctx)) {
-    await ctx.editMessageText(messages[lang].welcome, Markup.inlineKeyboard([[Markup.button.callback("Account", "account:open"), Markup.button.callback("Guides", "guides:open")],[Markup.button.callback("Support", "support:help"),Markup.button.callback("Help","help:open")]]));
+    await ctx.editMessageText(messages[lang].welcome, Markup.inlineKeyboard([
+      [Markup.button.callback("Account", "account:open"), Markup.button.callback("Language", "language:open")],
+      [Markup.button.callback("Guides", "guides:open"), Markup.button.callback("Rules", "rules:open")],
+      [Markup.button.callback("Support", "support:help"), Markup.button.callback("My tickets", "tickets:mine")],
+      [Markup.button.callback("Membership", "membership:status"), Markup.button.callback("Help", "help:open")],
+      [Markup.button.callback("About", "about:open")]
+    ]));
   } else await ctx.reply(messages[lang].member);
 });
 
@@ -651,6 +659,35 @@ bot.on("new_chat_members", async (ctx) => {
   if(!names.length) return;
   await ctx.reply("Welcome "+names.join(", ")+"! Please read /rules and start a private chat with the bot using /start to verify membership and access support.");
 });
+bot.action("membership:status", async (ctx) => {
+  await ctx.answerCbQuery();
+  if(!ctx.from) return;
+  const results=await Promise.all([config.REQUIRED_CHANNEL_ID,config.REQUIRED_GROUP_ID].map(async chatId=>{
+    try{const member=await ctx.telegram.getChatMember(chatId,ctx.from!.id);return ["creator","administrator","member"].includes(member.status)||(member.status==="restricted"&&member.is_member);}
+    catch{return false;}
+  }));
+  await ctx.reply("Channel: "+(results[0]?"joined":"not joined")+"\nGroup: "+(results[1]?"joined":"not joined")+"\nOverall: "+(results.every(Boolean)?"verified":"verification required"),
+    Markup.inlineKeyboard([[Markup.button.callback("Verify again","membership:verify")],[Markup.button.callback("Home","menu:home")]]));
+});
+bot.action("tickets:mine", async (ctx) => {
+  await ctx.answerCbQuery();
+  if(!ctx.from||!(await isMember(ctx))) return ctx.reply(messages.en.member);
+  const {data,error}=await db.from("bot_support_tickets").select("id,subject,status,priority").eq("telegram_id",ctx.from.id).order("created_at",{ascending:false}).limit(10);
+  if(error) return ctx.reply(messages.en.error);
+  return ctx.reply(data?.length?data.map(t=>"["+t.status+"] "+t.subject+"\n"+t.id+" | "+t.priority).join("\n\n"):"You have no support tickets yet.");
+});
+bot.action("rules:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply("Use /rules to read the published group rules."); });
+bot.action("about:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply("VEXTRO BOT\nA Telegram companion for account linking, guides and support.\nLanguages: English, Hindi (Roman), Vietnamese.\nUse /help for commands and /support to contact the Owner."); });
+bot.action("menu:home", async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.reply(messages.en.welcome,Markup.inlineKeyboard([
+    [Markup.button.callback("Account","account:open"),Markup.button.callback("Language","language:open")],
+    [Markup.button.callback("Guides","guides:open"),Markup.button.callback("Rules","rules:open")],
+    [Markup.button.callback("Support","support:help"),Markup.button.callback("My tickets","tickets:mine")],
+    [Markup.button.callback("Membership","membership:status"),Markup.button.callback("Help","help:open")]
+  ]));
+});
+bot.command("about", async (ctx) => ctx.reply("VEXTRO BOT\nTelegram account linking, multilingual guides, group membership verification and support.\nLanguages: English, Hindi (Roman), Vietnamese."));
 bot.command("help", async (ctx) => ctx.reply(messages.en.help));
 bot.action("help:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply(messages.en.help); });
 bot.action("support:help", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply(messages.en.support); });
