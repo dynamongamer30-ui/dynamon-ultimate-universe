@@ -23,7 +23,7 @@ export async function publishPost(bot: Telegraf<Context>, channelId: string, pos
   const media = data.media as PostMedia;
   const buttons = Array.isArray(data.buttons) ? data.buttons as PostButton[] : [];
   const reply_markup = buttons.length ? { inline_keyboard: buttons.map((b) => [{ text: b.text, url: b.url }]) } : undefined;
-  const parseMode = media?.format === "HTML" ? "HTML" : media?.format === "MarkdownV2" ? "MarkdownV2" : undefined;
+  const parseMode: "HTML" | "MarkdownV2" | undefined = media?.format === "HTML" ? "HTML" : media?.format === "MarkdownV2" ? "MarkdownV2" : undefined;
   const formatOptions = parseMode ? { parse_mode: parseMode } : {};
   const options = { ...(reply_markup ? { reply_markup } : {}), ...formatOptions };
   let message;
