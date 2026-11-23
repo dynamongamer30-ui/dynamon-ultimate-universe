@@ -41,7 +41,7 @@ export async function requestDeployment(bot: Telegraf<Context>, tag: string, own
 export async function requestRollback(bot: Telegraf<Context>, tag: string, ownerId: number) {
   if (!config.DEPLOY_WEBHOOK_URL || !config.DEPLOY_WEBHOOK_SECRET) throw new Error("Configure the hosting rollback webhook first");
   const { data: approval, error } = await db.from("vextro_update_approvals").select("tag,status").eq("tag", tag).maybeSingle();
-  if (error || !approval || approval.status !== "deploy_requested") throw new Error("Only a previously deployed approved release can be rolled back");
+  if (error || !approval || !["deploy_requested", "validated", "validation_failed"].includes(approval.status)) throw new Error("Only a previously deployed approved release can be rolled back");
   if (!config.BACKUP_PASSPHRASE) throw new Error("Encrypted safety backup is required before rollback");
   const health = await runHealthCheck(bot);
   const backup = await createBackup(ownerId);
@@ -115,7 +115,25 @@ export function startUpdateMonitor(bot: Telegraf<Context>, ownerId: number, inte
       }
     } catch (error) { console.error("VEXTRO update monitor failed", error); }
   };
+  const validatePending = async () => {
+    if (stopped) return;
+    try {
+      const { data, error } = await db.from("vextro_update_approvals").select("tag").eq("status", "deploy_requested").limit(5);
+      if (error) throw error;
+      for (const pending of data ?? []) {
+        const report = await runHealthCheck(bot);
+        const valid = report.database === "ok" && report.telegram === "ok";
+        const status = valid ? "validated" : "validation_failed";
+        await db.from("vextro_update_approvals").update({ status, updated_at: new Date().toISOString() }).eq("tag", pending.tag).eq("status", "deploy_requested");
+        await bot.telegram.sendMessage(ownerId, valid
+          ? "Update " + pending.tag + " passed post-deployment health checks."
+          : "Update " + pending.tag + " failed post-deployment health checks:\n" + report.detail.join("\n") + "\nOwner rollback command: /update_rollback " + pending.tag);
+      }
+    } catch (error) { console.error("VEXTRO deployment validation failed", error); }
+  };
   void check();
-  const timer = setInterval(() => void check(), Math.max(1, intervalHours) * 3600_000);
-  return () => { stopped = true; clearInterval(timer); };
+  const releaseTimer = setInterval(() => void check(), Math.max(1, intervalHours) * 3600_000);
+  const validationDelay = setTimeout(() => void validatePending(), 90_000);
+  const validationTimer = setInterval(() => void validatePending(), 5 * 60_000);
+  return () => { stopped = true; clearInterval(releaseTimer); clearTimeout(validationDelay); clearInterval(validationTimer); };
 }
