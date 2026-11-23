@@ -368,7 +368,7 @@ bot.on(["photo","video","document","animation"], async (ctx, next) => {
   if("photo" in message){fileId=message.photo[message.photo.length-1]?.file_id??"";kind="photo";}
   else if("video" in message){fileId=message.video.file_id;kind="video";}
   else if("document" in message){fileId=message.document.file_id;kind="document";}
-  else if("animation" in message){fileId=message.animation.file_id;kind="animation";}
+  else { const animation=(message as unknown as {animation?:{file_id:string}}).animation; if(animation){fileId=animation.file_id;kind="animation";} }
   if(!fileId) return ctx.reply("Could not read Telegram file ID.");
   await ctx.reply("Media received.\nType: "+kind+"\nFile ID:\n"+fileId+"\nUse /post_media <draft-uuid> "+kind+" "+fileId+" [caption]. Guide media currently supports photo/video only.");
 });
