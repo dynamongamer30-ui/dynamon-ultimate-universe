@@ -718,7 +718,7 @@ bot.on("text", async (ctx, next) => {
       .gte("created_at",new Date(now-24*3600_000).toISOString());
     if((priorWarnings??0)>=3){
       try {
-        await ctx.telegram.restrictChatMember(ctx.chat.id,ctx.from.id,{can_send_messages:false},{until_date:Math.floor(now/1000)+3600});
+        await ctx.telegram.callApi("restrictChatMember",{chat_id:ctx.chat.id,user_id:ctx.from.id,permissions:{can_send_messages:false},until_date:Math.floor(now/1000)+3600});
         await db.from("vextro_moderation_events").insert({telegram_id:ctx.from.id,chat_id:ctx.chat.id,event_type:"restricted",reason:"three moderation warnings within 24 hours"});
         try{await ctx.reply("You have been restricted for one hour after repeated moderation violations.");}catch{}
       } catch(restrictError) { log.warn({err:restrictError,userId:ctx.from.id},"Automatic restriction failed; verify bot admin permissions"); }
