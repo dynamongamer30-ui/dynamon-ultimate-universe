@@ -158,7 +158,7 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
           }
         }
       } catch (error) {
-        console.error("VEXTRO broadcast worker iteration failed", error);
+        console.error("Dynamon Assistant broadcast worker iteration failed", error);
       }
       await sleep(1500);
     }
@@ -189,7 +189,7 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
             .eq("status", "publishing").lt("updated_at", new Date(Date.now() - 10 * 60_000).toISOString());
         }
       } catch (error) {
-        console.error("VEXTRO scheduler iteration failed", error);
+        console.error("Dynamon Assistant scheduler iteration failed", error);
       }
       await sleep(10_000);
     }
