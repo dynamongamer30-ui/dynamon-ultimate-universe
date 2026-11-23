@@ -46,7 +46,7 @@ export function parseConfig(input: Record<string, unknown>): VextroConfig {
   const parsed = schema.safeParse(input);
   if (!parsed.success) {
     const missing = parsed.error.issues.map((issue) => issue.path.join(".")).join(", ");
-    throw new Error("Invalid VEXTRO BOT configuration: " + missing);
+    throw new Error("Invalid Dynamon Assistant configuration: " + missing);
   }
   return parsed.data;
 }
