@@ -113,9 +113,13 @@ export async function verifyBackup(id: string) {
     return { valid: false, error: error instanceof Error ? error.message : "Verification failed" };
   }
 }
-async function applyBackupSnapshot(snapshot: Snapshot) {
+type RestoreReport = { restored: Record<string, number>; skipped: string[] };
+const restoreProtectedTables = new Set(["bot_link_requests", "bot_account_links", "bot_guides"]);
+async function applyBackupSnapshot(snapshot: Snapshot): Promise<RestoreReport> {
   const restored: Record<string, number> = {};
+  const skipped: string[] = [];
   for (const table of backupTables) {
+    if (restoreProtectedTables.has(table.name)) { skipped.push(table.name); continue; }
     const rows = snapshot.tables[table.name] ?? [];
     restored[table.name] = 0;
     for (let i = 0; i < rows.length; i += 500) {
@@ -126,9 +130,9 @@ async function applyBackupSnapshot(snapshot: Snapshot) {
       restored[table.name] = (restored[table.name] ?? 0) + Number(data ?? 0);
     }
   }
-  return restored;
+  return { restored, skipped };
 }
-export async function restoreBackup(id: string, restoredBy: number) {
+export async function restoreBackup(id: string, restoredBy: number): Promise<RestoreReport> {
   const { snapshot } = await readBackup(id);
   const safety = await createBackup(restoredBy);
   try {
