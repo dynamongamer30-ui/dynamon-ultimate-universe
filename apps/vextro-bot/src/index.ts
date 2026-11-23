@@ -640,10 +640,16 @@ bot.command("broadcast_confirm", async (ctx) => {
 });
 bot.command("broadcasts", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const {data,error}=await db.from("vextro_broadcast_jobs").select("id,status,total_count,sent_count,failed_count,scheduled_at,created_at").order("created_at",{ascending:false}).limit(20);
+  const args=ctx.message.text.split(/\s+/);
+  const statuses=["draft","queued","running","paused","completed","cancelled","failed"];
+  const status=statuses.includes(args[1]??"")?args[1]:undefined;
+  const page=Math.max(1,Number(args[status?2:1])||1);
+  let query=db.from("vextro_broadcast_jobs").select("id,status,total_count,sent_count,failed_count,scheduled_at,created_at").order("created_at",{ascending:false});
+  if(status) query=query.eq("status",status);
+  const {data,error}=await query.range((page-1)*20,page*20-1);
   if(error) return ctx.reply("Broadcast history unavailable.");
-  if(!data?.length) return ctx.reply("No broadcast jobs.");
-  await ctx.reply(data.map(x=>x.id+" | "+x.status+"\n"+(x.sent_count??0)+"/"+x.total_count+" sent, "+(x.failed_count??0)+" failed\n"+(x.scheduled_at?formatOwnerDateTime(x.scheduled_at,config.OWNER_TIMEZONE):"unscheduled")).join("\n\n"));
+  if(!data?.length) return ctx.reply("No broadcast jobs on this page.");
+  await ctx.reply("Broadcasts — page "+page+(status?" | "+status:"")+"\n"+data.map(x=>x.id+" | "+x.status+"\n"+(x.sent_count??0)+"/"+x.total_count+" sent, "+(x.failed_count??0)+" failed\n"+(x.scheduled_at?formatOwnerDateTime(x.scheduled_at,config.OWNER_TIMEZONE):"unscheduled")).join("\n\n")+"\nNext: /broadcasts "+(status?status+" ":"")+(page+1));
 });
 bot.command("broadcast_test", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
