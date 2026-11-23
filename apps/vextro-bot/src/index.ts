@@ -972,6 +972,7 @@ bot.command("backup_status", async (ctx) => {
     const latest = artifacts[0];
     await ctx.reply("Encrypted application backup status\nLatest verified artifact: " +
       (latest ? new Date(latest.created_at).toLocaleString() + " | " + latest.bytes + " bytes | " + (latest.verified_at ? "verified" : "not verified") : "none") +
+      "\nOffsite copy: " + (latest?.offsite_verified_at ? "verified" : latest?.offsite_error ? "failed: " + latest.offsite_error : config.BACKUP_OFFSITE_URL ? "not verified" : "not configured") +
       "\nAvailable artifacts: " + artifacts.length + "\nLegacy backup failures recorded: " + (legacy.count ?? 0) +
       "\nAutomatic encrypted backup runs every " + config.BACKUP_INTERVAL_HOURS + " hours when BACKUP_PASSPHRASE is configured.");
   } catch (error) {
