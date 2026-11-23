@@ -929,16 +929,27 @@ bot.command("moderation_stats", async (ctx) => {
 });
 bot.command("analytics", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const [users, links, tickets, posts, backups] = await Promise.all([
+  const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const [users, links, tickets, posts, backups, broadcastJobs, sent, failed, scheduled, warnings] = await Promise.all([
     db.from("bot_users").select("*", { count: "exact", head: true }),
     db.from("bot_account_links").select("*", { count: "exact", head: true }).is("unlinked_at", null),
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed"),
     db.from("dgbot_posts").select("*", { count: "exact", head: true }).eq("state", "published").is("deleted_at", null),
-    db.from("dgbot_backup_runs").select("*", { count: "exact", head: true }).eq("status", "failed")
+    db.from("vextro_backup_artifacts").select("*", { count: "exact", head: true }).not("verified_at", "is", null),
+    db.from("vextro_broadcast_jobs").select("*", { count: "exact", head: true }),
+    db.from("vextro_broadcast_recipients").select("*", { count: "exact", head: true }).eq("status", "sent"),
+    db.from("vextro_broadcast_recipients").select("*", { count: "exact", head: true }).eq("status", "failed"),
+    db.from("vextro_scheduled_posts").select("*", { count: "exact", head: true }).eq("status", "scheduled"),
+    db.from("vextro_moderation_events").select("*", { count: "exact", head: true }).eq("event_type", "warning").gte("created_at", since)
   ]);
-  const errors = [users.error, links.error, tickets.error, posts.error, backups.error].filter(Boolean);
+  const errors = [users.error, links.error, tickets.error, posts.error, backups.error, broadcastJobs.error, sent.error, failed.error, scheduled.error, warnings.error].filter(Boolean);
   if (errors.length) { log.error({ errors }, "Analytics query failed"); return ctx.reply("Analytics are temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Analytics\nRegistered users: ${users.count ?? 0}\nLinked accounts: ${links.count ?? 0}\nOpen support tickets: ${tickets.count ?? 0}\nPublished channel posts: ${posts.count ?? 0}\nRecorded backup failures: ${backups.count ?? 0}`);
+  await ctx.reply("VEXTRO BOT Analytics\nRegistered users: " + (users.count ?? 0) +
+    "\nLinked accounts: " + (links.count ?? 0) + "\nOpen support tickets: " + (tickets.count ?? 0) +
+    "\nPublished channel posts: " + (posts.count ?? 0) + "\nVerified encrypted backups: " + (backups.count ?? 0) +
+    "\nBroadcast jobs: " + (broadcastJobs.count ?? 0) + "\nBroadcast messages sent: " + (sent.count ?? 0) +
+    "\nBroadcast deliveries failed: " + (failed.count ?? 0) + "\nScheduled posts pending: " + (scheduled.count ?? 0) +
+    "\nModeration warnings last 24h: " + (warnings.count ?? 0));
 });
 bot.command("backup_create", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
