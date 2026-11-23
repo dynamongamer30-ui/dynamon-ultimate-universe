@@ -9,6 +9,7 @@ const schema = z.object({
   WEBSITE_URL: z.string().url(),
   REQUIRED_CHANNEL_ID: z.string().min(1),
   REQUIRED_GROUP_ID: z.string().min(1),
+  PUBLISH_CHANNEL_ID: z.string().min(1).optional(),
   BOT_PUBLIC_USERNAME: z.string().regex(/^[A-Za-z0-9_]{5,32}$/).optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info")
 });
