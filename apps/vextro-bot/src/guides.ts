@@ -10,7 +10,7 @@ export function registerGuideAdmin(bot: Telegraf<Context>, ownerOnly: OwnerCheck
     const m = ctx.message.text.match(/^\/guide_create(?:@\w+)?\s+([a-z0-9][a-z0-9_-]{0,30})\s+([a-z0-9_-]{1,64})\s+([\s\S]+)$/i);
     if (!m) return ctx.reply("Usage: /guide_create <id> <category> <English title>");
     const { error } = await db.from("dgbot_guides").insert({
-      id: m[1]!.toLowerCase(), category: m[2]!.toLowerCase(),
+      id: m[1]!.toLowerCase(), category: m[2]!.toLowerCase(), link: "/guides/" + m[1]!.toLowerCase(),
       title: { en: m[3]!.trim() }, steps: { en: [] }, published: false, buttons: []
     });
     if (error) return ctx.reply("Could not create guide. Check that the ID is unique and valid.");
