@@ -898,6 +898,7 @@ bot.on("new_chat_members", async (ctx) => {
 bot.action("membership:status", async (ctx) => {
   await ctx.answerCbQuery();
   if(!ctx.from) return;
+  const lang=await getLanguage(ctx.from.id);
   const results=await Promise.all([runtimeMembership.channelId,runtimeMembership.groupId].map(async chatId=>{
     try{const member=await ctx.telegram.getChatMember(chatId,ctx.from!.id);return ["creator","administrator","member"].includes(member.status)||(member.status==="restricted"&&member.is_member);}
     catch{return false;}
