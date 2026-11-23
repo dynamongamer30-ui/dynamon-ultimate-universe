@@ -440,9 +440,11 @@ bot.command("post_preview", async (ctx) => {
   const { data, error } = await db.from("dgbot_posts").select("title,body,state,media,buttons").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error || !data) return ctx.reply("Post not found.");
   const caption = "[" + data.state + "] " + data.title + "\n\n" + (data.body || "(No body)");
-  const media = data.media as {type?:string;file_id?:string;caption?:string}|null;
+  const media = data.media as {type?:string;file_id?:string;caption?:string;format?:string}|null;
   const buttons = Array.isArray(data.buttons) ? data.buttons as Array<{text:string;url:string}> : [];
-  const options = buttons.length ? {reply_markup:{inline_keyboard:buttons.map(b=>[{text:b.text,url:b.url}])}} : {};
+  const parseMode = media?.format === "HTML" ? "HTML" : media?.format === "MarkdownV2" ? "MarkdownV2" : undefined;
+  const formatOptions = parseMode ? {parse_mode:parseMode} : {};
+  const options = {...(buttons.length ? {reply_markup:{inline_keyboard:buttons.map(b=>[{text:b.text,url:b.url}])}} : {}),...formatOptions};
   if(media?.file_id&&media.type==="photo") return ctx.replyWithPhoto(media.file_id,{caption:(media.caption||caption).slice(0,1024),...options});
   if(media?.file_id&&media.type==="video") return ctx.replyWithVideo(media.file_id,{caption:(media.caption||caption).slice(0,1024),...options});
   if(media?.file_id&&media.type==="document") return ctx.replyWithDocument(media.file_id,{caption:(media.caption||caption).slice(0,1024),...options});
