@@ -475,31 +475,27 @@ bot.command("post_publish", async (ctx) => {
   if (publishingPosts.has(id)) return ctx.reply("This post is already being published.");
   publishingPosts.add(id);
   try {
-    const { data, error } = await db.from("dgbot_posts").select("title,body,state,channel_message_id,media,buttons").eq("id", id).is("deleted_at", null).maybeSingle();
-    if (error || !data) return ctx.reply("Post not found.");
-    if (data.state === "published" && data.channel_message_id) return ctx.reply(`Already published. Telegram message ID: ${data.channel_message_id}`);
-    if (data.state !== "draft") return ctx.reply("Only draft posts can be published.");
-    const caption = data.body ? `${data.title}\n\n${data.body}` : data.title;
-    const media = data.media as { type?: string; file_id?: string; caption?: string } | null;
-    const buttons = Array.isArray(data.buttons) ? data.buttons as Array<{ text: string; url: string }> : [];
-    const reply_markup = buttons.length ? { inline_keyboard: buttons.map((button) => [{ text: button.text, url: button.url }]) } : undefined;
-    const mediaOptions = reply_markup ? { reply_markup } : {};
-    let message;
-    if (media?.file_id && media.type === "photo") message = await bot.telegram.sendPhoto(channelId, media.file_id, { caption: media.caption || caption, ...mediaOptions });
-    else if (media?.file_id && media.type === "video") message = await bot.telegram.sendVideo(channelId, media.file_id, { caption: media.caption || caption, ...mediaOptions });
-    else if (media?.file_id && media.type === "document") message = await bot.telegram.sendDocument(channelId, media.file_id, { caption: media.caption || caption, ...mediaOptions });
-    else if (media?.file_id && media.type === "animation") message = await bot.telegram.sendAnimation(channelId, media.file_id, { caption: media.caption || caption, ...mediaOptions });
-    else message = await bot.telegram.sendMessage(channelId, caption, reply_markup ? { reply_markup } : {});
-    const { error: updateError } = await db.from("dgbot_posts").update({ state: "published", channel_message_id: message.message_id, updated_at: new Date().toISOString() }).eq("id", id).eq("state", "draft");
-    if (updateError) {
-      log.error({ err: updateError, postId: id, telegramMessageId: message.message_id }, "Published post could not be recorded");
-      return ctx.reply(`Telegram accepted the post (message ${message.message_id}), but the database update failed. Do not retry until you verify the channel to avoid duplicate posting.`);
-    }
-    await ctx.reply(`Published to ${channelId}. Telegram message ID: ${message.message_id}`);
+    const messageId = await publishPost(bot, channelId, id);
+    await ctx.reply("Published to " + channelId + ". Telegram message ID: " + messageId);
   } catch (error) {
     log.error({ err: error, postId: id }, "Post publishing failed");
-    await ctx.reply("Publishing failed. Check channel permissions and try again.");
+    await ctx.reply("Publishing did not complete: " + (error instanceof Error ? error.message : "unknown error"));
   } finally { publishingPosts.delete(id); }
+});
+bot.command("post_reconcile", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m = ctx.message.text.match(/^\/post_reconcile(?:@\w+)?\s+([0-9a-f-]{36})\s+(published|draft)(?:\s+(\d+))?$/i);
+  if (!m) return ctx.reply("Usage: /post_reconcile <post-uuid> published <telegram-message-id> OR /post_reconcile <post-uuid> draft. Check the channel first; this command changes the publishing lock.");
+  const id=m[1]!,state=m[2]!.toLowerCase(),messageId=m[3]?Number(m[3]):null;
+  if(state==="published"&&(!messageId||!Number.isSafeInteger(messageId))) return ctx.reply("Provide the Telegram channel message ID after 'published'.");
+  if(state==="draft"&&messageId) return ctx.reply("Do not provide a message ID when restoring a draft.");
+  const patch=state==="published"
+    ? {state:"published",channel_message_id:messageId,updated_at:new Date().toISOString()}
+    : {state:"draft",channel_message_id:null,updated_at:new Date().toISOString()};
+  const {data,error}=await db.from("dgbot_posts").update(patch).eq("id",id).eq("state","publishing").is("deleted_at",null).select("id").maybeSingle();
+  if(error||!data) return ctx.reply("No publishing-locked post found, or reconciliation failed.");
+  await writeAudit("post.reconciled",null,id+" -> "+state+(messageId?" message "+messageId:""));
+  await ctx.reply(state==="published"?"Post marked as published with Telegram message ID "+messageId+".":"Post returned to draft. It is now safe to publish again after you confirmed no copy exists in the channel.");
 });
 bot.command("post_remove", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -697,11 +693,17 @@ bot.command("post_schedule_retry", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id=ctx.message.text.split(/\s+/)[1];
   if(!id) return ctx.reply("Usage: /post_schedule_retry <schedule-uuid>");
+  const {data: schedule,error: scheduleError}=await db.from("vextro_scheduled_posts").select("post_id").eq("id",id).eq("status","failed").maybeSingle();
+  if(scheduleError||!schedule) return ctx.reply("Failed schedule not found.");
+  const {data: post,error: postError}=await db.from("dgbot_posts").select("state").eq("id",schedule.post_id).maybeSingle();
+  if(postError||!post) return ctx.reply("Scheduled post not found.");
+  if(post.state!=="draft") return ctx.reply("This post is not a safe draft to retry. Current post state: "+post.state+". Check the channel and use /post_reconcile "+schedule.post_id+" published <message-id> or /post_reconcile "+schedule.post_id+" draft first.");
   const {data,error}=await db.from("vextro_scheduled_posts").update({status:"scheduled",scheduled_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()})
     .eq("id",id).eq("status","failed").select("id").maybeSingle();
-  if(error||!data) return ctx.reply("Failed schedule not found.");
-  await ctx.reply("Failed schedule queued for retry. The publisher checks the post state before sending to avoid duplicate sends where possible.");
+  if(error||!data) return ctx.reply("Schedule retry could not be queued.");
+  await ctx.reply("Failed schedule queued for retry. Post is confirmed in draft state.");
 });
+
 bot.command("post_schedule_cancel", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id=ctx.message.text.split(/\s+/)[1];
@@ -1256,7 +1258,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_format, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_edit, /broadcast_delete, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_format, /post_buttons, /post_preview, /post_edit, /post_publish, /post_reconcile, /post_remove, /broadcasts, /broadcast_draft, /broadcast_edit, /broadcast_delete, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
