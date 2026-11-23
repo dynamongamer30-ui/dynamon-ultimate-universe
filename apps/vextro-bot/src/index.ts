@@ -1290,24 +1290,6 @@ bot.command("warn_user", async (ctx) => {
   try { await bot.telegram.sendMessage(id,"You received a moderation warning in the VEXTRO group: "+m[2]!.slice(0,500)); } catch {}
   await ctx.reply("Moderation warning recorded.");
 });
-bot.command("moderation_edit", async (ctx) => {
-  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const m=ctx.message.text.match(/^\/moderation_edit(?:@\w+)?\s+(\d+)\s+([\s\S]+)$/i);
-  if(!m) return ctx.reply("Usage: /moderation_edit <rule-id> <new phrase or hostname>");
-  const value=m[2]!.trim().toLowerCase();
-  if(!value||value.length>253) return ctx.reply("Rule value must be 1–253 characters.");
-  const {data,error}=await db.from("dgbot_moderation_rules").update({value,updated_at:new Date().toISOString()}).eq("id",Number(m[1])).is("deleted_at",null).select("id").maybeSingle();
-  if(error||!data) return ctx.reply("Active moderation rule not found or update failed.");
-  await writeAudit("moderation.rule_updated",null,"Rule "+m[1]+" updated"); await ctx.reply("Moderation rule updated.");
-});
-bot.command("edit_allow_host", async (ctx) => {
-  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const m=ctx.message.text.match(/^\/edit_allow_host(?:@\w+)?\s+(\d+)\s+([a-z0-9.-]{1,253})(?:\s+(subdomains))?$/i);
-  if(!m||m[2]!.includes("..")||m[2]!.startsWith(".")||m[2]!.endsWith(".")) return ctx.reply("Usage: /edit_allow_host <id> <hostname> [subdomains]");
-  const {data,error}=await db.from("dgbot_allowlist").update({host:m[2]!.toLowerCase(),include_subdomains:Boolean(m[3])}).eq("id",Number(m[1])).is("deleted_at",null).select("id").maybeSingle();
-  if(error||!data) return ctx.reply("Allowed host not found or update failed.");
-  await writeAudit("moderation.allow_host_updated",null,String(m[1])); await ctx.reply("Allowed host updated.");
-});
 bot.command("moderation_remove", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id = Number(ctx.message.text.split(/\s+/)[1]);
