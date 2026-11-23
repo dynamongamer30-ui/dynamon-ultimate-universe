@@ -51,9 +51,10 @@ describe("VEXTRO bot configuration contract", () => {
     })).toThrow(/BACKUP_OFFSITE_URL/);
   });
 
-  it("requires a numeric group ID and a valid IANA timezone", () => {
+  it("requires a numeric group ID, valid timezone and HTTPS invite URLs", () => {
     expect(() => parseConfig({ ...validEnvironment(), REQUIRED_GROUP_ID: "@group" })).toThrow(/REQUIRED_GROUP_ID/);
     expect(() => parseConfig({ ...validEnvironment(), OWNER_TIMEZONE: "Mars/Olympus" })).toThrow(/OWNER_TIMEZONE/);
+    expect(() => parseConfig({ ...validEnvironment(), REQUIRED_GROUP_URL: "http://t.me/privateinvite" })).toThrow(/REQUIRED_GROUP_URL/);
   });
 
   it("requires paired deployment credentials and encrypted backups", () => {
