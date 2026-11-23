@@ -361,6 +361,7 @@ bot.command("ticket_search", async (ctx) => {
   const term=ctx.message.text.replace(/^\/ticket_search(?:@\w+)?\s*/i,"").trim();
   if(term.length<2||term.length>100) return ctx.reply("Usage: /ticket_search <at least 2 characters>");
   const safeTerm=term.replace(/[%,_*(),]/g," ").trim();
+  if(safeTerm.length<2) return ctx.reply("Search needs at least two letters or a numeric user ID.");
   let query=db.from("bot_support_tickets").select("id,telegram_id,subject,status,priority").order("updated_at",{ascending:false});
   if(/^\d+$/.test(term)) query=query.or("subject.ilike.%"+safeTerm+"%,telegram_id.eq."+Number(term));
   else query=query.ilike("subject","%"+safeTerm+"%");
