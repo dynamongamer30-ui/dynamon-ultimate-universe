@@ -894,6 +894,26 @@ bot.command("membership_reset", async (ctx) => {
   if(saveError) return ctx.reply("Membership setting could not be reset.");
   await ctx.reply("Required "+which+" restored from environment configuration.");
 });
+bot.command("membership_diagnose", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const me=await bot.telegram.getMe();
+  const inspect=async (chatId:string,label:string)=>{
+    try{
+      const [chat,member]=await Promise.all([bot.telegram.getChat(chatId),bot.telegram.getChatMember(chatId,me.id)]);
+      const admin=member.status==="administrator"||member.status==="creator";
+      const permissions=member as {can_delete_messages?:boolean;can_restrict_members?:boolean;can_invite_users?:boolean};
+      return label+": "+chat.title+" ("+chat.type+")\nID: "+chatId+"\nBot status: "+member.status+
+        "\nAdmin: "+(admin?"yes":"no")+
+        (label==="Group"?"\nCan delete messages: "+(permissions.can_delete_messages?"yes":"no")+"\nCan restrict members: "+(permissions.can_restrict_members?"yes":"no"):"");
+    }catch(error){return label+": inaccessible\nID: "+chatId+"\nReason: "+(error instanceof Error?error.message:"unknown Telegram API error");}
+  };
+  const [channel,group]=await Promise.all([
+    inspect(runtimeMembership.channelId,"Channel"),
+    inspect(runtimeMembership.groupId,"Group")
+  ]);
+  await ctx.reply("Membership integration diagnostics\nBot: @"+(me.username??"unknown")+"\n\n"+channel+"\n\n"+group+
+    "\n\nThe bot must be an administrator in both chats for reliable membership checks. Group moderation also needs delete-message and restrict-member permissions.");
+});
 bot.command("membership_check", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id=Number(ctx.message.text.split(/\s+/)[1]);
@@ -1400,7 +1420,7 @@ bot.command("admin_help", async (ctx) => {
     "GUIDES\n/guide_list | /guide_create <id> <category> <title> | /guide_edit <id> <language> <title|steps> | /guide_preview <id> [language] | /guide_media <id> <type> <file-id> | /guide_buttons <id> <label|url> | /guide_publish <id> | /guide_unpublish <id> | /guide_delete <id> | /guide_keyword <id> <language> <term> | /guide_review | /guide_review_approve | /guide_review_reject | /welcome_set | /welcome_preview | /welcome_reset",
     "BROADCASTS\n/broadcasts | /broadcast_draft | /broadcast_edit | /broadcast_format | /broadcast_delete | /broadcast_preview | /broadcast_test | /broadcast_schedule | /broadcast_confirm | /broadcast_pause | /broadcast_resume | /broadcast_cancel | /broadcast_retry | /broadcast_status",
     "MODERATION\n/moderation_rules | /moderation_add | /moderation_edit | /moderation_remove | /allow_hosts | /allow_host | /edit_allow_host | /remove_allow_host | /warn_user | /mute_user | /unmute_user | /group_ban | /group_unban | /moderation_stats",
-    "OPERATIONS\n/admin_menu | /analytics | /bot_status | /settings | /logs | /log_search | /audit_recent | /audit_search | /health | /membership_check | /membership_set_channel | /membership_set_group | /membership_reset | /maintenance_on | /maintenance_off | /maintenance_status | /backup_create | /backup_list | /backup_verify | /backup_restore_confirm | /backup_status | /backup_runs | /update_check | /update_approve | /update_install | /update_rollback | /update_status"
+    "OPERATIONS\n/admin_menu | /analytics | /bot_status | /settings | /logs | /log_search | /audit_recent | /audit_search | /health | /membership_check | /membership_diagnose | /membership_set_channel | /membership_set_group | /membership_reset | /maintenance_on | /maintenance_off | /maintenance_status | /backup_create | /backup_list | /backup_verify | /backup_restore_confirm | /backup_status | /backup_runs | /update_check | /update_approve | /update_install | /update_rollback | /update_status"
   ];
   for(const section of sections) await ctx.reply(section);
 });
