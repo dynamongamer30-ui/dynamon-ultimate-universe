@@ -905,7 +905,7 @@ bot.command("settings", async (ctx) => {
   await ctx.reply("VEXTRO BOT settings\nOwner-only administration: enabled\nRequired channel: "+config.REQUIRED_CHANNEL_ID+
     "\nRequired group: "+config.REQUIRED_GROUP_ID+"\nPublish channel: "+(config.PUBLISH_CHANNEL_ID??"not configured")+
     "\nWebsite: "+config.WEBSITE_URL+"\nBackup interval: "+config.BACKUP_INTERVAL_HOURS+" hours"+
-    "\nBackup retention: "+config.BACKUP_RETENTION_DAYS+" days\nRelease repository: "+config.GITHUB_REPOSITORY+
+    "\nBackup retention: "+config.BACKUP_RETENTION_DAYS+" days\nBackup passphrase: "+(config.BACKUP_PASSPHRASE?"configured":"not configured")+"\nOffsite endpoint: "+(config.BACKUP_OFFSITE_URL&&config.BACKUP_OFFSITE_TOKEN?"configured":"not configured")+"\nRelease repository: "+config.GITHUB_REPOSITORY+
     "\nDeployment webhook: "+(config.DEPLOY_WEBHOOK_URL?"configured":"not configured")+
     "\nNo secrets are displayed.");
 });
