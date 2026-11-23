@@ -13,6 +13,8 @@ const schema = z.object({
   WEBSITE_URL: z.string().url(),
   REQUIRED_CHANNEL_ID: z.string().min(1),
   REQUIRED_GROUP_ID: z.string().regex(/^-?\d+$/, "Numeric Telegram group chat ID required"),
+  REQUIRED_CHANNEL_URL: optionalString(z.string().url().refine((value) => new URL(value).protocol === "https:", "HTTPS required")),
+  REQUIRED_GROUP_URL: optionalString(z.string().url().refine((value) => new URL(value).protocol === "https:", "HTTPS required")),
   PUBLISH_CHANNEL_ID: optionalString(z.string().min(1)),
   BOT_PUBLIC_USERNAME: optionalString(z.string().regex(/^[A-Za-z0-9_]{5,32}$/)),
   BACKUP_PASSPHRASE: optionalString(z.string().min(16)),
