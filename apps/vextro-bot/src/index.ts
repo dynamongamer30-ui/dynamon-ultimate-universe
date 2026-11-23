@@ -627,9 +627,14 @@ bot.command("post_reconcile", async (ctx) => {
   const {data,error}=await db.from("dgbot_posts").update(patch).eq("id",id).eq("state","publishing").is("deleted_at",null).select("id").maybeSingle();
   if(error||!data) return ctx.reply("No publishing-locked post found, or reconciliation failed.");
   if(state==="published"){
-    const {error:scheduleError}=await db.from("vextro_scheduled_posts").update({status:"published",published_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()})
-      .eq("post_id",id).in("status",["scheduled","publishing","failed"]);
-    if(scheduleError) log.warn({err:scheduleError,postId:id},"Schedule status could not be reconciled after manual publish confirmation");
+    const {data:schedule,error:scheduleLookupError}=await db.from("vextro_scheduled_posts").select("id")
+      .eq("post_id",id).in("status",["scheduled","publishing","failed"]).lte("scheduled_at",new Date().toISOString())
+      .order("scheduled_at",{ascending:false}).limit(1).maybeSingle();
+    if(scheduleLookupError) log.warn({err:scheduleLookupError,postId:id},"Due schedule lookup failed during post reconciliation");
+    else if(schedule){
+      const {error:scheduleError}=await db.from("vextro_scheduled_posts").update({status:"published",published_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()}).eq("id",schedule.id);
+      if(scheduleError) log.warn({err:scheduleError,postId:id},"Schedule status could not be reconciled after manual publish confirmation");
+    }
   }
   await writeAudit("post.reconciled",null,id+" -> "+state+(messageId?" message "+messageId:""));
   await ctx.reply(state==="published"?"Post marked as published with Telegram message ID "+messageId+". Any pending schedule was reconciled as published.":"Post returned to draft. It is now safe to publish again after you confirmed no copy exists in the channel.");
