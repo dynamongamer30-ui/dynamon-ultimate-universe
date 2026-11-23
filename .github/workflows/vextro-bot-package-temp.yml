@@ -11,12 +11,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 26
-          cache: npm
-          cache-dependency-path: apps/vextro-bot/package-lock.json
       - name: Install and verify
         working-directory: apps/vextro-bot
         run: |
-          npm ci
+          npm install
           npm run typecheck
           npm test
           npm run build
