@@ -79,9 +79,10 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
             continue;
           }
           try {
-            const { data: job, error: jobError } = await db.from("vextro_broadcast_jobs").select("body").eq("id", recipient.job_id).single();
+            const { data: job, error: jobError } = await db.from("vextro_broadcast_jobs").select("body,format").eq("id", recipient.job_id).single();
             if (jobError || !job?.body) throw jobError ?? new Error("Broadcast body missing");
-            await bot.telegram.sendMessage(Number(recipient.telegram_id), String(job.body));
+            const parseMode = job.format === "HTML" ? "HTML" : job.format === "MarkdownV2" ? "MarkdownV2" : undefined;
+            await bot.telegram.sendMessage(Number(recipient.telegram_id), String(job.body), parseMode ? { parse_mode: parseMode } : {});
             await db.from("vextro_broadcast_recipients").update({ status: "sent", sent_at: new Date().toISOString(), last_error: null, updated_at: new Date().toISOString() }).eq("id", recipient.id);
           } catch (sendError) {
             const message = sendError instanceof Error ? sendError.message.slice(0, 500) : "Telegram delivery failed";
