@@ -248,7 +248,7 @@ bot.command("post_draft", async (ctx) => {
 });
 bot.command("post_media", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const match = ctx.message.text.match(/^\\/post_media(?:@\\w+)?\\s+([0-9a-f-]{36})\\s+(photo|video|document|animation)\\s+(\\S+)(?:\\s+([\\s\\S]+))?$/i);
+  const match = ctx.message.text.match(/^\/post_media(?:@\w+)?\s+([0-9a-f-]{36})\s+(photo|video|document|animation)\s+(\S+)(?:\s+([\s\S]+))?$/i);
   if (!match) return ctx.reply("Usage: /post_media <post-uuid> <photo|video|document|animation> <telegram-file-id> [caption]");
   const [, id, type, fileId, caption = ""] = match;
   if (caption.length > 1024) return ctx.reply("Caption must be 1024 characters or fewer.");
@@ -259,10 +259,10 @@ bot.command("post_media", async (ctx) => {
 });
 bot.command("post_buttons", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const match = ctx.message.text.match(/^\\/post_buttons(?:@\\w+)?\\s+([0-9a-f-]{36})\\s+([\\s\\S]+)$/i);
+  const match = ctx.message.text.match(/^\\/post_buttons(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
   if (!match) return ctx.reply("Usage: /post_buttons <post-uuid> then one Label|https://url per line (maximum 8).");
   const id = match[1]!;
-  const lines = match[2]!.split("\\n").map((line) => line.trim()).filter(Boolean);
+  const lines = match[2]!.split("\n").map((line) => line.trim()).filter(Boolean);
   if (lines.length > 8) return ctx.reply("Maximum 8 buttons are supported.");
   const buttons: Array<{ text: string; url: string }> = [];
   for (const line of lines) {
@@ -501,8 +501,8 @@ bot.on("text", async (ctx, next) => {
     const { data: rules, error } = await db.from("dgbot_moderation_rules").select("kind,value").is("deleted_at", null).limit(250);
     if (error) throw error;
     const body = ctx.message.text.toLocaleLowerCase();
-    const hosts = [...ctx.message.text.matchAll(/https?:\\/\\/[^\\s<>()]+/gi)].map((m) => {
-      try { return new URL(m[0]).hostname.toLowerCase().replace(/^www\\./, ""); } catch { return ""; }
+    const hosts = [...ctx.message.text.matchAll(/https?:\/\/[^\s<>()]+/gi)].map((m) => {
+      try { return new URL(m[0]).hostname.toLowerCase().replace(/^www\./, ""); } catch { return ""; }
     }).filter(Boolean);
     const matched = (rules ?? []).find((rule) => {
       const value = String(rule.value).toLocaleLowerCase();
