@@ -211,19 +211,19 @@ bot.command("posts", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const { data, error } = await db.from("dgbot_posts").select("id,title,state,updated_at").is("deleted_at", null).neq("state", "removed").order("updated_at", { ascending: false }).limit(20);
   if (error) { log.error({ err: error }, "Post list failed"); return ctx.reply("Post list unavailable."); }
-  if (!data?.length) return ctx.reply("No posts yet. Create one with /post_draft Title\\nBody.");
-  await ctx.reply(data.map((p) => `[${p.state}] ${p.id}\\n${p.title}`).join("\\n\\n"));
+  if (!data?.length) return ctx.reply("No posts yet. Create one with /post_draft Title\nBody.");
+  await ctx.reply(data.map((p) => `[${p.state}] ${p.id}\n${p.title}`).join("\n\n"));
 });
 bot.command("post_draft", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const payload = ctx.message.text.replace(/^\\/post_draft(?:@\\w+)?\\s*/i, "").trim();
-  const split = payload.indexOf("\\n");
+  const split = payload.indexOf("\n");
   const title = (split < 0 ? payload : payload.slice(0, split)).trim();
   const body = (split < 0 ? "" : payload.slice(split + 1)).trim();
-  if (title.length < 1 || title.length > 120 || body.length > 4096 || title.length + body.length + (body ? 2 : 0) > 4096) return ctx.reply("Usage: /post_draft Title\\nBody. Title: 1–120 characters; total post: up to 4096 characters.");
+  if (title.length < 1 || title.length > 120 || body.length > 4096 || title.length + body.length + (body ? 2 : 0) > 4096) return ctx.reply("Usage: /post_draft Title\nBody. Title: 1–120 characters; total post: up to 4096 characters.");
   const { data, error } = await db.from("dgbot_posts").insert({ title, body, state: "draft" }).select("id").single();
   if (error || !data) { log.error({ err: error }, "Post draft creation failed"); return ctx.reply("Could not create the draft."); }
-  await ctx.reply(`Draft created: ${data.id}\\nPreview: /post_preview ${data.id}\\nEdit: /post_edit ${data.id} Title\\nBody`);
+  await ctx.reply(`Draft created: ${data.id}\nPreview: /post_preview ${data.id}\nEdit: /post_edit ${data.id} Title\nBody`);
 });
 bot.command("post_preview", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -231,15 +231,15 @@ bot.command("post_preview", async (ctx) => {
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /post_preview <post-uuid>");
   const { data, error } = await db.from("dgbot_posts").select("title,body,state").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error || !data) return ctx.reply("Post not found.");
-  await ctx.reply(`[${data.state}] ${data.title}\\n\\n${data.body || "(No body)"}`.slice(0, 4096));
+  await ctx.reply(`[${data.state}] ${data.title}\n\n${data.body || "(No body)"}`.slice(0, 4096));
 });
 bot.command("post_edit", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const match = ctx.message.text.match(/^\\/post_edit(?:@\\w+)?\\s+([0-9a-f-]{36})\\s+([\\s\\S]+)$/i);
-  if (!match) return ctx.reply("Usage: /post_edit <post-uuid> Title\\nBody");
+  if (!match) return ctx.reply("Usage: /post_edit <post-uuid> Title\nBody");
   const id = match[1]!;
   const payload = match[2]!;
-  const split = payload.indexOf("\\n");
+  const split = payload.indexOf("\n");
   const title = (split < 0 ? payload : payload.slice(0, split)).trim();
   const body = (split < 0 ? "" : payload.slice(split + 1)).trim();
   if (title.length < 1 || title.length > 120 || body.length > 4096 || title.length + body.length + (body ? 2 : 0) > 4096) return ctx.reply("Title must be 1–120 characters and the full post must fit Telegram's 4096-character limit.");
@@ -260,7 +260,7 @@ bot.command("post_publish", async (ctx) => {
     if (error || !data) return ctx.reply("Post not found.");
     if (data.state === "published" && data.channel_message_id) return ctx.reply(`Already published. Telegram message ID: ${data.channel_message_id}`);
     if (data.state !== "draft") return ctx.reply("Only draft posts can be published.");
-    const message = await bot.telegram.sendMessage(channelId, data.body ? `${data.title}\\n\\n${data.body}` : data.title);
+    const message = await bot.telegram.sendMessage(channelId, data.body ? `${data.title}\n\n${data.body}` : data.title);
     const { error: updateError } = await db.from("dgbot_posts").update({ state: "published", channel_message_id: message.message_id, updated_at: new Date().toISOString() }).eq("id", id).eq("state", "draft");
     if (updateError) {
       log.error({ err: updateError, postId: id, telegramMessageId: message.message_id }, "Published post could not be recorded");
