@@ -83,7 +83,7 @@ export async function createBackup(createdBy: number) {
       const response = await fetch(config.BACKUP_OFFSITE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/octet-stream", Authorization: "Bearer " + config.BACKUP_OFFSITE_TOKEN, "X-Vextro-Backup-SHA256": sha256, "X-Vextro-Backup-Path": path },
-        body: encrypted,
+        body: new Uint8Array(encrypted),
         signal: AbortSignal.timeout(30_000)
       });
       const receipt = response.ok ? await response.json() as { sha256?: string } : null;
