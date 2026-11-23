@@ -29,7 +29,7 @@ Optional settings include `OWNER_TIMEZONE` (defaults to `Asia/Kolkata`; all sche
 - Persistent broadcasts with membership-verified audience snapshot, Owner confirmation, preview/test, Owner-timezone scheduling, pause/resume/cancel, delivery queue, retry-after handling, retry and results.
 - Group moderation rules, host allowlist, blocked phrase/domain enforcement, rate/repeat spam checks, warnings, timed restrictions, group ban/unban and moderation analytics.
 - Owner dashboard navigation, audit log/search, runtime settings, maintenance mode and health monitoring.
-- Encrypted AES-256-GCM application-data backups, SHA-256 integrity checks, private Supabase Storage, retention, scheduled backups, restore with a safety backup, and optional offsite HTTPS copy.
+- Encrypted AES-256-GCM application-data backups, SHA-256 integrity checks, private Supabase Storage, retention, scheduled backups, restore with a safety backup, and optional offsite HTTPS copy. Website-owned account-link requests, active website account links, and website guide records are preserved rather than overwritten during bot restore.
 - GitHub release checks, Owner approval records, deployment webhook requests and rollback webhook requests.
 - Restart recovery for in-flight queue work and stale scheduled-post leases.
 
@@ -39,6 +39,6 @@ Optional settings include `OWNER_TIMEZONE` (defaults to `Asia/Kolkata`; all sche
 - Backup encryption is disabled until `BACKUP_PASSPHRASE` is configured. Offsite copies require a custom HTTPS endpoint and token; it must accept the encrypted bytes and return JSON containing the matching `sha256`.
 - Release checks and Owner approvals work independently. Automatic installation/rollback requires a custom hosting webhook implementing `action: deploy` and `action: rollback`. No provider-specific webhook is wired by default; do not assume deployment works until the host endpoint is configured and tested.
 - Telegram moderation restrictions require the bot to be an administrator with the relevant group permissions. If Telegram rejects a moderation action, the failure is logged and shown to the Owner.
-- Account unlink is intentionally not implemented because no verified unlink RPC was found; direct table mutation would bypass the live 15-day unlink eligibility rule.
+- Account unlink is intentionally not implemented because no verified unlink RPC was found; direct table mutation would bypass the live 15-day unlink eligibility rule. Backup restore also skips website-owned account-link and guide tables to preserve the website's authority and unlink eligibility.
 - The legacy backup writer previously recorded repeated failures. The VEXTRO encrypted backup engine uses its own artifact table and private storage bucket; configure the passphrase before relying on it.
 - CI verifies TypeScript, Vitest and the production build. CI is not proof of live Telegram token, membership, hosting or webhook acceptance.
