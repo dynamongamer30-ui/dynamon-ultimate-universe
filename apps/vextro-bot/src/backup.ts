@@ -152,7 +152,7 @@ export function startBackupScheduler(ownerId: number, intervalHours: number, not
       const due = !data || Date.now() - new Date(data.created_at).getTime() >= intervalHours * 3600_000;
       if (due) {
         const backup = await createBackup(ownerId);
-        if (notify) await notify("Scheduled encrypted backup completed and verified. ID: " + backup.id + " | " + backup.bytes + " bytes");
+        if (notify) await notify("Scheduled encrypted backup completed and verified. ID: " + backup.id + " | " + backup.bytes + " bytes | offsite: " + (backup.offsite_verified_at ? "verified" : backup.offsite_error ? "failed" : "not configured"));
       }
     } catch (error) {
       console.error("VEXTRO encrypted backup scheduler failed", error);
