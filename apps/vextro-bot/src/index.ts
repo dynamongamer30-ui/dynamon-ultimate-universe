@@ -22,6 +22,7 @@ const bot = new Telegraf(config.BOT_TOKEN);
 const textLimit = 4000;
 const publishingPosts = new Set<string>();
 let maintenanceMode = false;
+const runtimeMembership = { channelId: config.REQUIRED_CHANNEL_ID, groupId: config.REQUIRED_GROUP_ID };
 const moderationActivity = new Map<number, { times: number[]; lastText: string; repeats: number }>();
 type Lang = "en" | "hi" | "vi";
 
@@ -60,7 +61,7 @@ async function getLanguage(telegramId: number): Promise<Lang> {
   return data?.language === "hi" || data?.language === "vi" ? data.language : "en";
 }
 async function isMemberId(telegramId: number): Promise<boolean> {
-  const results = await Promise.all([config.REQUIRED_CHANNEL_ID, config.REQUIRED_GROUP_ID].map(async (chatId) => {
+  const results = await Promise.all([runtimeMembership.channelId, runtimeMembership.groupId].map(async (chatId) => {
     try {
       const member = await bot.telegram.getChatMember(chatId, telegramId);
       return ["creator", "administrator", "member"].includes(member.status) || (member.status === "restricted" && member.is_member);
@@ -75,7 +76,7 @@ async function isMemberId(telegramId: number): Promise<boolean> {
 async function isMember(ctx: Context): Promise<boolean> {
   if (!ctx.from) return false;
   if (ownerOnly(ctx)) return true;
-  const results = await Promise.all([config.REQUIRED_CHANNEL_ID, config.REQUIRED_GROUP_ID].map(async (chatId) => {
+  const results = await Promise.all([runtimeMembership.channelId, runtimeMembership.groupId].map(async (chatId) => {
     try {
       const member = await ctx.telegram.getChatMember(chatId, ctx.from!.id);
       return ["creator", "administrator", "member"].includes(member.status) || (member.status === "restricted" && member.is_member);
@@ -788,7 +789,7 @@ bot.hears(/^\/guide_([a-z0-9][a-z0-9_-]{0,30})$/, async (ctx) => {
 });
 
 bot.on("left_chat_member", async (ctx) => {
-  if(String(ctx.chat.id)!==config.REQUIRED_GROUP_ID) return;
+  if(String(ctx.chat.id)!==runtimeMembership.groupId) return;
   const departed=ctx.message.left_chat_member;
   if(departed.is_bot) return;
   moderationActivity.delete(departed.id);
@@ -797,7 +798,7 @@ bot.on("left_chat_member", async (ctx) => {
 });
 bot.command("membership_status", async (ctx) => {
   if(!ctx.from) return;
-  const results=await Promise.all([config.REQUIRED_CHANNEL_ID,config.REQUIRED_GROUP_ID].map(async chatId=>{
+  const results=await Promise.all([runtimeMembership.channelId,runtimeMembership.groupId].map(async chatId=>{
     try{
       const member=await ctx.telegram.getChatMember(chatId,ctx.from!.id);
       return ["creator","administrator","member"].includes(member.status)||(member.status==="restricted"&&member.is_member);
@@ -805,11 +806,52 @@ bot.command("membership_status", async (ctx) => {
   }));
   await ctx.reply("Required channel: "+(results[0]?"joined":"not joined")+"\nRequired group: "+(results[1]?"joined":"not joined")+"\nOverall: "+(results.every(Boolean)?"verified":"verification required"));
 });
+bot.command("membership_set_channel", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const value=ctx.message.text.replace(/^\/membership_set_channel(?:@\w+)?\s*/i,"").trim();
+  if(!value||value.length>100||!/^(@[A-Za-z0-9_]{5,32}|-?\d+)$/.test(value)) return ctx.reply("Usage: /membership_set_channel <@channelusername or numeric chat ID>");
+  const {data,error}=await db.from("vextro_runtime_settings").select("value").eq("key","membership_config").maybeSingle();
+  if(error) return ctx.reply("Membership settings could not be loaded.");
+  const current=(data?.value??{}) as Record<string,unknown>;
+  const next={...current,channelId:value};
+  const {error:saveError}=await db.from("vextro_runtime_settings").upsert({key:"membership_config",value:next,updated_by:ctx.from.id,updated_at:new Date().toISOString()},{onConflict:"key"});
+  if(saveError) return ctx.reply("Channel setting could not be saved.");
+  runtimeMembership.channelId=value;
+  await writeAudit("settings.membership_channel",null,"Required channel changed");
+  await ctx.reply("Required channel updated to "+value+".");
+});
+bot.command("membership_set_group", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const value=ctx.message.text.replace(/^\/membership_set_group(?:@\w+)?\s*/i,"").trim();
+  if(!/^-?\d+$/.test(value)) return ctx.reply("Usage: /membership_set_group <numeric Telegram group chat ID>");
+  const {data,error}=await db.from("vextro_runtime_settings").select("value").eq("key","membership_config").maybeSingle();
+  if(error) return ctx.reply("Membership settings could not be loaded.");
+  const current=(data?.value??{}) as Record<string,unknown>;
+  const next={...current,groupId:value};
+  const {error:saveError}=await db.from("vextro_runtime_settings").upsert({key:"membership_config",value:next,updated_by:ctx.from.id,updated_at:new Date().toISOString()},{onConflict:"key"});
+  if(saveError) return ctx.reply("Group setting could not be saved.");
+  runtimeMembership.groupId=value;
+  await writeAudit("settings.membership_group",null,"Required group changed");
+  await ctx.reply("Required group updated to "+value+".");
+});
+bot.command("membership_reset", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const which=ctx.message.text.split(/\s+/)[1];
+  if(which!=="channel"&&which!=="group") return ctx.reply("Usage: /membership_reset <channel|group>");
+  const {data,error}=await db.from("vextro_runtime_settings").select("value").eq("key","membership_config").maybeSingle();
+  if(error) return ctx.reply("Membership settings could not be loaded.");
+  const current=(data?.value??{}) as Record<string,unknown>;
+  if(which==="channel"){delete current.channelId;runtimeMembership.channelId=config.REQUIRED_CHANNEL_ID;}
+  else{delete current.groupId;runtimeMembership.groupId=config.REQUIRED_GROUP_ID;}
+  const {error:saveError}=await db.from("vextro_runtime_settings").upsert({key:"membership_config",value:current,updated_by:ctx.from.id,updated_at:new Date().toISOString()},{onConflict:"key"});
+  if(saveError) return ctx.reply("Membership setting could not be reset.");
+  await ctx.reply("Required "+which+" restored from environment configuration.");
+});
 bot.command("membership_check", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id=Number(ctx.message.text.split(/\s+/)[1]);
   if(!Number.isSafeInteger(id)||id<1) return ctx.reply("Usage: /membership_check <telegram-id>");
-  const results=await Promise.all([config.REQUIRED_CHANNEL_ID,config.REQUIRED_GROUP_ID].map(async chatId=>{
+  const results=await Promise.all([runtimeMembership.channelId,runtimeMembership.groupId].map(async chatId=>{
     try{const member=await ctx.telegram.getChatMember(chatId,id);return member.status+(member.status==="restricted"?(member.is_member?" (member)":" (not member)"):"");}
     catch(error){return "unavailable: "+(error instanceof Error?error.message:"unknown");}
   }));
@@ -830,7 +872,7 @@ bot.command("rules", async (ctx) => {
   await ctx.reply(output.slice(0,textLimit));
 });
 bot.on("new_chat_members", async (ctx) => {
-  if(String(ctx.chat.id)!==config.REQUIRED_GROUP_ID) return;
+  if(String(ctx.chat.id)!==runtimeMembership.groupId) return;
   const names=ctx.message.new_chat_members.filter(m=>!m.is_bot).map(m=>m.first_name).slice(0,10);
   if(!names.length) return;
   await ctx.reply("Welcome "+names.join(", ")+"! Please read /rules and start a private chat with the bot using /start to verify membership and access support.");
@@ -838,7 +880,7 @@ bot.on("new_chat_members", async (ctx) => {
 bot.action("membership:status", async (ctx) => {
   await ctx.answerCbQuery();
   if(!ctx.from) return;
-  const results=await Promise.all([config.REQUIRED_CHANNEL_ID,config.REQUIRED_GROUP_ID].map(async chatId=>{
+  const results=await Promise.all([runtimeMembership.channelId,runtimeMembership.groupId].map(async chatId=>{
     try{const member=await ctx.telegram.getChatMember(chatId,ctx.from!.id);return ["creator","administrator","member"].includes(member.status)||(member.status==="restricted"&&member.is_member);}
     catch{return false;}
   }));
@@ -973,8 +1015,8 @@ bot.command("bot_status", async (ctx) => {
 });
 bot.command("settings", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  await ctx.reply("VEXTRO BOT settings\nOwner-only administration: enabled\nRequired channel: "+config.REQUIRED_CHANNEL_ID+
-    "\nRequired group: "+config.REQUIRED_GROUP_ID+"\nPublish channel: "+(config.PUBLISH_CHANNEL_ID??"not configured")+
+  await ctx.reply("VEXTRO BOT settings\nOwner-only administration: enabled\nRequired channel: "+runtimeMembership.channelId+
+    "\nRequired group: "+runtimeMembership.groupId+"\nPublish channel: "+(config.PUBLISH_CHANNEL_ID??"not configured")+
     \nWebsite: "+config.WEBSITE_URL+"\nOwner timezone: "+config.OWNER_TIMEZONE+"\nBackup interval: +config.BACKUP_INTERVAL_HOURS+" hours"+
     "\nBackup retention: "+config.BACKUP_RETENTION_DAYS+" days\nBackup passphrase: "+(config.BACKUP_PASSPHRASE?"configured":"not configured")+"\nOffsite endpoint: "+(config.BACKUP_OFFSITE_URL&&config.BACKUP_OFFSITE_TOKEN?"configured":"not configured")+"\nRelease repository: "+config.GITHUB_REPOSITORY+
     "\nDeployment webhook: "+(config.DEPLOY_WEBHOOK_URL?"configured":"not configured")+
@@ -1170,14 +1212,14 @@ bot.command("group_ban", async (ctx) => {
   const m=ctx.message.text.match(/^\/group_ban(?:@\w+)?\s+(\d+)\s+([\s\S]+)$/i);
   if(!m) return ctx.reply("Usage: /group_ban <telegram-id> <reason>");
   const id=Number(m[1]); if(!Number.isSafeInteger(id)||id<1||id===config.OWNER_TELEGRAM_ID) return ctx.reply("Invalid target.");
-  try{await ctx.telegram.banChatMember(config.REQUIRED_GROUP_ID,id);await writeAudit("moderation.group_ban",id,m[2]!.slice(0,200));await ctx.reply("User banned from required group.");}
+  try{await ctx.telegram.banChatMember(runtimeMembership.groupId,id);await writeAudit("moderation.group_ban",id,m[2]!.slice(0,200));await ctx.reply("User banned from required group.");}
   catch(error){log.error({err:error,targetId:id},"Group ban failed");await ctx.reply("Group ban failed. Verify bot admin permissions.");}
 });
 bot.command("group_unban", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id=Number(ctx.message.text.split(/\s+/)[1]);
   if(!Number.isSafeInteger(id)||id<1) return ctx.reply("Usage: /group_unban <telegram-id>");
-  try{await ctx.telegram.unbanChatMember(config.REQUIRED_GROUP_ID,id,{only_if_banned:true});await writeAudit("moderation.group_unban",id,"Owner lifted group ban");await ctx.reply("User unbanned from required group.");}
+  try{await ctx.telegram.unbanChatMember(runtimeMembership.groupId,id,{only_if_banned:true});await writeAudit("moderation.group_unban",id,"Owner lifted group ban");await ctx.reply("User unbanned from required group.");}
   catch(error){log.error({err:error,targetId:id},"Group unban failed");await ctx.reply("Group unban failed. Verify bot admin permissions.");}
 });
 bot.command("mute_user", async (ctx) => {
@@ -1186,7 +1228,7 @@ bot.command("mute_user", async (ctx) => {
   if(!m) return ctx.reply("Usage: /mute_user <telegram-id> <minutes 1-1440> <reason>");
   const id=Number(m[1]),minutes=Number(m[2]);
   if(!Number.isSafeInteger(id)||id<1||id===config.OWNER_TELEGRAM_ID||minutes<1||minutes>1440) return ctx.reply("Invalid target or mute duration.");
-  try{await ctx.telegram.callApi("restrictChatMember",{chat_id:config.REQUIRED_GROUP_ID,user_id:id,permissions:{can_send_messages:false},until_date:Math.floor(Date.now()/1000)+minutes*60});
+  try{await ctx.telegram.callApi("restrictChatMember",{chat_id:runtimeMembership.groupId,user_id:id,permissions:{can_send_messages:false},until_date:Math.floor(Date.now()/1000)+minutes*60});
     await writeAudit("moderation.mute",id,m[3]!.slice(0,200));await ctx.reply("User muted for "+minutes+" minutes.");}
   catch(error){log.error({err:error,targetId:id},"Group mute failed");await ctx.reply("Mute failed. Verify bot admin permissions.");}
 });
@@ -1195,12 +1237,12 @@ bot.command("unmute_user", async (ctx) => {
   const id=Number(ctx.message.text.split(/\s+/)[1]);
   if(!Number.isSafeInteger(id)||id<1) return ctx.reply("Usage: /unmute_user <telegram-id>");
   try {
-    await ctx.telegram.callApi("restrictChatMember",{chat_id:config.REQUIRED_GROUP_ID,user_id:id,permissions:{
+    await ctx.telegram.callApi("restrictChatMember",{chat_id:runtimeMembership.groupId,user_id:id,permissions:{
       can_send_messages:true,can_send_audios:true,can_send_documents:true,can_send_photos:true,can_send_videos:true,
       can_send_video_notes:true,can_send_voice_notes:true,can_send_polls:true,can_send_other_messages:true,
       can_add_web_page_previews:true,can_invite_users:true
     }});
-    await db.from("vextro_moderation_events").insert({telegram_id:id,chat_id:Number(config.REQUIRED_GROUP_ID),event_type:"released",reason:"Owner manually unmuted user"});
+    await db.from("vextro_moderation_events").insert({telegram_id:id,chat_id:Number(runtimeMembership.groupId),event_type:"released",reason:"Owner manually unmuted user"});
     await writeAudit("moderation.unmute",id,"Owner manually unmuted user");
     await ctx.reply("User unmuted in the required group.");
   } catch(error) { log.error({err:error,targetId:id},"Group unmute failed"); await ctx.reply("Unmute failed. Verify bot admin permissions."); }
@@ -1211,7 +1253,7 @@ bot.command("warn_user", async (ctx) => {
   if(!m) return ctx.reply("Usage: /warn_user <telegram-id> <reason>");
   const id=Number(m[1]);
   if(!Number.isSafeInteger(id)||id<1||id===config.OWNER_TELEGRAM_ID) return ctx.reply("Invalid target.");
-  const {error}=await db.from("vextro_moderation_events").insert({telegram_id:id,chat_id:Number(config.REQUIRED_GROUP_ID),event_type:"warning",reason:m[2]!.slice(0,200)});
+  const {error}=await db.from("vextro_moderation_events").insert({telegram_id:id,chat_id:Number(runtimeMembership.groupId),event_type:"warning",reason:m[2]!.slice(0,200)});
   if(error) return ctx.reply("Warning could not be recorded.");
   await writeAudit("moderation.manual_warning",id,m[2]!.slice(0,200));
   try { await bot.telegram.sendMessage(id,"You received a moderation warning in the VEXTRO group: "+m[2]!.slice(0,500)); } catch {}
@@ -1293,7 +1335,7 @@ bot.command("admin", async (ctx) => {
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
 
 bot.on("text", async (ctx, next) => {
-  if (ctx.chat.type === "private" || String(ctx.chat.id) !== config.REQUIRED_GROUP_ID || !ctx.from || ctx.from.is_bot || ownerOnly(ctx)) return next();
+  if (ctx.chat.type === "private" || String(ctx.chat.id) !== runtimeMembership.groupId || !ctx.from || ctx.from.is_bot || ownerOnly(ctx)) return next();
   try {
     const { data: rules, error } = await db.from("dgbot_moderation_rules").select("kind,value").is("deleted_at", null).limit(250);
     if (error) throw error;
@@ -1380,7 +1422,7 @@ const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID, config.OWNER
 const stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER_TELEGRAM_ID, config.BACKUP_INTERVAL_HOURS, (message) => bot.telegram.sendMessage(config.OWNER_TELEGRAM_ID, message)) : () => {};
 const stopHealth = startHealthMonitor(bot, config.OWNER_TELEGRAM_ID, 5);
 const stopUpdates = startUpdateMonitor(bot, config.OWNER_TELEGRAM_ID, config.UPDATE_CHECK_INTERVAL_HOURS);
-try { const {data}=await db.from("vextro_runtime_settings").select("value").eq("key","maintenance").maybeSingle(); maintenanceMode=(data?.value as {enabled?:boolean}|null)?.enabled===true; } catch(error) { log.error({err:error},"Maintenance setting could not be loaded; defaulting to normal mode"); }
+try { const {data}=await db.from("vextro_runtime_settings").select("value").eq("key","maintenance").maybeSingle(); maintenanceMode=(data?.value as {enabled?:boolean}|null)?.enabled===true; const {data:membership}=await db.from("vextro_runtime_settings").select("value").eq("key","membership_config").maybeSingle(); const settings=(membership?.value??{}) as {channelId?:string;groupId?:string}; if(settings.channelId) runtimeMembership.channelId=settings.channelId; if(settings.groupId&&/^-?\\d+$/.test(settings.groupId)) runtimeMembership.groupId=settings.groupId; } catch(error) { log.error({err:error},"Maintenance setting could not be loaded; defaulting to normal mode"); }
 process.once("SIGINT", () => { stopWorkers(); stopBackups(); stopHealth(); stopUpdates(); bot.stop("SIGINT"); });
 process.once("SIGTERM", () => { stopWorkers(); stopBackups(); stopHealth(); stopUpdates(); bot.stop("SIGTERM"); });
 await bot.launch({ dropPendingUpdates: false });
