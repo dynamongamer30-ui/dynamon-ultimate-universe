@@ -8,7 +8,6 @@ const passphrase = config.BACKUP_PASSPHRASE;
 const retentionDays = config.BACKUP_RETENTION_DAYS;
 const backupTables: Array<{ name: string; conflict: string }> = [
   { name: "bot_users", conflict: "telegram_id" },
-  { name: "bot_link_requests", conflict: "token_hash" },
   { name: "bot_account_links", conflict: "id" },
   { name: "bot_guides", conflict: "id" },
   { name: "bot_support_tickets", conflict: "id" },
