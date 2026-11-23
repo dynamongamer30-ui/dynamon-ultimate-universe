@@ -918,9 +918,10 @@ bot.command("broadcast_retry", async (ctx) => {
   if(jobError||!job||!["completed","failed","paused"].includes(job.status)) return ctx.reply("Only completed, failed or paused jobs can be retried.");
   const {error}=await db.from("vextro_broadcast_recipients").update({status:"pending",attempts:0,next_attempt_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()}).eq("job_id",id).eq("status","failed");
   if(error) return ctx.reply("Failed recipients could not be reset.");
+  const {count:uncertain}=await db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",id).eq("status","uncertain");
   const {error:updateError}=await db.from("vextro_broadcast_jobs").update({status:"running",completed_at:null,updated_at:new Date().toISOString()}).eq("id",id);
   if(updateError) return ctx.reply("Could not restart this queue.");
-  await ctx.reply("Failed recipients re-queued. Already delivered recipients will not be sent again.");
+  await ctx.reply("Failed recipients re-queued. Already delivered recipients will not be sent again."+((uncertain??0)>0?" Uncertain deliveries ("+uncertain+") were not retried; use /broadcast_reconcile "+id+" <telegram-user-id> sent|retry after checking each chat.":""));
 });
 bot.command("broadcast_pause", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
