@@ -13,7 +13,7 @@ Files added:
 - `src/config.ts`: strict environment validation
 - `src/supabase.ts`: server-only Supabase service-role client
 - `src/security.ts`: 256-bit URL-safe one-time token generation and SHA-256 hashing
-- `src/index.ts`: Telegraf polling runtime, membership gate, language preferences, website linking, support ticket creation and follow-up, Owner ticket list/detail/reply/close commands, published-guide reads, and Owner dashboard\n- `vitest.config.ts`: standalone bot test config, isolated from the website Vite configuration
+- `src/index.ts`: Telegraf polling runtime, membership gate, language preferences, website linking, support ticket creation and follow-up, Owner ticket list/detail/reply/close commands, published-guide reads, Owner post draft/edit/preview/publish/remove commands using verified `dgbot_posts`, and Owner dashboard\n- `vitest.config.ts`: standalone bot test config, isolated from the website Vite configuration
 - `tests/config.test.ts`, `tests/security.test.ts`
 - `README.md`: setup and verified-live-schema contract
 
@@ -32,12 +32,12 @@ CI:
 The bot inserts only the SHA-256 token hash into `bot_link_requests`; the website approval route consumes the raw one-time token using the existing `approve_bot_link` RPC.
 
 ## Important gaps and blockers
-- GitHub Actions run [45122124830](https://github.com/dynamongamer30-ui/dynamon-ultimate-universe/actions/runs/45122124830) completed successfully on Node.js 26 for commit `a4fe5c641e79f30e488d985a7c6fb20e65aa4c26`: type-check, Vitest, and TypeScript build all passed.
+- GitHub Actions run [45122696913](https://github.com/dynamongamer30-ui/dynamon-ultimate-universe/actions/runs/45122696913) completed successfully on Node.js 26 for commit `56cabb98e0db2574f9aad96a4cbb4d93eee5303f`: type-check, Vitest, and TypeScript build all passed. The earlier [45122124830](https://github.com/dynamongamer30-ui/dynamon-ultimate-universe/actions/runs/45122124830) run also passed for the foundation.
 - No Telegram token was used; no live bot polling or Telegram membership test was run.
 - No KataBump deployment was attempted.
 - No production Supabase migration, schema, or row was modified.
-- Support and guide handlers are implemented against verified live table columns and constraints. The live `bot_guides` table currently has no published guide rows, so users will see an empty-state message until content is published.\n- Telegram-side unlink is intentionally not exposed. The live project has no verified Telegram unlink RPC; direct updates would bypass the 15-day eligibility rule and audit behavior.
-- The current implementation is a runtime foundation, not all approved Revision 21 modules. Broadcasts, channel publishing, scheduling, workflow automation, advanced Owner screens, analytics, encrypted backup/restore, privacy workflows, anti-spam, maintenance mode, release/update management, and operational recovery still require implementation.
+- Support, guide, and Owner text-post handlers are implemented against verified live table columns and constraints. Post publishing requires the optional `PUBLISH_CHANNEL_ID` setting and channel permissions. The runtime has not yet implemented the complete universal media/button editor or scheduled content queue. The live `bot_guides` table currently has no published guide rows, so users will see an empty-state message until content is published.\n- Telegram-side unlink is intentionally not exposed. The live project has no verified Telegram unlink RPC; direct updates would bypass the 15-day eligibility rule and audit behavior.
+- The live `dgbot_backup_runs` table contains 212 scheduled attempts, all failed with `db_400`. No matching production cron job, deployed backup Edge Function, or writer in the current repo was found. The error's root cause is unknown; do not activate a replacement scheduler until the legacy/external writer is traced. See the detailed GitHub/Supabase audit.\n- The current implementation is a runtime foundation, not all approved Revision 21 modules. Broadcasts, channel publishing, scheduling, workflow automation, advanced Owner screens, analytics, encrypted backup/restore, privacy workflows, anti-spam, maintenance mode, release/update management, and operational recovery still require implementation.
 - Website URL, Telegram credentials, Owner ID, and required group/channel IDs must be set in KataBump's secret/environment manager. Never commit real secrets.
 - Website API/domain and KataBump hosting capabilities still require verification before production deployment.
 
