@@ -1185,6 +1185,18 @@ bot.command("moderation_add", async (ctx) => {
   if (error || !data) { log.error({ err: error }, "Moderation rule creation failed"); return ctx.reply("Could not add the rule."); }
   return ctx.reply("Moderation rule added: #" + data.id + ". Text messages in the required group are checked automatically; media captions are checked separately.");
 });
+bot.command("moderation_edit", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/moderation_edit(?:@\w+)?\s+(\d+)\s+(blocked_host|blocked_phrase)\s+([\s\S]+)$/i);
+  if(!m) return ctx.reply("Usage: /moderation_edit <rule-id> <blocked_host|blocked_phrase> <new value>");
+  const id=Number(m[1]),kind=m[2]!.toLowerCase(),value=m[3]!.trim();
+  if(!Number.isSafeInteger(id)||id<1||!value||value.length>200) return ctx.reply("Invalid rule ID or value.");
+  if(kind==="blocked_host"&&!/^[a-z0-9.-]{1,253}$/i.test(value)) return ctx.reply("Blocked host must be a hostname without URL or path.");
+  const {data,error}=await db.from("dgbot_moderation_rules").update({kind,value}).eq("id",id).is("deleted_at",null).select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Active moderation rule not found or update failed.");
+  await writeAudit("moderation.rule_updated",null,"Rule #"+id+" updated");
+  await ctx.reply("Moderation rule #"+id+" updated.");
+});
 bot.command("allow_hosts", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const {data,error}=await db.from("dgbot_allowlist").select("id,host,include_subdomains,account").is("deleted_at",null).order("created_at",{ascending:false}).limit(50);
@@ -1198,6 +1210,16 @@ bot.command("allow_host", async (ctx) => {
   const {data,error}=await db.from("dgbot_allowlist").insert({host:m[1]!.toLowerCase(),include_subdomains:Boolean(m[2])}).select("id").single();
   if(error||!data) return ctx.reply("Could not add allowed host.");
   await writeAudit("moderation.allow_host",null,m[1]!); await ctx.reply("Allowed host added: #"+data.id);
+});
+bot.command("edit_allow_host", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/edit_allow_host(?:@\w+)?\s+(\d+)\s+([a-z0-9.-]{1,253})(?:\s+(subdomains))?$/i);
+  if(!m||m[2]!.includes("..")||m[2]!.startsWith(".")||m[2]!.endsWith(".")) return ctx.reply("Usage: /edit_allow_host <id> <hostname> [subdomains]");
+  const id=Number(m[1]); if(!Number.isSafeInteger(id)||id<1) return ctx.reply("Invalid allowlist ID.");
+  const {data,error}=await db.from("dgbot_allowlist").update({host:m[2]!.toLowerCase(),include_subdomains:Boolean(m[3])}).eq("id",id).is("deleted_at",null).select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Active allowed host not found or update failed.");
+  await writeAudit("moderation.allow_host_updated",null,String(id));
+  await ctx.reply("Allowed host #"+id+" updated.");
 });
 bot.command("remove_allow_host", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
