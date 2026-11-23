@@ -123,7 +123,7 @@ async function applyBackupSnapshot(snapshot: Snapshot) {
         p_table: table.name, p_conflict: table.conflict, p_rows: rows.slice(i, i + 500)
       });
       if (error) throw new Error("Restore failed at " + table.name + ": " + error.message);
-      restored[table.name] += Number(data ?? 0);
+      restored[table.name] = (restored[table.name] ?? 0) + Number(data ?? 0);
     }
   }
   return restored;
