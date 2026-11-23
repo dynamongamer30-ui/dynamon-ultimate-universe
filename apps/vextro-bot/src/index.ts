@@ -328,6 +328,38 @@ bot.command("ticket_reply", async (ctx) => {
   await sendOwnerNotice("User "+ctx.from.id+" replied to ticket "+ticket.id+":\n"+body.slice(0,1200));
   await ctx.reply("Your reply was added to ticket "+ticket.id+".");
 });
+bot.command("ticket_history", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\s+/)[1];
+  if(!id||!/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /ticket_history <ticket-uuid>");
+  const {data:ticket,error:ticketError}=await db.from("bot_support_tickets").select("telegram_id,subject,category,status,priority").eq("id",id).maybeSingle();
+  if(ticketError||!ticket) return ctx.reply("Ticket not found.");
+  const {data,error}=await db.from("bot_support_messages").select("sender_type,sender_telegram_id,body,internal_note,created_at").eq("ticket_id",id).order("created_at",{ascending:true}).limit(100);
+  if(error) return ctx.reply("Ticket history unavailable.");
+  const history=(data??[]).map(m=>"["+new Date(m.created_at).toLocaleString()+"] "+(m.internal_note?"INTERNAL NOTE":m.sender_type+" "+(m.sender_telegram_id??""))+": "+m.body).join("\n\n");
+  await ctx.reply("Ticket "+id+"\n"+ticket.subject+" | "+ticket.category+" | "+ticket.status+" | "+ticket.priority+"\nUser: "+ticket.telegram_id+"\n\n"+(history||"No messages." ).slice(0,3900));
+});
+bot.command("ticket_note", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/ticket_note(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
+  if(!m) return ctx.reply("Usage: /ticket_note <ticket-uuid> <internal note>");
+  const body=m[2]!.trim(); if(!body||body.length>4000) return ctx.reply("Note must be 1–4000 characters.");
+  const {data:ticket,error:ticketError}=await db.from("bot_support_tickets").select("id").eq("id",m[1]!).maybeSingle();
+  if(ticketError||!ticket) return ctx.reply("Ticket not found.");
+  const {error}=await db.from("bot_support_messages").insert({ticket_id:m[1],sender_type:"owner",sender_telegram_id:config.OWNER_TELEGRAM_ID,body,internal_note:true});
+  if(error) return ctx.reply("Internal note could not be saved.");
+  await writeAudit("ticket.internal_note",null,m[1]!);
+  await ctx.reply("Internal note saved. It is visible only in Owner ticket history.");
+});
+bot.command("ticket_priority", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/ticket_priority(?:@\w+)?\s+([0-9a-f-]{36})\s+(low|normal|high|urgent)$/i);
+  if(!m) return ctx.reply("Usage: /ticket_priority <ticket-uuid> <low|normal|high|urgent>");
+  const {data,error}=await db.from("bot_support_tickets").update({priority:m[2]!.toLowerCase(),updated_at:new Date().toISOString()}).eq("id",m[1]!).select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Ticket priority update failed.");
+  await writeAudit("ticket.priority_changed",null,m[1]!+" -> "+m[2]);
+  await ctx.reply("Ticket priority set to "+m[2]+".");
+});
 bot.command("reopen_ticket", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id = ctx.message.text.split(/\s+/)[1];
@@ -1258,7 +1290,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_format, /post_buttons, /post_preview, /post_edit, /post_publish, /post_reconcile, /post_remove, /broadcasts, /broadcast_draft, /broadcast_edit, /broadcast_delete, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /ticket_history, /ticket_note, /ticket_priority, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_format, /post_buttons, /post_preview, /post_edit, /post_publish, /post_reconcile, /post_remove, /broadcasts, /broadcast_draft, /broadcast_edit, /broadcast_delete, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
