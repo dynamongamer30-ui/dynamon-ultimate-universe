@@ -16,6 +16,11 @@ export function registerOwnerMenu(bot: Telegraf<Context>, ownerOnly: (ctx: Conte
     if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
     await ctx.reply("VEXTRO BOT Owner Control Center\nChoose a module:", menu);
   });
+  bot.action("owner:home", async (ctx) => {
+    if (!ownerOnly(ctx)) return ctx.answerCbQuery("Access denied.");
+    await ctx.answerCbQuery();
+    await ctx.reply("VEXTRO BOT Owner Control Center\nChoose a module:", menu);
+  });
   bot.action(/^owner:(users|tickets|broadcasts|posts|guides|analytics|backups|health|updates|maintenance)$/, async (ctx) => {
     if (!ownerOnly(ctx)) return ctx.answerCbQuery("Access denied.");
     await ctx.answerCbQuery();
