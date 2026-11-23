@@ -72,7 +72,7 @@ export function registerOwnerMenu(bot: Telegraf<Context>, ownerOnly: (ctx: Conte
         const values=(data?.value??{}) as {channelId?:string;groupId?:string};
         return ctx.reply("Required membership\nChannel: "+(values.channelId??config.REQUIRED_CHANNEL_ID)+
           "\nGroup: "+(values.groupId??config.REQUIRED_GROUP_ID)+
-          "\n\nCommands: /membership_status, /membership_check <telegram-id>, /membership_set_channel, /membership_set_group, /membership_reset");
+          "\n\nCommands: /membership_status, /membership_check <telegram-id>, /membership_diagnose, /membership_set_channel, /membership_set_group, /membership_reset");
       }
       if (page === "schedules") {
         const {data,error}=await db.from("vextro_scheduled_posts").select("id,post_id,scheduled_at,status,last_error").in("status",["scheduled","publishing","failed"]).order("scheduled_at",{ascending:true}).limit(15);
