@@ -34,7 +34,7 @@ For development: `npm run dev`.
 - `/support Subject\nMessage`: create a support ticket and first message. Subsequent plain-text messages from the user are appended to their latest active ticket.
 - Owner support commands: `/tickets`, `/ticket <uuid>`, `/reply <uuid> <message>`, and `/close_ticket <uuid>`. Every Owner command checks the configured Telegram ID server-side.
 - `/guides`: list published, non-deleted rows from the live `bot_guides` table. Open a guide with its generated `/guide_<id>` command.
-- `/admin`: Owner-only dashboard with registered-user and open-ticket counts.
+- Owner content posts: `/posts`, `/post_draft Title\\nBody`, `/post_preview <uuid>`, `/post_edit <uuid> Title\\nBody`, `/post_publish <uuid>`, and `/post_remove <uuid>`. Drafts use the verified legacy `dgbot_posts` table. Publishing is disabled unless `PUBLISH_CHANNEL_ID` is configured and the bot can post to that channel.\n- `/admin`: Owner-only dashboard with registered-user and open-ticket counts.
 
 ## Live schema compatibility
 
@@ -45,7 +45,7 @@ The runtime uses verified live table/column names for `bot_users`, `bot_account_
 - The Supabase service-role key is server-only and must be stored in the host's secret manager.
 - Membership verification fails closed if either required chat cannot be checked.
 - No unlink operation is exposed: the live project has no verified Telegram-side unlink RPC, and direct updates would bypass the 15-day unlink eligibility/audit rule.
-- The live `bot_guides` table had no published guide rows during the 2026-11-23 schema check; the bot therefore returns a clear empty state until guides are published.
+- The live `bot_guides` and legacy `dgbot_guides` tables had no published guide rows during the 2026-11-23 schema check; the bot therefore returns a clear empty state until guides are published.\n- The legacy `dgbot_backup_runs` table contains 212 scheduled runs, all failed with `db_400`; backup scheduling is not enabled in this runtime until the external/legacy writer is identified and fixed. See the audit report.
 - Node.js 26 CI completed type-check, Vitest, and production TypeScript build successfully for commit `a4fe5c641e79f30e488d985a7c6fb20e65aa4c26`: [VEXTRO BOT CI](https://github.com/dynamongamer30-ui/dynamon-ultimate-universe/actions/runs/45122124830).
 - CI success is not live acceptance. No Telegram token was used, no live polling/membership check was run, and no KataBump deployment was attempted.
 - No production Supabase schema, migration, or row was changed.
