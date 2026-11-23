@@ -122,7 +122,8 @@ async function accountStatus(telegramId: number) {
 async function createLink(ctx: Context, telegramId: number): Promise<void> {
   try {
     if (await accountStatus(telegramId)) {
-      await ctx.reply("This Telegram account is already linked to a website account.");
+      const lang=await getLanguage(telegramId);
+      await ctx.reply(messages[lang].linked,homeMenu(lang));
       return;
     }
     const token = createOneTimeLinkToken();
@@ -131,7 +132,7 @@ async function createLink(ctx: Context, telegramId: number): Promise<void> {
     const url = new URL("/telegram/link", config.WEBSITE_URL);
     url.searchParams.set("token", token.raw);
     const lang = await getLanguage(telegramId);
-    await ctx.reply(messages[lang].linkCreated + "\n" + url.toString(), { link_preview_options: { is_disabled: true } });
+    await ctx.reply(messages[lang].linkCreated + "\n" + url.toString(), { link_preview_options: { is_disabled: true }, reply_markup: homeMenu(lang).reply_markup });
   } catch (error) {
     log.error({ err: error }, "Link request creation failed");
     await ctx.reply(messages.en.error);
