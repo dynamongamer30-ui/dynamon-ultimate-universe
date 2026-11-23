@@ -391,10 +391,25 @@ bot.command("post_media", async (ctx) => {
   if (!match) return ctx.reply("Usage: /post_media <post-uuid> <photo|video|document|animation> <telegram-file-id> [caption]");
   const [, id, type, fileId, caption = ""] = match;
   if (caption.length > 1024) return ctx.reply("Caption must be 1024 characters or fewer.");
-  const { data, error } = await db.from("dgbot_posts").update({ media: { type: type!.toLowerCase(), file_id: fileId, caption }, updated_at: new Date().toISOString() })
+  const { data: existing, error: readError } = await db.from("dgbot_posts").select("media").eq("id", id!).eq("state", "draft").is("deleted_at", null).maybeSingle();
+  if (readError || !existing) return ctx.reply("Draft not found.");
+  const previous = (existing.media ?? {}) as Record<string, unknown>;
+  const { data, error } = await db.from("dgbot_posts").update({ media: { ...previous, type: type!.toLowerCase(), file_id: fileId, caption }, updated_at: new Date().toISOString() })
     .eq("id", id!).eq("state", "draft").is("deleted_at", null).select("id").maybeSingle();
   if (error || !data) return ctx.reply("Draft not found or media could not be saved.");
   await ctx.reply("Media saved to draft.");
+});
+bot.command("post_format", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/post_format(?:@\w+)?\s+([0-9a-f-]{36})\s+(plain|html|markdownv2)$/i);
+  if(!m) return ctx.reply("Usage: /post_format <draft-uuid> <plain|html|markdownv2>");
+  const {data:existing,error:readError}=await db.from("dgbot_posts").select("media").eq("id",m[1]!).eq("state","draft").is("deleted_at",null).maybeSingle();
+  if(readError||!existing) return ctx.reply("Draft not found.");
+  const media=(existing.media??{}) as Record<string,unknown>;
+  const format=m[2]!.toLowerCase()==="plain"?"plain":m[2]!.toUpperCase()==="HTML"?"HTML":"MarkdownV2";
+  const {error}=await db.from("dgbot_posts").update({media:{...media,format},updated_at:new Date().toISOString()}).eq("id",m[1]!).eq("state","draft");
+  if(error) return ctx.reply("Message format could not be saved.");
+  await ctx.reply("Telegram formatting set to "+format+". Use /post_preview to validate formatting before publishing.");
 });
 bot.command("post_buttons", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -1239,7 +1254,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_edit, /broadcast_delete, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_format, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_edit, /broadcast_delete, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
