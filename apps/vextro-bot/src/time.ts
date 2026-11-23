@@ -34,6 +34,6 @@ export function parseOwnerDateTime(input: string, timeZone: string): Date {
 }
 export function formatOwnerDateTime(value: string | Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-GB", {
-    timeZone, dateStyle: "medium", timeStyle: "short", timeZoneName: "short"
+    timeZone, year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", timeZoneName: "short", hourCycle: "h23"
   }).format(typeof value === "string" ? new Date(value) : value);
 }
