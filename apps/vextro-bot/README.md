@@ -43,4 +43,4 @@ The package uses only verified live table and column names for `bot_users`, `bot
 - Membership verification fails closed if either required chat cannot be checked.
 - No unlink operation is exposed yet: the live project has no verified Telegram-side unlink RPC, and direct updates would bypass the 15-day unlink eligibility/audit rule.
 - Website URL, token, Owner ID and chat IDs must be supplied in local environment configuration.
-- This runtime has not yet been built against installed dependencies or tested with a real Telegram bot token. Do not run a second polling process using a token already active elsewhere.
+- The package's Node.js 26 CI completed type-check, Vitest, and production TypeScript build successfully for commit `a4fe5c641e79f30e488d985a7c6fb20e65aa4c26`. This does not replace live Telegram, Supabase write-path, membership, or hosting acceptance tests. Do not run a second polling process using a token already active elsewhere.
