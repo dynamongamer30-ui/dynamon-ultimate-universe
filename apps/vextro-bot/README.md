@@ -1,52 +1,44 @@
-# VEXTRO BOT runtime
+# VEXTRO BOT
 
-The bot runtime lives in this website repository at `apps/vextro-bot/`. It is a server-side Node.js service and is not part of the browser bundle.
+Node.js 26 + TypeScript + Telegraf Telegram bot runtime. Uses the existing Supabase production schema and the website's verified account-linking RPC. The Owner interface is Telegram-native and Owner-only.
 
-## Requirements
+## Runtime
 
-- Node.js 26+
-- Telegram bot token
-- Owner Telegram numeric ID
-- Supabase project URL and **service-role** key
-- Website base URL (deployed website origin)
-- Required channel and group chat IDs; bot must be able to query membership in both
+- Install: `npm ci`
+- Type-check: `npm run typecheck`
+- Tests: `npm test`
+- Build: `npm run build`
+- Start: `npm start`
 
-## Setup
+Run from this directory. The production entry point is `dist/index.js`.
 
-```powershell
-Copy-Item .env.example .env
-# Edit .env locally. Never commit .env.
-npm install
-npm run typecheck
-npm test
-npm run build
-npm start
-```
+## Required environment
 
-For development: `npm run dev`.
+`BOT_TOKEN`, `OWNER_TELEGRAM_ID`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `WEBSITE_URL`, `REQUIRED_CHANNEL_ID`, and `REQUIRED_GROUP_ID`.
 
-## Current handlers
+Optional settings include `PUBLISH_CHANNEL_ID`, `BOT_PUBLIC_USERNAME`, `BACKUP_PASSPHRASE`, `BACKUP_BUCKET`, `BACKUP_INTERVAL_HOURS`, `BACKUP_RETENTION_DAYS`, `BACKUP_OFFSITE_URL`, `BACKUP_OFFSITE_TOKEN`, `GITHUB_REPOSITORY`, `DEPLOY_WEBHOOK_URL`, `DEPLOY_WEBHOOK_SECRET`, and `UPDATE_CHECK_INTERVAL_HOURS`. See `.env.example`. Never commit a real secret or put the Supabase service-role key in a browser bundle.
 
-- `/start`: register the user in live `bot_users`, verify both membership requirements, and show the user menu.
-- `/language` and language buttons: persist English (`en`), Hindi (`hi`), or Vietnamese (`vi`).
-- `/account`: read the active website account link and unlink eligibility timestamp.
-- `/link`: generate a 256-bit one-time token, store only its SHA-256 hash in live `bot_link_requests`, and send the existing website `/telegram/link?token=` URL. The website's live `approve_bot_link(text)` RPC consumes it.
-- `/support Subject\nMessage`: create a support ticket and first message. Subsequent plain-text messages from the user are appended to their latest active ticket.
-- Owner support commands: `/tickets`, `/ticket <uuid>`, `/reply <uuid> <message>`, and `/close_ticket <uuid>`. Every Owner command checks the configured Telegram ID server-side.
-- `/guides`: list published, non-deleted rows from the live `bot_guides` table. Open a guide with its generated `/guide_<id>` command.
-- Owner content posts: `/posts`, `/post_draft Title\\nBody`, `/post_preview <uuid>`, `/post_edit <uuid> Title\\nBody`, `/post_publish <uuid>`, and `/post_remove <uuid>`. Drafts use the verified legacy `dgbot_posts` table. Publishing is disabled unless `PUBLISH_CHANNEL_ID` is configured and the bot can post to that channel.\n- `/users` and `/user <telegram-id>`: Owner user directory and account profile.\n- `/ban_user <telegram-id> <reason>` and `/unban_user <telegram-id>`: audited, reversible account restriction using the verified legacy ban table. A global access check blocks restricted accounts; database verification errors fail closed.\n- `/analytics`: Owner-only user, linked-account, open-ticket, published-post, and recorded backup-failure counts.\n- `/backup_status` and `/backup_runs`: read-only backup health/history; they never start a backup.\n- `/audit_recent`: latest Owner audit entries.\n- `/moderation_rules`, `/moderation_add`, and `/moderation_remove`: manage the verified legacy moderation-rule records. Incoming group-message enforcement is not enabled yet.\n- `/admin`: Owner-only dashboard with registered-user and open-ticket counts.
+## Implemented modules
 
-## Live schema compatibility
+- Onboarding, required channel+group membership verification, membership diagnostics, English/Hindi Roman/Vietnamese language selection and user menu.
+- Website account linking using a 256-bit one-time token; only SHA-256 is stored and the existing website `approve_bot_link(text)` RPC remains authoritative.
+- User profiles, access restrictions, language administration and user analytics.
+- Support ticket creation, category, conversation history, user replies, Owner replies, internal notes, priority, search, close and reopen.
+- Multilingual guide editor, media/buttons, publish/archive, keyword and review-queue workflows; published guides are available to users.
+- Channel post drafts, editing, previews, photo/video/document/animation attachments, HTTPS buttons, publishing and scheduled publishing.
+- Persistent broadcasts with audience snapshot, Owner confirmation, preview/test, schedule, pause/resume/cancel, delivery queue, retry-after handling, retry and results.
+- Group moderation rules, host allowlist, blocked phrase/domain enforcement, rate/repeat spam checks, warnings, timed restrictions, group ban/unban and moderation analytics.
+- Owner dashboard navigation, audit log/search, runtime settings, maintenance mode and health monitoring.
+- Encrypted AES-256-GCM application-data backups, SHA-256 integrity checks, private Supabase Storage, retention, scheduled backups, restore with a safety backup, and optional offsite HTTPS copy.
+- GitHub release checks, Owner approval records, deployment webhook requests and rollback webhook requests.
+- Restart recovery for in-flight queue work and stale scheduled-post leases.
 
-The runtime uses verified live table/column names for `bot_users`, `bot_account_links`, `bot_link_requests`, `bot_guides`, `bot_support_tickets`, and `bot_support_messages`. It does not call the uninstalled handoff RPC from the un-applied migration.
+## Important integration boundaries
 
-## Safety boundaries and deployment status
-
-- The Supabase service-role key is server-only and must be stored in the host's secret manager.
-- Membership verification fails closed if either required chat cannot be checked.
-- No unlink operation is exposed: the live project has no verified Telegram-side unlink RPC, and direct updates would bypass the 15-day unlink eligibility/audit rule.
-- The live `bot_guides` and legacy `dgbot_guides` tables had no published guide rows during the 2026-11-23 schema check; the bot therefore returns a clear empty state until guides are published.\n- The legacy `dgbot_backup_runs` table contains 212 scheduled runs, all failed with `db_400`; backup scheduling is not enabled in this runtime until the external/legacy writer is identified and fixed. See the audit report.
-- Node.js 26 CI completed type-check, Vitest, and production TypeScript build successfully for commit `a4fe5c641e79f30e488d985a7c6fb20e65aa4c26`: [VEXTRO BOT CI](https://github.com/dynamongamer30-ui/dynamon-ultimate-universe/actions/runs/45122124830).
-- CI success is not live acceptance. No Telegram token was used, no live polling/membership check was run, and no KataBump deployment was attempted.
-- No production Supabase schema, migration, or row was changed.
-- Do not run a second polling process with the same token while another instance is active.
+- The bot is compatible with the verified live schema. New VEXTRO queue, moderation, backup, settings and update tables/functions are additive Supabase migrations under `supabase/migrations/`. Do not bulk-push the repository's older migration history; production and repository histories have existing drift.
+- Backup encryption is disabled until `BACKUP_PASSPHRASE` is configured. Offsite copies require a custom HTTPS endpoint and token; it must accept the encrypted bytes and return JSON containing the matching `sha256`.
+- Release checks and Owner approvals work independently. Automatic installation/rollback requires a custom hosting webhook implementing `action: deploy` and `action: rollback`; KataBump's published docs describe manual file/SFTP deployment and do not document a deployment API. Do not assume the webhook exists until configured and tested.
+- Telegram moderation restrictions require the bot to be an administrator with the relevant group permissions. If Telegram rejects a moderation action, the failure is logged and shown to the Owner.
+- Account unlink is intentionally not implemented because no verified unlink RPC was found; direct table mutation would bypass the live 15-day unlink eligibility rule.
+- The legacy backup writer previously recorded repeated failures. The VEXTRO encrypted backup engine uses its own artifact table and private storage bucket; configure the passphrase before relying on it.
+- CI verifies TypeScript, Vitest and the production build. CI is not proof of live Telegram token, membership, hosting or webhook acceptance.
