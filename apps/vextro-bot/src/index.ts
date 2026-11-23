@@ -24,6 +24,7 @@ const publishingPosts = new Set<string>();
 let maintenanceMode = false;
 const runtimeMembership = { channelId: config.REQUIRED_CHANNEL_ID, groupId: config.REQUIRED_GROUP_ID };
 const moderationActivity = new Map<number, { times: number[]; lastText: string; repeats: number }>();
+const lastSeenWrites = new Map<number, number>();
 type Lang = "en" | "hi" | "vi";
 
 const messages: Record<Lang, { welcome: string; member: string; choose: string; unlinked: string; linked: string; linkCreated: string; help: string; support: string; ticketCreated: string; error: string }> = {
@@ -60,7 +61,7 @@ async function saveUser(telegramId: number, language?: Lang): Promise<void> {
     if (existing.error) throw existing.error;
     selectedLanguage = existing.data?.language === "hi" || existing.data?.language === "vi" ? existing.data.language : "en";
   }
-  const { error } = await db.from("bot_users").upsert({ telegram_id: telegramId, language: selectedLanguage, updated_at: new Date().toISOString() }, { onConflict: "telegram_id" });
+  const { error } = await db.from("bot_users").upsert({ telegram_id: telegramId, language: selectedLanguage, updated_at: new Date().toISOString(), last_seen_at: new Date().toISOString() }, { onConflict: "telegram_id" });
   if (error) throw error;
 }
 async function getWelcome(language: Lang): Promise<string> {
@@ -151,6 +152,18 @@ async function sendOwnerNotice(text: string): Promise<void> {
 bot.use(async (ctx, next) => {
   if (maintenanceMode && ctx.from && !ownerOnly(ctx)) return ctx.reply("VEXTRO BOT is temporarily in maintenance mode. Please try again later.");
   if (!ctx.from || ownerOnly(ctx)) return next();
+  const now=Date.now();
+  const lastWrite=lastSeenWrites.get(ctx.from.id)??0;
+  if(now-lastWrite>=5*60_000){
+    lastSeenWrites.set(ctx.from.id,now);
+    while(lastSeenWrites.size>10000){
+      const oldest=lastSeenWrites.keys().next().value;
+      if(oldest===undefined) break;
+      lastSeenWrites.delete(oldest);
+    }
+    const {error:seenError}=await db.from("bot_users").update({last_seen_at:new Date(now).toISOString()}).eq("telegram_id",ctx.from.id);
+    if(seenError) log.warn({err:seenError,telegramId:ctx.from.id},"Last-seen timestamp update failed");
+  }
   try {
     const ban = await isBanned(ctx.from.id);
     if (ban) return ctx.reply("This Telegram account is restricted. Contact the VEXTRO BOT Owner for a review.");
@@ -958,7 +971,7 @@ bot.command("user", async (ctx) => {
   const id = Number(ctx.message.text.split(/\s+/)[1]);
   if (!Number.isSafeInteger(id) || id < 1) return ctx.reply("Usage: /user <telegram-id>");
   const [user, link, tickets, ban] = await Promise.all([
-    db.from("bot_users").select("telegram_id,language,created_at,updated_at").eq("telegram_id", id).maybeSingle(),
+    db.from("bot_users").select("telegram_id,language,created_at,updated_at,last_seen_at").eq("telegram_id", id).maybeSingle(),
     db.from("bot_account_links").select("linked_at,unlink_eligible_at").eq("telegram_id", id).is("unlinked_at", null).maybeSingle(),
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).eq("telegram_id", id),
     db.from("dgbot_bans").select("reason").eq("telegram_id", id).is("deleted_at", null).maybeSingle()
@@ -973,7 +986,7 @@ bot.command("user", async (ctx) => {
   } catch {}
   await ctx.reply("User profile\nTelegram ID: "+id+"\nName: "+displayName+"\nUsername: "+username+
     "\nLanguage: "+user.data.language+"\nRegistered: "+new Date(user.data.created_at).toLocaleString()+
-    "\nLast active: "+new Date(user.data.updated_at).toLocaleString()+
+    "\nLast active: "+(user.data.last_seen_at?new Date(user.data.last_seen_at).toLocaleString():"not recorded")+
     "\nWebsite linked: "+(link.data?"yes":"no")+
     "\nSupport tickets: "+(tickets.count??0)+
     "\nRestricted: "+(ban.data?"yes — "+(ban.data.reason||"no reason"):"no"));
