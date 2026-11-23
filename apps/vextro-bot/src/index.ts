@@ -1127,7 +1127,7 @@ bot.command("backup_list", async (ctx) => {
 });
 bot.command("backup_verify", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id=ctx.message.text.split(/\\s+/)[1];
+  const id=ctx.message.text.split(/\s+/)[1];
   if(!id) return ctx.reply("Usage: /backup_verify <backup-uuid>");
   const result=await verifyBackup(id);
   await ctx.reply(result.valid?`Backup ${id} integrity and decryption verified.`:`Verification failed: ${result.error}`);
@@ -1139,8 +1139,8 @@ bot.command("backup_restore_confirm", async (ctx) => {
   try {
     await ctx.reply("Restore started. A fresh safety backup will be created first. Existing rows are upserted; unrelated newer rows are not deleted.");
     const report=await restoreBackup(id,ctx.from.id);
-    await writeAudit("backup.restored",null,\`Restored backup \${id}; rows: \${JSON.stringify(report.restored).slice(0,140)}; skipped: \${report.skipped.join(",")}\`);
-    await ctx.reply("Restore completed. Row counts by table:\n"+Object.entries(report.restored).map(([name,count])=>\`\${name}: \${count}\`).join("\n")+
+    await writeAudit("backup.restored",null,"Restored backup "+id+"; rows: "+JSON.stringify(report.restored).slice(0,140)+"; skipped: "+report.skipped.join(","));
+    await ctx.reply("Restore completed. Row counts by table:\n"+Object.entries(report.restored).map(([name,count])=>name+": "+count).join("\n")+
       "\nProtected website-owned tables skipped to preserve account-link eligibility and website content:\n"+(report.skipped.join(", ")||"none"));
   } catch(error) {
     log.error({err:error,backupId:id},"Backup restore failed");
