@@ -230,10 +230,33 @@ bot.command("link", async (ctx) => {
   if (!ctx.from || !(await isMember(ctx))) return ctx.reply(messages.en.member);
   await createLink(ctx, ctx.from.id);
 });
+async function unlinkStatusMessage(telegramId:number,language:Lang) {
+  const status=await accountStatus(telegramId);
+  if(!status) return messages[language].unlinked;
+  const eligibleAt=new Date(status.unlink_eligible_at);
+  const date=Number.isNaN(eligibleAt.getTime())?"not available":eligibleAt.toLocaleString("en-IN",{timeZone:config.OWNER_TIMEZONE});
+  const reached=Number.isFinite(eligibleAt.getTime())&&Date.now()>=eligibleAt.getTime();
+  const notice={
+    en:reached?"15-day unlink eligibility reached on "+date+". This bot cannot unlink the account yet because the website has no verified unlink action. Your link remains active.":"Unlink eligibility date: "+date+". This bot cannot unlink the account yet because the website has no verified unlink action. Your link remains active.",
+    hi:reached?"15 din ki unlink eligibility "+date+" ko poori hui. Website ka verified unlink action available nahi hai, isliye bot link ko active rakhega.":"Unlink eligibility date: "+date+". Website ka verified unlink action available nahi hai; tab tak account link active rahega.",
+    vi:reached?"Da dat moc 15 ngay vao "+date+". Website chua co thao tac huy lien ket da xac minh, nen lien ket van duoc giu nguyen.":"Ngay du dieu kien huy lien ket: "+date+". Website chua co thao tac huy lien ket da xac minh; lien ket van duoc giu nguyen."
+  };
+  return messages[language].linked+"\n"+notice[language];
+}
 bot.command("account", async (ctx) => {
   if (!ctx.from || !(await isMember(ctx))) return ctx.reply(messages.en.member);
-  try { const status = await accountStatus(ctx.from.id); await ctx.reply(status ? messages.en.linked : messages.en.unlinked); }
+  try { const lang=await getLanguage(ctx.from.id); await ctx.reply(await unlinkStatusMessage(ctx.from.id,lang),homeMenu(lang)); }
   catch (error) { log.error({ err: error }, "Account command failed"); await ctx.reply(messages.en.error); }
+});
+bot.command("unlink_status", async (ctx) => {
+  if(!ctx.from||!(await isMember(ctx))) return ctx.reply(messages.en.member);
+  try{const lang=await getLanguage(ctx.from.id);await ctx.reply(await unlinkStatusMessage(ctx.from.id,lang),homeMenu(lang));}
+  catch(error){log.error({err:error},"Unlink status failed");await ctx.reply(messages.en.error);}
+});
+bot.command("unlink", async (ctx) => {
+  if(!ctx.from||!(await isMember(ctx))) return ctx.reply(messages.en.member);
+  try{const lang=await getLanguage(ctx.from.id);await ctx.reply(await unlinkStatusMessage(ctx.from.id,lang)+"\n\nNo database change was made.",homeMenu(lang));}
+  catch(error){log.error({err:error},"Unlink request failed");await ctx.reply(messages.en.error);}
 });
 
 bot.command("support", async (ctx) => {
