@@ -7,6 +7,7 @@ import { publishPost, startJobWorkers } from "./jobs.js";
 import { createBackup, listBackups, restoreBackup, startBackupScheduler, verifyBackup } from "./backup.js";
 import { runHealthCheck, startHealthMonitor } from "./health.js";
 import { registerGuideAdmin } from "./guides.js";
+import { registerUpdateCommands, startUpdateMonitor } from "./updates.js";
 
 const log = pino({ level: config.LOG_LEVEL, redact: ["*.token", "*.password", "*.secret", "*.authorization"] });
 const bot = new Telegraf(config.BOT_TOKEN);
@@ -764,7 +765,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcast_draft, /broadcast_preview, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /maintenance_on, /maintenance_off, /maintenance_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcast_draft, /broadcast_preview, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
@@ -832,11 +833,13 @@ bot.on("text", async (ctx, next) => {
 
 bot.catch((error, ctx) => { log.error({ err: error, updateId: ctx.update.update_id }, "Telegram update failed"); });
 registerGuideAdmin(bot, ownerOnly, writeAudit);
+registerUpdateCommands(bot, ownerOnly, config.OWNER_TELEGRAM_ID);
 const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID);
 const stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER_TELEGRAM_ID, config.BACKUP_INTERVAL_HOURS) : () => {};
 const stopHealth = startHealthMonitor(bot, config.OWNER_TELEGRAM_ID, 5);
+const stopUpdates = startUpdateMonitor(bot, config.OWNER_TELEGRAM_ID, config.UPDATE_CHECK_INTERVAL_HOURS);
 try { const {data}=await db.from("vextro_runtime_settings").select("value").eq("key","maintenance").maybeSingle(); maintenanceMode=(data?.value as {enabled?:boolean}|null)?.enabled===true; } catch(error) { log.error({err:error},"Maintenance setting could not be loaded; defaulting to normal mode"); }
-process.once("SIGINT", () => { stopWorkers(); stopBackups(); stopHealth(); });
+process.once("SIGINT", () => { stopWorkers(); stopBackups(); stopHealth(); stopUpdates(); });
 process.once("SIGTERM", () => { stopWorkers(); stopBackups(); });
 await bot.launch({ dropPendingUpdates: false });
 log.info({ botUsername: config.BOT_PUBLIC_USERNAME ?? "not-configured" }, "VEXTRO BOT polling started");
