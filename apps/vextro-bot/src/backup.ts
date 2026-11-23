@@ -110,10 +110,7 @@ export async function verifyBackup(id: string) {
     return { valid: false, error: error instanceof Error ? error.message : "Verification failed" };
   }
 }
-export async function restoreBackup(id: string, restoredBy: number) {
-  // Never delete live rows. Upsert restores backed-up records while retaining newer unrelated rows.
-  const { snapshot } = await readBackup(id);
-  await createBackup(restoredBy);
+async function applyBackupSnapshot(snapshot: BackupSnapshot) {
   const restored: Record<string, number> = {};
   for (const table of backupTables) {
     const rows = snapshot.tables[table.name] ?? [];
@@ -121,11 +118,30 @@ export async function restoreBackup(id: string, restoredBy: number) {
       const { error } = await db.rpc("vextro_restore_table_rows", {
         p_table: table.name, p_conflict: table.conflict, p_rows: rows.slice(i, i + 500)
       });
-      if (error) throw new Error(`Restore failed at ${table.name}: ${error.message}`);
+      if (error) throw new Error("Restore failed at " + table.name + ": " + error.message);
     }
     restored[table.name] = rows.length;
   }
   return restored;
+}
+export async function restoreBackup(id: string, restoredBy: number) {
+  const { snapshot } = await readBackup(id);
+  const safety = await createBackup(restoredBy);
+  try {
+    return await applyBackupSnapshot(snapshot);
+  } catch (restoreError) {
+    try {
+      const { snapshot: safetySnapshot } = await readBackup(String(safety.id));
+      await applyBackupSnapshot(safetySnapshot);
+      throw new Error("Restore failed. Previous rows were recovered from safety backup " + safety.id +
+        "; newer unrelated rows were retained. Original error: " + (restoreError instanceof Error ? restoreError.message : "unknown error"));
+    } catch (recoveryError) {
+      if (recoveryError instanceof Error && recoveryError.message.startsWith("Restore failed. Previous rows were recovered")) throw recoveryError;
+      throw new Error("Restore failed and automatic safety recovery also failed. Safety backup " + safety.id +
+        " is preserved. Restore error: " + (restoreError instanceof Error ? restoreError.message : "unknown error") +
+        "; recovery error: " + (recoveryError instanceof Error ? recoveryError.message : "unknown error"));
+    }
+  }
 }
 export async function pruneBackups() {
   const { data, error } = await db.from("vextro_backup_artifacts").select("id,storage_path").lt("expires_at", new Date().toISOString()).limit(100);
