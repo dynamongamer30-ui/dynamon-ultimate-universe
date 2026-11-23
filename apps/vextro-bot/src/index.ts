@@ -540,7 +540,9 @@ bot.command("broadcast_preview", async (ctx) => {
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /broadcast_preview <uuid>");
   const { data, error } = await db.from("vextro_broadcast_jobs").select("body,status,scheduled_at,total_count,format").eq("id", id).maybeSingle();
   if (error || !data) return ctx.reply("Broadcast not found.");
-  await ctx.reply(`Preview [${data.status}]\nRecipients: ${data.total_count}\nScheduled: ${data.scheduled_at ? new Date(data.scheduled_at).toLocaleString() : "immediately after confirmation"}\n\n${data.body}`);
+  const parseMode = data.format === "HTML" ? "HTML" : data.format === "MarkdownV2" ? "MarkdownV2" : undefined;
+  const scheduled = data.scheduled_at ? formatOwnerDateTime(data.scheduled_at,ownerTimezone) : "immediately after confirmation";
+  await ctx.reply("Preview ["+data.status+"]\nFormat: "+data.format+"\nRecipients: "+data.total_count+"\nScheduled: "+scheduled+"\n\n"+data.body,parseMode?{parse_mode:parseMode}:{});
 });
 bot.command("broadcast_format", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
