@@ -108,7 +108,7 @@ bot.action("language:open", async (ctx) => {
 });
 bot.action(/^language:set:(en|hi|vi)$/, async (ctx) => {
   if (!ctx.from) return;
-  const lang = ctx.match[1] as Lang;
+  const lang = ctx.match[1]! as Lang;
   await saveUser(ctx.from.id, lang);
   await ctx.answerCbQuery("Language saved");
   await ctx.reply(messages[lang].welcome);
@@ -178,7 +178,7 @@ bot.command("reply", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const match = ctx.message.text.match(/^\/reply(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
   if (!match) return ctx.reply("Usage: /reply <ticket-uuid> <message>");
-  const [, id, body] = match;
+  const id = match[1]!;\n  const body = match[2]!;
   if (body.trim().length < 1 || body.length > textLimit) return ctx.reply("Reply must be 1–4000 characters.");
   const { data: ticket, error } = await db.from("bot_support_tickets").select("telegram_id,status").eq("id", id).maybeSingle();
   if (error || !ticket) return ctx.reply("Ticket not found.");
@@ -210,7 +210,7 @@ bot.command("guides", async (ctx) => {
 bot.action("guides:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply("Use /guides to browse published guides."); });
 bot.hears(/^\/guide_([a-z0-9][a-z0-9-]{1,39})$/, async (ctx) => {
   if (!ctx.from || !(await isMember(ctx))) return ctx.reply(messages.en.member);
-  const id = ctx.match[1];
+  const id = ctx.match[1]!;
   const { data, error } = await db.from("bot_guides").select("title,data").eq("id", id).eq("published", true).eq("deleted", false).maybeSingle();
   if (error || !data) return ctx.reply("Guide not found.");
   const value = data.data as Record<string, unknown>;
