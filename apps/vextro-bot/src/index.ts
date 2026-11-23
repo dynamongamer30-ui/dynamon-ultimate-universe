@@ -339,27 +339,6 @@ bot.command("ticket_history", async (ctx) => {
   const history=(data??[]).map(m=>"["+new Date(m.created_at).toLocaleString()+"] "+(m.internal_note?"INTERNAL NOTE":m.sender_type+" "+(m.sender_telegram_id??""))+": "+m.body).join("\n\n");
   await ctx.reply("Ticket "+id+"\n"+ticket.subject+" | "+ticket.category+" | "+ticket.status+" | "+ticket.priority+"\nUser: "+ticket.telegram_id+"\n\n"+(history||"No messages." ).slice(0,3900));
 });
-bot.command("ticket_note", async (ctx) => {
-  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const m=ctx.message.text.match(/^\/ticket_note(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
-  if(!m) return ctx.reply("Usage: /ticket_note <ticket-uuid> <internal note>");
-  const body=m[2]!.trim(); if(!body||body.length>4000) return ctx.reply("Note must be 1–4000 characters.");
-  const {data:ticket,error:ticketError}=await db.from("bot_support_tickets").select("id").eq("id",m[1]!).maybeSingle();
-  if(ticketError||!ticket) return ctx.reply("Ticket not found.");
-  const {error}=await db.from("bot_support_messages").insert({ticket_id:m[1],sender_type:"owner",sender_telegram_id:config.OWNER_TELEGRAM_ID,body,internal_note:true});
-  if(error) return ctx.reply("Internal note could not be saved.");
-  await writeAudit("ticket.internal_note",null,m[1]!);
-  await ctx.reply("Internal note saved. It is visible only in Owner ticket history.");
-});
-bot.command("ticket_priority", async (ctx) => {
-  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const m=ctx.message.text.match(/^\/ticket_priority(?:@\w+)?\s+([0-9a-f-]{36})\s+(low|normal|high|urgent)$/i);
-  if(!m) return ctx.reply("Usage: /ticket_priority <ticket-uuid> <low|normal|high|urgent>");
-  const {data,error}=await db.from("bot_support_tickets").update({priority:m[2]!.toLowerCase(),updated_at:new Date().toISOString()}).eq("id",m[1]!).select("id").maybeSingle();
-  if(error||!data) return ctx.reply("Ticket priority update failed.");
-  await writeAudit("ticket.priority_changed",null,m[1]!+" -> "+m[2]);
-  await ctx.reply("Ticket priority set to "+m[2]+".");
-});
 bot.command("reopen_ticket", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id = ctx.message.text.split(/\s+/)[1];
