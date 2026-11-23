@@ -397,7 +397,16 @@ bot.command("post_preview", async (ctx) => {
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /post_preview <post-uuid>");
   const { data, error } = await db.from("dgbot_posts").select("title,body,state,media,buttons").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error || !data) return ctx.reply("Post not found.");
-  await ctx.reply(`[${data.state}] ${data.title}\n\n${data.body || "(No body)"}`.slice(0, 4096));
+  const caption = "[" + data.state + "] " + data.title + "\n\n" + (data.body || "(No body)");
+  const media = data.media as {type?:string;file_id?:string;caption?:string}|null;
+  const buttons = Array.isArray(data.buttons) ? data.buttons as Array<{text:string;url:string}> : [];
+  const options = buttons.length ? {reply_markup:{inline_keyboard:buttons.map(b=>[{text:b.text,url:b.url}])}} : {};
+  if(media?.file_id&&media.type==="photo") return ctx.replyWithPhoto(media.file_id,{caption:(media.caption||caption).slice(0,1024),...options});
+  if(media?.file_id&&media.type==="video") return ctx.replyWithVideo(media.file_id,{caption:(media.caption||caption).slice(0,1024),...options});
+  if(media?.file_id&&media.type==="document") return ctx.replyWithDocument(media.file_id,{caption:(media.caption||caption).slice(0,1024),...options});
+  if(media?.file_id&&media.type==="animation") return ctx.replyWithAnimation(media.file_id,{caption:(media.caption||caption).slice(0,1024),...options});
+  const buttonLabels=buttons.length?"\n\nButtons: "+buttons.map(b=>b.text+" ("+b.url+")").join(", "):"";
+  return ctx.reply((caption+buttonLabels).slice(0,4096),options);
 });
 bot.command("post_edit", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
