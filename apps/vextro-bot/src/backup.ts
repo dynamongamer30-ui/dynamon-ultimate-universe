@@ -117,13 +117,14 @@ async function applyBackupSnapshot(snapshot: Snapshot) {
   const restored: Record<string, number> = {};
   for (const table of backupTables) {
     const rows = snapshot.tables[table.name] ?? [];
+    restored[table.name] = 0;
     for (let i = 0; i < rows.length; i += 500) {
-      const { error } = await db.rpc("vextro_restore_table_rows", {
+      const { data, error } = await db.rpc("vextro_restore_table_rows", {
         p_table: table.name, p_conflict: table.conflict, p_rows: rows.slice(i, i + 500)
       });
       if (error) throw new Error("Restore failed at " + table.name + ": " + error.message);
+      restored[table.name] += Number(data ?? 0);
     }
-    restored[table.name] = rows.length;
   }
   return restored;
 }
@@ -137,7 +138,7 @@ export async function restoreBackup(id: string, restoredBy: number) {
       const { snapshot: safetySnapshot } = await readBackup(String(safety.id));
       await applyBackupSnapshot(safetySnapshot);
       throw new Error("Restore failed. Previous rows were recovered from safety backup " + safety.id +
-        "; newer unrelated rows were retained. Original error: " + (restoreError instanceof Error ? restoreError.message : "unknown error"));
+        "; rows absent from the safety snapshot may remain. Original error: " + (restoreError instanceof Error ? restoreError.message : "unknown error"));
     } catch (recoveryError) {
       if (recoveryError instanceof Error && recoveryError.message.startsWith("Restore failed. Previous rows were recovered")) throw recoveryError;
       throw new Error("Restore failed and automatic safety recovery also failed. Safety backup " + safety.id +
