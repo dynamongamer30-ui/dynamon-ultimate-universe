@@ -23,7 +23,7 @@ Optional settings include `OWNER_TIMEZONE` (defaults to `Asia/Kolkata`; all sche
 - Onboarding, required channel+group membership verification, membership diagnostics, English/Hindi Roman/Vietnamese language selection and user menu.
 - Website account linking using a 256-bit one-time token; only SHA-256 is stored and the existing website `approve_bot_link(text)` RPC remains authoritative.
 - User profiles with Telegram name/username and throttled last-seen tracking, access restrictions, language administration and active-user analytics.
-- Support ticket creation, category, conversation history, user replies, Owner replies, internal notes, priority, search, close and reopen.
+- Support ticket creation, category, conversation history, user text/media attachments, Owner text/media replies, internal notes, priority, search, close and reopen.
 - Multilingual guide editor, media/buttons, publish/archive, keyword and review-queue workflows; published guides are available to users.
 - Channel post drafts, editing, previews, photo/video/document/animation attachments, HTTPS buttons, publishing and Owner-timezone scheduled publishing.
 - Persistent broadcasts with membership-verified audience snapshot, Owner confirmation, preview/test, Owner-timezone scheduling, pause/resume/cancel, delivery queue, retry-after handling, retry and results.
