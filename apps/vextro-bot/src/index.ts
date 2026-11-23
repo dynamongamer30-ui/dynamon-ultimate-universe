@@ -775,8 +775,9 @@ bot.command("settings", async (ctx) => {
 bot.command("audit_search", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const term=ctx.message.text.replace(/^\/audit_search(?:@\w+)?\s*/i,"").trim();
-  if(term.length<2||term.length>60) return ctx.reply("Usage: /audit_search <action or reason>");
-  const {data,error}=await db.from("dgbot_audit_log").select("action,actor_id,target_id,reason,created_at").or("action.ilike.%"+term+"%,reason.ilike.%"+term+"%").order("created_at",{ascending:false}).limit(20);
+  const safeTerm=term.replace(/[^a-z0-9 _.-]/gi,"");
+  if(safeTerm.length<2||safeTerm.length>60) return ctx.reply("Usage: /audit_search <action or reason>");
+  const {data,error}=await db.from("dgbot_audit_log").select("action,actor_id,target_id,reason,created_at").or("action.ilike.%"+safeTerm+"%,reason.ilike.%"+safeTerm+"%").order("created_at",{ascending:false}).limit(20);
   if(error) return ctx.reply("Audit search unavailable.");
   await ctx.reply(data?.length?data.map(x=>x.action+" | target "+(x.target_id??"—")+"\n"+x.reason+"\n"+new Date(x.created_at).toLocaleString()).join("\n\n"):"No matching audit events.");
 });
