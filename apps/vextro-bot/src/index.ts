@@ -10,7 +10,7 @@ const textLimit = 4000;
 type Lang = "en" | "hi" | "vi";
 
 const messages: Record<Lang, { welcome: string; member: string; choose: string; unlinked: string; linked: string; linkCreated: string; help: string; support: string; ticketCreated: string; error: string }> = {
-  en: { welcome: "Welcome to VEXTRO BOT.", member: "Join both the required channel and group, then press Verify.", choose: "Choose your language.", unlinked: "No website account is linked.", linked: "Your website account is linked.", linkCreated: "This one-time link expires in 10 minutes. Open it and sign in to your website account:", help: "Commands: /start, /language, /account, /link, /support Subject\\nMessage, /guides, /help", support: "Use /support followed by a subject, then put your message on the next line. Reply to this bot to continue your latest open ticket.", ticketCreated: "Your support ticket has been created.", error: "Something went wrong. Please try again later." },
+  en: { welcome: "Welcome to VEXTRO BOT.", member: "Join both the required channel and group, then press Verify.", choose: "Choose your language.", unlinked: "No website account is linked.", linked: "Your website account is linked.", linkCreated: "This one-time link expires in 10 minutes. Open it and sign in to your website account:", help: "Commands: /start, /language, /account, /link, /support Subject\nMessage, /guides, /help", support: "Use /support followed by a subject, then put your message on the next line. Reply to this bot to continue your latest open ticket.", ticketCreated: "Your support ticket has been created.", error: "Something went wrong. Please try again later." },
   hi: { welcome: "VEXTRO BOT mein aapka swagat hai.", member: "Pehle required channel aur group dono join karein, phir Verify dabayein.", choose: "Apni language chunein.", unlinked: "Koi website account linked nahi hai.", linked: "Aapka website account linked hai.", linkCreated: "Yeh link 10 minute mein expire hoga. Open karke website account mein sign in karein:", help: "Commands: /start, /language, /account, /link, /support, /guides, /help", support: "/support ke baad subject aur agali line mein message likhein. Latest open ticket ke liye bot ko reply karein.", ticketCreated: "Support ticket ban gaya hai.", error: "Kuch galat hua. Baad mein dobara try karein." },
   vi: { welcome: "Chào mừng bạn đến với VEXTRO BOT.", member: "Hãy tham gia cả kênh và nhóm bắt buộc, sau đó nhấn Verify.", choose: "Chọn ngôn ngữ của bạn.", unlinked: "Chưa liên kết tài khoản website.", linked: "Tài khoản website đã được liên kết.", linkCreated: "Liên kết hết hạn sau 10 phút. Mở liên kết và đăng nhập website:", help: "Lệnh: /start, /language, /account, /link, /guides, /help", support: "Dùng /support kèm tiêu đề và nội dung ở dòng tiếp theo.", ticketCreated: "Đã tạo phiếu hỗ trợ.", error: "Đã xảy ra lỗi. Vui lòng thử lại sau." }
 };
@@ -120,7 +120,7 @@ bot.action("account:open", async (ctx) => {
   try {
     const lang = await getLanguage(ctx.from.id);
     const link = await accountStatus(ctx.from.id);
-    const detail = link ? `\\nLinked: ${new Date(link.linked_at).toLocaleString()}\\nUnlink eligible: ${new Date(link.unlink_eligible_at).toLocaleString()}` : "";
+    const detail = link ? `\nLinked: ${new Date(link.linked_at).toLocaleString()}\nUnlink eligible: ${new Date(link.unlink_eligible_at).toLocaleString()}` : "";
     await ctx.reply(link ? messages[lang].linked + detail : messages[lang].unlinked, Markup.inlineKeyboard([[Markup.button.callback("Create website link", "account:link")]]));
   } catch (error) { log.error({ err: error }, "Account status failed"); await ctx.reply(messages.en.error); }
 });
@@ -152,7 +152,7 @@ bot.command("support", async (ctx) => {
     const { error: messageError } = await db.from("bot_support_messages").insert({ ticket_id: ticket.id, sender_type: "user", sender_telegram_id: ctx.from.id, body });
     if (messageError) { await db.from("bot_support_tickets").delete().eq("id", ticket.id); throw messageError; }
     await ctx.reply(`${messages.en.ticketCreated}\nTicket: ${ticket.id}`);
-    await sendOwnerNotice(`New VEXTRO support ticket\\nID: ${ticket.id}\\nFrom: ${ctx.from.id}\\nSubject: ${subject}\\nUse /ticket ${ticket.id} to view and /reply ${ticket.id} message to respond.`);
+    await sendOwnerNotice(`New VEXTRO support ticket\nID: ${ticket.id}\nFrom: ${ctx.from.id}\nSubject: ${subject}\nUse /ticket ${ticket.id} to view and /reply ${ticket.id} message to respond.`);
   } catch (error) { log.error({ err: error }, "Support ticket creation failed"); await ctx.reply(messages.en.error); }
 });
 
@@ -187,7 +187,7 @@ bot.command("reply", async (ctx) => {
   if (insertError) { log.error({ err: insertError }, "Owner reply persistence failed"); return ctx.reply("Could not save the reply."); }
   const { error: updateError } = await db.from("bot_support_tickets").update({ status: "pending", updated_at: new Date().toISOString() }).eq("id", id);
   if (updateError) log.error({ err: updateError }, "Ticket status update failed");
-  try { await bot.telegram.sendMessage(Number(ticket.telegram_id), `Support replied to ticket ${id}:\\n\\n${body.trim()}`); await ctx.reply("Reply saved and delivered."); }
+  try { await bot.telegram.sendMessage(Number(ticket.telegram_id), `Support replied to ticket ${id}:\n\n${body.trim()}`); await ctx.reply("Reply saved and delivered."); }
   catch (error) { log.error({ err: error, ticketId: id }, "Support reply delivery failed"); await ctx.reply("Reply saved, but Telegram delivery failed. Check the user's chat and retry safely."); }
 });
 bot.command("close_ticket", async (ctx) => {
@@ -246,11 +246,10 @@ bot.on("text", async (ctx, next) => {
     if (error) throw error;
     await db.from("bot_support_tickets").update({ status: "open", updated_at: new Date().toISOString() }).eq("id", ticket.id);
     await ctx.reply(`Added to support ticket ${ticket.id}.`);
-    await sendOwnerNotice(`New message on ticket ${ticket.id} from ${ctx.from.id}:\\n${body.slice(0, 1500)}\\nView: /ticket ${ticket.id}`);
+    await sendOwnerNotice(`New message on ticket ${ticket.id} from ${ctx.from.id}:\n${body.slice(0, 1500)}\nView: /ticket ${ticket.id}`);
   } catch (error) { log.error({ err: error }, "Support follow-up failed"); await ctx.reply(messages.en.error); }
 });
 
-bot.command("admin", async (ctx) => { if (!ownerOnly(ctx)) await ctx.reply("Access denied."); });
 bot.catch((error, ctx) => { log.error({ err: error, updateId: ctx.update.update_id }, "Telegram update failed"); });
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
