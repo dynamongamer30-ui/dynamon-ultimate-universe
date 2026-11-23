@@ -310,16 +310,16 @@ bot.command("post_publish", async (ctx) => {
   if (publishingPosts.has(id)) return ctx.reply("This post is already being published.");
   publishingPosts.add(id);
   try {
-    const { data, error } = await db.from("dgbot_posts").select("title,body,state,channel_message_id").eq("id", id).is("deleted_at", null).maybeSingle();
+    const { data, error } = await db.from("dgbot_posts").select("title,body,state,channel_message_id,media,buttons").eq("id", id).is("deleted_at", null).maybeSingle();
     if (error || !data) return ctx.reply("Post not found.");
     if (data.state === "published" && data.channel_message_id) return ctx.reply(`Already published. Telegram message ID: ${data.channel_message_id}`);
     if (data.state !== "draft") return ctx.reply("Only draft posts can be published.");
-    const caption = data.body ? `${data.title}\\n\\n${data.body}` : data.title;
+    const caption = data.body ? `${data.title}\n\n${data.body}` : data.title;
     const media = data.media as { type?: string; file_id?: string; caption?: string } | null;
     const buttons = Array.isArray(data.buttons) ? data.buttons as Array<{ text: string; url: string }> : [];
-    const reply_markup = buttons.length ? Markup.inlineKeyboard(buttons.map((button) => Markup.button.url(button.text, button.url))) : undefined;
+    const reply_markup = buttons.length ? { inline_keyboard: buttons.map((button) => [{ text: button.text, url: button.url }]) } : undefined;\n    const mediaOptions = mediaOptions;
     let message;
-    if (media?.file_id && media.type === "photo") message = await bot.telegram.sendPhoto(channelId, media.file_id, { caption: media.caption || caption, reply_markup });
+    if (media?.file_id && media.type === "photo") message = await bot.telegram.sendPhoto(channelId, media.file_id, { caption: media.caption || caption, ...mediaOptions });
     else if (media?.file_id && media.type === "video") message = await bot.telegram.sendVideo(channelId, media.file_id, { caption: media.caption || caption, reply_markup });
     else if (media?.file_id && media.type === "document") message = await bot.telegram.sendDocument(channelId, media.file_id, { caption: media.caption || caption, reply_markup });
     else if (media?.file_id && media.type === "animation") message = await bot.telegram.sendAnimation(channelId, media.file_id, { caption: media.caption || caption, reply_markup });
