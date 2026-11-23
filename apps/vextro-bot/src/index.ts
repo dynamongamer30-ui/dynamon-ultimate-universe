@@ -626,8 +626,13 @@ bot.command("post_reconcile", async (ctx) => {
     : {state:"draft",channel_message_id:null,updated_at:new Date().toISOString()};
   const {data,error}=await db.from("dgbot_posts").update(patch).eq("id",id).eq("state","publishing").is("deleted_at",null).select("id").maybeSingle();
   if(error||!data) return ctx.reply("No publishing-locked post found, or reconciliation failed.");
+  if(state==="published"){
+    const {error:scheduleError}=await db.from("vextro_scheduled_posts").update({status:"published",published_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()})
+      .eq("post_id",id).in("status",["scheduled","publishing","failed"]);
+    if(scheduleError) log.warn({err:scheduleError,postId:id},"Schedule status could not be reconciled after manual publish confirmation");
+  }
   await writeAudit("post.reconciled",null,id+" -> "+state+(messageId?" message "+messageId:""));
-  await ctx.reply(state==="published"?"Post marked as published with Telegram message ID "+messageId+".":"Post returned to draft. It is now safe to publish again after you confirmed no copy exists in the channel.");
+  await ctx.reply(state==="published"?"Post marked as published with Telegram message ID "+messageId+". Any pending schedule was reconciled as published.":"Post returned to draft. It is now safe to publish again after you confirmed no copy exists in the channel.");
 });
 bot.command("post_remove", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
