@@ -1,0 +1,36 @@
+name: VEXTRO BOT clean package
+on:
+  workflow_dispatch:
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: apps/vextro-bot/package-lock.json
+      - name: Install and verify
+        working-directory: apps/vextro-bot
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Assemble clean package
+        run: |
+          mkdir -p staging/VEXTRO-BOT/supabase/migrations
+          cp -R apps/vextro-bot/src staging/VEXTRO-BOT/src
+          cp -R apps/vextro-bot/dist staging/VEXTRO-BOT/dist
+          cp apps/vextro-bot/package.json apps/vextro-bot/package-lock.json apps/vextro-bot/tsconfig.json apps/vextro-bot/.env.example staging/VEXTRO-BOT/
+          cp supabase/migrations/*vextro*.sql staging/VEXTRO-BOT/supabase/migrations/
+          cd staging
+          zip -qr ../VEXTRO-BOT-Revision21.zip VEXTRO-BOT
+          unzip -l ../VEXTRO-BOT-Revision21.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VEXTRO-BOT-Revision21
+          path: VEXTRO-BOT-Revision21.zip
+          if-no-files-found: error
+          retention-days: 7
