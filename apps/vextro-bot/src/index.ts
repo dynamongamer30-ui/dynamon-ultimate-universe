@@ -673,10 +673,14 @@ bot.command("broadcast_edit", async (ctx) => {
   const m=ctx.message.text.match(/^\/broadcast_edit(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
   if(!m) return ctx.reply("Usage: /broadcast_edit <broadcast-uuid> <new message>");
   const body=m[2]!.trim();
-  if(!body||body.length>4000) return ctx.reply("Broadcast message must be 1–4000 characters.");
-  const {data,error}=await db.from("vextro_broadcast_jobs").update({body,updated_at:new Date().toISOString()}).eq("id",m[1]!).eq("status","draft").select("id").maybeSingle();
-  if(error||!data) return ctx.reply("Only an existing draft can be edited.");
-  await ctx.reply("Broadcast draft updated. Preview it again before confirmation.");
+  const {data:job,error:jobError}=await db.from("vextro_broadcast_jobs").select("media,translations").eq("id",m[1]!).eq("status","draft").maybeSingle();
+  if(jobError||!job) return ctx.reply("Only an existing draft can be edited.");
+  const limit=job.media?1024:4000;
+  const translations=(job.translations??{}) as Record<string,string>;
+  if(!body||body.length>limit||Object.values(translations).some(value=>String(value).length>limit)) return ctx.reply("Message and all translations must be 1–"+limit+" characters for this draft.");
+  const {error}=await db.from("vextro_broadcast_jobs").update({body,updated_at:new Date().toISOString()}).eq("id",m[1]!).eq("status","draft");
+  if(error) return ctx.reply("Broadcast draft could not be edited.");
+  await ctx.reply("Broadcast draft updated. Preview every language before confirmation.");
 });
 bot.command("broadcast_delete", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -753,12 +757,30 @@ bot.command("broadcasts", async (ctx) => {
 });
 bot.command("broadcast_test", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id=ctx.message.text.split(/\s+/)[1];
-  if(!id) return ctx.reply("Usage: /broadcast_test <broadcast-uuid>");
-  const {data,error}=await db.from("vextro_broadcast_jobs").select("body,format").eq("id",id).maybeSingle();
+  const args=ctx.message.text.split(/\s+/),id=args[1],language=(args[2]??"en") as "en"|"hi"|"vi";
+  if(!id||!["en","hi","vi"].includes(language)) return ctx.reply("Usage: /broadcast_test <broadcast-uuid> [en|hi|vi]");
+  const {data,error}=await db.from("vextro_broadcast_jobs").select("body,format,media,buttons,translations").eq("id",id).maybeSingle();
   if(error||!data) return ctx.reply("Broadcast not found.");
-  try { const parseMode=data.format==="HTML"?"HTML":data.format==="MarkdownV2"?"MarkdownV2":undefined; await bot.telegram.sendMessage(config.OWNER_TELEGRAM_ID,"VEXTRO broadcast test\n\n"+data.body,parseMode?{parse_mode:parseMode}:{}); await ctx.reply("Test message delivered to Owner chat only."); }
-  catch(sendError) { log.error({err:sendError},"Broadcast test failed"); await ctx.reply("Test delivery failed."); }
+  const translations=(data.translations??{}) as Record<string,string>;
+  const body=translations[language]??String(data.body);
+  const parseMode=(data.format==="HTML"?"HTML":data.format==="MarkdownV2"?"MarkdownV2":undefined) as "HTML"|"MarkdownV2"|undefined;
+  const media=data.media as {type?:string;file_id?:string}|null;
+  const buttons=Array.isArray(data.buttons)?data.buttons as Array<{text:string;url:string}>:[];
+  const reply_markup=buttons.length?{inline_keyboard:buttons.map(button=>[{text:button.text,url:button.url}])}:undefined;
+  const options={...(parseMode?{parse_mode:parseMode}:{}),...(reply_markup?{reply_markup}:{})};
+  try {
+    await bot.telegram.sendMessage(config.OWNER_TELEGRAM_ID,"VEXTRO broadcast test | language: "+language);
+    if(media?.file_id){
+      if(body.length>1024) return ctx.reply("Media caption exceeds Telegram's 1024-character limit for this language.");
+      const mediaOptions={caption:body,...options};
+      if(media.type==="photo") await bot.telegram.sendPhoto(config.OWNER_TELEGRAM_ID,media.file_id,mediaOptions);
+      else if(media.type==="video") await bot.telegram.sendVideo(config.OWNER_TELEGRAM_ID,media.file_id,mediaOptions);
+      else if(media.type==="document") await bot.telegram.sendDocument(config.OWNER_TELEGRAM_ID,media.file_id,mediaOptions);
+      else if(media.type==="animation") await bot.telegram.sendAnimation(config.OWNER_TELEGRAM_ID,media.file_id,mediaOptions);
+      else throw new Error("Unsupported broadcast media type");
+    }else await bot.telegram.sendMessage(config.OWNER_TELEGRAM_ID,body,options);
+    await ctx.reply("Test message delivered to Owner chat only.");
+  } catch(sendError) { log.error({err:sendError},"Broadcast test failed"); await ctx.reply("Test delivery failed."); }
 });
 bot.command("broadcast_retry", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
