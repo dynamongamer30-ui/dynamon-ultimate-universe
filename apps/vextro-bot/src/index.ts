@@ -1171,7 +1171,7 @@ const stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER
 const stopHealth = startHealthMonitor(bot, config.OWNER_TELEGRAM_ID, 5);
 const stopUpdates = startUpdateMonitor(bot, config.OWNER_TELEGRAM_ID, config.UPDATE_CHECK_INTERVAL_HOURS);
 try { const {data}=await db.from("vextro_runtime_settings").select("value").eq("key","maintenance").maybeSingle(); maintenanceMode=(data?.value as {enabled?:boolean}|null)?.enabled===true; } catch(error) { log.error({err:error},"Maintenance setting could not be loaded; defaulting to normal mode"); }
-process.once("SIGINT", () => { stopWorkers(); stopBackups(); stopHealth(); stopUpdates(); });
-process.once("SIGTERM", () => { stopWorkers(); stopBackups(); });
+process.once("SIGINT", () => { stopWorkers(); stopBackups(); stopHealth(); stopUpdates(); bot.stop("SIGINT"); });
+process.once("SIGTERM", () => { stopWorkers(); stopBackups(); stopHealth(); stopUpdates(); bot.stop("SIGTERM"); });
 await bot.launch({ dropPendingUpdates: false });
 log.info({ botUsername: config.BOT_PUBLIC_USERNAME ?? "not-configured" }, "VEXTRO BOT polling started");
