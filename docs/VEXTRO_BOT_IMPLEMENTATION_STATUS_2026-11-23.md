@@ -1,45 +1,59 @@
-# VEXTRO BOT implementation status — 2026-11-23
+# VEXTRO BOT Revision 21 — implementation status
 
-## Repository policy
-- Work is committed directly to `main`.
-- No new branches are created.
-- The connected GitHub actions do not provide branch deletion; the existing non-main branch is not deleted by this implementation work.
+Last updated: 2026-11-23  
+Repository: `dynamongamer30-ui/dynamon-ultimate-universe`  
+Branch: `main`  
+Runtime: Node.js 26, TypeScript, Telegraf, Supabase
 
-## Source added
-The website repository previously contained no actual bot runtime package. The first tracked runtime foundation is now at `apps/vextro-bot/`.
+## Implemented in the current runtime
 
-Files added:
-- `package.json`, `tsconfig.json`, `.env.example`, `.gitignore`
-- `src/config.ts`: strict environment validation
-- `src/supabase.ts`: server-only Supabase service-role client
-- `src/security.ts`: 256-bit URL-safe one-time token generation and SHA-256 hashing
-- `src/index.ts`: Telegraf polling runtime, membership gate, language preferences, website linking, support ticket creation and follow-up, Owner ticket list/detail/reply/close commands, published-guide reads, Owner post draft/edit/preview/publish/remove commands using verified `dgbot_posts`, Owner user directory/profile and reversible ban management, read-only analytics/backup/audit commands, moderation-rule CRUD, and Owner dashboard\n- `vitest.config.ts`: standalone bot test config, isolated from the website Vite configuration
-- `tests/config.test.ts`, `tests/security.test.ts`
-- `README.md`: setup and verified-live-schema contract
+- Owner-only access control, Telegram-native user and Owner menus, localized English/Hindi-Roman/Vietnamese flows, welcome editor and help.
+- Required channel+group membership gate, Owner-editable membership chat IDs, membership diagnostics, and transient-state cleanup when users leave the required group.
+- Website account linking through the existing `approve_bot_link(text)` RPC with one-time random tokens and SHA-256 token storage. No direct account-link table bypass.
+- User profile, language management, access ban/unban, pagination, and membership-aware broadcast audience.
+- Support ticket lifecycle: create, category, user conversation, Owner reply, internal notes, priority, search, close/reopen and Owner notifications.
+- Guide/rules manager: localized content, photo/video/document/animation media, buttons, publish/archive, keywords, search and review queue. Required guide route links are populated.
+- Universal channel post editor: drafts, edit, HTML/MarkdownV2/plain formatting, media attachments, HTTPS buttons, preview, publish, scheduled publish, cancel and retry.
+- Persistent broadcast queue: draft/edit/format/preview/test, audience verification, explicit Owner confirmation, schedule, pause/resume/cancel, retries, retry-after handling, results and completion notifications.
+- Moderation: blocked phrase/domain rules, allowlist add/edit/remove, rate/repeat spam controls, warnings, timed group mute/unmute, ban/unban, and audit records.
+- Owner dashboard, command directory, analytics, runtime log viewer, audit search, runtime settings, maintenance controls and health monitor.
+- Encrypted AES-256-GCM backups with scrypt-derived keys, random salt/IV, SHA-256 integrity, private Supabase Storage, retention, optional HTTPS offsite copy, restore with a pre-restore safety backup, and automatic safety-row recovery after a partial restore error.
+- Release checks, Owner approval, pre-deployment safety backup, optional deployment webhook, post-deployment health validation, rollback request and safety backup.
+- Restart recovery for persistent broadcast queue work and stale scheduled-post leases.
+- Owner timezone scheduling: local `YYYY-MM-DD HH:mm` is interpreted in `OWNER_TIMEZONE` (default `Asia/Kolkata`) and persisted as UTC.
 
-CI:
-- `.github/workflows/vextro-bot-ci.yml` runs on Node.js 26 for changes to the bot package.
-- Checks type-check, Vitest, and TypeScript build.
+## Supabase changes
 
-## Verified production contracts used
-- `bot_users(telegram_id, language, created_at, updated_at)`
-- `bot_account_links(telegram_id, linked_at, unlink_eligible_at, unlinked_at, user_id)`
-- `bot_link_requests(token_hash, telegram_id, created_at, expires_at, consumed_at, user_id)`
-- `bot_support_tickets(id, telegram_id, category, subject, status, priority, created_at, updated_at)`
-- `bot_support_messages(id, ticket_id, sender_type, sender_telegram_id, body, internal_note, created_at)`
-- Website approval RPC: `approve_bot_link(p_token text)`
+Eleven additive VEXTRO migrations are present in `supabase/migrations/` and applied to project `dfxcpxzylyycrirtnkof`. They add queue, settings, moderation, backup, restore, update-approval and broadcast-formatting structures. Existing website tables and the verified account-link RPC were preserved.
 
-The bot inserts only the SHA-256 token hash into `bot_link_requests`; the website approval route consumes the raw one-time token using the existing `approve_bot_link` RPC.
+The historical migration drift between the website repository and production remains unresolved. Do not run a bulk migration push or replay the older repository migration history against production.
 
-## Important gaps and blockers
-- GitHub Actions run [45123134428](https://github.com/dynamongamer30-ui/dynamon-ultimate-universe/actions/runs/45123134428) completed successfully on Node.js 26 for commit `5b9260dc725fcd7a0a8df608fca601b611db2b4d`: type-check, Vitest, and TypeScript build all passed. The later dashboard command-index change is queued for CI. The earlier [45122696913](https://github.com/dynamongamer30-ui/dynamon-ultimate-universe/actions/runs/45122696913) run also passed. The earlier [45122124830](https://github.com/dynamongamer30-ui/dynamon-ultimate-universe/actions/runs/45122124830) run also passed for the foundation.
-- No Telegram token was used; no live bot polling or Telegram membership test was run.
-- No KataBump deployment was attempted.
-- No production Supabase migration, schema, or row was modified.
-- Support, guide, and Owner text-post handlers are implemented against verified live table columns and constraints. Post publishing requires the optional `PUBLISH_CHANNEL_ID` setting and channel permissions. The runtime has not yet implemented the complete universal media/button editor or scheduled content queue. Moderation rule records can be managed, but incoming group-message enforcement and progressive warning/restriction workflows are not enabled. User-level Owner restrictions are active through the legacy ban table and a fail-closed access middleware. The live `bot_guides` table currently has no published guide rows, so users will see an empty-state message until content is published.\n- Telegram-side unlink is intentionally not exposed. The live project has no verified Telegram unlink RPC; direct updates would bypass the 15-day eligibility rule and audit behavior.
-- The live `dgbot_backup_runs` table contains 212 scheduled attempts, all failed with `db_400`. No matching production cron job, deployed backup Edge Function, or writer in the current repo was found. The error's root cause is unknown; do not activate a replacement scheduler until the legacy/external writer is traced. See the detailed GitHub/Supabase audit.\n- The current implementation is a runtime foundation, not all approved Revision 21 modules. Broadcasts, channel publishing, scheduling, workflow automation, advanced Owner screens, analytics, encrypted backup/restore, privacy workflows, anti-spam, maintenance mode, release/update management, and operational recovery still require implementation.
-- Website URL, Telegram credentials, Owner ID, and required group/channel IDs must be set in KataBump's secret/environment manager. Never commit real secrets.
-- Website API/domain and KataBump hosting capabilities still require verification before production deployment.
+## Verification
 
-## Safety
-Do not run a second polling process with the same Telegram token while another instance is active. Do not apply the historical migration folder wholesale; production migration drift remains unresolved. Do not run `supabase db push` until every intended migration has been reconciled against the live schema.
+- Latest VEXTRO BOT CI run: `45131393939` — dependency install, TypeScript type-check, Vitest tests and production build passed.
+- Backup encryption and Owner-timezone conversion have unit tests.
+- Production Supabase migrations were applied and schema was inspected.
+- No live Telegram polling test or KataBump deployment has been performed in this session. CI does not prove the live bot token, membership permissions, channel publishing or hosting integration.
+
+## Configuration still required before live operation
+
+- `BOT_TOKEN`, `OWNER_TELEGRAM_ID`, Supabase URL/service-role key, website URL, required channel and numeric group IDs.
+- `BACKUP_PASSPHRASE` (at least 16 characters) before encrypted backup scheduling or restore can be used.
+- `BACKUP_OFFSITE_URL` and `BACKUP_OFFSITE_TOKEN` together for verified offsite copies.
+- `PUBLISH_CHANNEL_ID` for channel publishing.
+- A custom HTTPS deployment webhook and secret for automated hosting deploy/rollback. No provider-specific webhook is configured by default.
+
+## Remaining acceptance work / known boundaries
+
+- Run live Telegram tests with the Owner's host secrets: onboarding, both membership checks, account-link approval, ticket flow, media publishing, broadcasts, moderation permissions, backups and restart recovery.
+- Complete the screen-by-screen Revision 21 acceptance pass for all approved user, Owner and shared interaction screens; the current runtime has the workflows but this visual acceptance pass is not signed off.
+- Validate the custom hosting webhook against the actual hosting provider before enabling automated deployment or rollback.
+- Configure and test the offsite backup receiver before relying on offsite retention.
+- Account unlink remains intentionally unavailable because the live 15-day eligibility rule has no verified unlink RPC; direct database mutation is not permitted.
+- The legacy `dgbot_backup_runs` writer previously recorded repeated `db_400` failures. The new encrypted backup engine is separate and remains inactive until its passphrase is configured.
+- The old non-main Git branch has not been deleted; the connected GitHub toolset exposes no branch-delete operation. No new branch was created.
+
+## Explicit scope exclusions
+
+- No CSV/JSON import/export module.
+- No separate disaster-recovery or hosting-migration module.
