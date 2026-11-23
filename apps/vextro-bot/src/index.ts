@@ -637,7 +637,7 @@ bot.command("post_reconcile", async (ctx) => {
     }
   }
   await writeAudit("post.reconciled",null,id+" -> "+state+(messageId?" message "+messageId:""));
-  await ctx.reply(state==="published"?"Post marked as published with Telegram message ID "+messageId+". Any pending schedule was reconciled as published.":"Post returned to draft. It is now safe to publish again after you confirmed no copy exists in the channel.");
+  await ctx.reply(state==="published"?"Post marked as published with Telegram message ID "+messageId+". The latest due schedule was marked published if present.":"Post returned to draft. It is now safe to publish again after you confirmed no copy exists in the channel.");
 });
 bot.command("post_remove", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -1083,16 +1083,6 @@ bot.on("left_chat_member", async (ctx) => {
   moderationActivity.delete(departed.id);
   await db.from("dgbot_user_state").delete().eq("telegram_id",departed.id);
   await writeAudit("membership.left_group",departed.id,"Member left the required group; transient state cleared");
-});
-bot.command("membership_status", async (ctx) => {
-  if(!ctx.from) return;
-  const results=await Promise.all([runtimeMembership.channelId,runtimeMembership.groupId].map(async chatId=>{
-    try{
-      const member=await ctx.telegram.getChatMember(chatId,ctx.from!.id);
-      return ["creator","administrator","member"].includes(member.status)||(member.status==="restricted"&&member.is_member);
-    }catch{return false;}
-  }));
-  await ctx.reply("Required channel: "+(results[0]?"joined":"not joined")+"\nRequired group: "+(results[1]?"joined":"not joined")+"\nOverall: "+(results.every(Boolean)?"verified":"verification required"));
 });
 bot.command("membership_set_channel", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
