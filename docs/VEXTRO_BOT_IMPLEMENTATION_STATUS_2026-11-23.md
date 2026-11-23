@@ -17,22 +17,22 @@ Runtime: Node.js 26, TypeScript, Telegraf, Supabase
 - Persistent broadcast queue: draft/edit/format/preview/test, audience verification, explicit Owner confirmation, schedule, pause/resume/cancel, retries, retry-after handling, results and completion notifications.
 - Moderation: blocked phrase/domain rules, allowlist add/edit/remove, rate/repeat spam controls, warnings, timed group mute/unmute, ban/unban, and audit records.
 - Owner dashboard, command directory, analytics, runtime log viewer, audit search, runtime settings, maintenance controls and health monitor.
-- Encrypted AES-256-GCM backups with scrypt-derived keys, random salt/IV, SHA-256 integrity, private Supabase Storage, retention, optional HTTPS offsite copy, restore with a pre-restore safety backup, and automatic safety-row recovery after a partial restore error.
+- Encrypted AES-256-GCM backups with scrypt-derived keys, random salt/IV, SHA-256 integrity, private Supabase Storage, retention, optional HTTPS offsite copy, restore with a pre-restore safety backup, automatic safety-row recovery after a partial restore error, and explicit preservation of website-owned account-link requests, active links and guide content.
 - Release checks, Owner approval, pre-deployment safety backup, optional deployment webhook, post-deployment health validation, rollback request and safety backup.
 - Restart recovery for persistent broadcast queue work and stale scheduled-post leases.
 - Owner timezone scheduling: local `YYYY-MM-DD HH:mm` is interpreted in `OWNER_TIMEZONE` (default `Asia/Kolkata`) and persisted as UTC.
 
 ## Supabase changes
 
-Eleven additive VEXTRO migrations are present in `supabase/migrations/` and applied to project `dfxcpxzylyycrirtnkof`. They add queue, settings, moderation, backup, restore, update-approval and broadcast-formatting structures. Existing website tables and the verified account-link RPC were preserved.
+Thirteen additive VEXTRO migrations are present in `supabase/migrations/` and applied to project `dfxcpxzylyycrirtnkof`. They add queue, settings, moderation, backup, restore, update-approval and broadcast-formatting structures. Existing website tables and the verified account-link RPC were preserved.
 
 The historical migration drift between the website repository and production remains unresolved. Do not run a bulk migration push or replay the older repository migration history against production.
 
 ## Verification
 
-- Latest VEXTRO BOT CI run: `45131393939` — dependency install, TypeScript type-check, Vitest tests and production build passed.
+- Latest VEXTRO BOT CI run: `45132037262` — dependency install, TypeScript type-check, Vitest tests and production build passed.
 - Backup encryption and Owner-timezone conversion have unit tests.
-- Production Supabase migrations were applied and schema was inspected.
+- Production Supabase migrations were applied and schema was inspected. All 21 restorable backup tables passed empty-row restore-function checks; website-owned account-link and guide tables are intentionally skipped and protected by the restore RPC.
 - No live Telegram polling test or KataBump deployment has been performed in this session. CI does not prove the live bot token, membership permissions, channel publishing or hosting integration.
 
 ## Configuration still required before live operation
