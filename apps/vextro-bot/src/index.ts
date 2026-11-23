@@ -1389,6 +1389,34 @@ bot.on("text", async (ctx, next) => {
   }
 });
 
+bot.on("message", async (ctx, next) => {
+  if (String(ctx.chat.id) !== config.REQUIRED_GROUP_ID || !ctx.from || ctx.from.is_bot || ownerOnly(ctx)) return next();
+  const message = ctx.message as unknown as { caption?: string };
+  const caption = (message.caption ?? "").trim();
+  if (!caption) return next();
+  try {
+    const [{data:rules,error:ruleError},{data:allowlist,error:allowError}]=await Promise.all([
+      db.from("dgbot_moderation_rules").select("kind,value").is("deleted_at",null).limit(250),
+      db.from("dgbot_allowlist").select("host,include_subdomains").is("deleted_at",null).limit(500)
+    ]);
+    if(ruleError||allowError) throw ruleError??allowError;
+    const body=caption.toLocaleLowerCase();
+    const hosts=[...caption.matchAll(/https?:\/\/[^\s<>()]+/gi)].map(m=>{try{return new URL(m[0]).hostname.toLowerCase().replace(/^www\./,"");}catch{return "";}}).filter(Boolean);
+    const allowed=(host:string)=>(allowlist??[]).some(item=>host===String(item.host).toLowerCase()||(item.include_subdomains&&host.endsWith("."+String(item.host).toLowerCase())));
+    const matched=(rules??[]).find(rule=>{
+      const value=String(rule.value).toLocaleLowerCase();
+      return rule.kind==="blocked_phrase"?body.includes(value):rule.kind==="blocked_host"?hosts.some(host=>(host===value||host.endsWith("."+value))&&!allowed(host)):false;
+    });
+    if(!matched) return next();
+    const reason=String(matched.kind)+": "+String(matched.value).slice(0,150);
+    try{await ctx.deleteMessage();}catch(deleteError){log.warn({err:deleteError},"Media caption moderation delete failed");}
+    const {error}=await db.from("vextro_moderation_events").insert({telegram_id:ctx.from.id,chat_id:ctx.chat.id,event_type:"warning",reason});
+    if(error) log.error({err:error},"Media caption moderation event failed");
+    await writeAudit("moderation.media_caption_removed",ctx.from.id,reason);
+    try{await ctx.reply("This media caption was removed because it matched a group moderation rule.");}catch{}
+  }catch(error){log.error({err:error},"Media caption moderation check failed; media was not removed");return next();}
+});
+
 bot.on("text", async (ctx, next) => {
   if (ctx.message.text.startsWith("/")) return next();
   if (!ctx.from || ownerOnly(ctx)) return;
