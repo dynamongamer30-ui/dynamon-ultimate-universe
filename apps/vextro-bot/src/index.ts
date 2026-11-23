@@ -187,11 +187,14 @@ bot.command("support", async (ctx) => {
   if (!ctx.from || !(await isMember(ctx))) return ctx.reply(messages.en.member);
   const payload = ctx.message.text.replace(/^\/support(?:@\w+)?\s*/i, "").trim();
   const split = payload.indexOf("\n");
-  const subject = (split < 0 ? payload : payload.slice(0, split)).trim();
+  let subject = (split < 0 ? payload : payload.slice(0, split)).trim();
   const body = (split < 0 ? "" : payload.slice(split + 1)).trim();
-  if (subject.length < 5 || subject.length > 120 || body.length < 1 || body.length > textLimit) return ctx.reply("Format: /support Subject (5–120 characters)\nDescribe your issue on the next line (up to 4000 characters).");
+  let category = "other";
+  const categoryMatch = subject.match(/^(technical|account|download|billing|other)\s*\|\s*([\s\S]+)$/i);
+  if (categoryMatch) { category = categoryMatch[1]!.toLowerCase(); subject = categoryMatch[2]!.trim(); }
+  if (subject.length < 5 || subject.length > 120 || body.length < 1 || body.length > textLimit) return ctx.reply("Format: /support [technical|account|download|billing|other | ]Subject (5–120 characters)\nDescribe your issue on the next line (up to 4000 characters).");
   try {
-    const { data: ticket, error: ticketError } = await db.from("bot_support_tickets").insert({ telegram_id: ctx.from.id, category: "other", subject }).select("id").single();
+    const { data: ticket, error: ticketError } = await db.from("bot_support_tickets").insert({ telegram_id: ctx.from.id, category, subject }).select("id").single();
     if (ticketError || !ticket) throw ticketError ?? new Error("Ticket was not created");
     const { error: messageError } = await db.from("bot_support_messages").insert({ ticket_id: ticket.id, sender_type: "user", sender_telegram_id: ctx.from.id, body });
     if (messageError) { await db.from("bot_support_tickets").delete().eq("id", ticket.id); throw messageError; }
@@ -291,6 +294,17 @@ bot.command("ticket_reply", async (ctx) => {
   await db.from("bot_support_tickets").update({status:"open",updated_at:new Date().toISOString()}).eq("id",ticket.id);
   await sendOwnerNotice("User "+ctx.from.id+" replied to ticket "+ticket.id+":\n"+body.slice(0,1200));
   await ctx.reply("Your reply was added to ticket "+ticket.id+".");
+});
+bot.command("reopen_ticket", async (ctx) => {
+  if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id = ctx.message.text.split(/\s+/)[1];
+  if (!id) return ctx.reply("Usage: /reopen_ticket <ticket-uuid>");
+  const { data, error } = await db.from("bot_support_tickets").update({ status: "open", updated_at: new Date().toISOString() })
+    .eq("id", id).eq("status", "closed").select("telegram_id").maybeSingle();
+  if (error || !data) return ctx.reply("Closed ticket not found.");
+  await writeAudit("ticket.reopened", Number(data.telegram_id), "Owner reopened ticket " + id);
+  try { await bot.telegram.sendMessage(Number(data.telegram_id), "Your support ticket has been reopened. Reply here to continue."); } catch {}
+  await ctx.reply("Ticket reopened.");
 });
 bot.command("close_ticket", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -943,7 +957,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
