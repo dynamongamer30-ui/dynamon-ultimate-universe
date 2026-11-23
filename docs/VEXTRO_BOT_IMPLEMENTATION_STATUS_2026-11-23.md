@@ -24,13 +24,13 @@ Runtime: Node.js 26, TypeScript, Telegraf, Supabase
 
 ## Supabase changes
 
-Thirteen additive VEXTRO migrations are present in `supabase/migrations/` and applied to project `dfxcpxzylyycrirtnkof`. They add queue, settings, moderation, backup, restore, update-approval and broadcast-formatting structures. Existing website tables and the verified account-link RPC were preserved.
+Fourteen additive VEXTRO migrations are present in `supabase/migrations/` and applied to project `dfxcpxzylyycrirtnkof`. They add queue, settings, moderation, backup, restore, update-approval and broadcast-formatting structures. Existing website tables and the verified account-link RPC were preserved.
 
 The historical migration drift between the website repository and production remains unresolved. Do not run a bulk migration push or replay the older repository migration history against production.
 
 ## Verification
 
-- Latest VEXTRO BOT CI run: `45132037262` — dependency install, TypeScript type-check, Vitest tests and production build passed.
+- Latest VEXTRO BOT CI run: `45132564042` — dependency install, TypeScript type-check, Vitest tests and production build passed.
 - Backup encryption and Owner-timezone conversion have unit tests.
 - Production Supabase migrations were applied and schema was inspected. All 21 restorable backup tables passed empty-row restore-function checks; website-owned account-link and guide tables are intentionally skipped and protected by the restore RPC.
 - No live Telegram polling test or KataBump deployment has been performed in this session. CI does not prove the live bot token, membership permissions, channel publishing or hosting integration.
