@@ -32,6 +32,24 @@ const messages: Record<Lang, { welcome: string; member: string; choose: string; 
   vi: { welcome: "Chào mừng bạn đến với VEXTRO BOT.", member: "Hãy tham gia cả kênh và nhóm bắt buộc, sau đó nhấn Verify.", choose: "Chọn ngôn ngữ của bạn.", unlinked: "Chưa liên kết tài khoản website.", linked: "Tài khoản website đã được liên kết.", linkCreated: "Liên kết hết hạn sau 10 phút. Mở liên kết và đăng nhập website:", help: "Lệnh: /start, /language, /account, /link, /membership_status, /guides, /rules, /support, /my_tickets, /ticket_reply, /help", support: "Dùng /support kèm danh mục và tiêu đề, nội dung ở dòng tiếp theo. Dùng /my_tickets và /ticket_reply để tiếp tục phiếu hỗ trợ.", ticketCreated: "Đã tạo phiếu hỗ trợ.", error: "Đã xảy ra lỗi. Vui lòng thử lại sau." }
 };
 
+const menuLabels: Record<Lang, {account:string;language:string;guides:string;rules:string;support:string;tickets:string;membership:string;help:string;about:string;home:string;verify:string;createLink:string}> = {
+  en:{account:"Account",language:"Language",guides:"Guides",rules:"Rules",support:"Support",tickets:"My tickets",membership:"Membership",help:"Help",about:"About",home:"Home",verify:"Verify membership",createLink:"Create website link"},
+  hi:{account:"Khata",language:"Bhasha",guides:"Guides",rules:"Niyam",support:"Sahayata",tickets:"Mere tickets",membership:"Sadasyata",help:"Madad",about:"Parichay",home:"Home",verify:"Membership verify karein",createLink:"Website link banayein"},
+  vi:{account:"Tài khoản",language:"Ngôn ngữ",guides:"Hướng dẫn",rules:"Quy định",support:"Hỗ trợ",tickets:"Phiếu của tôi",membership:"Thành viên",help:"Trợ giúp",about:"Giới thiệu",home:"Trang chủ",verify:"Xác minh thành viên",createLink:"Tạo liên kết website"}
+};
+function mainMenu(language: Lang) {
+  const t=menuLabels[language];
+  return Markup.inlineKeyboard([
+    [Markup.button.callback(t.account,"account:open"),Markup.button.callback(t.language,"language:open")],
+    [Markup.button.callback(t.guides,"guides:open"),Markup.button.callback(t.rules,"rules:open")],
+    [Markup.button.callback(t.support,"support:help"),Markup.button.callback(t.tickets,"tickets:mine")],
+    [Markup.button.callback(t.membership,"membership:status"),Markup.button.callback(t.help,"help:open")],
+    [Markup.button.callback(t.about,"about:open")]
+  ]);
+}
+function homeMenu(language: Lang) {
+  return Markup.inlineKeyboard([[Markup.button.callback(menuLabels[language].home,"menu:home")]]);
+}
 function ownerOnly(ctx: Context): boolean {
   return ctx.from?.id === config.OWNER_TELEGRAM_ID;
 }
@@ -148,16 +166,10 @@ bot.start(async (ctx) => {
     await saveUser(ctx.from.id);
     const lang = await getLanguage(ctx.from.id);
     if (!(await isMember(ctx))) {
-      await ctx.reply(messages[lang].member, Markup.inlineKeyboard([[Markup.button.callback("Verify membership", "membership:verify")]]));
+      await ctx.reply(messages[lang].member, Markup.inlineKeyboard([[Markup.button.callback(menuLabels[lang].verify, "membership:verify")]]));
       return;
     }
-    await ctx.reply(await getWelcome(lang), Markup.inlineKeyboard([
-      [Markup.button.callback("Account", "account:open"), Markup.button.callback("Language", "language:open")],
-      [Markup.button.callback("Guides", "guides:open"), Markup.button.callback("Rules", "rules:open")],
-      [Markup.button.callback("Support", "support:help"), Markup.button.callback("My tickets", "tickets:mine")],
-      [Markup.button.callback("Membership", "membership:status"), Markup.button.callback("Help", "help:open")],
-      [Markup.button.callback("About", "about:open")]
-    ]));
+    await ctx.reply(await getWelcome(lang), mainMenu(lang));
   } catch (error) { log.error({ err: error }, "Start handler failed"); await ctx.reply(messages.en.error); }
 });
 
@@ -166,13 +178,7 @@ bot.action("membership:verify", async (ctx) => {
   if (!ctx.from) return;
   const lang = await getLanguage(ctx.from.id);
   if (await isMember(ctx)) {
-    await ctx.editMessageText(await getWelcome(lang), Markup.inlineKeyboard([
-      [Markup.button.callback("Account", "account:open"), Markup.button.callback("Language", "language:open")],
-      [Markup.button.callback("Guides", "guides:open"), Markup.button.callback("Rules", "rules:open")],
-      [Markup.button.callback("Support", "support:help"), Markup.button.callback("My tickets", "tickets:mine")],
-      [Markup.button.callback("Membership", "membership:status"), Markup.button.callback("Help", "help:open")],
-      [Markup.button.callback("About", "about:open")]
-    ]));
+    await ctx.editMessageText(await getWelcome(lang), mainMenu(lang));
   } else await ctx.reply(messages[lang].member);
 });
 
@@ -909,12 +915,8 @@ bot.action("rules:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.r
 bot.action("about:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply("VEXTRO BOT\nA Telegram companion for account linking, guides and support.\nLanguages: English, Hindi (Roman), Vietnamese.\nUse /help for commands and /support to contact the Owner."); });
 bot.action("menu:home", async (ctx) => {
   await ctx.answerCbQuery();
-  await ctx.reply(await getWelcome("en"),Markup.inlineKeyboard([
-    [Markup.button.callback("Account","account:open"),Markup.button.callback("Language","language:open")],
-    [Markup.button.callback("Guides","guides:open"),Markup.button.callback("Rules","rules:open")],
-    [Markup.button.callback("Support","support:help"),Markup.button.callback("My tickets","tickets:mine")],
-    [Markup.button.callback("Membership","membership:status"),Markup.button.callback("Help","help:open")]
-  ]));
+  const lang=ctx.from?await getLanguage(ctx.from.id):"en";
+  await ctx.reply(await getWelcome(lang),mainMenu(lang));
 });
 bot.command("about", async (ctx) => ctx.reply("VEXTRO BOT\nTelegram account linking, multilingual guides, group membership verification and support.\nLanguages: English, Hindi (Roman), Vietnamese."));
 bot.command("help", async (ctx) => ctx.reply(messages.en.help));
