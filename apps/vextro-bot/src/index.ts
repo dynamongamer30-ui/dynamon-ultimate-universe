@@ -959,12 +959,12 @@ bot.command("users", async (ctx) => {
   const args=ctx.message.text.split(/\s+/);
   const language=["en","hi","vi"].includes(args[1]??"")?args[1]:undefined;
   const page=Math.max(1,Number(args[language?2:1])||1);
-  let query=db.from("bot_users").select("telegram_id,language,created_at,updated_at").order("updated_at",{ascending:false});
+  let query=db.from("bot_users").select("telegram_id,language,created_at,updated_at,last_seen_at").order("last_seen_at",{ascending:false});
   if(language) query=query.eq("language",language);
   const {data,error}=await query.range((page-1)*20,page*20-1);
   if(error) return ctx.reply("User list unavailable.");
   if(!data?.length) return ctx.reply("No users on this page.");
-  await ctx.reply("Users — page "+page+(language?" | language "+language:"")+"\n"+data.map(u=>u.telegram_id+" | "+u.language+" | "+new Date(u.updated_at).toLocaleDateString()).join("\n")+"\nNext: /users "+(language?language+" ":"")+(page+1));
+  await ctx.reply("Users — page "+page+(language?" | language "+language:"")+"\n"+data.map(u=>u.telegram_id+" | "+u.language+" | "+(u.last_seen_at?new Date(u.last_seen_at).toLocaleDateString():"never seen")).join("\n")+"\nNext: /users "+(language?language+" ":"")+(page+1));
 });
 bot.command("user", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -1130,8 +1130,9 @@ bot.command("moderation_stats", async (ctx) => {
 bot.command("analytics", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const since = new Date(Date.now() - 24 * 3600_000).toISOString();
-  const [users, links, tickets, posts, backups, broadcastJobs, sent, failed, scheduled, warnings] = await Promise.all([
+  const [users, activeUsers, links, tickets, posts, backups, broadcastJobs, sent, failed, scheduled, warnings] = await Promise.all([
     db.from("bot_users").select("*", { count: "exact", head: true }),
+    db.from("bot_users").select("*", { count: "exact", head: true }).gte("last_seen_at", since),
     db.from("bot_account_links").select("*", { count: "exact", head: true }).is("unlinked_at", null),
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed"),
     db.from("dgbot_posts").select("*", { count: "exact", head: true }).eq("state", "published").is("deleted_at", null),
@@ -1142,10 +1143,10 @@ bot.command("analytics", async (ctx) => {
     db.from("vextro_scheduled_posts").select("*", { count: "exact", head: true }).eq("status", "scheduled"),
     db.from("vextro_moderation_events").select("*", { count: "exact", head: true }).eq("event_type", "warning").gte("created_at", since)
   ]);
-  const errors = [users.error, links.error, tickets.error, posts.error, backups.error, broadcastJobs.error, sent.error, failed.error, scheduled.error, warnings.error].filter(Boolean);
+  const errors = [users.error, activeUsers.error, links.error, tickets.error, posts.error, backups.error, broadcastJobs.error, sent.error, failed.error, scheduled.error, warnings.error].filter(Boolean);
   if (errors.length) { log.error({ errors }, "Analytics query failed"); return ctx.reply("Analytics are temporarily unavailable."); }
   await ctx.reply("VEXTRO BOT Analytics\nRegistered users: " + (users.count ?? 0) +
-    "\nLinked accounts: " + (links.count ?? 0) + "\nOpen support tickets: " + (tickets.count ?? 0) +
+    "\nActive users (24h): " + (activeUsers.count ?? 0) + "\nLinked accounts: " + (links.count ?? 0) + "\nOpen support tickets: " + (tickets.count ?? 0) +
     "\nPublished channel posts: " + (posts.count ?? 0) + "\nVerified encrypted backups: " + (backups.count ?? 0) +
     "\nBroadcast jobs: " + (broadcastJobs.count ?? 0) + "\nBroadcast messages sent: " + (sent.count ?? 0) +
     "\nBroadcast deliveries failed: " + (failed.count ?? 0) + "\nScheduled posts pending: " + (scheduled.count ?? 0) +
