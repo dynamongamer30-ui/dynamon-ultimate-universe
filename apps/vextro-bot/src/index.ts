@@ -2,7 +2,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { Telegraf, Markup, type Context } from "telegraf";
 import pino from "pino";
 import { config } from "./config.js";
-import { db } from "./supabase.js";
+import { db } from "./supabase.js";\nimport { createOneTimeLinkToken } from "./security.js";
 
 const log = pino({ level: config.LOG_LEVEL, redact: ["*.token", "*.password", "*.secret", "*.authorization"] });
 const bot = new Telegraf(config.BOT_TOKEN);
