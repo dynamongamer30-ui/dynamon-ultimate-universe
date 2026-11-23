@@ -351,7 +351,7 @@ bot.command("user", async (ctx) => {
   ]);
   if (user.error || link.error || tickets.error || ban.error) return ctx.reply("User profile could not be loaded.");
   if (!user.data) return ctx.reply("User is not registered.");
-  await ctx.reply(`User profile\\nTelegram ID: ${id}\\nLanguage: ${user.data.language}\\nRegistered: ${new Date(user.data.created_at).toLocaleString()}\\nLast active: ${new Date(user.data.updated_at).toLocaleString()}\\nWebsite linked: ${link.data ? "yes" : "no"}\\nSupport tickets: ${tickets.count ?? 0}\\nRestricted: ${ban.data ? "yes — " + (ban.data.reason || "no reason") : "no"}`);
+  await ctx.reply(`User profile\nTelegram ID: ${id}\nLanguage: ${user.data.language}\nRegistered: ${new Date(user.data.created_at).toLocaleString()}\nLast active: ${new Date(user.data.updated_at).toLocaleString()}\nWebsite linked: ${link.data ? "yes" : "no"}\nSupport tickets: ${tickets.count ?? 0}\nRestricted: ${ban.data ? "yes — " + (ban.data.reason || "no reason") : "no"}`);
 });
 bot.command("ban_user", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
