@@ -895,8 +895,10 @@ bot.command("broadcast_reconcile", async (ctx) => {
   const m=ctx.message.text.match(/^\/broadcast_reconcile(?:@\w+)?\s+([0-9a-f-]{36})\s+(\d+)\s+(sent|retry)$/i);
   if(!m) return ctx.reply("Usage: /broadcast_reconcile <broadcast-uuid> <telegram-user-id> <sent|retry>. Check the user's chat before choosing.");
   const jobId=m[1]!,telegramId=Number(m[2]),action=m[3]!.toLowerCase();
+  if(!Number.isSafeInteger(telegramId)||telegramId<1) return ctx.reply("Invalid Telegram user ID.");
   const {data:job,error:jobError}=await db.from("vextro_broadcast_jobs").select("status").eq("id",jobId).maybeSingle();
-  if(jobError||!job||!["running","failed","paused"].includes(job.status)) return ctx.reply("Broadcast must be running, failed or paused to reconcile.");
+  if(jobError||!job||!["running","failed","paused","cancelled"].includes(job.status)) return ctx.reply("Broadcast not found or cannot be reconciled.");
+  if(job.status==="cancelled"&&action==="retry") return ctx.reply("This broadcast was cancelled. Mark the delivery as sent if confirmed, or create a new broadcast instead of retrying a cancelled job.");
   const {data:recipient,error:recipientError}=await db.from("vextro_broadcast_recipients").select("id").eq("job_id",jobId).eq("telegram_id",telegramId).eq("status","uncertain").maybeSingle();
   if(recipientError||!recipient) return ctx.reply("No uncertain delivery exists for that user and broadcast.");
   if(action==="sent"){
