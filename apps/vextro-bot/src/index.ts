@@ -360,7 +360,11 @@ bot.command("ticket_search", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const term=ctx.message.text.replace(/^\/ticket_search(?:@\w+)?\s*/i,"").trim();
   if(term.length<2||term.length>100) return ctx.reply("Usage: /ticket_search <at least 2 characters>");
-  const {data,error}=await db.from("bot_support_tickets").select("id,telegram_id,subject,status,priority").ilike("subject","%"+term.replace(/[%_]/g,"")+"%").order("updated_at",{ascending:false}).limit(20);
+  const safeTerm=term.replace(/[%,_*(),]/g," ").trim();
+  let query=db.from("bot_support_tickets").select("id,telegram_id,subject,status,priority").order("updated_at",{ascending:false});
+  if(/^\d+$/.test(term)) query=query.or("subject.ilike.%"+safeTerm+"%,telegram_id.eq."+Number(term));
+  else query=query.ilike("subject","%"+safeTerm+"%");
+  const {data,error}=await query.limit(20);
   if(error) return ctx.reply("Ticket search unavailable.");
   if(!data?.length) return ctx.reply("No matching tickets.");
   await ctx.reply(data.map(t=>"["+t.status+"/"+t.priority+"] "+t.id+"\nUser: "+t.telegram_id+"\n"+t.subject).join("\n\n"));
