@@ -9,6 +9,7 @@ import { runHealthCheck, startHealthMonitor } from "./health.js";
 import { registerGuideAdmin } from "./guides.js";
 import { registerUpdateCommands, startUpdateMonitor } from "./updates.js";
 import { registerOwnerMenu } from "./admin-menu.js";
+import { formatOwnerDateTime, parseOwnerDateTime } from "./time.js";
 
 const recentLogs: string[] = [];
 const logStream = { write(chunk: string) {
@@ -536,13 +537,16 @@ bot.command("broadcast_delete", async (ctx) => {
 });
 bot.command("broadcast_schedule", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const match = ctx.message.text.match(/^\/broadcast_schedule(?:@\w+)?\s+([0-9a-f-]{36})\s+(\S+)$/i);
-  if (!match) return ctx.reply("Usage: /broadcast_schedule <uuid> <ISO-8601-with-timezone>");
-  const id = match[1]!, at = new Date(match[2]!);
-  if (!Number.isFinite(at.getTime()) || at.getTime() < Date.now() + 60_000) return ctx.reply("Choose a valid future time at least one minute from now, including timezone offset.");
-  const { data, error } = await db.from("vextro_broadcast_jobs").update({ scheduled_at: at.toISOString(), updated_at: new Date().toISOString() }).eq("id", id).eq("status", "draft").select("id").maybeSingle();
-  if (error || !data) return ctx.reply("Draft not found or schedule could not be saved.");
-  await ctx.reply(`Scheduled for ${at.toISOString()}. It will not send until you explicitly run /broadcast_confirm ${id}.`);
+  const match=ctx.message.text.match(/^\/broadcast_schedule(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
+  if(!match) return ctx.reply("Usage: /broadcast_schedule <uuid> <YYYY-MM-DD HH:mm in Owner timezone>");
+  let at: Date;
+  try { at=parseOwnerDateTime(match[2]!,config.OWNER_TIMEZONE); }
+  catch(error){ return ctx.reply(error instanceof Error?error.message:"Invalid schedule time."); }
+  if(at.getTime()<Date.now()+60_000) return ctx.reply("Choose a future time at least one minute from now.");
+  const id=match[1]!;
+  const {data,error}=await db.from("vextro_broadcast_jobs").update({scheduled_at:at.toISOString(),updated_at:new Date().toISOString()}).eq("id",id).eq("status","draft").select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Draft not found or schedule could not be saved.");
+  await ctx.reply("Broadcast scheduled for "+formatOwnerDateTime(at,config.OWNER_TIMEZONE)+" ("+at.toISOString()+"). It will not send until you explicitly run /broadcast_confirm "+id+".");
 });
 bot.command("broadcast_confirm", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -653,15 +657,17 @@ bot.command("broadcast_status", async (ctx) => {
 });
 bot.command("post_schedule", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const match=ctx.message.text.match(/^\/post_schedule(?:@\w+)?\s+([0-9a-f-]{36})\s+(\S+)$/i);
-  if(!match) return ctx.reply("Usage: /post_schedule <draft-post-uuid> <ISO-8601-with-timezone>");
-  const at=new Date(match[2]!);
-  if(!Number.isFinite(at.getTime())||at.getTime()<Date.now()+60_000) return ctx.reply("Schedule must be at least one minute in the future and include timezone.");
+  const match=ctx.message.text.match(/^\/post_schedule(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
+  if(!match) return ctx.reply("Usage: /post_schedule <draft-post-uuid> <YYYY-MM-DD HH:mm in Owner timezone>");
+  let at: Date;
+  try { at=parseOwnerDateTime(match[2]!,config.OWNER_TIMEZONE); }
+  catch(error){ return ctx.reply(error instanceof Error?error.message:"Invalid schedule time."); }
+  if(at.getTime()<Date.now()+60_000) return ctx.reply("Schedule must be at least one minute in the future.");
   const {data:post,error:postError}=await db.from("dgbot_posts").select("id,state").eq("id",match[1]!).is("deleted_at",null).maybeSingle();
   if(postError||!post||post.state!=="draft") return ctx.reply("Only an existing draft post can be scheduled.");
   const {data,error}=await db.from("vextro_scheduled_posts").insert({post_id:post.id,scheduled_at:at.toISOString(),created_by:ctx.from.id}).select("id").single();
   if(error||!data) return ctx.reply("Could not schedule this post.");
-  await ctx.reply(`Post scheduled: ${data.id}\nTime: ${at.toISOString()}`);
+  await ctx.reply("Post scheduled for "+formatOwnerDateTime(at,config.OWNER_TIMEZONE)+" ("+at.toISOString()+"). Schedule ID: "+data.id);
 });
 bot.command("post_schedules", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
