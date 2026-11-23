@@ -1,4 +1,5 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { decryptBackupPayload, encryptBackupPayload } from "./backup-crypto.js";
 import { db } from "./supabase.js";
 import { config } from "./config.js";
 
@@ -28,28 +29,11 @@ const backupTables: Array<{ name: string; conflict: string }> = [
   { name: "vextro_broadcast_recipients", conflict: "id" },
   { name: "vextro_scheduled_posts", conflict: "id" }
 ];
-type Envelope = { version: 1; algorithm: "aes-256-gcm"; salt: string; iv: string; tag: string; ciphertext: string };
 type Snapshot = { format: "vextro-bot-backup"; version: 1; createdAt: string; tables: Record<string, Record<string, unknown>[]> };
 
 function requirePassphrase() {
   if (!passphrase || passphrase.length < 16) throw new Error("BACKUP_PASSPHRASE must be configured with at least 16 characters");
   return passphrase;
-}
-function encrypt(plain: Buffer): Buffer {
-  const salt = randomBytes(16), iv = randomBytes(12);
-  const key = scryptSync(requirePassphrase(), salt, 32);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
-  const ciphertext = Buffer.concat([cipher.update(plain), cipher.final()]);
-  const envelope: Envelope = { version: 1, algorithm: "aes-256-gcm", salt: salt.toString("hex"), iv: iv.toString("hex"), tag: cipher.getAuthTag().toString("hex"), ciphertext: ciphertext.toString("base64") };
-  return Buffer.from(JSON.stringify(envelope));
-}
-function decrypt(raw: Buffer): Buffer {
-  const envelope = JSON.parse(raw.toString("utf8")) as Envelope;
-  if (envelope.version !== 1 || envelope.algorithm !== "aes-256-gcm") throw new Error("Unsupported backup format");
-  const key = scryptSync(requirePassphrase(), Buffer.from(envelope.salt, "hex"), 32);
-  const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(envelope.iv, "hex"));
-  decipher.setAuthTag(Buffer.from(envelope.tag, "hex"));
-  return Buffer.concat([decipher.update(Buffer.from(envelope.ciphertext, "base64")), decipher.final()]);
 }
 async function collectTable(name: string) {
   const rows: Record<string, unknown>[] = [];
@@ -65,7 +49,7 @@ export async function createBackup(createdBy: number) {
   const tables: Snapshot["tables"] = {};
   for (const table of backupTables) tables[table.name] = await collectTable(table.name);
   const snapshot: Snapshot = { format: "vextro-bot-backup", version: 1, createdAt: new Date().toISOString(), tables };
-  const encrypted = encrypt(Buffer.from(JSON.stringify(snapshot)));
+  const encrypted = encryptBackupPayload(Buffer.from(JSON.stringify(snapshot)), requirePassphrase());
   const sha256 = createHash("sha256").update(encrypted).digest("hex");
   const path = `vextro/${new Date().toISOString().replace(/[:.]/g, "-")}-${randomBytes(4).toString("hex")}.vxb`;
   const { error: uploadError } = await db.storage.from(bucket).upload(path, encrypted, { contentType: "application/octet-stream", upsert: false });
@@ -108,7 +92,7 @@ export async function readBackup(id: string) {
   const encrypted = Buffer.from(await blob.arrayBuffer());
   const actual = createHash("sha256").update(encrypted).digest("hex");
   if (actual !== metadata.sha256 || encrypted.byteLength !== Number(metadata.bytes)) throw new Error("Backup integrity check failed");
-  const snapshot = JSON.parse(decrypt(encrypted).toString("utf8")) as Snapshot;
+  const snapshot = JSON.parse(decryptBackupPayload(encrypted, requirePassphrase()).toString("utf8")) as Snapshot;
   if (snapshot.format !== "vextro-bot-backup" || snapshot.version !== 1 || !snapshot.tables) throw new Error("Invalid backup payload");
   return { metadata, snapshot };
 }
