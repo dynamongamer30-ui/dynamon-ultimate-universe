@@ -67,6 +67,7 @@ async function isMemberId(telegramId: number): Promise<boolean> {
 }
 async function isMember(ctx: Context): Promise<boolean> {
   if (!ctx.from) return false;
+  if (ownerOnly(ctx)) return true;
   const results = await Promise.all([config.REQUIRED_CHANNEL_ID, config.REQUIRED_GROUP_ID].map(async (chatId) => {
     try {
       const member = await ctx.telegram.getChatMember(chatId, ctx.from!.id);
