@@ -53,7 +53,7 @@ async function sendOwnerArchive(encrypted: Buffer, ownerId: number, sha256: stri
   bytes.set(encrypted);
   const form = new FormData();
   form.set("chat_id", String(ownerId));
-  form.set("caption", "VEXTRO encrypted backup\nSHA-256: " + sha256 + "\nKeep this archive private. Restore using the bot backup controls.");
+  form.set("caption", "Dynamon Assistant encrypted backup\nSHA-256: " + sha256 + "\nKeep this archive private. Restore using the bot backup controls.");
   form.set("document", new Blob([bytes.buffer], { type: "application/octet-stream" }), filename);
   const response = await fetch("https://api.telegram.org/bot" + config.BOT_TOKEN + "/sendDocument", {
     method: "POST",
@@ -266,8 +266,8 @@ export function startBackupScheduler(ownerId: number, intervalHours: number, not
         if (notify) await notify("Scheduled encrypted backup completed and verified. ID: " + backup.id + " | " + backup.bytes + " bytes | offsite: " + (backup.offsite_verified_at ? "verified" : backup.offsite_error ? "failed" : "not configured"));
       }
     } catch (error) {
-      console.error("VEXTRO encrypted backup scheduler failed", error);
-      if (notify) { try { await notify("VEXTRO scheduled backup failed: " + (error instanceof Error ? error.message : "unknown error")); } catch {} }
+      console.error("Dynamon Assistant encrypted backup scheduler failed", error);
+      if (notify) { try { await notify("Dynamon Assistant scheduled backup failed: " + (error instanceof Error ? error.message : "unknown error")); } catch {} }
     }
   };
   void run();
