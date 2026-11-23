@@ -585,14 +585,14 @@ bot.command("broadcast_confirm", async (ctx) => {
   }).eq("id",id).eq("status","draft");
   if (updateError) return ctx.reply("Could not activate the queue. No messages have been sent.");
   await writeAudit("broadcast.confirmed", null, `Broadcast ${id} confirmed for ${recipients.length} users`);
-  await ctx.reply(`Broadcast confirmed. ${recipients.length} recipients queued. Delivery will begin at ${job.scheduled_at ? new Date(job.scheduled_at).toLocaleString() : "the next worker cycle"}.`);
+  await ctx.reply(`Broadcast confirmed. ${recipients.length} recipients queued. Delivery will begin at ${job.scheduled_at ? formatOwnerDateTime(job.scheduled_at,config.OWNER_TIMEZONE) : "the next worker cycle"}.`);
 });
 bot.command("broadcasts", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const {data,error}=await db.from("vextro_broadcast_jobs").select("id,status,total_count,sent_count,failed_count,scheduled_at,created_at").order("created_at",{ascending:false}).limit(20);
   if(error) return ctx.reply("Broadcast history unavailable.");
   if(!data?.length) return ctx.reply("No broadcast jobs.");
-  await ctx.reply(data.map(x=>x.id+" | "+x.status+"\n"+(x.sent_count??0)+"/"+x.total_count+" sent, "+(x.failed_count??0)+" failed\n"+(x.scheduled_at?new Date(x.scheduled_at).toLocaleString():"unscheduled")).join("\n\n"));
+  await ctx.reply(data.map(x=>x.id+" | "+x.status+"\n"+(x.sent_count??0)+"/"+x.total_count+" sent, "+(x.failed_count??0)+" failed\n"+(x.scheduled_at?formatOwnerDateTime(x.scheduled_at,config.OWNER_TIMEZONE):"unscheduled")).join("\n\n"));
 });
 bot.command("broadcast_test", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -653,7 +653,7 @@ bot.command("broadcast_status", async (ctx) => {
     db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",id).eq("status","failed"),
     db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",id).in("status",["pending","sending"])
   ]);
-  await ctx.reply(`Broadcast ${id}\nStatus: ${job.status}\nTotal: ${count??0}\nSent: ${sent??0}\nFailed/retrying: ${failed??0}\nPending: ${pending??0}\nScheduled: ${job.scheduled_at?new Date(job.scheduled_at).toLocaleString():"immediate"}`);
+  await ctx.reply(`Broadcast ${id}\nStatus: ${job.status}\nTotal: ${count??0}\nSent: ${sent??0}\nFailed/retrying: ${failed??0}\nPending: ${pending??0}\nScheduled: ${job.scheduled_at?formatOwnerDateTime(job.scheduled_at,config.OWNER_TIMEZONE):"immediate"}`);
 });
 bot.command("post_schedule", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -674,7 +674,7 @@ bot.command("post_schedules", async (ctx) => {
   const {data,error}=await db.from("vextro_scheduled_posts").select("id,post_id,scheduled_at,status,last_error").order("scheduled_at",{ascending:true}).limit(20);
   if(error) return ctx.reply("Schedule list unavailable.");
   if(!data?.length) return ctx.reply("No scheduled posts.");
-  await ctx.reply(data.map(x=>`${x.id} | ${x.status}\nPost: ${x.post_id}\n${new Date(x.scheduled_at).toLocaleString()}${x.last_error?"\n"+x.last_error:""}`).join("\n\n"));
+  await ctx.reply(data.map(x=>`${x.id} | ${x.status}\nPost: ${x.post_id}\n${formatOwnerDateTime(x.scheduled_at,config.OWNER_TIMEZONE)}${x.last_error?"\n"+x.last_error:""}`).join("\n\n"));
 });
 bot.command("post_schedule_retry", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -934,7 +934,7 @@ bot.command("settings", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   await ctx.reply("VEXTRO BOT settings\nOwner-only administration: enabled\nRequired channel: "+config.REQUIRED_CHANNEL_ID+
     "\nRequired group: "+config.REQUIRED_GROUP_ID+"\nPublish channel: "+(config.PUBLISH_CHANNEL_ID??"not configured")+
-    "\nWebsite: "+config.WEBSITE_URL+"\nBackup interval: "+config.BACKUP_INTERVAL_HOURS+" hours"+
+    \nWebsite: "+config.WEBSITE_URL+"\nOwner timezone: "+config.OWNER_TIMEZONE+"\nBackup interval: +config.BACKUP_INTERVAL_HOURS+" hours"+
     "\nBackup retention: "+config.BACKUP_RETENTION_DAYS+" days\nBackup passphrase: "+(config.BACKUP_PASSPHRASE?"configured":"not configured")+"\nOffsite endpoint: "+(config.BACKUP_OFFSITE_URL&&config.BACKUP_OFFSITE_TOKEN?"configured":"not configured")+"\nRelease repository: "+config.GITHUB_REPOSITORY+
     "\nDeployment webhook: "+(config.DEPLOY_WEBHOOK_URL?"configured":"not configured")+
     "\nNo secrets are displayed.");
