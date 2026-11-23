@@ -1,0 +1,78 @@
+name: VEXTRO BOT Telegram Deployment ZIP
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/vextro-bot/**"
+      - ".github/workflows/vextro-bot-release.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vextro-bot-telegram-release-main
+  cancel-in-progress: false
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/vextro-bot
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 26
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: apps/vextro-bot/package.json
+
+      - name: Generate exact dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Compile production runtime
+        run: npm run build
+
+      - name: Assemble Telegram hosting ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$GITHUB_WORKSPACE/release/VEXTRO-BOT"
+          mkdir -p "$OUT"
+          cp package.json package-lock.json .env.example "$OUT/"
+          cp -R dist "$OUT/"
+          cat > "$OUT/BUILD.txt" <<EOF
+          VEXTRO BOT Telegram deployment bundle
+          Repository: dynamongamer30-ui/dynamon-ultimate-universe
+          Branch: main
+          Commit: $GITHUB_SHA
+          Runtime: Node.js 26
+          Start command: npm start
+          Hosting target: KataBump
+          Build verification: type-check, unit tests, production compilation passed
+          EOF
+          cd "$GITHUB_WORKSPACE/release"
+          zip -qr "$GITHUB_WORKSPACE/VEXTRO-BOT-KataBump.zip" VEXTRO-BOT
+
+      - name: Upload Telegram deployment ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: VEXTRO-BOT-KataBump
+          path: VEXTRO-BOT-KataBump.zip
+          if-no-files-found: error
+          retention-days: 30
