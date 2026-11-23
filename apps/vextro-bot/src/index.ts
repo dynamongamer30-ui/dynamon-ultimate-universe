@@ -538,9 +538,18 @@ bot.command("broadcast_preview", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id = ctx.message.text.split(/\s+/)[1];
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /broadcast_preview <uuid>");
-  const { data, error } = await db.from("vextro_broadcast_jobs").select("body,status,scheduled_at,total_count").eq("id", id).maybeSingle();
+  const { data, error } = await db.from("vextro_broadcast_jobs").select("body,status,scheduled_at,total_count,format").eq("id", id).maybeSingle();
   if (error || !data) return ctx.reply("Broadcast not found.");
   await ctx.reply(`Preview [${data.status}]\nRecipients: ${data.total_count}\nScheduled: ${data.scheduled_at ? new Date(data.scheduled_at).toLocaleString() : "immediately after confirmation"}\n\n${data.body}`);
+});
+bot.command("broadcast_format", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/broadcast_format(?:@\w+)?\s+([0-9a-f-]{36})\s+(plain|html|markdownv2)$/i);
+  if(!m) return ctx.reply("Usage: /broadcast_format <uuid> <plain|html|markdownv2>");
+  const format=m[2]!.toLowerCase()==="plain"?"plain":m[2]!.toUpperCase()==="HTML"?"HTML":"MarkdownV2";
+  const {data,error}=await db.from("vextro_broadcast_jobs").update({format,updated_at:new Date().toISOString()}).eq("id",m[1]!).eq("status","draft").select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Only an existing draft can change format.");
+  await ctx.reply("Broadcast format set to "+format+". Preview and test it before confirmation.");
 });
 bot.command("broadcast_edit", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -623,9 +632,9 @@ bot.command("broadcast_test", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id=ctx.message.text.split(/\s+/)[1];
   if(!id) return ctx.reply("Usage: /broadcast_test <broadcast-uuid>");
-  const {data,error}=await db.from("vextro_broadcast_jobs").select("body").eq("id",id).maybeSingle();
+  const {data,error}=await db.from("vextro_broadcast_jobs").select("body,format").eq("id",id).maybeSingle();
   if(error||!data) return ctx.reply("Broadcast not found.");
-  try { await bot.telegram.sendMessage(config.OWNER_TELEGRAM_ID,"VEXTRO broadcast test\n\n"+data.body); await ctx.reply("Test message delivered to Owner chat only."); }
+  try { const parseMode=data.format==="HTML"?"HTML":data.format==="MarkdownV2"?"MarkdownV2":undefined; await bot.telegram.sendMessage(config.OWNER_TELEGRAM_ID,"VEXTRO broadcast test\n\n"+data.body,parseMode?{parse_mode:parseMode}:{}); await ctx.reply("Test message delivered to Owner chat only."); }
   catch(sendError) { log.error({err:sendError},"Broadcast test failed"); await ctx.reply("Test delivery failed."); }
 });
 bot.command("broadcast_retry", async (ctx) => {
