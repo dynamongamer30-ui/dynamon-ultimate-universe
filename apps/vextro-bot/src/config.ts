@@ -15,6 +15,10 @@ const schema = z.object({
   BACKUP_BUCKET: z.string().min(1).default("vextro-backups"),
   BACKUP_INTERVAL_HOURS: z.coerce.number().int().min(1).max(720).default(24),
   BACKUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  GITHUB_REPOSITORY: z.string().default("dynamongamer30-ui/dynamon-ultimate-universe"),
+  DEPLOY_WEBHOOK_URL: z.string().url().optional(),
+  DEPLOY_WEBHOOK_SECRET: z.string().min(16).optional(),
+  UPDATE_CHECK_INTERVAL_HOURS: z.coerce.number().int().min(1).max(72).default(6),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info")
 });
 
