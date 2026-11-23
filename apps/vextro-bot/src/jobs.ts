@@ -55,7 +55,8 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string) {
             await db.from("vextro_broadcast_recipients").update({ status: "sent", sent_at: new Date().toISOString(), last_error: null, updated_at: new Date().toISOString() }).eq("id", recipient.id);
           } catch (sendError) {
             const message = sendError instanceof Error ? sendError.message.slice(0, 500) : "Telegram delivery failed";
-            const retryAfter = Number((sendError as { response?: { parameters?: { retry_after?: number } } })?.response?.parameters?.retry_after ?? 0);\n            const delay = retryAfter > 0 ? retryAfter + 2 : Math.min(3600, 30 * (2 ** Math.max(0, Number(recipient.attempts) - 1)));
+            const retryAfter = Number((sendError as { response?: { parameters?: { retry_after?: number } } })?.response?.parameters?.retry_after ?? 0);
+            const delay = retryAfter > 0 ? retryAfter + 2 : Math.min(3600, 30 * (2 ** Math.max(0, Number(recipient.attempts) - 1)));
             await db.from("vextro_broadcast_recipients").update({
               status: "failed", last_error: message, next_attempt_at: new Date(Date.now() + delay * 1000).toISOString(), updated_at: new Date().toISOString()
             }).eq("id", recipient.id);
