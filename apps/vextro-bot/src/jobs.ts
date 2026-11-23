@@ -54,8 +54,12 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
   const broadcastLoop = async () => {
     while (!stopped) {
       try {
-        await db.from("vextro_broadcast_recipients").update({ status: "failed", next_attempt_at: new Date().toISOString(), last_error: "Recovered stale sending lease", updated_at: new Date().toISOString() })
-          .eq("status", "sending").lt("updated_at", new Date(Date.now() - 10 * 60_000).toISOString());
+        await db.from("vextro_broadcast_recipients").update({
+          status: "uncertain",
+          next_attempt_at: null,
+          last_error: "Worker lease expired after a send attempt. Delivery outcome is unknown; Owner reconciliation is required to prevent duplicate messages.",
+          updated_at: new Date().toISOString()
+        }).eq("status", "sending").lt("updated_at", new Date(Date.now() - 10 * 60_000).toISOString());
         const { data: jobs, error: jobsError } = await db.from("vextro_broadcast_jobs")
           .select("id").eq("status", "queued").lte("scheduled_at", new Date().toISOString()).limit(10);
         if (jobsError) throw jobsError;
@@ -78,6 +82,7 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
             }).eq("id", recipient.id);
             continue;
           }
+          let deliveryAttempted=false;
           try {
             const { data: job, error: jobError } = await db.from("vextro_broadcast_jobs")
               .select("body,format,media,buttons,translations").eq("id", recipient.job_id).single();
@@ -94,21 +99,28 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
             if(media?.file_id){
               if(body.length>1024) throw new Error("Broadcast media caption exceeds Telegram's 1024-character limit");
               const mediaOptions={caption:body,...options};
+              deliveryAttempted=true;
               if(media.type==="photo") await bot.telegram.sendPhoto(Number(recipient.telegram_id),media.file_id,mediaOptions);
               else if(media.type==="video") await bot.telegram.sendVideo(Number(recipient.telegram_id),media.file_id,mediaOptions);
               else if(media.type==="document") await bot.telegram.sendDocument(Number(recipient.telegram_id),media.file_id,mediaOptions);
               else if(media.type==="animation") await bot.telegram.sendAnimation(Number(recipient.telegram_id),media.file_id,mediaOptions);
               else throw new Error("Unsupported broadcast media type");
             }else{
+              deliveryAttempted=true;
               await bot.telegram.sendMessage(Number(recipient.telegram_id),body,options);
             }
             await db.from("vextro_broadcast_recipients").update({ status: "sent", sent_at: new Date().toISOString(), last_error: null, updated_at: new Date().toISOString() }).eq("id", recipient.id);
           } catch (sendError) {
             const message = sendError instanceof Error ? sendError.message.slice(0, 500) : "Telegram delivery failed";
+            const apiCode = Number((sendError as { response?: { error_code?: number } })?.response?.error_code ?? 0);
             const retryAfter = Number((sendError as { response?: { parameters?: { retry_after?: number } } })?.response?.parameters?.retry_after ?? 0);
+            const uncertain = deliveryAttempted && (!apiCode || apiCode >= 500);
             const delay = retryAfter > 0 ? retryAfter + 2 : Math.min(3600, 30 * (2 ** Math.max(0, Number(recipient.attempts) - 1)));
             await db.from("vextro_broadcast_recipients").update({
-              status: "failed", last_error: message, next_attempt_at: new Date(Date.now() + delay * 1000).toISOString(), updated_at: new Date().toISOString()
+              status: uncertain ? "uncertain" : "failed",
+              last_error: uncertain ? "Delivery outcome unknown: " + message + ". Owner must reconcile before retrying." : message,
+              next_attempt_at: uncertain ? null : new Date(Date.now() + delay * 1000).toISOString(),
+              updated_at: new Date().toISOString()
             }).eq("id", recipient.id);
           }
           await sleep(40);
@@ -117,18 +129,27 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, owne
           .in("status", ["running"]).limit(50);
         if (activeError) throw activeError;
         for (const job of active ?? []) {
-          const { data: remaining, error: remainingError } = await db.from("vextro_broadcast_recipients").select("id")
-            .eq("job_id", job.id).in("status", ["pending", "sending"]).limit(1);
-          if (remainingError) throw remainingError;
-          if (!remaining?.length) {
-            const [{ count: sent }, { count: failed }] = await Promise.all([
-              db.from("vextro_broadcast_recipients").select("*", { count: "exact", head: true }).eq("job_id", job.id).eq("status", "sent"),
-              db.from("vextro_broadcast_recipients").select("*", { count: "exact", head: true }).eq("job_id", job.id).eq("status", "failed")
-            ]);
-            const { data: completed } = await db.from("vextro_broadcast_jobs").update({ status: "completed", sent_count: sent ?? 0, failed_count: failed ?? 0, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-              .eq("id", job.id).eq("status", "running").select("id").maybeSingle();
-            if (completed && ownerId) {
-              try { await bot.telegram.sendMessage(ownerId, "Broadcast completed: " + job.id + "\nSent: " + (sent ?? 0) + "\nFailed: " + (failed ?? 0)); } catch {}
+          const [{count:pending},{count:sending},{count:retryableFailed},{count:sent},{count:failed},{count:uncertain}] = await Promise.all([
+            db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",job.id).eq("status","pending"),
+            db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",job.id).eq("status","sending"),
+            db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",job.id).eq("status","failed").lt("attempts",5),
+            db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",job.id).eq("status","sent"),
+            db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",job.id).eq("status","failed"),
+            db.from("vextro_broadcast_recipients").select("*",{count:"exact",head:true}).eq("job_id",job.id).eq("status","uncertain")
+          ]);
+          if(!(pending||sending||retryableFailed)){
+            const finalStatus=(failed??0)+(uncertain??0)>0?"failed":"completed";
+            const { data: completed } = await db.from("vextro_broadcast_jobs").update({
+              status:finalStatus,sent_count:sent??0,failed_count:(failed??0)+(uncertain??0),
+              completed_at:new Date().toISOString(),updated_at:new Date().toISOString()
+            }).eq("id",job.id).eq("status","running").select("id").maybeSingle();
+            if(completed&&ownerId){
+              try{
+                const note=uncertain
+                  ? "Broadcast requires manual delivery reconciliation. Uncertain recipients: "+uncertain+". Use /broadcast_reconcile "+job.id+" <telegram-user-id> sent|retry after checking each chat."
+                  : "Broadcast "+(finalStatus==="completed"?"completed":"finished with failures")+": "+job.id+"\nSent: "+(sent??0)+"\nFailed: "+(failed??0);
+                await bot.telegram.sendMessage(ownerId,note);
+              }catch{}
             }
           }
         }
