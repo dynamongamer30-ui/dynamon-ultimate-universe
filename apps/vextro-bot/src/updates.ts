@@ -38,6 +38,23 @@ export async function requestDeployment(bot: Telegraf<Context>, tag: string, own
   await db.from("vextro_update_approvals").update({ status: "deploy_requested", updated_at: new Date().toISOString() }).eq("tag", tag);
   return { backupId: backup.id };
 }
+export async function requestRollback(bot: Telegraf<Context>, tag: string, ownerId: number) {
+  if (!config.DEPLOY_WEBHOOK_URL || !config.DEPLOY_WEBHOOK_SECRET) throw new Error("Configure the hosting rollback webhook first");
+  const { data: approval, error } = await db.from("vextro_update_approvals").select("tag,status").eq("tag", tag).maybeSingle();
+  if (error || !approval || approval.status !== "deploy_requested") throw new Error("Only a previously deployed approved release can be rolled back");
+  if (!config.BACKUP_PASSPHRASE) throw new Error("Encrypted safety backup is required before rollback");
+  const health = await runHealthCheck(bot);
+  const backup = await createBackup(ownerId);
+  const response = await fetch(config.DEPLOY_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + config.DEPLOY_WEBHOOK_SECRET },
+    body: JSON.stringify({ action: "rollback", repository: config.GITHUB_REPOSITORY, release_tag: tag, health_before_rollback: health, safety_backup_id: backup.id }),
+    signal: AbortSignal.timeout(15_000)
+  });
+  if (!response.ok) throw new Error("Hosting rollback webhook rejected request with HTTP " + response.status);
+  await db.from("vextro_update_approvals").update({ status: "rollback_requested", updated_at: new Date().toISOString() }).eq("tag", tag);
+  return { backupId: backup.id };
+}
 export function registerUpdateCommands(bot: Telegraf<Context>, ownerOnly: (ctx: Context) => boolean, ownerId: number) {
   bot.command("update_check", async (ctx) => {
     if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
@@ -66,6 +83,15 @@ export function registerUpdateCommands(bot: Telegraf<Context>, ownerOnly: (ctx: 
       const result = await requestDeployment(bot, tag, ownerId);
       await ctx.reply("Deployment request accepted by the hosting webhook. Safety backup: " + result.backupId + ". Hosting health checks and rollback must be confirmed by the deployment provider.");
     } catch (error) { await ctx.reply("Update was not installed: " + (error instanceof Error ? error.message : "unknown error")); }
+  });
+  bot.command("update_rollback", async (ctx) => {
+    if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
+    const tag = ctx.message.text.split(/\s+/)[1];
+    if (!tag) return ctx.reply("Usage: /update_rollback <previously-deployed-release-tag>");
+    try {
+      const result = await requestRollback(bot, tag, ownerId);
+      await ctx.reply("Rollback request accepted by hosting webhook. Safety backup: " + result.backupId + ". Verify the application health in the host panel.");
+    } catch (error) { await ctx.reply("Rollback was not requested: " + (error instanceof Error ? error.message : "unknown error")); }
   });
   bot.command("update_status", async (ctx) => {
     if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
