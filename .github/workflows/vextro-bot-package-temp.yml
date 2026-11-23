@@ -1,6 +1,8 @@
 name: VEXTRO BOT clean package
 on:
-  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/vextro-bot-package-temp.yml"
 jobs:
   package:
     runs-on: ubuntu-latest
