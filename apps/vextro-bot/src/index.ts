@@ -736,6 +736,59 @@ bot.command("unban_user", async (ctx) => {
   await ctx.reply(`User ${id} restriction lifted.`);
 });
 
+bot.command("language_stats", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const [{count:en},{count:hi},{count:vi}]=await Promise.all([
+    db.from("bot_users").select("*",{count:"exact",head:true}).eq("language","en"),
+    db.from("bot_users").select("*",{count:"exact",head:true}).eq("language","hi"),
+    db.from("bot_users").select("*",{count:"exact",head:true}).eq("language","vi")
+  ]);
+  await ctx.reply("Language distribution\nEnglish: "+(en??0)+"\nHindi (Roman): "+(hi??0)+"\nVietnamese: "+(vi??0));
+});
+bot.command("user_language", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/user_language(?:@\w+)?\s+(\d+)\s+(en|hi|vi)$/i);
+  if(!m) return ctx.reply("Usage: /user_language <telegram-id> <en|hi|vi>");
+  const id=Number(m[1]);
+  const {data,error}=await db.from("bot_users").update({language:m[2],updated_at:new Date().toISOString()}).eq("telegram_id",id).select("telegram_id").maybeSingle();
+  if(error||!data) return ctx.reply("Registered user not found or language update failed.");
+  await writeAudit("user.language_changed",id,"Owner set language to "+m[2]);
+  await ctx.reply("Language updated for "+id+".");
+});
+bot.command("bot_status", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const memory=process.memoryUsage();
+  await ctx.reply("VEXTRO BOT runtime status\nUptime: "+Math.floor(process.uptime()/60)+" minutes\nNode: "+process.version+
+    "\nMemory RSS: "+Math.round(memory.rss/1024/1024)+" MB\nPublishing: "+(config.PUBLISH_CHANNEL_ID?"configured":"disabled")+
+    "\nEncrypted backups: "+(config.BACKUP_PASSPHRASE?"configured":"not configured")+
+    "\nMaintenance: "+(maintenanceMode?"ON":"OFF"));
+});
+bot.command("settings", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  await ctx.reply("VEXTRO BOT settings\nOwner-only administration: enabled\nRequired channel: "+config.REQUIRED_CHANNEL_ID+
+    "\nRequired group: "+config.REQUIRED_GROUP_ID+"\nPublish channel: "+(config.PUBLISH_CHANNEL_ID??"not configured")+
+    "\nWebsite: "+config.WEBSITE_URL+"\nBackup interval: "+config.BACKUP_INTERVAL_HOURS+" hours"+
+    "\nBackup retention: "+config.BACKUP_RETENTION_DAYS+" days\nRelease repository: "+config.GITHUB_REPOSITORY+
+    "\nDeployment webhook: "+(config.DEPLOY_WEBHOOK_URL?"configured":"not configured")+
+    "\nNo secrets are displayed.");
+});
+bot.command("audit_search", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const term=ctx.message.text.replace(/^\/audit_search(?:@\w+)?\s*/i,"").trim();
+  if(term.length<2||term.length>60) return ctx.reply("Usage: /audit_search <action or reason>");
+  const {data,error}=await db.from("dgbot_audit_log").select("action,actor_id,target_id,reason,created_at").or("action.ilike.%"+term+"%,reason.ilike.%"+term+"%").order("created_at",{ascending:false}).limit(20);
+  if(error) return ctx.reply("Audit search unavailable.");
+  await ctx.reply(data?.length?data.map(x=>x.action+" | target "+(x.target_id??"—")+"\n"+x.reason+"\n"+new Date(x.created_at).toLocaleString()).join("\n\n"):"No matching audit events.");
+});
+bot.command("moderation_stats", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const [{count:warnings},{count:restricted},{count:rules}]=await Promise.all([
+    db.from("vextro_moderation_events").select("*",{count:"exact",head:true}).eq("event_type","warning").gte("created_at",new Date(Date.now()-24*3600_000).toISOString()),
+    db.from("vextro_moderation_events").select("*",{count:"exact",head:true}).eq("event_type","restricted").gte("created_at",new Date(Date.now()-24*3600_000).toISOString()),
+    db.from("dgbot_moderation_rules").select("*",{count:"exact",head:true}).is("deleted_at",null)
+  ]);
+  await ctx.reply("Moderation last 24 hours\nWarnings/deletions: "+(warnings??0)+"\nRestrictions: "+(restricted??0)+"\nActive rules: "+(rules??0));
+});
 bot.command("analytics", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const [users, links, tickets, posts, backups] = await Promise.all([
@@ -889,7 +942,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
