@@ -52,6 +52,19 @@ async function getLanguage(telegramId: number): Promise<Lang> {
   if (error) throw error;
   return data?.language === "hi" || data?.language === "vi" ? data.language : "en";
 }
+async function isMemberId(telegramId: number): Promise<boolean> {
+  const results = await Promise.all([config.REQUIRED_CHANNEL_ID, config.REQUIRED_GROUP_ID].map(async (chatId) => {
+    try {
+      const member = await bot.telegram.getChatMember(chatId, telegramId);
+      return ["creator", "administrator", "member"].includes(member.status) || (member.status === "restricted" && member.is_member);
+    } catch (error) {
+      const code = (error as { response?: { error_code?: number } })?.response?.error_code;
+      if (code === 400) return false;
+      throw error;
+    }
+  }));
+  return results.every(Boolean);
+}
 async function isMember(ctx: Context): Promise<boolean> {
   if (!ctx.from) return false;
   const results = await Promise.all([config.REQUIRED_CHANNEL_ID, config.REQUIRED_GROUP_ID].map(async (chatId) => {
@@ -492,7 +505,13 @@ bot.command("broadcast_confirm", async (ctx) => {
   for (let from=0; ; from+=1000) {
     const { data, error: usersError } = await db.from("bot_users").select("telegram_id").order("telegram_id").range(from, from+999);
     if (usersError) return ctx.reply("Could not load recipient list; broadcast was not queued.");
-    for (const user of data ?? []) if (!banned.has(Number(user.telegram_id))) recipients.push({ job_id:id, telegram_id:Number(user.telegram_id) });
+    const candidates=(data??[]).filter(user=>!banned.has(Number(user.telegram_id)));
+    for(let i=0;i<candidates.length;i+=10){
+      const batch=candidates.slice(i,i+10);
+      const checked=await Promise.all(batch.map(async user=>({id:Number(user.telegram_id),member:await isMemberId(Number(user.telegram_id))})).map(p=>p.catch(error=>({error}))));
+      if(checked.some(item=>"error" in item)) return ctx.reply("Membership verification failed; broadcast remains a draft and no messages were queued.");
+      for(const item of checked) if(item.member) recipients.push({job_id:id,telegram_id:item.id});
+    }
     if (!data || data.length < 1000) break;
   }
   if (!recipients.length) return ctx.reply("No registered recipients. Broadcast remains a draft.");
