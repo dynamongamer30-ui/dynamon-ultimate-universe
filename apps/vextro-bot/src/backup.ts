@@ -27,7 +27,11 @@ const backupTables: Array<{ name: string; conflict: string }> = [
   { name: "dgbot_user_state", conflict: "telegram_id" },
   { name: "vextro_broadcast_jobs", conflict: "id" },
   { name: "vextro_broadcast_recipients", conflict: "id" },
-  { name: "vextro_scheduled_posts", conflict: "id" }
+  { name: "vextro_scheduled_posts", conflict: "id" },
+  { name: "vextro_runtime_settings", conflict: "key" },
+  { name: "vextro_moderation_events", conflict: "id" },
+  { name: "vextro_update_approvals", conflict: "tag" },
+  { name: "dgbot_backup_runs", conflict: "id" }
 ];
 type Snapshot = { format: "vextro-bot-backup"; version: 1; createdAt: string; tables: Record<string, Record<string, unknown>[]> };
 
