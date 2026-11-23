@@ -481,6 +481,24 @@ bot.command("broadcast_preview", async (ctx) => {
   if (error || !data) return ctx.reply("Broadcast not found.");
   await ctx.reply(`Preview [${data.status}]\nRecipients: ${data.total_count}\nScheduled: ${data.scheduled_at ? new Date(data.scheduled_at).toLocaleString() : "immediately after confirmation"}\n\n${data.body}`);
 });
+bot.command("broadcast_edit", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const m=ctx.message.text.match(/^\/broadcast_edit(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
+  if(!m) return ctx.reply("Usage: /broadcast_edit <broadcast-uuid> <new message>");
+  const body=m[2]!.trim();
+  if(!body||body.length>4000) return ctx.reply("Broadcast message must be 1–4000 characters.");
+  const {data,error}=await db.from("vextro_broadcast_jobs").update({body,updated_at:new Date().toISOString()}).eq("id",m[1]!).eq("status","draft").select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Only an existing draft can be edited.");
+  await ctx.reply("Broadcast draft updated. Preview it again before confirmation.");
+});
+bot.command("broadcast_delete", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\s+/)[1];
+  if(!id) return ctx.reply("Usage: /broadcast_delete <broadcast-uuid>");
+  const {data,error}=await db.from("vextro_broadcast_jobs").delete().eq("id",id).eq("status","draft").select("id").maybeSingle();
+  if(error||!data) return ctx.reply("Only an unconfirmed draft can be deleted.");
+  await ctx.reply("Broadcast draft deleted.");
+});
 bot.command("broadcast_schedule", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const match = ctx.message.text.match(/^\/broadcast_schedule(?:@\w+)?\s+([0-9a-f-]{36})\s+(\S+)$/i);
@@ -1101,7 +1119,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /reopen_ticket, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_edit, /broadcast_delete, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /welcome_set, /welcome_preview, /welcome_reset, /language_stats, /user_language, /bot_status, /settings, /audit_search, /moderation_stats, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove, /allow_hosts, /allow_host, /remove_allow_host, /group_ban, /group_unban, /mute_user, /unmute_user, /warn_user.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
