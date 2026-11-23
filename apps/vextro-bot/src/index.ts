@@ -33,10 +33,10 @@ const messages: Record<Lang, { welcome: string; member: string; choose: string; 
   vi: { welcome: "Chào mừng bạn đến với VEXTRO BOT.", member: "Hãy tham gia cả kênh và nhóm bắt buộc, sau đó nhấn Verify.", choose: "Chọn ngôn ngữ của bạn.", unlinked: "Chưa liên kết tài khoản website.", linked: "Tài khoản website đã được liên kết.", linkCreated: "Liên kết hết hạn sau 10 phút. Mở liên kết và đăng nhập website:", help: "Lệnh: /start, /language, /account, /link, /unlink_status, /unlink, /membership_status, /guides, /rules, /support, /my_tickets, /ticket_reply, /help", support: "Dùng /support kèm danh mục và tiêu đề, nội dung ở dòng tiếp theo. Trong phiếu đang mở, bạn có thể gửi ảnh, tài liệu, video, âm thanh hoặc tin nhắn thoại. Dùng /my_tickets và /ticket_reply để tiếp tục.", ticketCreated: "Đã tạo phiếu hỗ trợ.", error: "Đã xảy ra lỗi. Vui lòng thử lại sau." }
 };
 
-const menuLabels: Record<Lang, {account:string;language:string;guides:string;rules:string;support:string;tickets:string;membership:string;help:string;about:string;home:string;verify:string;createLink:string;unlinkStatus:string;joinChannel:string;joinGroup:string}> = {
-  en:{account:"Account",language:"Language",guides:"Guides",rules:"Rules",support:"Support",tickets:"My tickets",membership:"Membership",help:"Help",about:"About",home:"Home",verify:"Verify membership",createLink:"Create website link",unlinkStatus:"Unlink status",joinChannel:"Join channel",joinGroup:"Join group"},
-  hi:{account:"Khata",language:"Bhasha",guides:"Guides",rules:"Niyam",support:"Sahayata",tickets:"Mere tickets",membership:"Sadasyata",help:"Madad",about:"Parichay",home:"Home",verify:"Membership verify karein",createLink:"Website link banayein",unlinkStatus:"Unlink status",joinChannel:"Channel join karein",joinGroup:"Group join karein"},
-  vi:{account:"Tài khoản",language:"Ngôn ngữ",guides:"Hướng dẫn",rules:"Quy định",support:"Hỗ trợ",tickets:"Phiếu của tôi",membership:"Thành viên",help:"Trợ giúp",about:"Giới thiệu",home:"Trang chủ",verify:"Xác minh thành viên",createLink:"Tạo liên kết website",unlinkStatus:"Trạng thái hủy liên kết",joinChannel:"Tham gia kênh",joinGroup:"Tham gia nhóm"}
+const menuLabels: Record<Lang, {account:string;language:string;guides:string;rules:string;support:string;tickets:string;membership:string;help:string;about:string;home:string;verify:string;createLink:string;unlinkStatus:string;unlink:string;joinChannel:string;joinGroup:string}> = {
+  en:{account:"Account",language:"Language",guides:"Guides",rules:"Rules",support:"Support",tickets:"My tickets",membership:"Membership",help:"Help",about:"About",home:"Home",verify:"Verify membership",createLink:"Create website link",unlinkStatus:"Unlink status",unlink:"Unlink account",joinChannel:"Join channel",joinGroup:"Join group"},
+  hi:{account:"Khata",language:"Bhasha",guides:"Guides",rules:"Niyam",support:"Sahayata",tickets:"Mere tickets",membership:"Sadasyata",help:"Madad",about:"Parichay",home:"Home",verify:"Membership verify karein",createLink:"Website link banayein",unlinkStatus:"Unlink status",unlink:"Account unlink karein",joinChannel:"Channel join karein",joinGroup:"Group join karein"},
+  vi:{account:"Tài khoản",language:"Ngôn ngữ",guides:"Hướng dẫn",rules:"Quy định",support:"Hỗ trợ",tickets:"Phiếu của tôi",membership:"Thành viên",help:"Trợ giúp",about:"Giới thiệu",home:"Trang chủ",verify:"Xác minh thành viên",createLink:"Tạo liên kết website",unlinkStatus:"Trạng thái hủy liên kết",unlink:"Hủy liên kết tài khoản",joinChannel:"Tham gia kênh",joinGroup:"Tham gia nhóm"}
 };
 function mainMenu(language: Lang) {
   const t=menuLabels[language];
@@ -240,7 +240,7 @@ bot.action("account:open", async (ctx) => {
     const link = await accountStatus(ctx.from.id);
     const detail = link ? "\nLinked: "+formatOwnerDateTime(link.linked_at,config.OWNER_TIMEZONE)+"\nUnlink eligible: "+formatOwnerDateTime(link.unlink_eligible_at,config.OWNER_TIMEZONE) : "";
     const keyboard=link
-      ? Markup.inlineKeyboard([[Markup.button.callback(menuLabels[lang].unlinkStatus,"account:unlink-status")],[Markup.button.callback(menuLabels[lang].home,"menu:home")]])
+      ? Markup.inlineKeyboard([[Markup.button.callback(menuLabels[lang].unlinkStatus,"account:unlink-status")],[Markup.button.callback(menuLabels[lang].unlink,"account:unlink")],[Markup.button.callback(menuLabels[lang].home,"menu:home")]])
       : Markup.inlineKeyboard([[Markup.button.callback(menuLabels[lang].createLink,"account:link")],[Markup.button.callback(menuLabels[lang].home,"menu:home")]]);
     await ctx.reply(link ? messages[lang].linked + detail : messages[lang].unlinked, keyboard);
   } catch (error) { log.error({ err: error }, "Account status failed"); await ctx.reply(messages.en.error); }
@@ -267,9 +267,9 @@ async function unlinkStatusMessage(telegramId:number,language:Lang) {
   const date=Number.isNaN(eligibleAt.getTime())?"not available":eligibleAt.toLocaleString("en-IN",{timeZone:config.OWNER_TIMEZONE});
   const reached=Number.isFinite(eligibleAt.getTime())&&Date.now()>=eligibleAt.getTime();
   const notice={
-    en:reached?"15-day unlink eligibility reached on "+date+". This bot cannot unlink the account yet because the website has no verified unlink action. Your link remains active.":"Unlink eligibility date: "+date+". This bot cannot unlink the account yet because the website has no verified unlink action. Your link remains active.",
-    hi:reached?"15 din ki unlink eligibility "+date+" ko poori hui. Website ka verified unlink action available nahi hai, isliye bot link ko active rakhega.":"Unlink eligibility date: "+date+". Website ka verified unlink action available nahi hai; tab tak account link active rahega.",
-    vi:reached?"Da dat moc 15 ngay vao "+date+". Website chua co thao tac huy lien ket da xac minh, nen lien ket van duoc giu nguyen.":"Ngay du dieu kien huy lien ket: "+date+". Website chua co thao tac huy lien ket da xac minh; lien ket van duoc giu nguyen."
+    en:reached?"Your account is eligible to unlink now. Use /unlink and confirm to disconnect it.":"You can unlink this account on "+date+". Until then it remains linked.",
+    hi:reached?"Aapka account ab unlink karne ke liye eligible hai. /unlink likhein aur confirm karein.":"Aap "+date+" ko account unlink kar sakte hain. Tab tak link active rahega.",
+    vi:reached?"Tài khoản đã đủ điều kiện hủy liên kết. Dùng /unlink và xác nhận để tiếp tục.":"Bạn có thể hủy liên kết vào "+date+". Tài khoản vẫn được liên kết cho đến lúc đó."
   };
   return messages[language].linked+"\n"+notice[language];
 }
@@ -283,10 +283,56 @@ bot.command("unlink_status", async (ctx) => {
   try{const lang=await getLanguage(ctx.from.id);await ctx.reply(await unlinkStatusMessage(ctx.from.id,lang),homeMenu(lang));}
   catch(error){log.error({err:error},"Unlink status failed");await ctx.reply(messages.en.error);}
 });
+async function requestUnlinkConfirmation(ctx:Context,telegramId:number,language:Lang) {
+  const status=await accountStatus(telegramId);
+  if(!status) return ctx.reply(messages[language].unlinked,homeMenu(language));
+  const eligibleAt=new Date(status.unlink_eligible_at);
+  if(!Number.isFinite(eligibleAt.getTime())||Date.now()<eligibleAt.getTime()) {
+    return ctx.reply(await unlinkStatusMessage(telegramId,language),homeMenu(language));
+  }
+  return ctx.reply(
+    "Confirm unlinking your website account from this Telegram account? This action takes effect immediately. You can create a new link later.",
+    Markup.inlineKeyboard([
+      [Markup.button.callback("Confirm unlink","account:unlink-confirm")],
+      [Markup.button.callback("Cancel","account:unlink-cancel")]
+    ])
+  );
+}
+bot.action("account:unlink",async(ctx)=>{
+  await ctx.answerCbQuery();
+  if(!ctx.from||!(await isMember(ctx))) return ctx.reply(messages.en.member);
+  try { const lang=await getLanguage(ctx.from.id); await requestUnlinkConfirmation(ctx,ctx.from.id,lang); }
+  catch(error) { log.error({err:error},"Unlink confirmation failed"); await ctx.reply(messages.en.error); }
+});
+bot.action("account:unlink-confirm",async(ctx)=>{
+  await ctx.answerCbQuery();
+  if(!ctx.from||!(await isMember(ctx))) return ctx.reply(messages.en.member);
+  try {
+    const {data,error}=await db.rpc("unlink_bot_account_from_telegram",{p_telegram_id:ctx.from.id});
+    if(error) throw error;
+    const result=data as {ok?:boolean;error?:string;eligible_at?:string}|null;
+    const lang=await getLanguage(ctx.from.id);
+    if(result?.ok===true) {
+      await ctx.reply("Your website account has been unlinked successfully.",mainMenu(lang));
+      return;
+    }
+    if(result?.error==="unlink_restricted") {
+      await ctx.reply("Unlink is not available yet. Eligibility: "+String(result.eligible_at??"not available"),homeMenu(lang));
+      return;
+    }
+    if(result?.error==="not_linked") return ctx.reply(messages[lang].unlinked,homeMenu(lang));
+    await ctx.reply("The account could not be unlinked. No change was made.",homeMenu(lang));
+  } catch(error) { log.error({err:error},"Account unlink RPC failed"); await ctx.reply(messages.en.error); }
+});
+bot.action("account:unlink-cancel",async(ctx)=>{
+  await ctx.answerCbQuery("Cancelled");
+  const lang=ctx.from?await getLanguage(ctx.from.id):"en";
+  await ctx.reply("Unlink cancelled. Your website account remains linked.",homeMenu(lang));
+});
 bot.command("unlink", async (ctx) => {
   if(!ctx.from||!(await isMember(ctx))) return ctx.reply(messages.en.member);
-  try{const lang=await getLanguage(ctx.from.id);await ctx.reply(await unlinkStatusMessage(ctx.from.id,lang)+"\n\nNo database change was made.",homeMenu(lang));}
-  catch(error){log.error({err:error},"Unlink request failed");await ctx.reply(messages.en.error);}
+  try { const lang=await getLanguage(ctx.from.id); await requestUnlinkConfirmation(ctx,ctx.from.id,lang); }
+  catch(error) { log.error({err:error},"Unlink request failed"); await ctx.reply(messages.en.error); }
 });
 
 bot.command("support", async (ctx) => {
