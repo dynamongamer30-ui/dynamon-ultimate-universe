@@ -216,7 +216,7 @@ bot.command("posts", async (ctx) => {
 });
 bot.command("post_draft", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const payload = ctx.message.text.replace(/^\\/post_draft(?:@\\w+)?\\s*/i, "").trim();
+  const payload = ctx.message.text.replace(/^\/post_draft(?:@\w+)?\s*/i, "").trim();
   const split = payload.indexOf("\n");
   const title = (split < 0 ? payload : payload.slice(0, split)).trim();
   const body = (split < 0 ? "" : payload.slice(split + 1)).trim();
@@ -227,7 +227,7 @@ bot.command("post_draft", async (ctx) => {
 });
 bot.command("post_preview", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id = ctx.message.text.split(/\\s+/)[1];
+  const id = ctx.message.text.split(/\s+/)[1];
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /post_preview <post-uuid>");
   const { data, error } = await db.from("dgbot_posts").select("title,body,state").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error || !data) return ctx.reply("Post not found.");
@@ -235,7 +235,7 @@ bot.command("post_preview", async (ctx) => {
 });
 bot.command("post_edit", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const match = ctx.message.text.match(/^\\/post_edit(?:@\\w+)?\\s+([0-9a-f-]{36})\\s+([\\s\\S]+)$/i);
+  const match = ctx.message.text.match(/^\/post_edit(?:@\w+)?\s+([0-9a-f-]{36})\s+([\s\S]+)$/i);
   if (!match) return ctx.reply("Usage: /post_edit <post-uuid> Title\nBody");
   const id = match[1]!;
   const payload = match[2]!;
@@ -251,7 +251,7 @@ bot.command("post_publish", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const channelId = config.PUBLISH_CHANNEL_ID;
   if (!channelId) return ctx.reply("Publishing is disabled. Set PUBLISH_CHANNEL_ID in the host environment first.");
-  const id = ctx.message.text.split(/\\s+/)[1];
+  const id = ctx.message.text.split(/\s+/)[1];
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /post_publish <post-uuid>");
   if (publishingPosts.has(id)) return ctx.reply("This post is already being published.");
   publishingPosts.add(id);
@@ -274,7 +274,7 @@ bot.command("post_publish", async (ctx) => {
 });
 bot.command("post_remove", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id = ctx.message.text.split(/\\s+/)[1];
+  const id = ctx.message.text.split(/\s+/)[1];
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /post_remove <post-uuid>");
   const { data, error } = await db.from("dgbot_posts").select("state,channel_message_id").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error || !data) return ctx.reply("Post not found.");
