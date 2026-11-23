@@ -31,6 +31,7 @@ export async function requestDeployment(bot: Telegraf<Context>, tag: string, own
   const response = await fetch(config.DEPLOY_WEBHOOK_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + config.DEPLOY_WEBHOOK_SECRET },
+    redirect: "error",
     body: JSON.stringify({ action: "deploy", repository: config.GITHUB_REPOSITORY, release_tag: tag, safety_backup_id: backup.id }),
     signal: AbortSignal.timeout(15_000)
   });
@@ -48,6 +49,7 @@ export async function requestRollback(bot: Telegraf<Context>, tag: string, owner
   const response = await fetch(config.DEPLOY_WEBHOOK_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + config.DEPLOY_WEBHOOK_SECRET },
+    redirect: "error",
     body: JSON.stringify({ action: "rollback", repository: config.GITHUB_REPOSITORY, release_tag: tag, health_before_rollback: health, safety_backup_id: backup.id }),
     signal: AbortSignal.timeout(15_000)
   });
