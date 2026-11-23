@@ -1165,7 +1165,7 @@ bot.command("users", async (ctx) => {
   if(["en","hi","vi"].includes(filter)) query=query.eq("language",filter);
   else if(filter==="active") query=query.gte("last_seen_at",new Date(Date.now()-24*3600_000).toISOString());
   else if(filter==="banned"){
-    const {data,error}=await db.from("dgbot_bans").select("telegram_id",{count:"exact"}).is("deleted_at",null).limit(200);
+    const {data,error,count}=await db.from("dgbot_bans").select("telegram_id",{count:"exact"}).is("deleted_at",null).limit(200);
     if(error) return ctx.reply("Banned-user filter unavailable.");
     if((count??0)>200) return ctx.reply("More than 200 banned users exist; use /user <telegram-id> for individual lookup.");
     const ids=(data??[]).map(x=>Number(x.telegram_id));
