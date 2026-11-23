@@ -1,0 +1,112 @@
+import type { Telegraf } from "telegraf";
+import type { Context } from "telegraf";
+import { db } from "./supabase.js";
+
+type PostMedia = { type?: string; file_id?: string; caption?: string } | null;
+type PostButton = { text: string; url: string };
+
+export async function publishPost(bot: Telegraf<Context>, channelId: string, postId: string) {
+  const { data, error } = await db.from("dgbot_posts")
+    .select("title,body,state,channel_message_id,media,buttons")
+    .eq("id", postId).is("deleted_at", null).maybeSingle();
+  if (error || !data) throw error ?? new Error("Post not found");
+  if (data.state === "published" && data.channel_message_id) return Number(data.channel_message_id);
+  if (data.state !== "draft") throw new Error("Only draft posts can be published");
+  const caption = data.body ? `${data.title}\n\n${data.body}` : data.title;
+  const media = data.media as PostMedia;
+  const buttons = Array.isArray(data.buttons) ? data.buttons as PostButton[] : [];
+  const reply_markup = buttons.length ? { inline_keyboard: buttons.map((b) => [{ text: b.text, url: b.url }]) } : undefined;
+  const options = reply_markup ? { reply_markup } : {};
+  let message;
+  if (media?.file_id && media.type === "photo") message = await bot.telegram.sendPhoto(channelId, media.file_id, { caption: media.caption || caption, ...options });
+  else if (media?.file_id && media.type === "video") message = await bot.telegram.sendVideo(channelId, media.file_id, { caption: media.caption || caption, ...options });
+  else if (media?.file_id && media.type === "document") message = await bot.telegram.sendDocument(channelId, media.file_id, { caption: media.caption || caption, ...options });
+  else if (media?.file_id && media.type === "animation") message = await bot.telegram.sendAnimation(channelId, media.file_id, { caption: media.caption || caption, ...options });
+  else message = await bot.telegram.sendMessage(channelId, caption, options);
+  const { error: updateError } = await db.from("dgbot_posts").update({
+    state: "published", channel_message_id: message.message_id, updated_at: new Date().toISOString()
+  }).eq("id", postId).eq("state", "draft");
+  if (updateError) throw new Error(`Telegram accepted message ${message.message_id}, but post state update failed: ${updateError.message}`);
+  return message.message_id;
+}
+
+export function startJobWorkers(bot: Telegraf<Context>, channelId?: string) {
+  let stopped = false;
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const broadcastLoop = async () => {
+    while (!stopped) {
+      try {
+        const { data: jobs, error: jobsError } = await db.from("vextro_broadcast_jobs")
+          .select("id").eq("status", "queued").lte("scheduled_at", new Date().toISOString()).limit(10);
+        if (jobsError) throw jobsError;
+        for (const job of jobs ?? []) {
+          await db.from("vextro_broadcast_jobs").update({ status: "running", updated_at: new Date().toISOString() })
+            .eq("id", job.id).eq("status", "queued");
+        }
+        const { data: claimed, error } = await db.rpc("vextro_claim_broadcast_recipients", { p_limit: 20 });
+        if (error) throw error;
+        for (const recipient of claimed ?? []) {
+          try {
+            await bot.telegram.sendMessage(Number(recipient.telegram_id), String((await db.from("vextro_broadcast_jobs")
+              .select("body").eq("id", recipient.job_id).single()).data?.body ?? ""));
+            await db.from("vextro_broadcast_recipients").update({ status: "sent", sent_at: new Date().toISOString(), last_error: null, updated_at: new Date().toISOString() }).eq("id", recipient.id);
+          } catch (sendError) {
+            const message = sendError instanceof Error ? sendError.message.slice(0, 500) : "Telegram delivery failed";
+            const delay = Math.min(3600, 30 * (2 ** Math.max(0, Number(recipient.attempts) - 1)));
+            await db.from("vextro_broadcast_recipients").update({
+              status: "failed", last_error: message, next_attempt_at: new Date(Date.now() + delay * 1000).toISOString(), updated_at: new Date().toISOString()
+            }).eq("id", recipient.id);
+          }
+          await sleep(40);
+        }
+        const { data: active, error: activeError } = await db.from("vextro_broadcast_jobs").select("id")
+          .in("status", ["running"]).limit(50);
+        if (activeError) throw activeError;
+        for (const job of active ?? []) {
+          const { data: remaining, error: remainingError } = await db.from("vextro_broadcast_recipients").select("id")
+            .eq("job_id", job.id).in("status", ["pending", "sending"]).limit(1);
+          if (remainingError) throw remainingError;
+          if (!remaining?.length) {
+            await db.from("vextro_broadcast_jobs").update({ status: "completed", completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+              .eq("id", job.id).eq("status", "running");
+          }
+        }
+      } catch (error) {
+        console.error("VEXTRO broadcast worker iteration failed", error);
+      }
+      await sleep(1500);
+    }
+  };
+  const scheduleLoop = async () => {
+    while (!stopped) {
+      try {
+        if (channelId) {
+          const { data: due, error } = await db.from("vextro_scheduled_posts").select("id,post_id")
+            .eq("status", "scheduled").lte("scheduled_at", new Date().toISOString()).order("scheduled_at").limit(5);
+          if (error) throw error;
+          for (const item of due ?? []) {
+            const { data: claimed } = await db.from("vextro_scheduled_posts").update({
+              status: "publishing", attempts: 1, updated_at: new Date().toISOString()
+            }).eq("id", item.id).eq("status", "scheduled").select("id").maybeSingle();
+            if (!claimed) continue;
+            try {
+              await publishPost(bot, channelId, item.post_id);
+              await db.from("vextro_scheduled_posts").update({ status: "published", published_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_error: null }).eq("id", item.id);
+            } catch (publishError) {
+              const reason = publishError instanceof Error ? publishError.message.slice(0, 500) : "Publish failed";
+              await db.from("vextro_scheduled_posts").update({ status: "failed", last_error: reason, updated_at: new Date().toISOString() }).eq("id", item.id);
+            }
+          }
+          await db.from("vextro_scheduled_posts").update({ status: "scheduled", last_error: "Recovered stale worker lease", updated_at: new Date().toISOString() })
+            .eq("status", "publishing").lt("updated_at", new Date(Date.now() - 10 * 60_000).toISOString());
+        }
+      } catch (error) {
+        console.error("VEXTRO scheduler iteration failed", error);
+      }
+      await sleep(10_000);
+    }
+  };
+  void broadcastLoop();
+  void scheduleLoop();
+  return () => { stopped = true; };
+}
