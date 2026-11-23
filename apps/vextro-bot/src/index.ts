@@ -537,8 +537,12 @@ bot.command("broadcast_confirm", async (ctx) => {
     const candidates=(data??[]).filter(user=>!banned.has(Number(user.telegram_id)));
     for(let i=0;i<candidates.length;i+=10){
       const batch=candidates.slice(i,i+10);
-      const checked=await Promise.all(batch.map(async user=>({id:Number(user.telegram_id),member:await isMemberId(Number(user.telegram_id))})).map(p=>p.catch(error=>({error}))));
-      if(checked.some(item=>"error" in item)) return ctx.reply("Membership verification failed; broadcast remains a draft and no messages were queued.");
+      const checked=await Promise.all(batch.map(async user=>{
+        const userId=Number(user.telegram_id);
+        try { return {id:userId,member:await isMemberId(userId),failed:false}; }
+        catch { return {id:userId,member:false,failed:true}; }
+      }));
+      if(checked.some(item=>item.failed)) return ctx.reply("Membership verification failed; broadcast remains a draft and no messages were queued.");
       for(const item of checked) if(item.member) recipients.push({job_id:id,telegram_id:item.id});
     }
     if (!data || data.length < 1000) break;
