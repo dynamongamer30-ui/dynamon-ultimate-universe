@@ -113,9 +113,9 @@ export function startUpdateMonitor(bot: Telegraf<Context>, ownerId: number, inte
       if (release && release.tag_name !== lastTag) {
         lastTag = release.tag_name;
         const { data } = await db.from("vextro_update_approvals").select("tag").eq("tag", release.tag_name).maybeSingle();
-        if (!data) await bot.telegram.sendMessage(ownerId, "VEXTRO BOT update available: " + release.tag_name + "\n" + release.html_url + "\nReview and approve with /update_approve " + release.tag_name);
+        if (!data) await bot.telegram.sendMessage(ownerId, "Dynamon Assistant update available: " + release.tag_name + "\n" + release.html_url + "\nReview and approve with /update_approve " + release.tag_name);
       }
-    } catch (error) { console.error("VEXTRO update monitor failed", error); }
+    } catch (error) { console.error("Dynamon Assistant update monitor failed", error); }
   };
   const validatePending = async () => {
     if (stopped) return;
@@ -131,7 +131,7 @@ export function startUpdateMonitor(bot: Telegraf<Context>, ownerId: number, inte
           ? "Update " + pending.tag + " passed post-deployment health checks."
           : "Update " + pending.tag + " failed post-deployment health checks:\n" + report.detail.join("\n") + "\nOwner rollback command: /update_rollback " + pending.tag);
       }
-    } catch (error) { console.error("VEXTRO deployment validation failed", error); }
+    } catch (error) { console.error("Dynamon Assistant deployment validation failed", error); }
   };
   void check();
   const releaseTimer = setInterval(() => void check(), Math.max(1, intervalHours) * 3600_000);
