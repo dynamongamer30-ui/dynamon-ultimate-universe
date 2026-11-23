@@ -2,7 +2,9 @@ import { Telegraf, Markup, type Context } from "telegraf";
 import pino from "pino";
 import { config } from "./config.js";
 import { db } from "./supabase.js";
-import { createOneTimeLinkToken } from "./security.js";\nimport { publishPost, startJobWorkers } from "./jobs.js";\nimport { createBackup, listBackups, restoreBackup, startBackupScheduler, verifyBackup } from "./backup.js";
+import { createOneTimeLinkToken } from "./security.js";
+import { publishPost, startJobWorkers } from "./jobs.js";
+import { createBackup, listBackups, restoreBackup, startBackupScheduler, verifyBackup } from "./backup.js";
 
 const log = pino({ level: config.LOG_LEVEL, redact: ["*.token", "*.password", "*.secret", "*.authorization"] });
 const bot = new Telegraf(config.BOT_TOKEN);
@@ -355,7 +357,7 @@ bot.command("post_remove", async (ctx) => {
 
 bot.command("broadcast_draft", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const body = ctx.message.text.replace(/^\\/broadcast_draft(?:@\\w+)?\\s*/i, "").trim();
+  const body = ctx.message.text.replace(/^\/broadcast_draft(?:@\w+)?\s*/i, "").trim();
   if (!body || body.length > 4000) return ctx.reply("Usage: /broadcast_draft your message (1–4000 characters).");
   const { data, error } = await db.from("vextro_broadcast_jobs").insert({ created_by: ctx.from.id, body, status: "draft" }).select("id").single();
   if (error || !data) return ctx.reply("Could not create broadcast draft.");
@@ -363,7 +365,7 @@ bot.command("broadcast_draft", async (ctx) => {
 });
 bot.command("broadcast_preview", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id = ctx.message.text.split(/\\s+/)[1];
+  const id = ctx.message.text.split(/\s+/)[1];
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /broadcast_preview <uuid>");
   const { data, error } = await db.from("vextro_broadcast_jobs").select("body,status,scheduled_at,total_count").eq("id", id).maybeSingle();
   if (error || !data) return ctx.reply("Broadcast not found.");
@@ -371,7 +373,7 @@ bot.command("broadcast_preview", async (ctx) => {
 });
 bot.command("broadcast_schedule", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const match = ctx.message.text.match(/^\\/broadcast_schedule(?:@\\w+)?\\s+([0-9a-f-]{36})\\s+(\\S+)$/i);
+  const match = ctx.message.text.match(/^\/broadcast_schedule(?:@\w+)?\s+([0-9a-f-]{36})\s+(\S+)$/i);
   if (!match) return ctx.reply("Usage: /broadcast_schedule <uuid> <ISO-8601-with-timezone>");
   const id = match[1]!, at = new Date(match[2]!);
   if (!Number.isFinite(at.getTime()) || at.getTime() < Date.now() + 60_000) return ctx.reply("Choose a valid future time at least one minute from now, including timezone offset.");
@@ -381,7 +383,7 @@ bot.command("broadcast_schedule", async (ctx) => {
 });
 bot.command("broadcast_confirm", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id = ctx.message.text.split(/\\s+/)[1];
+  const id = ctx.message.text.split(/\s+/)[1];
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return ctx.reply("Usage: /broadcast_confirm <uuid>");
   const { data: job, error } = await db.from("vextro_broadcast_jobs").select("id,status,scheduled_at").eq("id", id).maybeSingle();
   if (error || !job) return ctx.reply("Broadcast not found.");
@@ -407,7 +409,7 @@ bot.command("broadcast_confirm", async (ctx) => {
 });
 bot.command("broadcast_pause", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id=ctx.message.text.split(/\\s+/)[1];
+  const id=ctx.message.text.split(/\s+/)[1];
   if (!id) return ctx.reply("Usage: /broadcast_pause <uuid>");
   const { data,error }=await db.from("vextro_broadcast_jobs").update({status:"paused",updated_at:new Date().toISOString()}).eq("id",id).in("status",["queued","running"]).select("id").maybeSingle();
   if(error||!data) return ctx.reply("Active broadcast not found.");
@@ -415,7 +417,7 @@ bot.command("broadcast_pause", async (ctx) => {
 });
 bot.command("broadcast_resume", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id=ctx.message.text.split(/\\s+/)[1];
+  const id=ctx.message.text.split(/\s+/)[1];
   if (!id) return ctx.reply("Usage: /broadcast_resume <uuid>");
   const { data,error }=await db.from("vextro_broadcast_jobs").update({status:"running",updated_at:new Date().toISOString()}).eq("id",id).eq("status","paused").select("id").maybeSingle();
   if(error||!data) return ctx.reply("Paused broadcast not found.");
@@ -423,7 +425,7 @@ bot.command("broadcast_resume", async (ctx) => {
 });
 bot.command("broadcast_cancel", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id=ctx.message.text.split(/\\s+/)[1];
+  const id=ctx.message.text.split(/\s+/)[1];
   if (!id) return ctx.reply("Usage: /broadcast_cancel <uuid>");
   const { data,error }=await db.from("vextro_broadcast_jobs").update({status:"cancelled",updated_at:new Date().toISOString()}).eq("id",id).in("status",["draft","queued","running","paused"]).select("id").maybeSingle();
   if(error||!data) return ctx.reply("Cancellable broadcast not found.");
@@ -431,7 +433,7 @@ bot.command("broadcast_cancel", async (ctx) => {
 });
 bot.command("broadcast_status", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id=ctx.message.text.split(/\\s+/)[1];
+  const id=ctx.message.text.split(/\s+/)[1];
   if (!id) return ctx.reply("Usage: /broadcast_status <uuid>");
   const [{data:job,error},{data:counts,count,error:countError}]=await Promise.all([
     db.from("vextro_broadcast_jobs").select("status,total_count,scheduled_at,created_at").eq("id",id).maybeSingle(),
@@ -447,7 +449,7 @@ bot.command("broadcast_status", async (ctx) => {
 });
 bot.command("post_schedule", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const match=ctx.message.text.match(/^\\/post_schedule(?:@\\w+)?\\s+([0-9a-f-]{36})\\s+(\\S+)$/i);
+  const match=ctx.message.text.match(/^\/post_schedule(?:@\w+)?\s+([0-9a-f-]{36})\s+(\S+)$/i);
   if(!match) return ctx.reply("Usage: /post_schedule <draft-post-uuid> <ISO-8601-with-timezone>");
   const at=new Date(match[2]!);
   if(!Number.isFinite(at.getTime())||at.getTime()<Date.now()+60_000) return ctx.reply("Schedule must be at least one minute in the future and include timezone.");
@@ -466,7 +468,7 @@ bot.command("post_schedules", async (ctx) => {
 });
 bot.command("post_schedule_cancel", async (ctx) => {
   if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
-  const id=ctx.message.text.split(/\\s+/)[1];
+  const id=ctx.message.text.split(/\s+/)[1];
   if(!id) return ctx.reply("Usage: /post_schedule_cancel <schedule-uuid>");
   const {data,error}=await db.from("vextro_scheduled_posts").update({status:"cancelled",updated_at:new Date().toISOString()}).eq("id",id).eq("status","scheduled").select("id").maybeSingle();
   if(error||!data) return ctx.reply("Pending schedule not found.");
@@ -698,7 +700,9 @@ bot.on("text", async (ctx, next) => {
 });
 
 bot.catch((error, ctx) => { log.error({ err: error, updateId: ctx.update.update_id }, "Telegram update failed"); });
-process.once("SIGINT", () => bot.stop("SIGINT"));
-process.once("SIGTERM", () => bot.stop("SIGTERM"));
-const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID);\nconst stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER_TELEGRAM_ID, config.BACKUP_INTERVAL_HOURS) : () => {};\nprocess.once("SIGINT", () => { stopWorkers(); stopBackups(); });\nprocess.once("SIGTERM", () => { stopWorkers(); stopBackups(); });\nawait bot.launch({ dropPendingUpdates: false });
+const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID);
+const stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER_TELEGRAM_ID, config.BACKUP_INTERVAL_HOURS) : () => {};
+process.once("SIGINT", () => { stopWorkers(); stopBackups(); });
+process.once("SIGTERM", () => { stopWorkers(); stopBackups(); });
+await bot.launch({ dropPendingUpdates: false });
 log.info({ botUsername: config.BOT_PUBLIC_USERNAME ?? "not-configured" }, "VEXTRO BOT polling started");
