@@ -473,6 +473,34 @@ bot.command("broadcast_confirm", async (ctx) => {
   await writeAudit("broadcast.confirmed", null, `Broadcast ${id} confirmed for ${recipients.length} users`);
   await ctx.reply(`Broadcast confirmed. ${recipients.length} recipients queued. Delivery will begin at ${job.scheduled_at ? new Date(job.scheduled_at).toLocaleString() : "the next worker cycle"}.`);
 });
+bot.command("broadcasts", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const {data,error}=await db.from("vextro_broadcast_jobs").select("id,status,total_count,sent_count,failed_count,scheduled_at,created_at").order("created_at",{ascending:false}).limit(20);
+  if(error) return ctx.reply("Broadcast history unavailable.");
+  if(!data?.length) return ctx.reply("No broadcast jobs.");
+  await ctx.reply(data.map(x=>x.id+" | "+x.status+"\n"+(x.sent_count??0)+"/"+x.total_count+" sent, "+(x.failed_count??0)+" failed\n"+(x.scheduled_at?new Date(x.scheduled_at).toLocaleString():"unscheduled")).join("\n\n"));
+});
+bot.command("broadcast_test", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\s+/)[1];
+  if(!id) return ctx.reply("Usage: /broadcast_test <broadcast-uuid>");
+  const {data,error}=await db.from("vextro_broadcast_jobs").select("body").eq("id",id).maybeSingle();
+  if(error||!data) return ctx.reply("Broadcast not found.");
+  try { await bot.telegram.sendMessage(config.OWNER_TELEGRAM_ID,"VEXTRO broadcast test\n\n"+data.body); await ctx.reply("Test message delivered to Owner chat only."); }
+  catch(sendError) { log.error({err:sendError},"Broadcast test failed"); await ctx.reply("Test delivery failed."); }
+});
+bot.command("broadcast_retry", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=ctx.message.text.split(/\s+/)[1];
+  if(!id) return ctx.reply("Usage: /broadcast_retry <broadcast-uuid>");
+  const {data:job,error:jobError}=await db.from("vextro_broadcast_jobs").select("id,status").eq("id",id).maybeSingle();
+  if(jobError||!job||!["completed","failed","paused"].includes(job.status)) return ctx.reply("Only completed, failed or paused jobs can be retried.");
+  const {error}=await db.from("vextro_broadcast_recipients").update({status:"pending",attempts:0,next_attempt_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()}).eq("job_id",id).eq("status","failed");
+  if(error) return ctx.reply("Failed recipients could not be reset.");
+  const {error:updateError}=await db.from("vextro_broadcast_jobs").update({status:"running",completed_at:null,updated_at:new Date().toISOString()}).eq("id",id);
+  if(updateError) return ctx.reply("Could not restart this queue.");
+  await ctx.reply("Failed recipients re-queued. Already delivered recipients will not be sent again.");
+});
 bot.command("broadcast_pause", async (ctx) => {
   if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
   const id=ctx.message.text.split(/\s+/)[1];
@@ -765,7 +793,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcast_draft, /broadcast_preview, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
