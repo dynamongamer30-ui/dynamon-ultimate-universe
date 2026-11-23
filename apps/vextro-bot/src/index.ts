@@ -8,6 +8,7 @@ import { createBackup, listBackups, restoreBackup, startBackupScheduler, verifyB
 import { runHealthCheck, startHealthMonitor } from "./health.js";
 import { registerGuideAdmin } from "./guides.js";
 import { registerUpdateCommands, startUpdateMonitor } from "./updates.js";
+import { registerOwnerMenu } from "./admin-menu.js";
 
 const log = pino({ level: config.LOG_LEVEL, redact: ["*.token", "*.password", "*.secret", "*.authorization"] });
 const bot = new Telegraf(config.BOT_TOKEN);
@@ -902,6 +903,7 @@ bot.on("text", async (ctx, next) => {
 bot.catch((error, ctx) => { log.error({ err: error, updateId: ctx.update.update_id }, "Telegram update failed"); });
 registerGuideAdmin(bot, ownerOnly, writeAudit);
 registerUpdateCommands(bot, ownerOnly, config.OWNER_TELEGRAM_ID);
+registerOwnerMenu(bot, ownerOnly);
 const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID);
 const stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER_TELEGRAM_ID, config.BACKUP_INTERVAL_HOURS) : () => {};
 const stopHealth = startHealthMonitor(bot, config.OWNER_TELEGRAM_ID, 5);
