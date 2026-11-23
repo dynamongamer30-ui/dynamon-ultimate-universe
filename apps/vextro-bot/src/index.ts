@@ -59,13 +59,18 @@ function membershipJoinKeyboard(language:Lang) {
   if(channelUrl) row.push(Markup.button.url(menuLabels[language].joinChannel,channelUrl));
   if(groupUrl) row.push(Markup.button.url(menuLabels[language].joinGroup,groupUrl));
   row.push(Markup.button.callback(menuLabels[language].verify,"membership:verify"));
-  return Markup.inlineKeyboard([row]);
+  return Markup.inlineKeyboard([row,[Markup.button.callback(menuLabels[language].home,"menu:home")]]);
 }
 function membershipPrompt(language:Lang) {
   const channelId=runtimeMembership.channelId;
   const hasChannel=Boolean(config.REQUIRED_CHANNEL_URL||(channelId.startsWith("@")&&channelId.length>1));
   const hasGroup=Boolean(config.REQUIRED_GROUP_URL);
-  return messages[language].member+(!hasChannel||!hasGroup?"\nIf a join button is missing, ask the Owner for the private invite link.":"");
+  const inviteHint={
+    en:"If a join button is missing, ask the Owner for the private invite link.",
+    hi:"Agar join button missing hai, Owner se private invite link maangein.",
+    vi:"Neu thieu nut tham gia, hay hoi Owner de nhan lien ket moi rieng."
+  }[language];
+  return messages[language].member+(!hasChannel||!hasGroup?"\n"+inviteHint:"");
 }
 function ownerOnly(ctx: Context): boolean {
   return ctx.from?.id === config.OWNER_TELEGRAM_ID;
