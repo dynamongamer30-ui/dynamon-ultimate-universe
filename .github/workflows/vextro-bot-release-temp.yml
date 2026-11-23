@@ -28,7 +28,7 @@ jobs:
           npm run typecheck
           npm run build
           cd ../..
-          zip -qr VEXTRO-BOT-clean-source.zip release/vextro-bot
+          zip -qr VEXTRO-BOT-clean-source.zip release/vextro-bot -x '*/node_modules/*'
       - uses: actions/upload-artifact@v4
         with:
           name: VEXTRO-BOT-clean-source
