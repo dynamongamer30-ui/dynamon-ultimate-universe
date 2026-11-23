@@ -31,8 +31,6 @@ const backupTables: Array<{ name: string; conflict: string }> = [
   { name: "vextro_runtime_settings", conflict: "key" },
   { name: "vextro_moderation_events", conflict: "id" },
   { name: "vextro_update_approvals", conflict: "tag" },
-  { name: "vextro_moderation_events", conflict: "id" },
-  { name: "vextro_update_approvals", conflict: "tag" },
   { name: "dgbot_backup_runs", conflict: "id" }
 ];
 type Snapshot = { format: "vextro-bot-backup"; version: 1; createdAt: string; tables: Record<string, Record<string, unknown>[]> };
@@ -40,6 +38,74 @@ type Snapshot = { format: "vextro-bot-backup"; version: 1; createdAt: string; ta
 function requirePassphrase() {
   if (!passphrase || passphrase.length < 16) throw new Error("BACKUP_PASSPHRASE must be configured with at least 16 characters");
   return passphrase;
+}
+
+type OwnerArchiveReceipt = {
+  chatId: number;
+  messageId: number;
+  fileId: string;
+  fileUniqueId: string | null;
+  fileSize: number | null;
+};
+
+async function sendOwnerArchive(encrypted: Buffer, ownerId: number, sha256: string, filename: string): Promise<OwnerArchiveReceipt> {
+  const bytes = new Uint8Array(encrypted.byteLength);
+  bytes.set(encrypted);
+  const form = new FormData();
+  form.set("chat_id", String(ownerId));
+  form.set("caption", "VEXTRO encrypted backup\nSHA-256: " + sha256 + "\nKeep this archive private. Restore using the bot backup controls.");
+  form.set("document", new Blob([bytes.buffer], { type: "application/octet-stream" }), filename);
+  const response = await fetch("https://api.telegram.org/bot" + config.BOT_TOKEN + "/sendDocument", {
+    method: "POST",
+    body: form,
+    redirect: "error",
+    signal: AbortSignal.timeout(60_000)
+  });
+  const payload = await response.json() as {
+    ok?: boolean;
+    description?: string;
+    result?: {
+      message_id?: number;
+      chat?: { id?: number };
+      document?: { file_id?: string; file_unique_id?: string; file_size?: number };
+    };
+  };
+  const document = payload.result?.document;
+  if (!response.ok || payload.ok !== true || !payload.result?.message_id || !payload.result.chat?.id || !document?.file_id) {
+    throw new Error("Owner Telegram backup upload failed: " + (payload.description ?? ("HTTP " + response.status)));
+  }
+  if (document.file_size !== undefined && document.file_size !== encrypted.byteLength) {
+    throw new Error("Owner Telegram backup upload returned an unexpected file size");
+  }
+  return {
+    chatId: payload.result.chat.id,
+    messageId: payload.result.message_id,
+    fileId: document.file_id,
+    fileUniqueId: document.file_unique_id ?? null,
+    fileSize: document.file_size ?? null
+  };
+}
+
+async function downloadOwnerArchive(fileId: string): Promise<Buffer | null> {
+  try {
+    const response = await fetch(
+      "https://api.telegram.org/bot" + config.BOT_TOKEN + "/getFile?file_id=" + encodeURIComponent(fileId),
+      { redirect: "error", signal: AbortSignal.timeout(15_000) }
+    );
+    if (!response.ok) return null;
+    const payload = await response.json() as { ok?: boolean; result?: { file_path?: string } };
+    const filePath = payload.ok ? payload.result?.file_path : undefined;
+    if (!filePath) return null;
+    const fileResponse = await fetch(
+      "https://api.telegram.org/file/bot" + config.BOT_TOKEN + "/" + filePath,
+      { redirect: "error", signal: AbortSignal.timeout(30_000) }
+    );
+    if (!fileResponse.ok) return null;
+    return Buffer.from(await fileResponse.arrayBuffer());
+  } catch {
+    // Bot API cloud downloads are limited in size; use the private Supabase recovery copy when available.
+    return null;
+  }
 }
 async function collectTable(name: string) {
   const rows: Record<string, unknown>[] = [];
@@ -57,16 +123,31 @@ export async function createBackup(createdBy: number) {
   const snapshot: Snapshot = { format: "vextro-bot-backup", version: 1, createdAt: new Date().toISOString(), tables };
   const encrypted = encryptBackupPayload(Buffer.from(JSON.stringify(snapshot)), requirePassphrase());
   const sha256 = createHash("sha256").update(encrypted).digest("hex");
-  const path = `vextro/${new Date().toISOString().replace(/[:.]/g, "-")}-${randomBytes(4).toString("hex")}.vxb`;
+  const filename = "vextro-backup-" + new Date().toISOString().replace(/[:.]/g, "-") + ".vxb";
+  // The Owner's private Telegram chat is the primary archive destination.
+  const ownerArchive = await sendOwnerArchive(encrypted, createdBy, sha256, filename);
+  const path = `vextro/${filename}`;
+  let storagePath: string | null = null;
+  let storageError: string | null = null;
   const { error: uploadError } = await db.storage.from(bucket).upload(path, encrypted, { contentType: "application/octet-stream", upsert: false });
-  if (uploadError) throw new Error(`Backup upload failed: ${uploadError.message}`);
+  if (uploadError) {
+    storageError = uploadError.message.slice(0, 500);
+    // Telegram's cloud Bot API can only download files up to 20 MB; larger backups require the secondary copy for restoration.
+    if (encrypted.byteLength > 20 * 1024 * 1024) throw new Error("Owner Telegram archive was sent, but the Supabase recovery copy failed and this backup exceeds Telegram's 20 MB download limit: " + storageError);
+  } else {
+    storagePath = path;
+  }
   const { data, error } = await db.from("vextro_backup_artifacts").insert({
-    storage_path: path, format_version: 1, encryption: "aes-256-gcm", bytes: encrypted.byteLength,
+    storage_path: storagePath, storage_error: storageError,
+    telegram_chat_id: ownerArchive.chatId, telegram_message_id: ownerArchive.messageId,
+    telegram_file_id: ownerArchive.fileId, telegram_file_unique_id: ownerArchive.fileUniqueId,
+    telegram_verified_at: new Date().toISOString(),
+    format_version: 1, encryption: "aes-256-gcm", bytes: encrypted.byteLength,
     sha256, created_by: createdBy, expires_at: new Date(Date.now() + retentionDays * 86400_000).toISOString()
-  }).select("id,storage_path,bytes,created_at").single();
+  }).select("id,storage_path,bytes,created_at,telegram_chat_id,telegram_message_id,telegram_file_id,telegram_verified_at,storage_error").single();
   if (error || !data) {
-    await db.storage.from(bucket).remove([path]);
-    throw error ?? new Error("Backup metadata could not be saved");
+    if (storagePath) await db.storage.from(bucket).remove([storagePath]);
+    throw error ?? new Error("Backup metadata could not be saved; the encrypted archive remains in the Owner Telegram chat");
   }
   if (config.BACKUP_OFFSITE_URL && config.BACKUP_OFFSITE_TOKEN) {
     try {
@@ -90,16 +171,20 @@ export async function createBackup(createdBy: number) {
   await db.from("vextro_backup_artifacts").update({ verified_at: new Date().toISOString() }).eq("id", data.id);
   await pruneBackups();
   const { data: completed, error: completedError } = await db.from("vextro_backup_artifacts")
-    .select("id,storage_path,bytes,created_at,verified_at,offsite_url,offsite_verified_at,offsite_error").eq("id", data.id).single();
+    .select("id,storage_path,bytes,created_at,verified_at,offsite_url,offsite_verified_at,offsite_error,telegram_chat_id,telegram_message_id,telegram_file_id,telegram_verified_at,storage_error").eq("id", data.id).single();
   if (completedError || !completed) throw completedError ?? new Error("Backup metadata verification failed");
   return completed;
 }
 export async function readBackup(id: string) {
-  const { data: metadata, error } = await db.from("vextro_backup_artifacts").select("id,storage_path,sha256,bytes").eq("id", id).maybeSingle();
+  const { data: metadata, error } = await db.from("vextro_backup_artifacts").select("id,storage_path,sha256,bytes,telegram_file_id").eq("id", id).maybeSingle();
   if (error || !metadata) throw error ?? new Error("Backup artifact not found");
-  const { data: blob, error: downloadError } = await db.storage.from(bucket).download(metadata.storage_path);
-  if (downloadError || !blob) throw downloadError ?? new Error("Backup download failed");
-  const encrypted = Buffer.from(await blob.arrayBuffer());
+  let encrypted: Buffer | null = metadata.telegram_file_id ? await downloadOwnerArchive(metadata.telegram_file_id) : null;
+  if (!encrypted && metadata.storage_path) {
+    const { data: blob, error: downloadError } = await db.storage.from(bucket).download(metadata.storage_path);
+    if (!downloadError && blob) encrypted = Buffer.from(await blob.arrayBuffer());
+  }
+  if (!encrypted) throw new Error("Backup download failed from Owner Telegram archive and the Supabase recovery copy");
+
   const actual = createHash("sha256").update(encrypted).digest("hex");
   if (actual !== metadata.sha256 || encrypted.byteLength !== Number(metadata.bytes)) throw new Error("Backup integrity check failed");
   const snapshot = JSON.parse(decryptBackupPayload(encrypted, requirePassphrase()).toString("utf8")) as Snapshot;
@@ -156,14 +241,16 @@ export async function pruneBackups() {
   const { data, error } = await db.from("vextro_backup_artifacts").select("id,storage_path").lt("expires_at", new Date().toISOString()).limit(100);
   if (error) throw error;
   for (const item of data ?? []) {
-    const { error: removeError } = await db.storage.from(bucket).remove([item.storage_path]);
-    if (removeError) throw removeError;
+    if (item.storage_path) {
+      const { error: removeError } = await db.storage.from(bucket).remove([item.storage_path]);
+      if (removeError) throw removeError;
+    }
     const { error: deleteError } = await db.from("vextro_backup_artifacts").delete().eq("id", item.id);
     if (deleteError) throw deleteError;
   }
 }
 export async function listBackups() {
-  const { data, error } = await db.from("vextro_backup_artifacts").select("id,bytes,created_at,verified_at,expires_at,offsite_url,offsite_verified_at,offsite_error").order("created_at", { ascending: false }).limit(20);
+  const { data, error } = await db.from("vextro_backup_artifacts").select("id,bytes,created_at,verified_at,expires_at,offsite_url,offsite_verified_at,offsite_error,telegram_message_id,telegram_verified_at,storage_error").order("created_at", { ascending: false }).limit(20);
   if (error) throw error;
   return data ?? [];
 }
