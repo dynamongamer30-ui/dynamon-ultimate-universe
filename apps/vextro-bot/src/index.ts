@@ -424,7 +424,7 @@ bot.on("message", async (ctx, next) => {
   else if(message.document){fileId=message.document.file_id;kind="document";}
   else if(message.animation){fileId=message.animation.file_id;kind="animation";}
   else return next();
-  await ctx.reply("Media received.\nType: "+kind+"\nFile ID:\n"+fileId+"\nUse /post_media <draft-uuid> "+kind+" "+fileId+" [caption].");
+  await ctx.reply("Media received.\nType: "+kind+"\nFile ID:\n"+fileId+"\nUse /post_media <post-uuid> "+kind+" "+fileId+" [caption] or /broadcast_media <broadcast-uuid> "+kind+" "+fileId+".");
 });
 
 bot.command("post_media", async (ctx) => {
