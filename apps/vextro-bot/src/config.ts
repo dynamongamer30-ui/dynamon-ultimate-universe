@@ -8,7 +8,7 @@ const schema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(30),
   WEBSITE_URL: z.string().url(),
   REQUIRED_CHANNEL_ID: z.string().min(1),
-  REQUIRED_GROUP_ID: z.string().min(1),
+  REQUIRED_GROUP_ID: z.string().regex(/^-?\d+$/, "Numeric Telegram group chat ID required"),
   PUBLISH_CHANNEL_ID: z.string().min(1).optional(),
   BOT_PUBLIC_USERNAME: z.string().regex(/^[A-Za-z0-9_]{5,32}$/).optional(),
   BACKUP_PASSPHRASE: z.string().min(16).optional(),
