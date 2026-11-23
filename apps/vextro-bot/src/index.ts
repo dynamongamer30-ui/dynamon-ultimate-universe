@@ -442,14 +442,21 @@ bot.on("message", async (ctx, next) => {
     video?: {file_id:string};
     document?: {file_id:string};
     animation?: {file_id:string};
+    audio?: {file_id:string};
+    voice?: {file_id:string};
+    video_note?: {file_id:string};
   };
   let fileId="",kind="";
   if(message.photo?.length){fileId=message.photo[message.photo.length-1]!.file_id;kind="photo";}
   else if(message.video){fileId=message.video.file_id;kind="video";}
   else if(message.document){fileId=message.document.file_id;kind="document";}
   else if(message.animation){fileId=message.animation.file_id;kind="animation";}
+  else if(message.audio){fileId=message.audio.file_id;kind="audio";}
+  else if(message.voice){fileId=message.voice.file_id;kind="voice";}
+  else if(message.video_note){fileId=message.video_note.file_id;kind="video_note";}
   else return next();
-  await ctx.reply("Media received.\nType: "+kind+"\nFile ID:\n"+fileId+"\nUse /post_media <post-uuid> "+kind+" "+fileId+" [caption] or /broadcast_media <broadcast-uuid> "+kind+" "+fileId+".");
+  await ctx.reply("Media received.\nType: "+kind+"\nFile ID:\n"+fileId+
+    (["photo","video","document","animation"].includes(kind)?"\nPost: /post_media <post-uuid> "+kind+" "+fileId+" [caption]\nBroadcast: /broadcast_media <broadcast-uuid> "+kind+" "+fileId:"\nSupport reply: /ticket_media <ticket-uuid> "+kind+" "+fileId+" [caption]"));
 });
 
 bot.command("post_media", async (ctx) => {
