@@ -30,7 +30,7 @@ export async function publishPost(bot: Telegraf<Context>, channelId: string, pos
   return message.message_id;
 }
 
-export function startJobWorkers(bot: Telegraf<Context>, channelId?: string) {
+export function startJobWorkers(bot: Telegraf<Context>, channelId?: string, ownerId?: number) {
   let stopped = false;
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   const broadcastLoop = async () => {
@@ -75,8 +75,11 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string) {
               db.from("vextro_broadcast_recipients").select("*", { count: "exact", head: true }).eq("job_id", job.id).eq("status", "sent"),
               db.from("vextro_broadcast_recipients").select("*", { count: "exact", head: true }).eq("job_id", job.id).eq("status", "failed")
             ]);
-            await db.from("vextro_broadcast_jobs").update({ status: "completed", sent_count: sent ?? 0, failed_count: failed ?? 0, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-              .eq("id", job.id).eq("status", "running");
+            const { data: completed } = await db.from("vextro_broadcast_jobs").update({ status: "completed", sent_count: sent ?? 0, failed_count: failed ?? 0, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+              .eq("id", job.id).eq("status", "running").select("id").maybeSingle();
+            if (completed && ownerId) {
+              try { await bot.telegram.sendMessage(ownerId, "Broadcast completed: " + job.id + "\nSent: " + (sent ?? 0) + "\nFailed: " + (failed ?? 0)); } catch {}
+            }
           }
         }
       } catch (error) {
@@ -100,6 +103,7 @@ export function startJobWorkers(bot: Telegraf<Context>, channelId?: string) {
             try {
               await publishPost(bot, channelId, item.post_id);
               await db.from("vextro_scheduled_posts").update({ status: "published", published_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_error: null }).eq("id", item.id);
+              if (ownerId) { try { await bot.telegram.sendMessage(ownerId, "Scheduled channel post published. Schedule: " + item.id + "\nPost: " + item.post_id); } catch {} }
             } catch (publishError) {
               const reason = publishError instanceof Error ? publishError.message.slice(0, 500) : "Publish failed";
               await db.from("vextro_scheduled_posts").update({ status: "failed", last_error: reason, updated_at: new Date().toISOString() }).eq("id", item.id);
