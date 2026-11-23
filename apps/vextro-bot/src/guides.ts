@@ -34,7 +34,7 @@ export function registerGuideAdmin(bot: Telegraf<Context>, ownerOnly: OwnerCheck
   bot.command("guide_media", async (ctx) => {
     if (!ownerOnly(ctx)) return ctx.reply("Access denied.");
     const m = ctx.message.text.match(/^\/guide_media(?:@\w+)?\s+([a-z0-9_-]{1,31})\s+(photo|video)\s+(\S+)(?:\s+([\s\S]+))?$/i);
-    if (!m) return ctx.reply("Usage: /guide_media <id> <photo|video> <telegram-file-id> [caption]");
+    if (!m) return ctx.reply("Usage: /guide_media <id> <photo|video|document|animation> <telegram-file-id> [caption]");
     const { data, error } = await db.from("dgbot_guides").update({
       media: { type: m[2], file_id: m[3], caption: m[4] ?? "" }, updated_at: new Date().toISOString()
     }).eq("id", m[1]!).is("deleted_at", null).select("id").maybeSingle();
