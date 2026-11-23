@@ -317,12 +317,13 @@ bot.command("post_publish", async (ctx) => {
     const caption = data.body ? `${data.title}\n\n${data.body}` : data.title;
     const media = data.media as { type?: string; file_id?: string; caption?: string } | null;
     const buttons = Array.isArray(data.buttons) ? data.buttons as Array<{ text: string; url: string }> : [];
-    const reply_markup = buttons.length ? { inline_keyboard: buttons.map((button) => [{ text: button.text, url: button.url }]) } : undefined;\n    const mediaOptions = mediaOptions;
+    const reply_markup = buttons.length ? { inline_keyboard: buttons.map((button) => [{ text: button.text, url: button.url }]) } : undefined;
+    const mediaOptions = reply_markup ? { reply_markup } : {};
     let message;
     if (media?.file_id && media.type === "photo") message = await bot.telegram.sendPhoto(channelId, media.file_id, { caption: media.caption || caption, ...mediaOptions });
-    else if (media?.file_id && media.type === "video") message = await bot.telegram.sendVideo(channelId, media.file_id, { caption: media.caption || caption, reply_markup });
-    else if (media?.file_id && media.type === "document") message = await bot.telegram.sendDocument(channelId, media.file_id, { caption: media.caption || caption, reply_markup });
-    else if (media?.file_id && media.type === "animation") message = await bot.telegram.sendAnimation(channelId, media.file_id, { caption: media.caption || caption, reply_markup });
+    else if (media?.file_id && media.type === "video") message = await bot.telegram.sendVideo(channelId, media.file_id, { caption: media.caption || caption, ...mediaOptions });
+    else if (media?.file_id && media.type === "document") message = await bot.telegram.sendDocument(channelId, media.file_id, { caption: media.caption || caption, ...mediaOptions });
+    else if (media?.file_id && media.type === "animation") message = await bot.telegram.sendAnimation(channelId, media.file_id, { caption: media.caption || caption, ...mediaOptions });
     else message = await bot.telegram.sendMessage(channelId, caption, reply_markup ? { reply_markup } : {});
     const { error: updateError } = await db.from("dgbot_posts").update({ state: "published", channel_message_id: message.message_id, updated_at: new Date().toISOString() }).eq("id", id).eq("state", "draft");
     if (updateError) {
