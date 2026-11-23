@@ -46,7 +46,7 @@ The historical migration drift between the website repository and production rem
 ## Remaining acceptance work / known boundaries
 
 - Run live Telegram tests with the Owner's host secrets: onboarding, both membership checks, account-link approval, ticket flow, media publishing, broadcasts, moderation permissions, backups and restart recovery.
-- Complete the screen-by-screen Revision 21 acceptance pass for all approved user, Owner and shared interaction screens; the current runtime has the workflows but this visual acceptance pass is not signed off.
+- Code-level mapping for all 50 approved user, Owner and shared screen flows is complete. Live Telegram acceptance remains pending. Telegram controls the user's light/dark theme; a bot cannot force the client's dark theme.
 - Validate the custom hosting webhook against the actual hosting provider before enabling automated deployment or rollback.
 - Configure and test the offsite backup receiver before relying on offsite retention.
 - Account unlink remains intentionally unavailable because the live 15-day eligibility rule has no verified unlink RPC; direct database mutation is not permitted.
