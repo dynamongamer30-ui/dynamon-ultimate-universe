@@ -18,7 +18,7 @@ const moderationActivity = new Map<number, { times: number[]; lastText: string; 
 type Lang = "en" | "hi" | "vi";
 
 const messages: Record<Lang, { welcome: string; member: string; choose: string; unlinked: string; linked: string; linkCreated: string; help: string; support: string; ticketCreated: string; error: string }> = {
-  en: { welcome: "Welcome to VEXTRO BOT.", member: "Join both the required channel and group, then press Verify.", choose: "Choose your language.", unlinked: "No website account is linked.", linked: "Your website account is linked.", linkCreated: "This one-time link expires in 10 minutes. Open it and sign in to your website account:", help: "Commands: /start, /language, /account, /link, /support Subject\nMessage, /guides, /help", support: "Use /support followed by a subject, then put your message on the next line. Reply to this bot to continue your latest open ticket.", ticketCreated: "Your support ticket has been created.", error: "Something went wrong. Please try again later." },
+  en: { welcome: "Welcome to VEXTRO BOT.", member: "Join both the required channel and group, then press Verify.", choose: "Choose your language.", unlinked: "No website account is linked.", linked: "Your website account is linked.", linkCreated: "This one-time link expires in 10 minutes. Open it and sign in to your website account:", help: "Commands: /start, /language, /account, /link, /membership_status, /rules, /support Subject\nMessage, /guides, /help", support: "Use /support followed by a subject, then put your message on the next line. Reply to this bot to continue your latest open ticket.", ticketCreated: "Your support ticket has been created.", error: "Something went wrong. Please try again later." },
   hi: { welcome: "VEXTRO BOT mein aapka swagat hai.", member: "Pehle required channel aur group dono join karein, phir Verify dabayein.", choose: "Apni language chunein.", unlinked: "Koi website account linked nahi hai.", linked: "Aapka website account linked hai.", linkCreated: "Yeh link 10 minute mein expire hoga. Open karke website account mein sign in karein:", help: "Commands: /start, /language, /account, /link, /support, /guides, /help", support: "/support ke baad subject aur agali line mein message likhein. Latest open ticket ke liye bot ko reply karein.", ticketCreated: "Support ticket ban gaya hai.", error: "Kuch galat hua. Baad mein dobara try karein." },
   vi: { welcome: "Chào mừng bạn đến với VEXTRO BOT.", member: "Hãy tham gia cả kênh và nhóm bắt buộc, sau đó nhấn Verify.", choose: "Chọn ngôn ngữ của bạn.", unlinked: "Chưa liên kết tài khoản website.", linked: "Tài khoản website đã được liên kết.", linkCreated: "Liên kết hết hạn sau 10 phút. Mở liên kết và đăng nhập website:", help: "Lệnh: /start, /language, /account, /link, /guides, /help", support: "Dùng /support kèm tiêu đề và nội dung ở dòng tiếp theo.", ticketCreated: "Đã tạo phiếu hỗ trợ.", error: "Đã xảy ra lỗi. Vui lòng thử lại sau." }
 };
@@ -610,6 +610,46 @@ bot.hears(/^\/guide_([a-z0-9][a-z0-9_-]{0,30})$/, async (ctx) => {
   return ctx.reply(heading + "\n\n" + body.slice(0,textLimit), markup);
 });
 
+bot.command("membership_status", async (ctx) => {
+  if(!ctx.from) return;
+  const results=await Promise.all([config.REQUIRED_CHANNEL_ID,config.REQUIRED_GROUP_ID].map(async chatId=>{
+    try{
+      const member=await ctx.telegram.getChatMember(chatId,ctx.from!.id);
+      return ["creator","administrator","member"].includes(member.status)||(member.status==="restricted"&&member.is_member);
+    }catch{return false;}
+  }));
+  await ctx.reply("Required channel: "+(results[0]?"joined":"not joined")+"\nRequired group: "+(results[1]?"joined":"not joined")+"\nOverall: "+(results.every(Boolean)?"verified":"verification required"));
+});
+bot.command("membership_check", async (ctx) => {
+  if(!ownerOnly(ctx)) return ctx.reply("Access denied.");
+  const id=Number(ctx.message.text.split(/\s+/)[1]);
+  if(!Number.isSafeInteger(id)||id<1) return ctx.reply("Usage: /membership_check <telegram-id>");
+  const results=await Promise.all([config.REQUIRED_CHANNEL_ID,config.REQUIRED_GROUP_ID].map(async chatId=>{
+    try{const member=await ctx.telegram.getChatMember(chatId,id);return member.status+(member.status==="restricted"?(member.is_member?" (member)":" (not member)"):"");}
+    catch(error){return "unavailable: "+(error instanceof Error?error.message:"unknown");}
+  }));
+  await ctx.reply("Membership for "+id+"\nChannel: "+results[0]+"\nGroup: "+results[1]);
+});
+bot.command("rules", async (ctx) => {
+  if(!ctx.from||!(await isMember(ctx))) return ctx.reply(messages.en.member);
+  const lang=await getLanguage(ctx.from.id), locale=lang==="hi"?"hi-Latn":lang;
+  const {data,error}=await db.from("dgbot_guides").select("title,steps").eq("category","rules").eq("published",true).is("deleted_at",null).order("updated_at",{ascending:false}).limit(5);
+  if(error) return ctx.reply(messages.en.error);
+  if(!data?.length) return ctx.reply("Group rules have not been published yet.");
+  const output=data.map(g=>{
+    const title=g.title as Record<string,string>, steps=g.steps as Record<string,unknown>;
+    const value=steps[locale]??steps.en??[];
+    const body=Array.isArray(value)?value.map((x,i)=>(i+1)+". "+String(x)).join("\n"):String(value);
+    return (title[locale]??title.en??"Rules")+"\n"+body;
+  }).join("\n\n");
+  await ctx.reply(output.slice(0,textLimit));
+});
+bot.on("new_chat_members", async (ctx) => {
+  if(String(ctx.chat.id)!==config.REQUIRED_GROUP_ID) return;
+  const names=ctx.message.new_chat_members.filter(m=>!m.is_bot).map(m=>m.first_name).slice(0,10);
+  if(!names.length) return;
+  await ctx.reply("Welcome "+names.join(", ")+"! Please read /rules and start a private chat with the bot using /start to verify membership and access support.");
+});
 bot.command("help", async (ctx) => ctx.reply(messages.en.help));
 bot.action("help:open", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply(messages.en.help); });
 bot.action("support:help", async (ctx) => { await ctx.answerCbQuery(); await ctx.reply(messages.en.support); });
@@ -793,7 +833,7 @@ bot.command("admin", async (ctx) => {
     db.from("bot_support_tickets").select("*", { count: "exact", head: true }).neq("status", "closed")
   ]);
   if (userError || ticketError) { log.error({ userError, ticketError }, "Owner dashboard query failed"); return ctx.reply("Dashboard is temporarily unavailable."); }
-  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
+  await ctx.reply(`VEXTRO BOT Owner Dashboard\nRegistered users: ${users ?? 0}\nOpen tickets: ${openTickets ?? 0}\n\nCommands: /users, /user, /ban_user, /unban_user, /tickets, /ticket, /ticket_priority, /ticket_category, /ticket_note, /ticket_search, /my_tickets, /ticket_reply, /reply, /close_ticket, /posts, /post_draft, /post_media, /post_buttons, /post_preview, /post_edit, /post_publish, /post_remove, /broadcasts, /broadcast_draft, /broadcast_preview, /broadcast_test, /broadcast_retry, /broadcast_schedule, /broadcast_confirm, /broadcast_pause, /broadcast_resume, /broadcast_cancel, /broadcast_status, /post_schedule, /post_schedules, /post_schedule_cancel, /analytics, /backup_create, /backup_list, /backup_verify, /backup_restore_confirm, /backup_status, /backup_runs, /health, /membership_check, /maintenance_on, /maintenance_off, /maintenance_status, /update_check, /update_approve, /update_install, /update_status, /audit_recent, /moderation_rules, /moderation_add, /moderation_remove.`);
 });
 
 // Text replies are routed only to the sender's most recent active ticket; commands are never intercepted.
