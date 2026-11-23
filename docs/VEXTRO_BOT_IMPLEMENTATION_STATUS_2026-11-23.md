@@ -30,7 +30,7 @@ The historical migration drift between the website repository and production rem
 
 ## Verification
 
-- Latest VEXTRO BOT CI run: `45133176646` — dependency install, TypeScript type-check, Vitest tests and production build passed.
+- Latest VEXTRO BOT CI run: `45133962416` — dependency install, TypeScript type-check, Vitest tests and production build passed.
 - Backup encryption and Owner-timezone conversion have unit tests.
 - Production Supabase migrations were applied and schema was inspected. All 21 restorable backup tables passed empty-row restore-function checks; website-owned account-link and guide tables are intentionally skipped and protected by the restore RPC.
 - No live Telegram polling test or KataBump deployment has been performed in this session. CI does not prove the live bot token, membership permissions, channel publishing or hosting integration.
