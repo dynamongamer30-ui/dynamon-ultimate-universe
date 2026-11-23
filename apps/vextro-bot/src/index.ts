@@ -1167,7 +1167,7 @@ registerGuideAdmin(bot, ownerOnly, writeAudit);
 registerUpdateCommands(bot, ownerOnly, config.OWNER_TELEGRAM_ID);
 registerOwnerMenu(bot, ownerOnly);
 const stopWorkers = startJobWorkers(bot, config.PUBLISH_CHANNEL_ID, config.OWNER_TELEGRAM_ID);
-const stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER_TELEGRAM_ID, config.BACKUP_INTERVAL_HOURS) : () => {};
+const stopBackups = config.BACKUP_PASSPHRASE ? startBackupScheduler(config.OWNER_TELEGRAM_ID, config.BACKUP_INTERVAL_HOURS, (message) => bot.telegram.sendMessage(config.OWNER_TELEGRAM_ID, message)) : () => {};
 const stopHealth = startHealthMonitor(bot, config.OWNER_TELEGRAM_ID, 5);
 const stopUpdates = startUpdateMonitor(bot, config.OWNER_TELEGRAM_ID, config.UPDATE_CHECK_INTERVAL_HOURS);
 try { const {data}=await db.from("vextro_runtime_settings").select("value").eq("key","maintenance").maybeSingle(); maintenanceMode=(data?.value as {enabled?:boolean}|null)?.enabled===true; } catch(error) { log.error({err:error},"Maintenance setting could not be loaded; defaulting to normal mode"); }
